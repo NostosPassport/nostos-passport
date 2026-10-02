@@ -71,6 +71,11 @@ function RootNavigator() {
       <Stack.Protected guard={status === "guest" || (meReady && !needsTerms)}>
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
       </Stack.Protected>
+      {/* Development builds only: every visual piece on made-up data, reachable without an account (see features/gallery). */}
+      <Stack.Protected guard={__DEV__}>
+        <Stack.Screen name="design/index" options={{ title: "Design gallery" }} />
+        <Stack.Screen name="design/[section]" options={{ title: "Design gallery" }} />
+      </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="age-gate" options={{ title: "Age check", presentation: "modal", headerLeft: CloseButton }} />
         <Stack.Screen name="sign-in" options={{ title: "Sign in", presentation: "modal", headerLeft: CloseButton }} />

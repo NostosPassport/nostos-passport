@@ -25,7 +25,7 @@ import { visaLabel, visaStamp } from "./visa";
  * One stamp as a visa spread: the stamp inked on the left page, its photos stuck into the scrapbook on the right, and a typed slip
  * underneath with the date, the place, the caption and the song as a ticket stub. The owner drags photos about; it saves itself.
  */
-export function VisaSpread({ stamp }: { stamp: StampView }) {
+export function VisaSpread({ stamp, onSaveLayout }: { stamp: StampView; /** Replaces saving to the server (the Design gallery has no server). */ onSaveLayout?: (body: Parameters<typeof api.stamps.layout>[1]) => void }) {
   const { width: sw, height: sh } = useWindowDimensions();
   const queryClient = useQueryClient();
   const [viewing, setViewing] = useState<number | null>(null);
@@ -56,7 +56,7 @@ export function VisaSpread({ stamp }: { stamp: StampView }) {
               </View>
             </View>
           </PageStock>
-          <ScrapbookPage stampId={stamp.id} photos={stamp.photos} width={pageW} height={pageH} editable={stamp.mine} onLayout={(body) => save.mutate(body)} onOpenPhoto={setViewing} />
+          <ScrapbookPage stampId={stamp.id} photos={stamp.photos} width={pageW} height={pageH} editable={stamp.mine} onLayout={(body) => (onSaveLayout ? onSaveLayout(body) : save.mutate(body))} onOpenPhoto={setViewing} />
         </View>
       </Spread>
 

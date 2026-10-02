@@ -53,6 +53,7 @@ export default function Welcome() {
         <Text variant="footnote" color="textTertiary">
           For adults 21 and over.
         </Text>
+        {__DEV__ ? <Button title="Design gallery (development)" variant="plain" compact block={false} onPress={() => router.push("/design")} /> : null}
       </View>
     </View>
   );

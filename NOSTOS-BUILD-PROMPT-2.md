@@ -39,7 +39,7 @@ Nostos is STRICTLY PERSONAL for this version. No feed, no likes, no follows, no 
 - [x] F.10 Stamp flow (where are you list, km at 1000 m+, honesty banner, calm disabled state, compose, landing)
 - [x] F.11 Map (dark, glowing brass pins, dim pins, bottom sheet, custom markers)
 - [x] F.12 Place page, settings, welcome, sign up (age gate), under-21 screen, first run, delete-account and legal restyled
-- [ ] F.13 Dev-only Design gallery
+- [x] F.13 Dev-only Design gallery
 
 ## G. Tests and honesty
 - [ ] G.1 Unit-test logic: layout, deterministic stamp design, ordering and page numbers, photo slots, theme lint, geofence states, distance formatting, multi-photo rules.

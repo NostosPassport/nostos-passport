@@ -103,6 +103,12 @@ export default function Settings() {
           <ListRow icon="questionmark.circle.fill" title="Support" external onPress={() => openWebPage(LEGAL.support)} />
         </ListGroup>
 
+        {__DEV__ ? (
+          <ListGroup header="Development">
+            <ListRow icon="paintpalette.fill" title="Design gallery" chevron onPress={() => router.push("/design")} accessibilityHint="Every visual piece on made-up data" />
+          </ListGroup>
+        ) : null}
+
         <ListGroup>
           <ListRow icon="rectangle.portrait.and.arrow.right" title="Sign out" onPress={confirmSignOut} />
           <ListRow
