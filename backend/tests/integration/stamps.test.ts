@@ -328,3 +328,28 @@ describe("pages and slots", () => {
     expect(second.nextAfter).toBeNull();
   });
 });
+
+describe("my place page", () => {
+  it("stacks my stamps at a place by night, oldest first, and says whether I'm inside right now", async () => {
+    const { getMyPlacePage, stampDay } = await import("@/server/services/stamps");
+    const v = await makeVenue();
+    const me = await makeActor();
+    const other = await makeActor({ isPrivate: false });
+    const d1 = new Date("2026-09-20T23:30:00Z"), d2 = new Date("2026-09-20T23:50:00Z"), d3 = new Date("2026-09-27T23:30:00Z");
+    await makeStamp(me, v.id, { caption: "a", now: d1 });
+    await makeStamp(me, v.id, { caption: "b", now: d2 });
+    await makeStamp(me, v.id, { caption: "c", now: d3 });
+    await makeStamp(other, v.id, { caption: "not mine" });
+    await makeStamp(me, (await makeVenue()).id, { caption: "elsewhere" });
+    const page = await getMyPlacePage(prisma, me, v.slug, INSIDE);
+    expect(page.stamps.map((s) => s.caption)).toEqual(["a", "b", "c"]);
+    expect(page.visits.map((x) => [x.day, x.stamps.length])).toEqual([[stampDay(d1), 2], [stampDay(d3), 1]]);
+    expect(page.inside).toBe(true);
+    expect(page.distanceM).toBeLessThanOrEqual(v.geofenceMeters);
+    expect((await getMyPlacePage(prisma, me, v.id, OUTSIDE)).inside).toBe(false);
+    expect(await getMyPlacePage(prisma, me, v.id)).toMatchObject({ inside: null, distanceM: null });
+    expect(JSON.stringify(page)).not.toContain("not mine");
+    await expect(getMyPlacePage(prisma, null, v.id)).rejects.toMatchObject({ status: 401 });
+    await expect(getMyPlacePage(prisma, me, "nope")).rejects.toMatchObject({ status: 404 });
+  });
+});

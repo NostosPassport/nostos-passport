@@ -12,7 +12,8 @@
  */
 import { z } from "zod";
 import type { Db } from "@/lib/db";
-import { isValidLatLng } from "@/lib/geo";
+import { distanceMeters, isValidLatLng } from "@/lib/geo";
+import { localParts } from "@/lib/time";
 import { pageAndSlot } from "@/lib/layout";
 import { getStorage, newStorageKey, type BlobStorage } from "@/lib/storage";
 import type { Actor } from "@/server/actor";
@@ -455,4 +456,40 @@ export async function listFeed(db: Db, actor: Actor | null, before?: string | nu
   });
   const page = rows.slice(0, STAMPS_PAGE);
   return { stamps: await toStampViews(db, me, page, now), nextBefore: rows.length > STAMPS_PAGE ? cursorOf(page[page.length - 1]!) : null };
+}
+
+/** The local calendar day (America/New_York) a stamp was made on: YYYY-MM-DD. Stamps at one place on one day stack together. */
+export const stampDay = (d: Date) => {
+  const p = localParts(d);
+  return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+};
+
+/**
+ * Your own page for one place: every stamp you made there, oldest first, grouped by the day (so the same place on different
+ * nights stacks as separate visits), plus whether you are inside its geofence right now. The position is only used for this
+ * answer (never stored). Owner only: it is built from your own stamps and nobody else's.
+ */
+export async function getMyPlacePage(db: Db, actor: Actor | null, idOrSlug: string, pos?: { lat: number; lng: number } | null, now = new Date()) {
+  const me = requireSignedIn(actor);
+  const place = await db.venue.findFirst({ where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] }, select: { id: true, slug: true, name: true, address: true, neighborhood: true, lat: true, lng: true, geofenceMeters: true, osmId: true } });
+  if (!place) throw notFound("Place not found");
+  const rows = await db.photo.findMany({ where: { userId: me.userId, venueId: place.id, hiddenAt: null, removedAt: null }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: stampSelect });
+  const stamps = await toStampViews(db, me, rows, now);
+  const visits: { day: string; stamps: typeof stamps }[] = [];
+  for (const st of stamps) {
+    const day = stampDay(st.createdAt);
+    const last = visits[visits.length - 1];
+    if (last && last.day === day) last.stamps.push(st);
+    else visits.push({ day, stamps: [st] });
+  }
+  const here = pos && isValidLatLng(pos) ? Math.round(distanceMeters(pos, place)) : null;
+  const { osmId, ...rest } = place;
+  return {
+    place: { ...rest, fromOsm: osmId !== null },
+    stamps,
+    visits,
+    /** true or false when a position was sent, null when it wasn't. */
+    inside: here === null ? null : here <= place.geofenceMeters,
+    distanceM: here,
+  };
 }

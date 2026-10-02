@@ -1,5 +1,5 @@
 /**
- * COPIED VERBATIM from backend/src/contracts/api.ts (this repo, commit 70fecc8).
+ * COPIED VERBATIM from backend/src/contracts/api.ts (this repo, commit e4d6039).
  * Do not edit here: change the backend contract, then re-copy with `npm run sync:contracts`.
  */
 /**
@@ -222,6 +222,17 @@ export const UserPlacesResponse = z
 /** GET /api/songs/search?q= : metadata from Apple's iTunes Search API, proxied. */
 export const SongResult = z.object({ title: z.string(), artist: z.string(), album: z.string().nullable(), artUrl: z.string().nullable(), sourceId: z.string() }).strict();
 export const SongSearchResponse = z.object({ songs: z.array(SongResult) }).strict();
+
+/** GET /api/places/:id/mine?lat=&lng=: your own page for a place. `visits` stack your stamps by night; `inside` is null without a position. */
+export const MyPlacePageResponse = z
+  .object({
+    place: Place.omit({ fromOsm: true }).extend({ fromOsm: z.boolean() }).strict(),
+    stamps: z.array(StampView),
+    visits: z.array(z.object({ day: z.string(), stamps: z.array(StampView) }).strict()),
+    inside: z.boolean().nullable(),
+    distanceM: z.number().int().nullable(),
+  })
+  .strict();
 
 // ------------------------------------------------------------------------------------------------
 // People

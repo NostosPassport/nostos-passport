@@ -27,6 +27,7 @@ import * as meFollowingR from "@/app/api/me/following/route";
 import * as placesR from "@/app/api/places/route";
 import * as placeR from "@/app/api/places/[id]/route";
 import * as nearbyR from "@/app/api/places/nearby/route";
+import * as placeMineR from "@/app/api/places/[id]/mine/route";
 import * as placeStampsR from "@/app/api/places/[id]/stamps/route";
 import * as stampR from "@/app/api/stamps/[id]/route";
 import * as stampPhotosR from "@/app/api/stamps/[id]/photos/route";
@@ -79,6 +80,7 @@ const REGISTRY: Record<string, ZodTypeAny | "binary"> = {
   "GET /api/places": C.PlacesResponse,
   "GET /api/places/[id]": C.PlaceResponse,
   "GET /api/places/nearby": C.NearbyPlacesResponse,
+  "GET /api/places/[id]/mine": C.MyPlacePageResponse,
   "POST /api/places/[id]/stamps": C.CreateStampResponse,
   "GET /api/stamps/[id]": C.StampResponse,
   "PATCH /api/stamps/[id]": C.StampResponse,
@@ -216,6 +218,8 @@ describe("API contract", () => {
     await call("POST /api/places/[id]/stamps", placeStampsR.POST, { token: friendT, params: { id: p3.id }, status: 201, form: stampForm({ lat: String(INSIDE.lat), lng: String(INSIDE.lng), songTitle: "Only Song", songArtist: "Solo" }, false) });
     await call("POST /api/places/[id]/stamps", placeStampsR.POST, { token: friendT, params: { id: p4.id }, status: 201, form: stampForm({ lat: String(INSIDE.lat), lng: String(INSIDE.lng) }) });
     const stampId = full.stamp.id as string;
+    const mine = await call("GET /api/places/[id]/mine", placeMineR.GET, { token: me, params: { id: place.slug }, query: `?lat=${INSIDE.lat}&lng=${INSIDE.lng}` });
+    expect(mine).toMatchObject({ inside: true, visits: [{ stamps: [{ id: stampId }] }] });
 
     // Songs (proxied): the route calls Apple, so the contract test serves it a canned reply.
     const realFetch = globalThis.fetch;
