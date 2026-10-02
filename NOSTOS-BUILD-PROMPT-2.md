@@ -30,7 +30,7 @@ Nostos is STRICTLY PERSONAL for this version. No feed, no likes, no follows, no 
 - [x] F.1 Cover (Skia leather grain, brass foil wordmark and original emblem, drag/tilt highlight, border, vignette, shadow, three numbers, gear)
 - [x] F.2 Open animation (3D swing, hinge left, inner-edge shading)
 - [x] F.3 Bearer page
-- [ ] F.4 Pages (two-page spreads, gutter, page edges, numbers, ribbon, guilloche, 3 slots per page, seeded jitter, pinned ribbons)
+- [x] F.4 Pages (two-page spreads, gutter, page edges, numbers, ribbon, guilloche, 3 slots per page, seeded jitter, pinned ribbons)
 - [ ] F.5 Page flip (drag from edge, tap edges, rotateY hinge with live shading, springs, hold halfway, reduced motion crossfade)
 - [ ] F.6 Stamps (Skia/SVG brass ink, deterministic design from place id, border from neighborhood, pure function with tests, completed-neighborhood foil stamp)
 - [ ] F.7 Stamp landing (slam, ink spread, glow, shake, haptic, photos pin, "Added to page N", progress)

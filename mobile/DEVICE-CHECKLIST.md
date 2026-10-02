@@ -96,3 +96,4 @@ Seed accounts: `avaa` (private, four requests waiting), `maya_r` (public, verifi
 - [ ] Cover: foil highlight follows a finger drag, follows tilt, shimmers when idle, and stops with Reduce Motion on.
 - [ ] Open animation: the cover swings on its left edge, shades while turning, and the page under it is shadowed then clears. With Reduce Motion it crossfades.
 - [ ] Bearer page: your photo or initial, name, handle, passport number, issue date and the two machine lines sit inside the page rule without clipping, at the smallest and largest text sizes; a long bio stops at three lines.
+- [ ] Pages: a spread shows two pages with a dark fold down the middle, thin page edges on the outer sides that grow with the pages on that side, a page number in each bottom outer corner, faint guilloche behind the stamps and wave bands at the top. Stamps sit three to a page, slightly tilted and never colliding. A pinned stamp has a brass ribbon.
