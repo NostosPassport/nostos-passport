@@ -5,6 +5,7 @@ import { TextInput } from "react-native";
 
 import { api, errorText } from "@/api";
 import { useAuth } from "@/auth/auth-context";
+import { FormHeader } from "@/components/brand/form-header";
 import { Button } from "@/components/ui/button";
 import { FormScreen } from "@/components/ui/form-screen";
 import { InlineError } from "@/components/ui/inline-error";
@@ -38,6 +39,7 @@ export default function SignIn() {
 
   return (
     <FormScreen>
+      <FormHeader title="Welcome back" line="Your passport is where you left it." />
       <FieldGroup errors={[emailError]}>
         <Field
           label="Email"
