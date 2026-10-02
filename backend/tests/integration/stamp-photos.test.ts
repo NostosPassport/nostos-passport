@@ -70,7 +70,7 @@ describe("multi-photo stamps", () => {
     await expect(setPhotoLayout(prisma, me, s.id, { photos: [{ id: a!.id, rotation: 90 }] })).rejects.toThrow();
     await expect(setPhotoLayout(prisma, me, s.id, { photos: [{ id: "nope", x: 0.1 }] })).rejects.toMatchObject({ status: 400 });
     const other = await makeActor({ isPrivate: false });
-    await expect(setPhotoLayout(prisma, other, s.id, { photos: [{ id: a!.id, x: 0.9 }] })).rejects.toMatchObject({ status: 403 });
+    await expect(setPhotoLayout(prisma, other, s.id, { photos: [{ id: a!.id, x: 0.9 }] })).rejects.toMatchObject({ status: 404 });
     await expect(prisma.stampPhoto.update({ where: { id: a!.id }, data: { storageKey: "photos/other.png" } })).rejects.toThrow(/immutable/);
   });
 
@@ -94,8 +94,8 @@ describe("multi-photo stamps", () => {
     const me = await makeActor({ isPrivate: false });
     const stranger = await makeActor();
     const s = await stampWith(me, v.id, 2);
-    await expect(addStampPhotos(prisma, stranger, s.id, many(1))).rejects.toMatchObject({ status: 403 });
-    await expect(removeStampPhoto(prisma, stranger, s.id, s.photos[0]!.id)).rejects.toMatchObject({ status: 403 });
+    await expect(addStampPhotos(prisma, stranger, s.id, many(1))).rejects.toMatchObject({ status: 404 });
+    await expect(removeStampPhoto(prisma, stranger, s.id, s.photos[0]!.id)).rejects.toMatchObject({ status: 404 });
     expect((await getStamp(prisma, stranger, s.id)).stamp.photos).toHaveLength(2);
     await prisma.photo.update({ where: { id: s.id }, data: { hiddenAt: new Date() } });
     await expect(getStamp(prisma, stranger, s.id)).rejects.toMatchObject({ status: 404 });

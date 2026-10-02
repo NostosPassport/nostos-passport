@@ -6,7 +6,7 @@
  * restore user content.
  */
 import type { Actor } from "@/server/actor";
-import { forbidden, unauthorized } from "@/server/errors";
+import { forbidden, notFound, unauthorized } from "@/server/errors";
 
 export function requireSignedIn(actor: Actor | null): Actor {
   if (!actor) throw unauthorized();
@@ -32,7 +32,7 @@ export function assertAdmin(actor: Actor | null): Actor {
 /** Editing user-generated content: author only. Moderators don't edit (they hide), so they're refused too. */
 export function assertCanEditOwnContent(actor: Actor | null, content: { userId: string }): Actor {
   const a = requireSignedIn(actor);
-  if (a.userId !== content.userId) throw forbidden("You can only edit your own content");
+  if (a.userId !== content.userId) throw notFound("Stamp not found");
   return a;
 }
 

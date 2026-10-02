@@ -30,3 +30,4 @@ One line per green gate run, appended by scripts/gate.sh only. Format: UTC time 
 2026-10-02T17:19:52Z | 65cbb45 | backend 269 | mobile 292
 2026-10-02T17:30:19Z | 04c2247 | backend 269 | mobile 292
 2026-10-02T17:33:31Z | 04c2247 | backend 271 | mobile 292
+2026-10-02T17:36:59Z | 4d5424d | backend 273 | mobile 292

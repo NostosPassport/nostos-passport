@@ -120,13 +120,13 @@ describe("editing and removing a stamp", () => {
     await expect(editStamp(prisma, me, p.id, { caption: "" })).resolves.toBeTruthy();
   });
 
-  it("only the author edits or removes: everyone else, staff included, gets 403 or 404", async () => {
+  it("only the author edits or removes: everyone else, staff included, gets the same 404 as a missing stamp", async () => {
     const v = await makeVenue();
     const me = await makeActor({ isPrivate: false });
     const s = await makeStamp(me, v.id);
     for (const other of [await makeActor(), await makeActor({ role: "MODERATOR" }), await makeActor({ role: "ADMIN" })]) {
-      await expect(editStamp(prisma, other, s.id, { caption: "mine now" })).rejects.toMatchObject({ status: 403 });
-      await expect(removeStamp(prisma, other, s.id)).rejects.toMatchObject({ status: 403 });
+      await expect(editStamp(prisma, other, s.id, { caption: "mine now" })).rejects.toMatchObject({ status: 404 });
+      await expect(removeStamp(prisma, other, s.id)).rejects.toMatchObject({ status: 404 });
     }
     await expect(editStamp(prisma, null, s.id, { caption: "x" })).rejects.toMatchObject({ status: 401 });
   });

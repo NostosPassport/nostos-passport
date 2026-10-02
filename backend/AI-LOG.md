@@ -26,3 +26,7 @@ sections (logged in OPEN-QUESTIONS 4).
 - Verified reviewer references moderation.ts:233,305 at current HEAD: personal-mode HTTP returned 200 in both staff regression cases before the fix.
 - Social moderation services and web page now reject personal mode before reading legacy records; queue, hidden, log, decisions and direct flagging are covered. Records remain append-only.
 - Baseline gate: backend 269, mobile 292. Postgres is isolated on 5438; test database allowlist accepts exact nostos_codex_test.
+
+## Codex lane, phase 2
+- Reproduced foreign edit returning 403 versus missing 404, in both personal and social modes.
+- Shared ownership guard now returns the identical stamp-not-found response before hidden or content checks. HTTP regression exercises edit, remove, append, layout and photo removal for USER, MODERATOR and ADMIN. Existing unsafe 403 expectations now require 404.
