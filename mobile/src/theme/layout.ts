@@ -54,6 +54,8 @@ export const size = {
   listRow: 68,
   heroHeight: 220,
   borderEmphasis: 1.5,
+  /** The dark ring around the raised Stamp button. */
+  focusRingWidth: 4,
 } as const;
 
 /** Width / height of media frames. */

@@ -12,7 +12,7 @@ Nostos is STRICTLY PERSONAL for this version. No feed, no likes, no follows, no 
 ## C. Rescope
 - [x] C.1 SOCIAL_ENABLED flag (backend env, mobile config), default false. Off: every social route (feed, follows, follow requests, likes, activity, blocks, people search, other users' profiles and stamps) 404s; mobile hides those tabs and screens; every passport visible only to its owner. Keep code and tests; run the social tests with the flag on, add tests with it off.
 - [x] C.2 Invariants tests: flag off, no endpoint returns another user's stamps, places, handle or counts to anyone but the owner.
-- [ ] C.3 Mobile tabs: exactly Passport (home), Stamp (large center button), Map. Settings gear on Passport. No feed, no bell.
+- [x] C.3 Mobile tabs: exactly Passport (home), Stamp (large center button), Map. Settings gear on Passport. No feed, no bell.
 
 ## D. Data features
 - [x] D.1 Multi-photo stamps: up to 6 photos, in-app camera only. stamp_photo table (stamp id, storage key, position, optional x, y, rotation). EXIF/GPS stripped. Same immutability and hidden-never-deleted. Contract, API.md, tests (limit, ordering, strip, layout persistence, visibility).
