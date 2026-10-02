@@ -106,7 +106,8 @@ export async function seed(db: PrismaClient, opts: SeedOptions = {}): Promise<Se
       }
       const exempt = person.exempt === true;
       const where = exempt ? { lat: place.lat + 0.02, lng: place.lng } : near(place);
-      await db.photo.create({
+      await db.$transaction(async (tx) => {
+      await tx.photo.create({
         data: {
           id, userId: uid(person.handle), venueId: place.id, storageKey: keys[0] ?? null, mimeType: keys[0] ? "image/png" : null,
           caption: hasCaption ? rng.pick(CAPTIONS) : "", songTitle: song?.title ?? null, songArtist: song?.artist ?? null,
@@ -115,13 +116,14 @@ export async function seed(db: PrismaClient, opts: SeedOptions = {}): Promise<Se
       });
       for (const [k, key] of keys.entries()) {
         const laid = rng.chance(0.5);
-        await db.stampPhoto.create({
+        await tx.stampPhoto.create({
           data: {
             stampId: id, storageKey: key, mimeType: "image/png", position: k, createdAt: ago(age),
             ...(laid ? { x: Math.round(rng.next() * 80) / 100 + 0.1, y: Math.round(rng.next() * 80) / 100 + 0.1, rotation: Math.round((rng.next() - 0.5) * 20) } : {}),
           },
         });
       }
+      });
       stampIds.push({ id, userId: uid(person.handle), hidden: false, countable: !exempt });
     }
   }

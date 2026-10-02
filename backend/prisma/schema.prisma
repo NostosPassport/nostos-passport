@@ -162,6 +162,8 @@ model Venue {
 /// A stamp: one visit to a place, with a photo, a caption, a song, or any mix (a CHECK requires at least one).
 /// Stamps are immutable except caption, song, moderation state (hidden_at) and removed_at (final); a trigger enforces it.
 model Photo {
+  /// Immutable database transaction of creation; photos may only be inserted in that transaction.
+  creationTransaction String @default(dbgenerated("txid_current()::text")) @map("creation_transaction")
   id           String        @id @default(cuid())
   userId       String        @map("user_id")
   venueId      String        @map("venue_id")

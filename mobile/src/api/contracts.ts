@@ -1,5 +1,5 @@
 /**
- * COPIED VERBATIM from backend/src/contracts/api.ts (this repo, commit 33bc4dd).
+ * COPIED VERBATIM from backend/src/contracts/api.ts (this repo, commit a8fd412).
  * Do not edit here: change the backend contract, then re-copy with `npm run sync:contracts`.
  */
 /**
@@ -199,7 +199,7 @@ export const StampEditRequest = z
   .partial()
   .strict()
   .refine((v) => Object.keys(v).length > 0, "Nothing to change");
-/** PATCH /api/stamps/:id/photos: the scrapbook layout. Owner only. POST adds photos (multipart `photos`); POST .../photos/:photoId/remove removes one. */
+/** PATCH /api/stamps/:id/photos: the scrapbook layout. Owner only. POST rejects later additions (400 for the owner, 404 for foreign/missing stamps); POST .../photos/:photoId/remove removes one. */
 export const PhotoLayoutRequest = z
   .object({
     photos: z

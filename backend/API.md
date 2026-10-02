@@ -100,7 +100,7 @@ proxied through the backend to Apple's public iTunes Search API with no user ide
 |---|---|---|
 | `GET /api/stamps/:id` | | `StampResponse` (404 unless visible) |
 | `PATCH /api/stamps/:id` | `StampEditRequest`: caption and song only; frozen while a flag is open | `StampResponse` |
-| `POST /api/stamps/:id/photos` | multipart `photos` (repeated) | `StampResponse`: add photos to your own stamp, up to 6 in all |
+| `POST /api/stamps/:id/photos` | multipart `photos` (repeated) | Creation-only: returns 400 for the owner; foreign/missing stamps return the same 404 |
 | `PATCH /api/stamps/:id/photos` | `PhotoLayoutRequest`: `{ photos: [{ id, position?, x?, y?, rotation? }] }` | `StampResponse`: the scrapbook layout and order, owner only |
 | `POST /api/stamps/:id/photos/:photoId/remove` | none | `StampResponse`: hides one photo for good, never deletes |
 | `POST /api/stamps/:id/remove` | none | `RemoveStampResponse`: "delete from profile", final, never a hard delete |
@@ -110,7 +110,7 @@ proxied through the backend to Apple's public iTunes Search API with no user ide
 | `GET /api/users/:handle/places` | | `UserPlacesResponse`: distinct places with stamp count and latest stamp |
 | `GET /api/songs/search?q=` | | `SongSearchResponse`: signed in, rate limited (120 an hour) |
 
-A stamp holds up to 6 photos (`photos`, in page order, each with an optional scrapbook `x`, `y` as 0..1 of the page and `rotation` in degrees; `photoUrl` is the first). Photos are re-encoded, so no EXIF or GPS survives, and they are hidden, never deleted.
+Photos can only be attached in the stamp creation request, never added later. A stamp holds up to 6 photos (`photos`, in page order, each with an optional scrapbook `x`, `y` as 0..1 of the page and `rotation` in degrees; `photoUrl` is the first). Photos are re-encoded, so no EXIF or GPS survives, and they are hidden, never deleted.
 
 A `StampView` carries the author (always a full profile view), the place, the song, likes and `mine`. It never carries
 coordinates, storage keys or user ids. `hidden` and `removed` are true only for staff.

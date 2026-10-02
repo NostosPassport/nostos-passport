@@ -243,31 +243,14 @@ async function ownStamp(db: Db, actor: Actor | null, stampId: string) {
   return { me, stamp };
 }
 
-/** Add photos to your own stamp, up to 6 in all. They take the next free positions. */
+/** Compatibility endpoint: photographs are fixed at creation, never appended later. */
 export async function addStampPhotos(db: Db, actor: Actor | null, stampId: string, buffers: Buffer[], now = new Date(), storage: BlobStorage = getStorage()) {
-  const { me, stamp } = await ownStamp(db, actor, stampId);
-  const live = await db.stampPhoto.findMany({ where: { stampId, removedAt: null }, select: { position: true } });
-  if (buffers.length === 0) throw badRequest("Attach at least one photo");
-  if (live.length + buffers.length > MAX_STAMP_PHOTOS) throw badRequest(`A stamp holds up to ${MAX_STAMP_PHOTOS} photos`);
-  const images = await Promise.all(buffers.map((b) => processImage(b)));
-  const keys = images.map((img) => newStorageKey("photos", img.kind.ext));
-  const free = [0, 1, 2, 3, 4, 5].filter((n) => !live.some((p) => p.position === n));
-  const written: string[] = [];
-  try {
-    await db.$transaction(async (tx) => {
-      for (const [i, img] of images.entries()) {
-        await tx.stampPhoto.create({ data: { stampId, storageKey: keys[i]!, mimeType: img.kind.mime, position: free[i]!, createdAt: now } });
-        await storage.put(keys[i]!, img.bytes, img.kind.mime);
-        written.push(keys[i]!);
-      }
-      await tx.photo.update({ where: { id: stampId }, data: { editedAt: now } });
-    });
-  } catch (err) {
-    await Promise.all(written.map((k) => storage.delete(k).catch(() => {})));
-    throw err;
-  }
-  void stamp;
-  return getStamp(db, me, stampId, now);
+  await ownStamp(db, actor, stampId);
+  // Retain the signature for callers, but reject before decoding images or writing files.
+  void buffers;
+  void now;
+  void storage;
+  throw badRequest("Photos can only be attached when creating a stamp");
 }
 
 /** Remove one photo from your stamp (final: it is hidden, never deleted). A stamp can't be left with nothing in it. */

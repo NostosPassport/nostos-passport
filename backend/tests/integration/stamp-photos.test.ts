@@ -24,27 +24,29 @@ describe("multi-photo stamps", () => {
     await expect(stampWith(me, (await makeVenue()).id, 7)).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/up to 6 photos/) });
     await expect(addStampPhotos(prisma, me, s.id, many(1))).rejects.toMatchObject({ status: 400 });
     // The database refuses too, whatever the service says.
-    await expect(prisma.stampPhoto.create({ data: { stampId: s.id, storageKey: "photos/x7.png", mimeType: "image/png", position: 5 } })).rejects.toThrow(/at most 6 photos/);
+    await expect(prisma.$transaction(async (tx) => {
+      const parent = await tx.photo.create({ data: { userId: me.userId, venueId: v.id, caption: "batch", ...INSIDE } });
+      for (let i = 0; i < 7; i++) await tx.stampPhoto.create({ data: { stampId: parent.id, storageKey: `photos/limit${i}.png`, mimeType: "image/png", position: i % 6 } });
+    })).rejects.toThrow(/at most 6 photos/);
     await expect(prisma.stampPhoto.create({ data: { stampId: s.id, storageKey: "photos/x8.png", mimeType: "image/png", position: 6 } })).rejects.toThrow();
   });
 
-  it("adds photos into the next free positions and keeps the order after a removal", async () => {
+  it("refuses later additions and keeps the original order after a removal", async () => {
     const v = await makeVenue();
     const me = await makeActor();
     const s = await stampWith(me, v.id, 3);
     const removed = await removeStampPhoto(prisma, me, s.id, s.photos[1]!.id);
     expect(removed.stamp.photos.map((p) => p.position)).toEqual([0, 2]);
-    const added = await addStampPhotos(prisma, me, s.id, many(2));
-    expect(added.stamp.photos.map((p) => p.position)).toEqual([0, 1, 2, 3]);
-    expect(added.stamp.editedAt).not.toBeNull();
+    await expect(addStampPhotos(prisma, me, s.id, many(2))).rejects.toMatchObject({ status: 400 });
+    expect((await getStamp(prisma, me, s.id)).stamp.photos.map((p) => p.position)).toEqual([0, 2]);
+    expect(removed.stamp.editedAt).not.toBeNull();
   });
 
   it("strips EXIF and GPS from every photo", async () => {
     const v = await makeVenue();
     const me = await makeActor();
     const dirty = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#aa8844" } }).jpeg().withExif({ IFD0: { Make: "LeakyPhone" }, IFD3: { GPSLatitudeRef: "N", GPSLatitude: "40/1 43/1 36/1" } }).toBuffer();
-    const s = await createStamp(prisma, me, v.id, { photos: [dirty, dirty], meta: { caption: "", lat: String(INSIDE.lat), lng: String(INSIDE.lng) } });
-    await addStampPhotos(prisma, me, s.id, [dirty]);
+    const s = await createStamp(prisma, me, v.id, { photos: [dirty, dirty, dirty], meta: { caption: "", lat: String(INSIDE.lat), lng: String(INSIDE.lng) } });
     const rows = await prisma.stampPhoto.findMany({ where: { stampId: s.id } });
     expect(rows).toHaveLength(3);
     for (const r of rows) {

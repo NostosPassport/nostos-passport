@@ -30,3 +30,8 @@ sections (logged in OPEN-QUESTIONS 4).
 ## Codex lane, phase 2
 - Reproduced foreign edit returning 403 versus missing 404, in both personal and social modes.
 - Shared ownership guard now returns the identical stamp-not-found response before hidden or content checks. HTTP regression exercises edit, remove, append, layout and photo removal for USER, MODERATOR and ADMIN. Existing unsafe 403 expectations now require 404.
+
+## Codex lane, phase 3
+- Three creation-only regression cases failed before implementation, including direct append after a parent update.
+- Later append rejects before image processing/storage. Forward migration adds a database-forced immutable creation transaction and checks it on every photo insert. Six-photo limits, EXIF stripping, layout and final removal coverage remain. Demo seed now creates each photo set atomically with its parent.
+- Contract comment changed; generated mobile contract is synchronized in this same commit. Merge should regenerate it with npm run sync:contracts.

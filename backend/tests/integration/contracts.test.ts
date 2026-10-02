@@ -85,7 +85,7 @@ const REGISTRY: Record<string, ZodTypeAny | "binary"> = {
   "POST /api/places/[id]/stamps": C.CreateStampResponse,
   "GET /api/stamps/[id]": C.StampResponse,
   "PATCH /api/stamps/[id]": C.StampResponse,
-  "POST /api/stamps/[id]/photos": C.StampResponse,
+  "POST /api/stamps/[id]/photos": C.ErrorResponse,
   "PATCH /api/stamps/[id]/photos": C.StampResponse,
   "POST /api/stamps/[id]/photos/[photoId]/remove": C.StampResponse,
   "GET /api/me/neighborhoods": C.NeighborhoodIndexResponse,
@@ -263,15 +263,16 @@ describe("API contract", () => {
     const pins = await call("GET /api/me/pins", pinsR.GET, { token: me });
     expect(pins.stamps.map((x: { id: string }) => x.id)).toEqual([stampId]);
 
-    // Photos: add, lay out, remove.
+    // Photos: reject additions, lay out and remove the creation-time photo.
     const more = new FormData();
     more.append("photos", new Blob([new Uint8Array(png())], { type: "image/png" }), "a.png");
     more.append("photos", new Blob([new Uint8Array(png())], { type: "image/png" }), "b.png");
-    const added = await call("POST /api/stamps/[id]/photos", stampPhotosR.POST, { token: me, params: { id: stampId }, form: more });
-    expect(added.stamp.photos).toHaveLength(3);
-    const laid = await call("PATCH /api/stamps/[id]/photos", stampPhotosR.PATCH, { token: me, params: { id: stampId }, body: { photos: [{ id: added.stamp.photos[1].id, x: 0.4, y: 0.6, rotation: -7 }] } });
-    expect(laid.stamp.photos[1]).toMatchObject({ x: 0.4, y: 0.6, rotation: -7 });
-    await call("POST /api/stamps/[id]/photos/[photoId]/remove", stampPhotoRemoveR.POST, { token: me, params: { id: stampId, photoId: added.stamp.photos[2].id } });
+    const rejected = await call("POST /api/stamps/[id]/photos", stampPhotosR.POST, { token: me, params: { id: stampId }, form: more, status: 400 });
+    expect(rejected).toEqual({ error: "bad_request", message: "Photos can only be attached when creating a stamp" });
+    const photoId = full.stamp.photos[0].id;
+    const laid = await call("PATCH /api/stamps/[id]/photos", stampPhotosR.PATCH, { token: me, params: { id: stampId }, body: { photos: [{ id: photoId, x: 0.4, y: 0.6, rotation: -7 }] } });
+    expect(laid.stamp.photos[0]).toMatchObject({ x: 0.4, y: 0.6, rotation: -7 });
+    await call("POST /api/stamps/[id]/photos/[photoId]/remove", stampPhotoRemoveR.POST, { token: me, params: { id: stampId, photoId } });
 
     // Stamp detail, likes, activity, edit, remove
     const friendStamp = myFeed.stamps[0].id as string;
