@@ -10,6 +10,17 @@ A **stamp** is one visit to a **place**: a photo, a caption, a song, or any mix 
 your profile, a collection of stamps. (In the database a stamp is a row in `photo` and a place is a row in `venue`; the
 API and the app say stamp and place.)
 
+## Personal mode (default)
+
+With `SOCIAL_ENABLED=false`, only the owner can read a passport, its stamps or its visited places. Foreign and missing
+stamp mutation IDs return the same 404 status, body and headers. Feed, follows, likes, activity, blocks, people search,
+moderation and admin tools return 404, including service and web callers. Existing social and moderation records stay stored.
+The social behavior documented below applies only when the flag is explicitly enabled.
+
+Photos are attached only when creating a stamp. `POST /api/stamps/:id/photos` rejects later additions with 400 for the
+owner and 404 for foreign/missing stamps. Caption/song edits and final photo removal must leave actual live content;
+the original immutable storage key does not count. Layout edits remain supported.
+
 ## Conventions
 
 | | |

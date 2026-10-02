@@ -80,9 +80,23 @@ source id), so no made-up links exist. Seeded stamps use generated placeholder i
   filed under its neighborhood; without them it falls back to the old East Village and Lower East Side outlines.
 - **Page and slot**: the oldest live stamp is page 1 slot 1, three slots to a page. Removing a stamp closes the gap behind it
   (later stamps move up); the oldest never move. One function (`src/lib/layout.ts`), mirrored in the app, same test vectors.
-- **Multi-photo**: all of a stamp's photos live in `stamp_photo`; `photo.storage_key` stays as the first photo at creation (the
-  CHECK needs it) and is never read for display. The in-app camera rule is a client rule: the server cannot tell a camera from a
+- **Multi-photo**: all of a stamp's photos live in `stamp_photo`; `photo.storage_key` stays as the first photo at creation for
+  immutable audit history. Live stamp_photo rows drive display and content constraints. The in-app camera rule is a client rule: the server cannot tell a camera from a
   library, it only strips and limits.
 - **Pins** are their own table, owner only, up to 4, unpinning deletes the row (a layout choice, not content).
 - **Social off**: with `SOCIAL_ENABLED` off the privacy functions themselves treat every viewer but the owner as a stranger
   (staff too), so even a forgotten route check cannot leak; social routes 404.
+
+## Codex lane: reviewer fixes
+
+- Personal moderation/admin/social services reject the disabled flag before reading records. Foreign passport services
+  return 404, including staff, so legacy records cannot reveal handles through a direct service or web caller.
+- Photo sets are creation-only. A forced, immutable creation-transaction marker gates database child inserts; the
+  service rejects later append before image processing or storage. Seed parents and children are one transaction.
+- Empty-content checks use live stamp_photo rows. Parent locks serialize service edits/removals; deferred constraint
+  triggers validate committed content. Photo updates advance the parent row version to invalidate stale repeatable-read snapshots.
+- Historical empty live stamps are not assigned invented content or automatically removed. The migration preflight
+  stops for explicit review. See OPEN-QUESTIONS.md, Codex lane.
+- Summary photos are selected from live rows in layout order, including place, activity and moderation previews.
+- Tests and exact source references are in the Codex lane review. No mobile visual or device claim is made here.
+- A live song needs a non-whitespace title and artist even through direct SQL; removed historical metadata remains final.

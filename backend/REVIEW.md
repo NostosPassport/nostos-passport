@@ -25,3 +25,18 @@ How each rule from `../CLAUDE.md` is enforced, and the test that proves it. Veri
 - Migrations in `prisma/migrations/2026100*`: read `strip_to_nostos` (drops), `stamps` (triggers, CHECKs), `flag_category`.
 - Open questions that affect the backend: `../OPEN-QUESTIONS.md` (L1 songs terms, L2 age gate, L3 SAFE for Kids Act, L4
   geolocation disclosures).
+
+## Codex lane review, 2026-10-02
+
+The default is personal mode. Social-mode rules in the table above apply only with SOCIAL_ENABLED enabled.
+Personal moderation/admin callers are 404s, foreign mutations have identical status/body/headers, photos are creation-only,
+and deferred live-content constraints protect edit/removal races, including repeatable-read snapshots.
+Live songs must have non-whitespace titles and artists at the database boundary.
+
+Regression coverage: personal-moderation.test.ts, stamp-mutation-visibility.test.ts, stamp-photo-creation.test.ts,
+stamp-content.test.ts, backend-audit.test.ts and personal-staff-pages.test.ts. Invariant rule 11 is stronger.
+Final complete gate: backend 292 tests (34 files), mobile 292 tests (39 suites), contract sync and required invariants passed.
+
+Current detailed report: ../reviews/2026-10-02T180902Z-codex-1.md
+Contract-changing commit: 2723315. Regenerate mobile/src/api/contracts.ts with npm run sync:contracts after merge;
+do not resolve generated-copy conflicts manually. No other mobile source was edited in this lane.

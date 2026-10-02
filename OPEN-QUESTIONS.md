@@ -26,3 +26,10 @@ blocked. Legal questions are never decided by the builder.
 | L4 | **Geolocation data.** Coordinates are used for the geofence check and stripped from uploads; stamp coordinates are not shown to viewers. What disclosures does the privacy policy need? | Policy text carried over from Last Call and needs a rewrite for Nostos. |
 | L2b | **Age gate retries.** Nothing is stored about someone who fails the 21+ check, so they can try again with a different birthdate. Is that acceptable, or must we remember a refusal (for example a flag on the device)? The app stores nothing and never sends an under-21 birthdate to the server. | No memory of a refusal. |
 | L5 | **Sentry and privacy labels.** Error reporting is built but off (needs `EXPO_PUBLIC_SENTRY_ENABLED=1` and a DSN at build time). If you turn it on, does the App Store privacy label need "Diagnostics", is a data processing agreement needed, and where should the Sentry project live (EU or US)? Events carry no user, request or breadcrumbs. | Off. No DSN in the repo. |
+
+## Codex lane
+
+- If a data-bearing environment contains existing empty live stamps or invalid song metadata, who should review their disposition before the
+  live-content migration is deployed? The migration stops without inventing content or changing those records
+  (`backend/prisma/migrations/20261003140000_live_stamp_content/migration.sql:42`). The isolated Codex databases migrated
+  successfully; this is not a current implementation blocker. No legal decision is made here.
