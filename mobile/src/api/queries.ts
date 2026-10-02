@@ -64,6 +64,18 @@ export function usePeopleList(handle: string, list: "followers" | "following") {
   return useQuery({ queryKey: qk.people(handle, list), queryFn: () => api.users.people(handle, list) });
 }
 
+/** Your pinned stamps (up to 4). Owner only. */
+export function usePins() {
+  const { status } = useAuth();
+  return useQuery({ queryKey: qk.pins, queryFn: () => api.pins.get(), enabled: status === "signedIn", staleTime: 60_000 });
+}
+
+/** Your neighborhoods and how far through each you are. Owner only. */
+export function useNeighborhoodIndex() {
+  const { status } = useAuth();
+  return useQuery({ queryKey: qk.neighborhoods, queryFn: () => api.neighborhoods(), enabled: status === "signedIn", staleTime: 60_000 });
+}
+
 export function useProfileSettings() {
   return useQuery({ queryKey: qk.profileSettings, queryFn: api.me.profile });
 }

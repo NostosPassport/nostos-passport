@@ -7,6 +7,8 @@ export const qk = {
   following: ["me", "following"] as const,
   blocks: ["me", "blocks"] as const,
   profileSettings: ["me", "profile"] as const,
+  pins: ["me", "pins"] as const,
+  neighborhoods: ["me", "neighborhoods"] as const,
   followRequests: ["me", "follow-requests"] as const,
   activity: ["me", "activity"] as const,
   /** `user(handle)` is a prefix of the grid and places keys, so invalidating a passport refreshes its tabs too. */

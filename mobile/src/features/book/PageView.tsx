@@ -39,7 +39,7 @@ export function PageView({ page, side, width, height, stamps, pinnedIds = [], re
   const inset = Math.round(width * 0.06);
   const ribbonW = Math.round(width * 0.05);
   return (
-    <PageStock width={width} height={height}>
+    <PageStock width={width} height={height} spine={side === "left" ? "right" : "left"}>
       <Svg width={width} height={height} style={styles.fill} pointerEvents="none">
         <Path d={rosettePath(`page:${page}`, width / 2, height / 2, width * 0.42)} stroke={colors.brass} strokeOpacity={0.07} strokeWidth={bookStyle.pageLine} fill="none" />
         {wavePaths(`top:${page}`, width - inset * 2, band).map((d, i) => (

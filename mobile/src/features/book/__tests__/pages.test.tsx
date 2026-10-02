@@ -131,8 +131,11 @@ describe("PageView and Spread", () => {
     expect(screen.getByLabelText("Page 5")).toBeTruthy();
     expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
-  it("lays two pages side by side", async () => {
-    await render(<Spread pageWidth={300} pageHeight={426} spreadIndex={1} spreadTotal={3} left={<PageView page={1} side="left" width={300} height={426} stamps={[]} />} right={<PageView page={2} side="right" width={300} height={426} stamps={[]} />} />);
+  it("frames the pages it is given", async () => {
+    await render(<Spread pageWidth={300} pageHeight={426} spreadIndex={1} spreadTotal={3}>
+        <PageView page={1} side="left" width={300} height={426} stamps={[]} />
+        <PageView page={2} side="right" width={300} height={426} stamps={[]} />
+      </Spread>);
     expect(screen.getByLabelText("Page 1")).toBeTruthy();
     expect(screen.getByLabelText("Page 2")).toBeTruthy();
   });

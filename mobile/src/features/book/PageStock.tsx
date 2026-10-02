@@ -1,14 +1,30 @@
 import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 import { bookStyle, colors } from "@/theme";
 
-/** The paper of one page: near-black stock with a fine inset rule. Every page of the book is drawn on one. */
-export function PageStock({ width, height, children }: { width: number; height: number; children?: ReactNode }) {
+/**
+ * The paper of one page: near-black stock with a fine inset rule. `spine` is the side the page is bound on; that edge is
+ * shaded dark, like the fold of an open book. The shading belongs to the page, so a page in the middle of a turn carries it.
+ */
+export function PageStock({ width, height, spine, children }: { width: number; height: number; spine?: "left" | "right"; children?: ReactNode }) {
+  const gutter = Math.round(width * bookStyle.gutterShare);
   return (
     <View style={[{ width, height }, styles.stock]}>
       <View pointerEvents="none" style={[styles.rule, { margin: Math.round(width * 0.04) }]} />
       {children}
+      {spine ? (
+        <Svg width={gutter} height={height} style={[styles.fold, spine === "left" ? { left: 0 } : { right: 0 }]} pointerEvents="none">
+          <Defs>
+            <LinearGradient id={`fold-${spine}`} x1={spine === "left" ? "0" : "1"} y1="0" x2={spine === "left" ? "1" : "0"} y2="0">
+              <Stop offset="0" stopColor={colors.shadow} stopOpacity={0.85} />
+              <Stop offset="1" stopColor={colors.shadow} stopOpacity={0} />
+            </LinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width={gutter} height={height} fill={`url(#fold-${spine})`} />
+        </Svg>
+      ) : null}
     </View>
   );
 }
@@ -16,4 +32,5 @@ export function PageStock({ width, height, children }: { width: number; height: 
 const styles = StyleSheet.create({
   stock: { backgroundColor: colors.surface, overflow: "hidden" },
   rule: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, borderWidth: bookStyle.pageLine, borderColor: colors.hairline },
+  fold: { position: "absolute", top: 0 },
 });

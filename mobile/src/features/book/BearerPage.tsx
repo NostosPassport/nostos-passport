@@ -13,7 +13,7 @@ export function BearerPage({ width, height, bearer, avatarUrl }: { width: number
   const pad = Math.round(width * 0.09);
   const photo = Math.round(width * 0.3);
   return (
-    <PageStock width={width} height={height}>
+    <PageStock width={width} height={height} spine="left">
       <View style={[styles.body, { padding: pad }]} accessible accessibilityLabel={`Passport of ${bearer.displayName}, at ${bearer.handle}. ${fields.map((f) => `${f.label.toLowerCase()}: ${f.value}`).join(". ")}`}>
         <Text variant="serifLabel" color="brass" align="center">
           NOSTOS PASSPORT

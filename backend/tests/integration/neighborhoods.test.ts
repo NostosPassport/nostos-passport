@@ -61,7 +61,10 @@ describe("the real NYC boundaries", () => {
 describe("the importer covers more than bars", () => {
   const el = (id: number, tags: Record<string, string>, lat = 40.72, lng = -73.98): OverpassElement => ({ type: "node", id, lat, lon: lng, tags: { name: `N${id}`, ...tags } });
   it("keeps restaurants, cafes, parks, museums and bookstores, and drops what it doesn't know", async () => {
-    for (const [key, vals] of Object.entries(PLACE_KINDS)) expect(overpassQuery()).toContain(`"${key}"`), expect(vals.length).toBeGreaterThan(0);
+    for (const [key, vals] of Object.entries(PLACE_KINDS)) {
+      expect(overpassQuery()).toContain(`"${key}"`);
+      expect(vals.length).toBeGreaterThan(0);
+    }
     expect(overpassQuery()).toMatch(/restaurant/);
     expect(overpassQuery()).toMatch(/park/);
     await importNeighborhoods(prisma, HOODS);

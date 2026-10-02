@@ -34,7 +34,7 @@ const SUBTITLE = "PASSPORT";
  * The cover: black leather with brass foil. The wordmark and the emblem are one foil layer whose highlight sweeps with a
  * drag, with device tilt where the phone has it, and in a slow idle shimmer. Tapping opens the book.
  */
-export function Cover({ width, height, counts, onOpen, name }: { width: number; height: number; counts: CoverCounts; onOpen?: () => void; name?: string }) {
+export function Cover({ width, height, counts, onOpen, name, showCounts = true }: { width: number; height: number; counts: CoverCounts; onOpen?: () => void; name?: string; showCounts?: boolean }) {
   const { sweep, gesture } = useFoilSweep(width);
   const titleFont = useFont(CormorantGaramond_600SemiBold, Math.round(width * 0.135));
   const subFont = useFont(CourierPrime_400Regular, Math.round(width * 0.036));
@@ -109,7 +109,7 @@ export function Cover({ width, height, counts, onOpen, name }: { width: number; 
           </Canvas>
         </Pressable>
       </GestureDetector>
-      <Counts counts={counts} />
+      {showCounts ? <Counts counts={counts} /> : null}
     </View>
   );
 }

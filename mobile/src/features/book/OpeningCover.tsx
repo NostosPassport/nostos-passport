@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 
 import { bookMotion, colors, shadows } from "@/theme";
 import { coverAngle, pageShadow, PERSPECTIVE, showsInside, swingShade } from "./open-math";
@@ -13,15 +14,26 @@ type Props = {
   outside: ReactNode;
   /** The first page, lying under the cover. */
   page: ReactNode;
+  /** Start already open (to close a book that is open). Only read when the component mounts. */
+  initialOpen?: boolean;
+  /** Called when a swing has finished. */
+  onSettled?: () => void;
 };
 
 /** Swings a cover open on its left edge. With reduced motion it crossfades instead. */
-export function OpeningCover({ width, height, open, outside, page }: Props) {
+export function OpeningCover({ width, height, open, outside, page, initialOpen, onSettled }: Props) {
   const reduced = useReducedMotion();
-  const progress = useSharedValue(open ? 1 : 0);
+  const progress = useSharedValue((initialOpen ?? open) ? 1 : 0);
 
   useEffect(() => {
-    progress.value = reduced ? withTiming(open ? 1 : 0, { duration: bookMotion.durations.crossfade }) : withSpring(open ? 1 : 0, bookMotion.coverOpen);
+    const done = (finished?: boolean) => {
+      "worklet";
+      if (finished && onSettled) scheduleOnRN(onSettled);
+    };
+    const target = open ? 1 : 0;
+    progress.value = reduced ? withTiming(target, { duration: bookMotion.durations.crossfade }, done) : withSpring(target, bookMotion.coverOpen, done);
+    // The callback is read once per swing; a new one is not a reason to start another.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, reduced, progress]);
 
   const swing = useAnimatedStyle(() => ({
