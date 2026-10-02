@@ -12,7 +12,7 @@ jest.mock("@/auth/auth-context", () => ({ useAuth: () => ({ status: "signedIn" }
 jest.mock("@/api", () => ({ api: {}, mediaUrl: (u: string) => u, errorText: (_e: unknown, f: string) => f }));
 
 const stamp = (over: Partial<StampView> = {}): StampView => ({
-  id: "s1", photoUrl: null, photos: [], caption: "hello", song: null, createdAt: "2026-09-24T02:00:00.000Z", editedAt: null,
+  id: "s1", photoUrl: null, photos: [], page: 1, slot: 1, caption: "hello", song: null, createdAt: "2026-09-24T02:00:00.000Z", editedAt: null,
   place: { id: "p1", slug: "velvet", name: "Velvet", neighborhood: "East Village" },
   author: { handle: "sam", displayName: "Sam", avatarUrl: null, verified: false }, mine: false, likes: { count: 0, viewerLiked: false }, hidden: false, removed: false, ...over,
 });

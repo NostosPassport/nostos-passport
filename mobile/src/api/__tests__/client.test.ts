@@ -202,13 +202,13 @@ describe("errorText", () => {
 
 describe("stamp and social endpoints", () => {
   const stamp = {
-    id: "s1", photoUrl: "https://cdn.example.test/s1.jpg", photos: [{ id: "ph1", url: "https://cdn.example.test/s1.jpg", position: 0, x: null, y: null, rotation: null }], caption: "hi", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
+    id: "s1", photoUrl: "https://cdn.example.test/s1.jpg", page: 1, slot: 1, photos: [{ id: "ph1", url: "https://cdn.example.test/s1.jpg", position: 0, x: null, y: null, rotation: null }], caption: "hi", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
     createdAt: "2026-09-24T02:00:00.000Z", editedAt: null, place: { id: "v1", slug: "velvet", name: "Velvet", neighborhood: "East Village" },
     author: { handle: "sam", displayName: "Sam", avatarUrl: null, verified: false }, mine: false, likes: { count: 3, viewerLiked: false }, hidden: false, removed: false,
   };
 
   it("pages the feed and a passport grid with the server's opaque cursor, encoded", async () => {
-    const { api, calls } = setup(() => jsonResponse(200, { stamps: [], nextBefore: null }));
+    const { api, calls } = setup((c) => jsonResponse(200, c.url.includes("/api/feed") ? { stamps: [], nextBefore: null } : { stamps: [], nextAfter: null }));
     await api.feed();
     await api.feed("2026-09-24T02:00:00.000Z_s1");
     await api.users.stamps("sam");
@@ -217,7 +217,7 @@ describe("stamp and social endpoints", () => {
       "https://api.example.test/api/feed",
       "https://api.example.test/api/feed?before=2026-09-24T02%3A00%3A00.000Z_s1",
       "https://api.example.test/api/users/sam/stamps",
-      "https://api.example.test/api/users/sam/stamps?before=2026-09-24T02%3A00%3A00.000Z_s1",
+      "https://api.example.test/api/users/sam/stamps?after=2026-09-24T02%3A00%3A00.000Z_s1",
     ]);
   });
 

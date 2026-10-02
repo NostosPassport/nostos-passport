@@ -152,6 +152,9 @@ export const StampView = z
     photos: z.array(StampPhotoView).max(6),
     caption: z.string(),
     song: Song.nullable(),
+    /** Page and slot in the owner's passport, oldest first, three slots to a page (src/lib/layout.ts). null if hidden or removed. */
+    page: z.number().int().min(1).nullable(),
+    slot: z.number().int().min(1).max(3).nullable(),
     createdAt: IsoDate,
     editedAt: IsoDate.nullable(),
     place: PlaceRef,
@@ -193,7 +196,8 @@ export const LikeResponse = z.object({ liked: z.boolean(), count: z.number().int
 /** Feed and passport grid, newest first. `nextBefore` = an opaque cursor: pass it as ?before= for the next page; null = the end. */
 export const StampsPageResponse = z.object({ stamps: z.array(StampView), nextBefore: z.string().nullable() }).strict();
 export const FeedResponse = StampsPageResponse;
-export const UserStampsResponse = StampsPageResponse;
+/** The passport, OLDEST first so page 1 stays page 1. `nextAfter` = pass it as ?after= for the next page; null = the end. */
+export const UserStampsResponse = z.object({ stamps: z.array(StampView), nextAfter: z.string().nullable() }).strict();
 export const UserPlacesResponse = z
   .object({
     places: z.array(

@@ -44,13 +44,13 @@ export function useUserProfile(handle: string) {
   return useQuery({ queryKey: qk.user(handle), queryFn: () => api.users.get(handle) });
 }
 
-/** A passport's Stamps grid, 30 per page. */
+/** A passport's stamps, oldest first, 30 per page. */
 export function useUserStamps(handle: string, enabled = true) {
   return useInfiniteQuery({
     queryKey: qk.userStamps(handle),
     queryFn: ({ pageParam }) => api.users.stamps(handle, pageParam),
     initialPageParam: null as string | null,
-    getNextPageParam: (last) => last.nextBefore,
+    getNextPageParam: (last) => last.nextAfter,
     enabled,
   });
 }

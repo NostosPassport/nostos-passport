@@ -226,6 +226,9 @@ export function createApi(config: ApiConfig) {
     },
 
     stamps: {
+      /** Add photos with `upload("/api/stamps/:id/photos", StampResponse, form)`. */
+      layout: (id: string, body: C.PhotoLayoutRequest) => request("PATCH", `/api/stamps/${enc(id)}/photos`, C.StampResponse, body),
+      removePhoto: (id: string, photoId: string) => request("POST", `/api/stamps/${enc(id)}/photos/${enc(photoId)}/remove`, C.StampResponse),
       get: (id: string) => request("GET", `/api/stamps/${enc(id)}`, C.StampResponse),
       /** Caption and song only; send only changed fields (`song: null` removes the song). */
       edit: (id: string, body: C.StampEditRequest) => request("PATCH", `/api/stamps/${enc(id)}`, C.StampResponse, body),
@@ -246,9 +249,9 @@ export function createApi(config: ApiConfig) {
       get: (handle: string) => request("GET", `/api/users/${enc(handle)}`, C.ProfileResponse),
       follow: (handle: string, follow: boolean) => request(follow ? "PUT" : "DELETE", `/api/users/${enc(handle)}/follow`, C.FollowResponse),
       block: (handle: string, block: boolean) => request(block ? "POST" : "DELETE", `/api/users/${enc(handle)}/block`, C.BlockResponse),
-      /** Passport stamps grid, newest first; pass the previous page's `nextBefore` for the next page. */
-      stamps: (handle: string, before?: string | null) =>
-        request("GET", `/api/users/${enc(handle)}/stamps${before ? `?before=${enc(before)}` : ""}`, C.UserStampsResponse),
+      /** The passport's stamps, OLDEST first (page 1 stays page 1); pass the previous page's `nextAfter` for the next page. */
+      stamps: (handle: string, after?: string | null) =>
+        request("GET", `/api/users/${enc(handle)}/stamps${after ? `?after=${enc(after)}` : ""}`, C.UserStampsResponse),
       places: (handle: string) => request("GET", `/api/users/${enc(handle)}/places`, C.UserPlacesResponse),
       /** 403 `private_account` without full access to the profile. */
       people: (handle: string, list: "followers" | "following") => request("GET", `/api/users/${enc(handle)}/${list}`, C.PeopleListResponse),

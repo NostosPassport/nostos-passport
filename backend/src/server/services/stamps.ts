@@ -13,6 +13,7 @@
 import { z } from "zod";
 import type { Db } from "@/lib/db";
 import { isValidLatLng } from "@/lib/geo";
+import { pageAndSlot } from "@/lib/layout";
 import { getStorage, newStorageKey, type BlobStorage } from "@/lib/storage";
 import type { Actor } from "@/server/actor";
 import { uploadUrl } from "@/server/media";
@@ -123,8 +124,28 @@ export const MAX_STAMP_PHOTOS = 6;
 
 export type StampView = Awaited<ReturnType<typeof toStampViews>>[number];
 
+/** Each stamp's 0-based position among its owner's live stamps, oldest first (the input to the shared layout function). */
+async function ordinals(db: Db, rows: readonly StampRow[]) {
+  const out = new Map<string, number>();
+  const userIds = [...new Set(rows.map((r) => r.userId))];
+  if (!userIds.length) return out;
+  const all = await db.photo.findMany({
+    where: { userId: { in: userIds }, hiddenAt: null, removedAt: null },
+    orderBy: [{ userId: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+    select: { id: true, userId: true },
+  });
+  const counter = new Map<string, number>();
+  for (const s of all) {
+    const n = counter.get(s.userId) ?? 0;
+    out.set(s.id, n);
+    counter.set(s.userId, n + 1);
+  }
+  return out;
+}
+
 /** Builds the wire shape. Callers have already decided each stamp is visible to `actor`. Never includes coordinates, keys or user ids. */
 async function toStampViews(db: Db, actor: Actor | null, rows: readonly StampRow[], now: Date) {
+  const places = await ordinals(db, rows);
   const likes = await likeSummaries(db, rows.map((r) => r.id), actor?.userId);
   const none: LikeSummary = { count: 0, viewerLiked: false };
   return Promise.all(
@@ -135,6 +156,8 @@ async function toStampViews(db: Db, actor: Actor | null, rows: readonly StampRow
       photos: await Promise.all(r.photos.map(async (p) => ({ id: p.id, url: await uploadUrl(p.storageKey, now), position: p.position, x: p.x, y: p.y, rotation: p.rotation }))),
       caption: r.caption,
       song: r.songTitle ? { title: r.songTitle, artist: r.songArtist!, artUrl: r.songArtUrl, sourceId: r.songSourceId } : null,
+      /** Page and slot in the owner's passport (oldest first, three to a page); null for a stamp that is hidden or removed. */
+      ...(places.has(r.id) ? pageAndSlot(places.get(r.id)!) : { page: null, slot: null }),
       createdAt: r.createdAt,
       editedAt: r.editedAt,
       place: { id: r.venue.id, slug: r.venue.slug, name: r.venue.name, neighborhood: r.venue.neighborhood },
@@ -369,18 +392,18 @@ export function parseCursor(before: string) {
 }
 export const beforeCursor = (c: { at: Date; id: string }) => ({ OR: [{ createdAt: { lt: c.at } }, { createdAt: c.at, id: { lt: c.id } }] });
 
-/** A passport's stamps grid, newest first, 30 at a time (`before` = the previous page's `nextBefore`). */
-export async function listUserStamps(db: Db, actor: Actor | null, handle: string, before?: string | null, now = new Date()) {
+/** The passport's stamps, OLDEST first (so page 1 stays page 1), 30 at a time. `after` = the previous page's `nextAfter`. */
+export async function listUserStamps(db: Db, actor: Actor | null, handle: string, after?: string | null, now = new Date()) {
   const { user, isSelf } = await assertProfileVisible(db, actor, handle);
-  const c = before ? parseCursor(before) : null;
+  const c = after ? parseCursor(after) : null;
   const rows = await db.photo.findMany({
-    where: { ...profileStampsWhere(user.id, isSelf), ...(c ? beforeCursor(c) : {}) },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    where: { ...profileStampsWhere(user.id, isSelf), ...(c ? { OR: [{ createdAt: { gt: c.at } }, { createdAt: c.at, id: { gt: c.id } }] } : {}) },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     take: STAMPS_PAGE + 1,
     select: stampSelect,
   });
   const page = rows.slice(0, STAMPS_PAGE);
-  return { stamps: await toStampViews(db, actor, page, now), nextBefore: rows.length > STAMPS_PAGE ? cursorOf(page[page.length - 1]!) : null };
+  return { stamps: await toStampViews(db, actor, page, now), nextAfter: rows.length > STAMPS_PAGE ? cursorOf(page[page.length - 1]!) : null };
 }
 
 /** Every place a person has stamped (the Places view), with their stamp count there and the latest stamp. Newest first. */

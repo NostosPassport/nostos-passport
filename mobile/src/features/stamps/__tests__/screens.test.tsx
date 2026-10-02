@@ -46,7 +46,7 @@ jest.mock("@/features/moderation/content-actions", () => ({
 jest.mock("@/features/moderation/flagged-store", () => ({ useFlaggedIds: () => new Set<string>() }));
 
 const stamp: StampView = {
-  id: "s1", photoUrl: null, photos: [], caption: "hello there", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
+  id: "s1", photoUrl: null, photos: [], page: 1, slot: 1, caption: "hello there", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
   createdAt: "2026-09-24T02:00:00.000Z", editedAt: null, place: { id: "p1", slug: "velvet", name: "Velvet", neighborhood: "East Village" },
   author: { handle: "sam", displayName: "Sam", avatarUrl: null, verified: false }, mine: false, likes: { count: 2, viewerLiked: false }, hidden: false, removed: false,
 };

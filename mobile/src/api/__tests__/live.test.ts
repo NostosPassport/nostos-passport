@@ -69,7 +69,7 @@ d("live backend", () => {
     const own = await ava.users.get(handle);
     expect(own.access).toBe("full");
     const grid = await ava.users.stamps(handle);
-    if (grid.nextBefore) await ava.users.stamps(handle, grid.nextBefore);
+    if (grid.nextAfter) await ava.users.stamps(handle, grid.nextAfter);
     if (grid.stamps[0]) expect((await ava.stamps.get(grid.stamps[0].id)).stamp.mine).toBe(true);
 
     // The seed keeps @avaa private, and @moth_hopeful follows no one.

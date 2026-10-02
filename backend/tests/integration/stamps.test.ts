@@ -274,7 +274,8 @@ describe("the feed and the passport", () => {
     const last = await makeStamp(me, b.id, { caption: "at b", now: new Date(t + 2 * 3600_000) });
     const viewer = await makeActor();
     const grid = await listUserStamps(prisma, viewer, me.handle);
-    expect(grid.stamps.map((s) => s.caption)).toEqual(["at b", "second at a", "first at a"]);
+    expect(grid.stamps.map((s) => s.caption)).toEqual(["first at a", "second at a", "at b"]);
+    expect(grid.stamps.map((s) => [s.page, s.slot])).toEqual([[1, 1], [1, 2], [1, 3]]);
     const { places } = await listUserPlaces(prisma, viewer, me.handle);
     expect(places.map((p) => [p.place.slug, p.stamps])).toEqual([[b.slug, 1], [a.slug, 2]]);
     expect(places[0]!.latestStamp.id).toBe(last.id);
@@ -292,5 +293,38 @@ describe("places", () => {
     expect(near.map((p) => p.inside)).toEqual([true, false]);
     expect(near[0]!.distanceM).toBe(0);
     expect(JSON.stringify(near)).not.toMatch(/osmId/);
+  });
+});
+
+describe("pages and slots", () => {
+  it("numbers stamps oldest first, three to a page, from one shared function", async () => {
+    const me = await makeActor();
+    const t = Date.now() - 10 * 3600_000;
+    const ids: string[] = [];
+    for (let i = 0; i < 7; i++) ids.push((await makeStamp(me, (await makeVenue()).id, { caption: `n${i}`, now: new Date(t + i * 3600_000) })).id);
+    const grid = await listUserStamps(prisma, me, me.handle);
+    expect(grid.stamps.map((s) => s.caption)).toEqual(["n0", "n1", "n2", "n3", "n4", "n5", "n6"]);
+    expect(grid.stamps.map((s) => `${s.page}.${s.slot}`)).toEqual(["1.1", "1.2", "1.3", "2.1", "2.2", "2.3", "3.1"]);
+    // The same numbers appear on the single-stamp response.
+    expect((await getStamp(prisma, me, ids[4]!)).stamp).toMatchObject({ page: 2, slot: 2 });
+    // The oldest stays on page 1 when newer ones come; removing one closes the gap behind it.
+    await removeStamp(prisma, me, ids[1]!);
+    expect((await getStamp(prisma, me, ids[0]!)).stamp).toMatchObject({ page: 1, slot: 1 });
+    expect((await getStamp(prisma, me, ids[2]!)).stamp).toMatchObject({ page: 1, slot: 2 });
+    expect((await getStamp(prisma, me, ids[6]!)).stamp).toMatchObject({ page: 2, slot: 3 });
+    // Staff looking at a removed stamp see no page.
+    expect((await getStamp(prisma, await makeActor({ role: "MODERATOR" }), ids[1]!)).stamp).toMatchObject({ page: null, slot: null });
+  });
+
+  it("pages the passport oldest first with an after cursor and no gaps", async () => {
+    const me = await makeActor();
+    const venue = await makeVenue();
+    const base = Date.now() - 90 * 60_000;
+    for (let i = 0; i < STAMPS_PAGE + 4; i++) await prisma.photo.create({ data: { userId: me.userId, venueId: venue.id, caption: `s${i}`, ...INSIDE, createdAt: new Date(base + i * 1000) } });
+    const first = await listUserStamps(prisma, me, me.handle);
+    const second = await listUserStamps(prisma, me, me.handle, first.nextAfter);
+    expect(first.stamps).toHaveLength(STAMPS_PAGE);
+    expect([...first.stamps, ...second.stamps].map((s) => s.caption)).toEqual(Array.from({ length: STAMPS_PAGE + 4 }, (_, i) => `s${i}`));
+    expect(second.nextAfter).toBeNull();
   });
 });
