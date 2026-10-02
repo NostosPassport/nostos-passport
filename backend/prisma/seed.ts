@@ -20,7 +20,7 @@ import { placeholderPng } from "./placeholder-image";
 import { assertSeedAllowed } from "./seed-guard";
 import { CAPTIONS, PEOPLE, PLACES, SONGS } from "./seed-data";
 
-const TABLES = ["rate_event", "verification_event", "photo_like", "follow_request", "block", "login_attempt", "moderation_event", "flag", "follow", "stamp_photo", "photo", "venue", "session", "app_user"];
+const TABLES = ["rate_event", "verification_event", "photo_like", "follow_request", "block", "login_attempt", "moderation_event", "flag", "follow", "pinned_stamp", "stamp_photo", "photo", "venue", "session", "app_user"];
 
 export type SeedOptions = { now?: Date; storage?: BlobStorage; env?: Record<string, string | undefined> };
 export type SeedSummary = { places: number; people: number; stamps: number; likes: number; follows: number; requests: number };

@@ -78,6 +78,7 @@ proxied through the backend to Apple's public iTunes Search API with no user ide
 | `POST /api/me/delete` | `DeleteAccountRequest` | `DeleteAccountResponse`: anonymizes the account, hides its stamps, removes the files |
 | `GET`, `PATCH /api/me/profile` | `ProfileSettingsRequest` | `ProfileSettingsResponse` |
 | `POST`, `DELETE /api/me/avatar` | multipart `photo` | `AvatarResponse` |
+| `GET`, `PUT /api/me/pins` | `PinsRequest` `{ stampIds }` (up to 4 of your own) | `PinsResponse`: pinned stamps, owner only |
 | `GET /api/me/activity` | | `ActivityResponse`: follow requests, new followers, likes on your stamps |
 | `GET /api/me/following` | | `FollowingResponse` |
 | `GET /api/me/blocks` | | `BlocksResponse` |

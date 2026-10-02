@@ -190,6 +190,9 @@ export const PhotoLayoutRequest = z
       .max(6),
   })
   .strict();
+/** GET and PUT /api/me/pins: your pinned stamps (up to 4), owner only. PUT body is `{ stampIds }`. */
+export const PinsRequest = z.object({ stampIds: z.array(z.string().min(1).max(64)).max(4) }).strict();
+export const PinsResponse = z.object({ stamps: z.array(StampView).max(4) }).strict();
 export const RemoveStampResponse = z.object({ removed: z.literal(true) }).strict();
 /** PUT/DELETE /api/stamps/:id/like. */
 export const LikeResponse = z.object({ liked: z.boolean(), count: z.number().int(), viewerLiked: z.boolean() }).strict();

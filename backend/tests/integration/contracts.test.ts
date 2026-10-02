@@ -31,6 +31,7 @@ import * as placeStampsR from "@/app/api/places/[id]/stamps/route";
 import * as stampR from "@/app/api/stamps/[id]/route";
 import * as stampPhotosR from "@/app/api/stamps/[id]/photos/route";
 import * as stampPhotoRemoveR from "@/app/api/stamps/[id]/photos/[photoId]/remove/route";
+import * as pinsR from "@/app/api/me/pins/route";
 import * as stampLikeR from "@/app/api/stamps/[id]/like/route";
 import * as stampRemoveR from "@/app/api/stamps/[id]/remove/route";
 import * as feedR from "@/app/api/feed/route";
@@ -84,6 +85,8 @@ const REGISTRY: Record<string, ZodTypeAny | "binary"> = {
   "POST /api/stamps/[id]/photos": C.StampResponse,
   "PATCH /api/stamps/[id]/photos": C.StampResponse,
   "POST /api/stamps/[id]/photos/[photoId]/remove": C.StampResponse,
+  "GET /api/me/pins": C.PinsResponse,
+  "PUT /api/me/pins": C.PinsResponse,
   "PUT /api/stamps/[id]/like": C.LikeResponse,
   "DELETE /api/stamps/[id]/like": C.LikeResponse,
   "POST /api/stamps/[id]/remove": C.RemoveStampResponse,
@@ -248,6 +251,10 @@ describe("API contract", () => {
     await call("GET /api/feed", feedR.GET, { token: me, query: "?before=2999-01-01T00:00:00.000Z_zzzz" });
     await call("GET /api/users/[handle]/stamps", userStampsR.GET, { token: me, params: { handle: friend.handle } });
     await call("GET /api/users/[handle]/places", userPlacesR.GET, { token: me, params: { handle: friend.handle } });
+
+    await call("PUT /api/me/pins", pinsR.PUT, { token: me, body: { stampIds: [stampId] } });
+    const pins = await call("GET /api/me/pins", pinsR.GET, { token: me });
+    expect(pins.stamps.map((x: { id: string }) => x.id)).toEqual([stampId]);
 
     // Photos: add, lay out, remove.
     const more = new FormData();

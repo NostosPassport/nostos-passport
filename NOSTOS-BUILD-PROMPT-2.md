@@ -18,7 +18,7 @@ Nostos is STRICTLY PERSONAL for this version. No feed, no likes, no follows, no 
 - [x] D.1 Multi-photo stamps: up to 6 photos, in-app camera only. stamp_photo table (stamp id, storage key, position, optional x, y, rotation). EXIF/GPS stripped. Same immutability and hidden-never-deleted. Contract, API.md, tests (limit, ordering, strip, layout persistence, visibility).
 - [ ] D.2 Place pages (backend): your own stamps at a place (stack across nights) plus a flag for being inside the geofence now.
 - [ ] D.3 Collections: neighborhoods table with boundaries (public NYC data or OSM, log choice in DECISIONS.md), progress per neighborhood, index endpoint, completion marker. Broaden the importer beyond bars and log it.
-- [ ] D.4 Pinned stamps: up to 4, owner only.
+- [x] D.4 Pinned stamps: up to 4, owner only.
 - [x] D.5 Oldest first ordering; stamp response includes page and slot from one shared layout function.
 
 ## E. Theme system
