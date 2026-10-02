@@ -129,6 +129,8 @@ export const stampStyle = {
   partialFill: 0.18,
   /** Stroke widths for rings, rules and text in a stamp (pt at a 120 pt stamp). */
   strokes: { ring: 3, hair: 1.2, text: 2 },
+  /** Type inside a stamp, in the same 120 pt box: name, neighborhood line, and the completion stamp's words. */
+  text: { name: 11, area: 6.5, arcTrack: 1.2, bannerTrack: 1, completeWord: 13, completeTrack: 2, completeArea: 7 },
   /** Largest tilt a stamp is given, in degrees. */
   maxTiltDeg: 11,
   /** Overlap allowed between neighbors, as a share of the stamp. */

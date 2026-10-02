@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import type { StampView } from "@/api/contracts";
 import { Text } from "@/components/ui/text";
-import { bookStyle, colors, space } from "@/theme";
+import { bookStyle, colors } from "@/theme";
 import { ribbonPath, ribbonsOnPage } from "./edges";
 import { rosettePath, wavePaths } from "./guilloche";
 import { PageStock } from "./PageStock";
+import { StampMark } from "./StampMark";
 import { type Placement, slotPlacement } from "./slots";
 
 export type RenderStamp = (stamp: StampView, placement: Placement) => ReactNode;
@@ -23,13 +24,9 @@ type Props = {
   onStampPress?: (stamp: StampView) => void;
 };
 
-/** Until real stamps are drawn (see Stamp.tsx), a stamp is a ring with the place's name. */
+/** A stamp is inked from its place's design (see stamp-design.ts). */
 const defaultRender: RenderStamp = (stamp, p) => (
-  <View style={{ width: p.size, height: p.size, borderRadius: p.size / 2 }}>
-    <Text variant="serifLabel" color="brass" align="center" numberOfLines={3} style={styles.fallback}>
-      {stamp.place.name}
-    </Text>
-  </View>
+  <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, neighborhoodId: stamp.place.neighborhoodId, neighborhoodName: stamp.place.neighborhood }} size={p.size} />
 );
 
 /** One page of stamps: paper, guilloche, the page number, and up to three stamps in their slots. */
@@ -74,6 +71,5 @@ export function PageView({ page, side, width, height, stamps, pinnedIds = [], re
 
 const styles = StyleSheet.create({
   fill: { position: "absolute", top: 0, left: 0 },
-  fallback: { margin: space.xs },
   number: { position: "absolute" },
 });
