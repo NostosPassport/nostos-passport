@@ -1,5 +1,5 @@
 # Fixed project name: keeps the existing "nostos_nostos_pg" volume (and its data) now that this file lives in backend/.
-name: nostos
+name: nostos-codex
 
 services:
   db:
@@ -7,14 +7,14 @@ services:
     environment:
       POSTGRES_USER: nostos
       POSTGRES_PASSWORD: nostos
-      POSTGRES_DB: nostos
+      POSTGRES_DB: nostos_codex
       TZ: UTC
     ports:
-      - "5435:5432"
+      - "5438:5432"
     volumes:
       - nostos_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nostos -d nostos"]
+      test: ["CMD-SHELL", "pg_isready -U nostos -d nostos_codex"]
       interval: 2s
       timeout: 3s
       retries: 30
