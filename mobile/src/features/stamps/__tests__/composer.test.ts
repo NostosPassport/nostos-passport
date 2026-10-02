@@ -7,15 +7,15 @@ const place = (over: Partial<{ id: string; inside: boolean; distanceM: number; g
 
 describe("stamp content rule", () => {
   it("needs at least one of photo, caption or song", () => {
-    expect(hasContent({ photoUri: null, caption: "", song: null })).toBe(false);
-    expect(hasContent({ photoUri: null, caption: "   ", song: null })).toBe(false);
-    expect(hasContent({ photoUri: "file://p.jpg", caption: "", song: null })).toBe(true);
-    expect(hasContent({ photoUri: null, caption: "hi", song: null })).toBe(true);
-    expect(hasContent({ photoUri: null, caption: "", song })).toBe(true);
+    expect(hasContent({ photoUris: [], caption: "", song: null })).toBe(false);
+    expect(hasContent({ photoUris: [], caption: "   ", song: null })).toBe(false);
+    expect(hasContent({ photoUris: ["file://p.jpg"], caption: "", song: null })).toBe(true);
+    expect(hasContent({ photoUris: [], caption: "hi", song: null })).toBe(true);
+    expect(hasContent({ photoUris: [], caption: "", song })).toBe(true);
   });
 
   it("says what's missing, in order: place first, then content, then length", () => {
-    const empty = { photoUri: null, caption: "", song: null };
+    const empty = { photoUris: [], caption: "", song: null };
     expect(stampProblem(empty, null)).toBe("Choose where you are.");
     expect(stampProblem(empty, "p1")).toBe("Add a photo, a caption or a song.");
     expect(stampProblem({ ...empty, caption: "x".repeat(CAPTION_MAX + 1) }, "p1")).toMatch(/280 characters/);
