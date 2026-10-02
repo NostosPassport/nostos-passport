@@ -46,3 +46,12 @@ sections (logged in OPEN-QUESTIONS 4).
 - Guard all social/admin entry services and the admin web page. Foreign profile/passport services now 404 instead of returning a limited handle. Disabled-mode like summaries are zero. Strengthen invariant rule 11.
 - Summary URLs now select live photographs in layout order. Codex dev script and example URLs use 3001/5438; optional pooler is 6439 and its script never targets the other lane. Pooled runtime remains untested.
 - Repeatable-read probe reproduced an additional empty-stamp write skew: a caption transaction with an older snapshot committed after raw photo removal. A further forward migration advances the parent row version on photo updates; old snapshots now abort with Prisma P2034.
+
+## Codex lane final review
+- Final implementation commit 4af3053; complete gate passed 291 backend / 292 mobile tests.
+- Detailed report: ../reviews/2026-10-02T180902Z-codex-1.md. Contract-changing commit: 2723315 only; mobile must run npm run sync:contracts after merge.
+- Gate locks were waited out naturally and never removed or bypassed. Database test processes were serialized. Only the generated mobile contract was changed.
+
+## Codex lane, phase 6
+- Final database audit reproduced a live stamp with a tab/newline-only song title through a direct write. Service song validation already trims and rejects empty text.
+- A forward CHECK now requires actual text in both live song fields using the same whitespace set as JavaScript trim; already removed historical records are preserved. Regression: stamp-content.test.ts, "the database rejects whitespace-only song titles and artists on live stamps".

@@ -84,6 +84,14 @@ describe("live stamp content", () => {
     expect((await getStamp(prisma, me, s.id)).stamp).toMatchObject({ caption: "words", photos: [] });
   });
 
+  it("the database rejects whitespace-only song titles and artists on live stamps", async () => {
+    const me = await makeActor();
+    const venue = await makeVenue();
+    for (const [songTitle, songArtist] of [["\t\n", "Artist"], ["Title", "\u00a0\u2003\ufeff"], ["\t", "\t"]]) {
+      await expect(prisma.photo.create({ data: { userId: me.userId, venueId: venue.id, ...INSIDE, caption: "", songTitle, songArtist } })).rejects.toThrow(/photo_song_has_text/);
+    }
+  });
+
   it("creation with live photos succeeds, while a stale original storage key never counts as content", async () => {
     const me = await makeActor();
     const venue = await makeVenue();
