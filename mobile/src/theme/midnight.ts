@@ -135,6 +135,26 @@ export const stampStyle = {
   maxOverlap: 0.12,
 } as const;
 
+/** Line weights and radii for the book's drawn parts (Skia and SVG take plain numbers, so they live in the theme). */
+export const bookStyle = {
+  /** Cover border: a thick line and a hairline. */
+  borderThick: 2,
+  borderHair: 0.8,
+  /** Emblem strokes, in unit-circle space (the emblem is scaled up). */
+  emblemRing: 0.022,
+  emblemInner: 0.012,
+  emblemTick: 0.01,
+  /** Page guilloche, rules and the ribbon. */
+  pageLine: 0.6,
+  pageRule: 1,
+  /** Gutter fold, as a share of a page's width. */
+  gutterShare: 0.09,
+  /** Visible page-stack edge lines. */
+  edgeLine: 1,
+  edgeGap: 2,
+  maxEdgeLines: 6,
+} as const;
+
 /** The whole theme as one object, for components that take "the theme". */
-export const midnight = { name: "Midnight", palette, colors, fonts, shadows, bookMotion, stampStyle } as const;
+export const midnight = { name: "Midnight", palette, colors, fonts, shadows, bookMotion, bookStyle, stampStyle } as const;
 export type Theme = typeof midnight;

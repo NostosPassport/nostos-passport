@@ -25,3 +25,20 @@ jest.mock("expo-symbols", () => {
 
 jest.mock("react-native-worklets", () => require("react-native-worklets/src/mock"));
 jest.mock("react-native-reanimated", () => ({ ...require("react-native-reanimated/mock"), useReducedMotion: () => false }));
+
+// Skia draws on a GPU canvas that doesn't exist in Jest. Components render as plain Views (Canvas) or nothing, so the book's
+// structure, labels and logic can be tested; how it looks is a device check (DEVICE-CHECKLIST.md).
+jest.mock("@shopify/react-native-skia", () => {
+  const { View } = require("react-native");
+  const passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+  const target: Record<string, unknown> = {
+    Canvas: ({ children, ...rest }: { children?: React.ReactNode }) => <View {...rest}>{children}</View>,
+    vec: (x: number, y: number) => ({ x, y }),
+    useFont: () => null,
+    useImage: () => null,
+    Skia: { Path: { Make: () => ({ moveTo() {}, lineTo() {}, close() {}, addCircle() {} }), MakeFromSVGString: () => ({}) }, RuntimeEffect: { Make: () => null }, Color: (c: string) => c },
+  };
+  return new Proxy(target, { get: (t, k) => (k === "__esModule" ? true : k in t ? t[k as string] : passthrough) });
+});
+jest.mock("expo-sensors", () => ({ DeviceMotion: { isAvailableAsync: async () => false, addListener: () => ({ remove() {} }), setUpdateInterval() {} } }));
+jest.mock("expo-camera", () => ({ CameraView: () => null, useCameraPermissions: () => [{ granted: true }, jest.fn()] }));

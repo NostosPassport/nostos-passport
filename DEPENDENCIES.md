@@ -72,6 +72,10 @@ The gate (scripts/check-deps.mjs) fails if a package.json dependency has no matc
 - typescript@~6.0.3: typecheck
 - @expo-google-fonts/cormorant-garamond@^0.4.1: the serif for titles and stamp text (bundled font files, works in Expo Go)
 - @expo-google-fonts/courier-prime@^0.4.1: the typewriter face for dates and captions (bundled font files)
+- @shopify/react-native-skia@2.6.2: the passport book: leather grain and foil shaders, stamps, page shading (included in Expo Go, checked in the Expo SDK 57 docs)
+- react-native-svg@15.15.4: guilloche page patterns, the ribbon and thin line drawings (included in Expo Go)
+- expo-camera@~57.0.6: the in-app camera for stamp photos, up to 6 per stamp (included in Expo Go)
+- expo-sensors@~57.0.3: device tilt for the cover foil highlight; optional, a drag fallback exists (included in Expo Go)
 - @sentry/react-native@~7.11.0: error reporting, off unless the build sets EXPO_PUBLIC_SENTRY_ENABLED=1 and a DSN (no DSN is committed); loaded lazily, scrubbed of user data
 
 

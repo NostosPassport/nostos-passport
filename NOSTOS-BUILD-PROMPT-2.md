@@ -27,7 +27,7 @@ Nostos is STRICTLY PERSONAL for this version. No feed, no likes, no follows, no 
 - [x] E.3 Settings: quiet "Customize, coming soon" row with a lock, opening a teaser sheet.
 
 ## F. The passport book UI (Expo Go compatible only; DEPENDENCIES.md line each; log anything that cannot run in DECISIONS.md)
-- [ ] F.1 Cover (Skia leather grain, brass foil wordmark and original emblem, drag/tilt highlight, border, vignette, shadow, three numbers, gear)
+- [x] F.1 Cover (Skia leather grain, brass foil wordmark and original emblem, drag/tilt highlight, border, vignette, shadow, three numbers, gear)
 - [ ] F.2 Open animation (3D swing, hinge left, inner-edge shading)
 - [ ] F.3 Bearer page
 - [ ] F.4 Pages (two-page spreads, gutter, page edges, numbers, ribbon, guilloche, 3 slots per page, seeded jitter, pinned ribbons)
