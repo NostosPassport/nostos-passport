@@ -4,7 +4,7 @@ import { StyleSheet, View } from "react-native";
 import MapView from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { farewellNotice, useAuth } from "@/auth/auth-context";
+import { farewellNotice } from "@/auth/auth-context";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -15,7 +15,6 @@ import { colors, radius, screenPadding, size, space } from "@/theme";
 
 export default function Welcome() {
   const insets = useSafeAreaInsets();
-  const { browseAsGuest } = useAuth();
   const [panelHeight, setPanelHeight] = useState(0);
   // Shown once after deleting an account.
   const [farewell] = useState(() => farewellNotice.take());
@@ -59,7 +58,7 @@ export default function Welcome() {
         <View style={styles.actions}>
           <Button title="Create account" onPress={() => router.push("/sign-up")} />
           <Button title="Sign in" variant="secondary" onPress={() => router.push("/sign-in")} />
-          <Button title="Look around first" variant="plain" onPress={browseAsGuest} accessibilityHint="Browse without an account" />
+          <Button title="Look around first" variant="plain" onPress={() => router.push("/age-gate")} accessibilityHint="Asks your birthdate, then lets you browse without an account" />
         </View>
         <Text variant="footnote" color="textTertiary">
           For adults 21 and over.

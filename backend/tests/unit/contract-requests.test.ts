@@ -14,19 +14,21 @@ function agree(contract: ZodTypeAny, server: ZodTypeAny, samples: unknown[]) {
 describe("contract request schemas agree with server validation", () => {
   it("signup", () =>
     agree(C.SignupRequest, signupSchema, [
-      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: true, confirm21: true },
-      { email: "a@b.co", password: "short", displayName: "A", handle: "abc", acceptTerms: true, confirm21: true },
-      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "a", acceptTerms: true, confirm21: true },
-      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "ABC_ok", acceptTerms: true, confirm21: true },
-      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: false, confirm21: true },
-      { email: "nope", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: true, confirm21: true },
-      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: true, confirm21: true, extra: 1 },
+      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "short", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "a", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "ABC_ok", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: false, birthdate: "1990-05-05" },
+      { email: "nope", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05", extra: 1 },
     ]));
   it("flags, moderation, deletion", () => {
     agree(C.FlagRequest, flagSchema, [
       { targetType: "STAMP", targetId: "p1", reason: "fake photo" }, { targetType: "USER", targetId: "someone", reason: "abuse" },
       { targetType: "STAMP", targetId: "p1", reason: "no" }, { targetType: "PHOTO", targetId: "p1", reason: "fake photo" }, { targetType: "COMMENT", targetId: "c", reason: "hmm hmm" },
       { targetType: "STAMP", targetId: "", reason: "fake" },
+      { targetType: "STAMP", targetId: "p1", reason: "not here", category: "NOT_AT_PLACE" }, { targetType: "USER", targetId: "u", reason: "too young", category: "UNDERAGE" },
+      { targetType: "USER", targetId: "u", reason: "follows me", category: "STALKING" }, { targetType: "USER", targetId: "u", reason: "nope nope", category: "BORING" },
     ]);
     agree(C.ModActionRequest, moderateSchema.innerType(), [
       { targetType: "STAMP", targetId: "p", action: "HIDE" }, { targetType: "USER", targetId: "u", action: "SUSPEND", note: "abuse" }, { targetType: "STAMP", targetId: "p", action: "DELETE" },

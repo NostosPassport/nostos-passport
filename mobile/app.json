@@ -18,9 +18,9 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Nostos uses your location to show what's near you and to confirm you're at a venue when you post a report.",
-        "NSCameraUsageDescription": "Take photos of the venue to share what it's like right now.",
-        "NSPhotoLibraryUsageDescription": "Choose a photo of the venue to share."
+        "NSLocationWhenInUseUsageDescription": "Nostos uses your location to find the places near you and to confirm you're there when you stamp one. Your position isn't shown to anyone.",
+        "NSCameraUsageDescription": "Take a photo for your stamp.",
+        "NSPhotoLibraryUsageDescription": "Choose a photo for your stamp."
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -67,7 +67,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Nostos uses your location to show what's near you and to confirm you're at a venue when you post a report.",
+          "locationWhenInUsePermission": "Nostos uses your location to find the places near you and to confirm you're there when you stamp one. Your position isn't shown to anyone.",
           "isIosBackgroundLocationEnabled": false,
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false,
@@ -77,12 +77,11 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Take photos of the venue to share what it's like right now.",
-          "photosPermission": "Choose a photo of the venue to share.",
+          "cameraPermission": "Take a photo for your stamp.",
+          "photosPermission": "Choose a photo for your stamp.",
           "microphonePermission": false
         }
-      ],
-      "@react-native-community/datetimepicker"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

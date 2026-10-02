@@ -60,7 +60,7 @@ KEEP: auth and sessions (token auth for iOS), users, handle and bio and avatar, 
 - [x] 4.2.4 GET /api/feed: stamps from people you follow, newest first, cursor paging, strictly chronological, no ranking, no personalization (this keeps us outside NY's SAFE for Kids Act).
 - [x] 4.2.5 Profile passport endpoints: stamps grid (cursor), places visited (distinct places with stamp count and latest stamp), counts.
 - [x] 4.2.6 Songs: v1 stores metadata only (title, artist, art URL), no audio playback. Search via Apple's public iTunes Search API, proxied through our backend with a short timeout, a rate limit and no user identifiers sent. Put the licensing and terms question in OPEN-QUESTIONS.md for the lawyer session, do not decide it.
-- [ ] 4.2.7 Update the contract, API.md, tests for every rule, and the invariants suite.
+- [x] 4.2.7 Update the contract, API.md, tests for every rule, and the invariants suite.
 
 ### Phase 3: mobile passport
 - [x] 4.3.1 Neutral components first (design comes in phase 5). Use theme tokens only, SF Symbols, no emoji, lint rules as already enforced.
@@ -74,10 +74,10 @@ KEEP: auth and sessions (token auth for iOS), users, handle and bio and avatar, 
 - [x] 4.3.9 Make sure no sheet or screen can render blank.
 
 ### Phase 4: safety and compliance
-- [ ] 4.4.1 Birthdate age gate at signup and guest browsing: blocks under-21s and stores nothing about them (no DOB, no email, no record). Replace the "21+" checkbox. Legal specifics go to OPEN-QUESTIONS.md for the lawyer session.
-- [ ] 4.4.2 Report reasons: add underage, stalking, and "not at this place".
-- [ ] 4.4.3 Keep Apple Guideline 1.2 coverage: Report and Block on every stamp and profile, moderation queue, objectionable text filter, account deletion.
-- [ ] 4.4.4 Hook Sentry into the existing reportError hook behind an env flag (off by default, no DSN committed). Dependency ledger line required.
+- [x] 4.4.1 Birthdate age gate at signup and guest browsing: blocks under-21s and stores nothing about them (no DOB, no email, no record). Replace the "21+" checkbox. Legal specifics go to OPEN-QUESTIONS.md for the lawyer session.
+- [x] 4.4.2 Report reasons: add underage, stalking, and "not at this place".
+- [x] 4.4.3 Keep Apple Guideline 1.2 coverage: Report and Block on every stamp and profile, moderation queue, objectionable text filter, account deletion.
+- [x] 4.4.4 Hook Sentry into the existing reportError hook behind an env flag (off by default, no DSN committed). Dependency ledger line required.
 
 ### Phase 5: design layer
 - [ ] 4.5.1 Read DESIGN.md. If it has a filled "Chosen reference" section, do a design pass: rebuild the navigation, tab bar, feed and profile layouts to match that app's patterns (the interaction model, layout structure and gestures people already know), using Nostos's own colors, icon set, name and logo. If the section is empty, skip this phase, note that in the review, and finish everything else. Never copy a real app's logo, icons, exact palette, name or proprietary assets.

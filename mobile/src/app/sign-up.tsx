@@ -14,13 +14,13 @@ import { Field, FieldGroup } from "@/components/ui/text-field";
 import { useAnnounce } from "@/lib/a11y";
 import { haptics } from "@/lib/haptics";
 import { LEGAL, openWebPage } from "@/lib/links";
+import { checkBirthdate, formatBirthdateInput } from "@/lib/age";
 import { MIN_PASSWORD, validateSignup, type SignupErrors, type SignupFields } from "@/lib/validation";
 import { space } from "@/theme";
 
 export default function SignUp() {
   const { signIn } = useAuth();
-  const [fields, setFields] = useState<SignupFields>({ email: "", password: "", handle: "", displayName: "" });
-  const [is21, setIs21] = useState(false);
+  const [fields, setFields] = useState<SignupFields>({ email: "", password: "", handle: "", displayName: "", birthdate: "" });
   const [terms, setTerms] = useState(false);
   const [errors, setErrors] = useState<SignupErrors>({});
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -28,10 +28,11 @@ export default function SignUp() {
   const passwordRef = useRef<TextInput>(null);
   const handleRef = useRef<TextInput>(null);
   const displayNameRef = useRef<TextInput>(null);
+  const birthdateRef = useRef<TextInput>(null);
   useAnnounce(consentError);
 
   const set = (k: keyof SignupFields) => (v: string) => {
-    setFields((f) => ({ ...f, [k]: k === "handle" ? v.toLowerCase() : v }));
+    setFields((f) => ({ ...f, [k]: k === "handle" ? v.toLowerCase() : k === "birthdate" ? formatBirthdateInput(v) : v }));
     if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined }));
   };
 
@@ -43,7 +44,8 @@ export default function SignUp() {
         handle: fields.handle.trim().toLowerCase(),
         displayName: fields.displayName.trim(),
         acceptTerms: true,
-        confirm21: true,
+        // Checked on the phone first, and again by the server, which never stores it. An under-21 date never gets this far.
+        birthdate: checkBirthdate(fields.birthdate).ok ? (checkBirthdate(fields.birthdate) as { apiDate: string }).apiDate : "",
       }),
     onSuccess: (res) => signIn(res),
     onError: () => haptics.warning(),
@@ -53,12 +55,13 @@ export default function SignUp() {
     if (signup.isPending) return;
     const e = validateSignup(fields);
     setErrors(e);
-    const consent = !is21 ? "Confirm you're 21 or older." : !terms ? "Agree to the Terms and Privacy policy to continue." : null;
+    const consent = !terms ? "Agree to the Terms and Privacy policy to continue." : null;
     setConsentError(consent);
     if (e.email) emailRef.current?.focus();
     else if (e.password) passwordRef.current?.focus();
     else if (e.handle) handleRef.current?.focus();
     else if (e.displayName) displayNameRef.current?.focus();
+    else if (e.birthdate) birthdateRef.current?.focus();
     if (Object.keys(e).length || consent) {
       haptics.warning();
       return;
@@ -98,7 +101,7 @@ export default function SignUp() {
         />
       </FieldGroup>
 
-      <FieldGroup errors={[errors.handle, errors.displayName]} footer="Your handle is shown on your photos and comments.">
+      <FieldGroup errors={[errors.handle, errors.displayName]} footer="Your handle is shown on your stamps.">
         <Field
           ref={handleRef}
           label="Handle"
@@ -122,19 +125,34 @@ export default function SignUp() {
           invalid={!!errors.displayName}
           autoComplete="name"
           textContentType="name"
+          returnKeyType="next"
+          onSubmitEditing={() => birthdateRef.current?.focus()}
+        />
+      </FieldGroup>
+
+      <FieldGroup errors={[errors.birthdate]} footer="Nostos is for people 21 and older. We check your birthdate once and don't keep it.">
+        <Field
+          ref={birthdateRef}
+          label="Birthdate"
+          placeholder="MM/DD/YYYY"
+          value={fields.birthdate}
+          onChangeText={set("birthdate")}
+          invalid={!!errors.birthdate}
+          keyboardType="number-pad"
+          autoComplete="birthdate-full"
+          textContentType="none"
+          maxLength={10}
           returnKeyType="done"
+          testID="signup-birthdate"
         />
       </FieldGroup>
 
       <View style={styles.consents}>
-        <Checkbox checked={is21} onChange={setIs21} invalid={!!consentError && !is21} accessibilityLabel="I'm 21 or older">
-          <Text variant="body">I&apos;m 21 or older</Text>
-        </Checkbox>
-        <Checkbox checked={terms} onChange={setTerms} invalid={!!consentError && is21 && !terms} accessibilityLabel="I agree to the Terms and Privacy policy">
+        <Checkbox checked={terms} onChange={setTerms} invalid={!!consentError && !terms} accessibilityLabel="I agree to the Terms and Privacy policy">
           <Text variant="body">I agree to the Terms and Privacy policy</Text>
         </Checkbox>
         <Text variant="footnote" color="textTertiary">
-          There&apos;s no tolerance for abusive content or users. Anyone can report a post or an account.
+          There&apos;s no tolerance for abusive content or users. Anyone can report a stamp or an account.
         </Text>
         <View style={styles.links}>
           <Button title="Terms" variant="plain" compact block={false} onPress={() => openWebPage(LEGAL.terms)} accessibilityRole="link" />

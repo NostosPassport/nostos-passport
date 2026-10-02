@@ -11,7 +11,7 @@ const mem = installMemoryStorage();
 
 describe("login throttle (Postgres, email + IP)", () => {
   it("locks one IP after 10 failures without locking the same account from another IP", async () => {
-    await signup(prisma, { email: "t@x.dev", password: "long enough pw", displayName: "T", handle: "ttt", acceptTerms: true, confirm21: true });
+    await signup(prisma, { email: "t@x.dev", password: "long enough pw", displayName: "T", handle: "ttt", acceptTerms: true, birthdate: "1990-05-05" });
     for (let i = 0; i < 10; i++) await login(prisma, { email: "t@x.dev", password: "nope" }, { ip: "203.0.113.9" }).catch(() => {});
     await expect(login(prisma, { email: "t@x.dev", password: "long enough pw" }, { ip: "203.0.113.9" })).rejects.toMatchObject({ status: 429 });
     await expect(login(prisma, { email: "t@x.dev", password: "long enough pw" }, { ip: "198.51.100.1" })).resolves.toBeTruthy();
@@ -19,7 +19,7 @@ describe("login throttle (Postgres, email + IP)", () => {
   });
 
   it("expires after 15 minutes and clears on success", async () => {
-    await signup(prisma, { email: "u@x.dev", password: "long enough pw", displayName: "U", handle: "uuu", acceptTerms: true, confirm21: true });
+    await signup(prisma, { email: "u@x.dev", password: "long enough pw", displayName: "U", handle: "uuu", acceptTerms: true, birthdate: "1990-05-05" });
     const t0 = new Date();
     for (let i = 0; i < 10; i++) await login(prisma, { email: "u@x.dev", password: "nope" }, { ip: "1.1.1.1" }, t0).catch(() => {});
     const later = new Date(t0.getTime() + 15 * 60_000 + 1);
@@ -28,7 +28,7 @@ describe("login throttle (Postgres, email + IP)", () => {
   });
 
   it("can't be raced: parallel wrong guesses stop at the limit", async () => {
-    await signup(prisma, { email: "r@x.dev", password: "long enough pw", displayName: "R", handle: "rrr", acceptTerms: true, confirm21: true });
+    await signup(prisma, { email: "r@x.dev", password: "long enough pw", displayName: "R", handle: "rrr", acceptTerms: true, birthdate: "1990-05-05" });
     const results = await Promise.allSettled(Array.from({ length: 25 }, () => login(prisma, { email: "r@x.dev", password: "nope" }, { ip: "9.9.9.9" })));
     expect(results.filter((r) => r.status === "rejected" && (r.reason as { status: number }).status === 401)).toHaveLength(10);
     expect(await prisma.loginAttempt.count({ where: { email: "r@x.dev" } })).toBe(10);

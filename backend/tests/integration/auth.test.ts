@@ -6,7 +6,7 @@ import { POST as loginRoute } from "@/app/api/auth/login/route";
 
 describe("auth", () => {
   it("signs up as USER only and stores a scrypt hash, never the password", async () => {
-    const { user } = await signup(prisma, { email: "A@x.dev", password: "long enough pw", displayName: "A", handle: "aaa", acceptTerms: true, confirm21: true });
+    const { user } = await signup(prisma, { email: "A@x.dev", password: "long enough pw", displayName: "A", handle: "aaa", acceptTerms: true, birthdate: "1990-05-05" });
     expect(user.role).toBe("USER");
     expect(user.email).toBe("a@x.dev");
     expect(user.passwordHash).toMatch(/^scrypt\$/);
@@ -21,20 +21,20 @@ describe("auth", () => {
   });
 
   it("logs in with the right password and rejects the wrong one", async () => {
-    await signup(prisma, { email: "c@x.dev", password: "long enough pw", displayName: "C", handle: "ccc", acceptTerms: true, confirm21: true });
+    await signup(prisma, { email: "c@x.dev", password: "long enough pw", displayName: "C", handle: "ccc", acceptTerms: true, birthdate: "1990-05-05" });
     await expect(login(prisma, { email: "c@x.dev", password: "nope nope nope" })).rejects.toMatchObject({ status: 401 });
     const { session } = await login(prisma, { email: "c@x.dev", password: "long enough pw" });
     expect((await getSessionUser(prisma, session.token))?.email).toBe("c@x.dev");
   });
 
   it("throttles repeated failures", async () => {
-    await signup(prisma, { email: "d@x.dev", password: "long enough pw", displayName: "D", handle: "ddd", acceptTerms: true, confirm21: true });
+    await signup(prisma, { email: "d@x.dev", password: "long enough pw", displayName: "D", handle: "ddd", acceptTerms: true, birthdate: "1990-05-05" });
     for (let i = 0; i < 10; i++) await login(prisma, { email: "d@x.dev", password: "wrong" }).catch(() => {});
     await expect(login(prisma, { email: "d@x.dev", password: "long enough pw" })).rejects.toMatchObject({ status: 429 });
   });
 
   it("stores only the token hash and expires sessions", async () => {
-    const { user } = await signup(prisma, { email: "e@x.dev", password: "long enough pw", displayName: "E", handle: "eee", acceptTerms: true, confirm21: true });
+    const { user } = await signup(prisma, { email: "e@x.dev", password: "long enough pw", displayName: "E", handle: "eee", acceptTerms: true, birthdate: "1990-05-05" });
     const { token } = await createSession(prisma, user.id);
     const row = await prisma.session.findUnique({ where: { id: hashToken(token) } });
     expect(row).not.toBeNull();
@@ -44,7 +44,7 @@ describe("auth", () => {
   });
 
   it("login route sets an httpOnly SameSite=Lax cookie", async () => {
-    await signup(prisma, { email: "f@x.dev", password: "long enough pw", displayName: "F", handle: "fff", acceptTerms: true, confirm21: true });
+    await signup(prisma, { email: "f@x.dev", password: "long enough pw", displayName: "F", handle: "fff", acceptTerms: true, birthdate: "1990-05-05" });
     const res = await loginRoute(
       new Request("http://localhost/api/auth/login", {
         method: "POST",

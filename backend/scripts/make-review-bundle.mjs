@@ -60,7 +60,7 @@ const tests = strip(run("node_modules/.bin/vitest run --reporter=verbose"))
   .join("\n");
 
 const sep = (title) => `\n\n${"=".repeat(100)}\n== ${title}\n${"=".repeat(100)}\n\n`;
-let out = `NOSTOS BACKEND — REVIEW BUNDLE\nGenerated ${new Date().toISOString()} at commit ${commit}\n`;
+let out = `NOSTOS BACKEND - REVIEW BUNDLE\nGenerated ${new Date().toISOString()} at commit ${commit}\n`;
 out += `\nContents:\n${["TEST SUMMARY", ...files].map((f) => `  - ${f}`).join("\n")}\n`;
 out += sep("TEST SUMMARY");
 out += `$ pnpm typecheck\n${typecheck}\n\n$ pnpm lint\n${lint}\n\n$ pnpm vitest run --reporter=verbose\n${tests}\n\nGit history:\n${log}\n`;

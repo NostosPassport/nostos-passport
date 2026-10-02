@@ -32,18 +32,13 @@ The gate (scripts/check-deps.mjs) fails if a package.json dependency has no matc
 
 ## mobile
 
-- @expo/ui@~57.0.20: carried over from Last Call, used by the app
-- @gorhom/bottom-sheet@^5.2.14: bottom sheets
-- @react-native-community/datetimepicker@9.1.0: carried over from Last Call, used by the app
 - @react-native-community/netinfo@12.0.1: carried over from Last Call, used by the app
 - @shopify/flash-list@2.0.2: fast lists
 - @tanstack/react-query@^5.103.2: mobile data fetching and cache
 - expo@~57.0.25: mobile framework
-- expo-blur@~57.0.3: carried over from Last Call, used by the app
 - expo-constants@~57.0.19: carried over from Last Call, used by the app
 - expo-device@~57.0.2: carried over from Last Call, used by the app
 - expo-font@~57.0.4: carried over from Last Call, used by the app
-- expo-glass-effect@~57.0.4: carried over from Last Call, used by the app
 - expo-haptics@~57.0.3: carried over from Last Call, used by the app
 - expo-image@~57.0.5: fast image rendering
 - expo-image-manipulator@~57.0.20: resize photos before upload
@@ -75,7 +70,10 @@ The gate (scripts/check-deps.mjs) fails if a package.json dependency has no matc
 - jest@~29.7.0: mobile test runner
 - jest-expo@~57.0.5: dev tooling (build, test or lint)
 - typescript@~6.0.3: typecheck
+- @sentry/react-native@~7.11.0: error reporting, off unless the build sets EXPO_PUBLIC_SENTRY_ENABLED=1 and a DSN (no DSN is committed); loaded lazily, scrubbed of user data
+
 
 ## Removed
 
+- @gorhom/bottom-sheet, @react-native-community/datetimepicker, expo-blur, expo-glass-effect, @expo/ui: nothing in Nostos uses them (the venue sheets and promo pickers are gone).
 - leaflet, @types/leaflet: the web map is gone (Nostos is an iPhone app; the web holds legal pages and moderation tools).

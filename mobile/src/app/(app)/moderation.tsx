@@ -222,7 +222,9 @@ function QueueCard({ item, busy, onAct }: { item: ModQueueItem; busy: boolean; o
       <View style={styles.flags}>
         {item.flags.map((f) => (
           <View key={f.id} style={styles.flag}>
-            <Text variant="subhead">&ldquo;{f.reason}&rdquo;</Text>
+            <Text variant="subhead">
+              {f.category === "UNDERAGE" || f.category === "STALKING" ? "Urgent: " : ""}&ldquo;{f.reason}&rdquo;
+            </Text>
             <Text variant="footnote" color="textTertiary">
               {f.by}
               {f.byRole !== "USER" ? ` · ${f.byRole.toLowerCase()}` : ""} · {formatAge(f.createdAt)}

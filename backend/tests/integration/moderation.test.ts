@@ -66,6 +66,29 @@ describe("flags", () => {
     expect(await prisma.flag.count({ where: { targetId: stamp.id } })).toBe(0);
   });
 
+  it("reports carry a category (default OTHER): underage, stalking and not-at-this-place are first-class", async () => {
+    const { stamp, author } = await publicStamp();
+    const flaggers = [await makeActor(), await makeActor(), await makeActor(), await makeActor()];
+    await flagContent(prisma, flaggers[0]!, { targetType: "STAMP", targetId: stamp.id, reason: "Not at this place", category: "NOT_AT_PLACE" });
+    await flagContent(prisma, flaggers[1]!, { targetType: "STAMP", targetId: stamp.id, reason: "just wrong" });
+    await flagContent(prisma, flaggers[2]!, { targetType: "USER", targetId: author.handle, reason: "Under 21 or looks underage", category: "UNDERAGE" });
+    await flagContent(prisma, flaggers[3]!, { targetType: "USER", targetId: author.handle, reason: "Stalking or unwanted contact", category: "STALKING" });
+    expect((await prisma.flag.findMany({ orderBy: { createdAt: "asc" } })).map((f) => f.category)).toEqual(["NOT_AT_PLACE", "OTHER", "UNDERAGE", "STALKING"]);
+    await expect(flagContent(prisma, await makeActor(), { targetType: "STAMP", targetId: stamp.id, reason: "bad category", category: "BORING" })).rejects.toThrow();
+  });
+
+  it("the queue puts underage and stalking reports first, whatever their age", async () => {
+    const mod = await makeActor({ role: "MODERATOR" });
+    const old = await publicStamp();
+    await flagContent(prisma, await makeActor(), { targetType: "STAMP", targetId: old.stamp.id, reason: "spam spam", category: "SPAM" });
+    const urgent = await makeActor({ isPrivate: false });
+    await flagContent(prisma, await makeActor(), { targetType: "USER", targetId: urgent.handle, reason: "Under 21 or looks underage", category: "UNDERAGE" });
+    const queue = await moderationQueue(prisma, mod);
+    expect(queue.map((q) => q.targetType)).toEqual(["USER", "STAMP"]);
+    expect(queue[0]!.flags[0]).toMatchObject({ category: "UNDERAGE" });
+    expect(queue[1]!.flags[0]).toMatchObject({ category: "SPAM" });
+  });
+
   it("the old content types are not accepted", async () => {
     const { stamp } = await publicStamp();
     for (const targetType of ["PHOTO", "COMMENT", "REPORT"]) {

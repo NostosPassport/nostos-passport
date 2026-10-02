@@ -34,6 +34,18 @@ enum ContentType {
   USER
 }
 
+/// Why something was reported. UNDERAGE and STALKING are read first by moderators.
+enum FlagCategory {
+  SPAM
+  HARASSMENT
+  SEXUAL_OR_VIOLENT
+  NOT_AT_PLACE
+  STALKING
+  UNDERAGE
+  PRIVATE_INFO
+  OTHER
+}
+
 enum FlagStatus {
   OPEN
   RESOLVED
@@ -59,34 +71,34 @@ enum VerificationAction {
 }
 
 model User {
-  id                  String    @id @default(cuid())
-  email               String    @unique
-  handle              String    @unique
-  displayName         String    @map("display_name")
-  passwordHash        String    @map("password_hash")
-  role                Role      @default(USER)
+  id              String    @id @default(cuid())
+  email           String    @unique
+  handle          String    @unique
+  displayName     String    @map("display_name")
+  passwordHash    String    @map("password_hash")
+  role            Role      @default(USER)
   /// Moderation reputation in [0.2, 1.5]; new accounts start at 0.5. Visible only to the user and moderators.
-  reputation          Float     @default(0.5)
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  reputation      Float     @default(0.5)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   /// Set when the account was deleted (anonymized). The row stays so stamps and the moderation log keep their history.
-  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
-  termsAcceptedAt     DateTime? @map("terms_accepted_at") @db.Timestamptz(3)
-  termsVersion        String?   @map("terms_version")
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+  termsAcceptedAt DateTime? @map("terms_accepted_at") @db.Timestamptz(3)
+  termsVersion    String?   @map("terms_version")
   /// App Review / QA accounts: may stamp from anywhere. Their stamps are stored but visible only to themselves.
   /// Settable only by an admin or the seed.
-  geofenceExempt      Boolean   @default(false) @map("geofence_exempt")
+  geofenceExempt  Boolean   @default(false) @map("geofence_exempt")
   /// Set by a moderator for abusive accounts: can't sign in, all sessions revoked. Content stays until moderated.
-  suspendedAt         DateTime? @map("suspended_at") @db.Timestamptz(3)
+  suspendedAt     DateTime? @map("suspended_at") @db.Timestamptz(3)
   /// Private accounts (the default for every account): only approved followers see the profile, stamps and places.
   /// See src/server/privacy.ts.
-  isPrivate           Boolean   @default(true) @map("is_private")
+  isPrivate       Boolean   @default(true) @map("is_private")
   /// Max 150 characters, content-filtered.
-  bio                 String    @default("")
+  bio             String    @default("")
   /// Profile photo (re-encoded square JPEG). Shown only to viewers allowed to see the full profile.
-  avatarKey           String?   @map("avatar_key")
+  avatarKey       String?   @map("avatar_key")
   /// Verified badge, handpicked by an admin. Every grant and revoke is in the append-only verification_event log.
   /// Badge only: it never changes visibility, ordering or anything else.
-  verifiedAt          DateTime? @map("verified_at") @db.Timestamptz(3)
+  verifiedAt      DateTime? @map("verified_at") @db.Timestamptz(3)
 
   sessions               Session[]
   photos                 Photo[]
@@ -145,33 +157,33 @@ model Venue {
 /// A stamp: one visit to a place, with a photo, a caption, a song, or any mix (a CHECK requires at least one).
 /// Stamps are immutable except caption, song, moderation state (hidden_at) and removed_at (final); a trigger enforces it.
 model Photo {
-  id           String    @id @default(cuid())
-  userId       String    @map("user_id")
-  venueId      String    @map("venue_id")
+  id           String      @id @default(cuid())
+  userId       String      @map("user_id")
+  venueId      String      @map("venue_id")
   /// null = a stamp without a photo.
-  storageKey   String?   @unique @map("storage_key")
-  mimeType     String?   @map("mime_type")
+  storageKey   String?     @unique @map("storage_key")
+  mimeType     String?     @map("mime_type")
   /// Up to 280 characters (CHECK). Empty string when there is no caption.
   caption      String
   /// Song metadata only (no audio): from Apple's iTunes Search API, via our backend.
-  songTitle    String?   @map("song_title")
-  songArtist   String?   @map("song_artist")
-  songArtUrl   String?   @map("song_art_url")
-  songSourceId String?   @map("song_source_id")
+  songTitle    String?     @map("song_title")
+  songArtist   String?     @map("song_artist")
+  songArtUrl   String?     @map("song_art_url")
+  songSourceId String?     @map("song_source_id")
   /// Where the phone was when it stamped (kept for auditing the geofence check; never sent to viewers).
   lat          Float
   lng          Float
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  hiddenAt     DateTime? @map("hidden_at") @db.Timestamptz(3)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  hiddenAt     DateTime?   @map("hidden_at") @db.Timestamptz(3)
   /// Optional 1 to 10 (CHECK). Not shown in the UI for v1. Immutable.
-  rating       Int?      @db.SmallInt
-  editedAt     DateTime? @map("edited_at") @db.Timestamptz(3)
+  rating       Int?        @db.SmallInt
+  editedAt     DateTime?   @map("edited_at") @db.Timestamptz(3)
   /// The author removed it from their profile ("delete" means hide). Final: a trigger refuses to clear it.
-  removedAt    DateTime? @map("removed_at") @db.Timestamptz(3)
+  removedAt    DateTime?   @map("removed_at") @db.Timestamptz(3)
   /// Snapshot at write time: false when stamped by a geofence-exempt (App Review / QA) account: visible to its author only.
-  countable    Boolean   @default(true)
-  user         User      @relation(fields: [userId], references: [id])
-  venue        Venue     @relation(fields: [venueId], references: [id])
+  countable    Boolean     @default(true)
+  user         User        @relation(fields: [userId], references: [id])
+  venue        Venue       @relation(fields: [venueId], references: [id])
   likes        PhotoLike[]
 
   @@index([venueId, createdAt])
@@ -252,17 +264,18 @@ model RateEvent {
 }
 
 model Flag {
-  id         String      @id @default(cuid())
-  targetType ContentType @map("target_type")
-  targetId   String      @map("target_id")
+  id         String       @id @default(cuid())
+  targetType ContentType  @map("target_type")
+  targetId   String       @map("target_id")
   /// null for USER targets (profile reports).
-  venueId    String?     @map("venue_id")
-  flaggerId  String      @map("flagger_id")
+  venueId    String?      @map("venue_id")
+  flaggerId  String       @map("flagger_id")
   reason     String
-  status     FlagStatus  @default(OPEN)
-  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
-  flagger    User        @relation(fields: [flaggerId], references: [id])
-  venue      Venue?      @relation(fields: [venueId], references: [id])
+  category   FlagCategory @default(OTHER)
+  status     FlagStatus   @default(OPEN)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  flagger    User         @relation(fields: [flaggerId], references: [id])
+  venue      Venue?       @relation(fields: [venueId], references: [id])
 
   /// One OPEN flag per user per item (partial unique index in migration 3); after a review you may flag again.
   @@index([targetType, targetId, flaggerId])

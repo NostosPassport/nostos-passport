@@ -118,7 +118,7 @@ describe("objectionable content filter at every entry point", () => {
     await expect(makeStamp(me, venue.id, { caption: "porn night" })).rejects.toMatchObject(bad);
     await expect(makeStamp(me, venue.id, { caption: "ok", meta: { songTitle: "total f4gg0t", songArtist: "Someone" } })).rejects.toMatchObject(bad);
     await expect(makeStamp(me, venue.id, { caption: "ok", meta: { songTitle: "Fine", songArtist: "porn star" } })).rejects.toMatchObject(bad);
-    const base = { email: "n@x.dev", password: "long enough pw", acceptTerms: true, confirm21: true };
+    const base = { email: "n@x.dev", password: "long enough pw", acceptTerms: true, birthdate: "1990-05-05" };
     await expect(signup(prisma, { ...base, handle: "xxniggerxx", displayName: "ok" })).rejects.toMatchObject(bad);
     await expect(signup(prisma, { ...base, handle: "fine_handle", displayName: "Slut Queen" })).rejects.toMatchObject(bad);
     await expect(signup(prisma, { ...base, handle: "fine_handle", displayName: "Cocktail Queen" })).resolves.toBeTruthy();
@@ -127,11 +127,11 @@ describe("objectionable content filter at every entry point", () => {
 
 describe("terms acceptance", () => {
   const base = { email: "t@x.dev", password: "long enough pw", displayName: "T", handle: "terms_t" };
-  it("signup requires acceptTerms and confirm21 (true), and stores the version and time", async () => {
+  it("signup requires acceptTerms and a birthdate, and stores the version and time (never the birthdate)", async () => {
     await expect(signup(prisma, base)).rejects.toThrow(/Terms/);
-    await expect(signup(prisma, { ...base, acceptTerms: true })).rejects.toThrow(/21 or older/);
-    await expect(signup(prisma, { ...base, acceptTerms: "yes", confirm21: true })).rejects.toThrow();
-    const { user } = await signup(prisma, { ...base, acceptTerms: true, confirm21: true });
+    await expect(signup(prisma, { ...base, acceptTerms: true })).rejects.toThrow(/birthdate/i);
+    await expect(signup(prisma, { ...base, acceptTerms: "yes", birthdate: "1990-05-05" })).rejects.toThrow();
+    const { user } = await signup(prisma, { ...base, acceptTerms: true, birthdate: "1990-05-05" });
     expect(user.termsVersion).toBe(CURRENT_TERMS_VERSION);
     expect(user.termsAcceptedAt).toBeInstanceOf(Date);
     expect(Object.keys(user)).not.toContain("dateOfBirth");
@@ -193,7 +193,7 @@ describe("geofence-exempt review accounts", () => {
     expect(res.status).toBe(200);
     expect((await prisma.user.findUniqueOrThrow({ where: { id: target.userId } })).geofenceExempt).toBe(true);
     // Not settable through signup or any user-facing payload.
-    await expect(signup(prisma, { email: "g@x.dev", password: "long enough pw", displayName: "G", handle: "ggg", acceptTerms: true, confirm21: true, geofenceExempt: true })).rejects.toThrow(/Unrecognized key/);
+    await expect(signup(prisma, { email: "g@x.dev", password: "long enough pw", displayName: "G", handle: "ggg", acceptTerms: true, birthdate: "1990-05-05", geofenceExempt: true })).rejects.toThrow(/Unrecognized key/);
   });
 });
 

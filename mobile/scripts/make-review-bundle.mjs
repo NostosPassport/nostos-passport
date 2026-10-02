@@ -56,7 +56,7 @@ const tsc = run("npx tsc --noEmit 2>&1").trim() || "tsc: no errors";
 const lint = run("npx expo lint --max-warnings 0 2>&1").trim().split("\n").slice(-3).join("\n") || "lint: clean";
 const commit = run("git rev-parse --short HEAD").trim();
 
-let out = `NOSTOS iOS — REVIEW BUNDLE\nCommit: ${commit}\nGenerated: ${new Date().toISOString()}\n\n`;
+let out = `NOSTOS iOS - REVIEW BUNDLE\nCommit: ${commit}\nGenerated: ${new Date().toISOString()}\n\n`;
 out += `Contents:\n${files.map((f) => `  - ${f}`).join("\n")}\n\n`;
 out += `=== TEST SUMMARY ===\n${summary}\n\n${tsc}\n${lint}\n\n`;
 for (const f of files) {

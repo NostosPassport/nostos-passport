@@ -1,4 +1,3 @@
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -14,9 +13,12 @@ import { AuthProvider, useAuth } from "@/auth/auth-context";
 import { HeaderButton } from "@/components/ui/header-button";
 import { stackOptions } from "@/components/ui/stack-options";
 import { useOfflineAnnouncer } from "@/lib/network";
+import { initErrorReporting } from "@/lib/report-error";
 import { colors } from "@/theme";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+// Off unless the build sets EXPO_PUBLIC_SENTRY_ENABLED=1 and a DSN (see lib/report-error.ts).
+initErrorReporting();
 
 export default function RootLayout() {
   const [queryClient] = useState(createQueryClient);
@@ -27,10 +29,8 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <BottomSheetModalProvider>
-              <StatusBar style="light" />
-              <RootNavigator />
-            </BottomSheetModalProvider>
+            <StatusBar style="light" />
+            <RootNavigator />
           </AuthProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
@@ -67,7 +67,7 @@ function RootNavigator() {
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
-        {/* Modal: guests open these from inside the venue sheet, so they must present above it. */}
+        <Stack.Screen name="age-gate" options={{ title: "Age check", presentation: "modal", headerLeft: CloseButton }} />
         <Stack.Screen name="sign-in" options={{ title: "Sign in", presentation: "modal", headerLeft: CloseButton }} />
         <Stack.Screen name="sign-up" options={{ title: "Create account", presentation: "modal", headerLeft: CloseButton }} />
       </Stack.Protected>

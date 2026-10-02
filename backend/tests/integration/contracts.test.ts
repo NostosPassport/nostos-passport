@@ -180,7 +180,7 @@ describe("API contract", () => {
     // Auth (iOS)
     const su = await call("POST /api/auth/signup", signupR.POST, {
       headers: { "x-client": "ios" }, status: 201,
-      body: { email: "app@x.dev", password: "long enough pw", displayName: "App User", handle: "app_user", acceptTerms: true, confirm21: true },
+      body: { email: "app@x.dev", password: "long enough pw", displayName: "App User", handle: "app_user", acceptTerms: true, birthdate: "1990-05-05" },
     });
     const li = await call("POST /api/auth/login", loginR.POST, { headers: { "x-client": "ios" }, body: { email: "app@x.dev", password: "long enough pw" } });
     const me = li.token as string;
@@ -300,7 +300,7 @@ describe("API contract", () => {
     // Sign-out flows and deletion last.
     await call("POST /api/auth/logout", logoutR.POST, { token: friendT });
     await call("POST /api/auth/logout-all", logoutAllR.POST, { token: me });
-    const fresh = await signup(prisma, { email: "bye@x.dev", password: "long enough pw", displayName: "Bye", handle: "bye_bye", acceptTerms: true, confirm21: true });
+    const fresh = await signup(prisma, { email: "bye@x.dev", password: "long enough pw", displayName: "Bye", handle: "bye_bye", acceptTerms: true, birthdate: "1990-05-05" });
     const byeT = await tok(fresh.user.id);
     await call("POST /api/me/delete", meDeleteR.POST, { token: byeT, body: { password: "long enough pw" } });
   }, 60_000);

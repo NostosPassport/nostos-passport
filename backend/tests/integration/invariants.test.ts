@@ -11,6 +11,7 @@ import { blockUser } from "@/server/services/blocks";
 import { likeStamp } from "@/server/services/likes";
 import { getMe } from "@/server/services/me";
 import { listActivity } from "@/server/services/activity";
+import { signup } from "@/server/services/auth";
 import { installMemoryStorage } from "./mem-storage";
 import { actorFor, makeActor, makeStamp, makeUser, makeVenue, verify, INSIDE, OUTSIDE } from "./factories";
 
@@ -154,6 +155,21 @@ describe("invariants", () => {
     const stamp = await makeStamp(subject, venue.id);
     await follow(prisma, stranger, subject.handle);
     expect(JSON.stringify([wire(await getStamp(prisma, stranger, stamp.id)), wire(await listFeed(prisma, stranger))])).not.toMatch(/reputation|0\.77/);
+  });
+
+  it("rule 8: under-21s are blocked at signup and nothing about them is stored", async () => {
+    const now = new Date("2026-10-02T16:00:00Z");
+    const tables = ["app_user", "session", "login_attempt", "rate_event", "flag", "moderation_event", "photo", "follow"];
+    const count = async () => Object.fromEntries(await Promise.all(tables.map(async (t) => [t, Number((await prisma.$queryRawUnsafe<{ n: bigint }[]>(`SELECT count(*) AS n FROM "${t}"`))[0]!.n)])));
+    const before = await count();
+    const attempt = { email: "u20@x.dev", password: "long enough pw", displayName: "Twenty", handle: "twenty", acceptTerms: true };
+    await expect(signup(prisma, { ...attempt, birthdate: "2005-10-03" }, { now })).rejects.toMatchObject({ status: 403, code: "underage" });
+    expect(await count()).toEqual(before);
+    expect(await prisma.user.count({ where: { OR: [{ email: attempt.email }, { handle: attempt.handle }] } })).toBe(0);
+    // No column anywhere holds a birthdate, so an adult's isn't kept either.
+    const cols = await prisma.$queryRaw<{ column_name: string }[]>`SELECT column_name FROM information_schema.columns WHERE table_schema = 'public'`;
+    expect(cols.map((c) => c.column_name).filter((c) => /birth|dob/i.test(c))).toEqual([]);
+    await expect(signup(prisma, { ...attempt, birthdate: "2005-10-02" }, { now })).resolves.toBeTruthy();
   });
 
   it("rule 9: the feed is chronological from people you follow, with no ranking or personalization", async () => {

@@ -53,7 +53,7 @@ export function ProfileScreen({ handle, modal, own }: { handle: string; modal?: 
       { options: ["Report account", `Block @${handle}`, "Cancel"], destructiveButtonIndex: 1, cancelButtonIndex: 2, tintColor: colors.accent, userInterfaceStyle: "dark" },
       (i) => {
         if (i === 2 || !requireAccount()) return;
-        if (i === 0) chooseReportReason(`Report @${handle}`, (reason) => flag.mutate({ targetType: "USER", targetId: handle, reason }));
+        if (i === 0) chooseReportReason(`Report @${handle}`, (chosen) => flag.mutate({ targetType: "USER", targetId: handle, ...chosen }));
         if (i === 1) confirmBlock(handle, () => block.mutate({ handle, block: true }, { onSuccess: () => router.back() }));
       },
     );

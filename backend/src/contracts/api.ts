@@ -19,6 +19,8 @@ export const IsoDate = z.string().datetime({ offset: true });
 export const Role = z.enum(["USER", "MODERATOR", "ADMIN"]);
 /** What can be reported or moderated. The database calls a stamp "PHOTO"; the API says STAMP. */
 export const TargetType = z.enum(["STAMP", "USER"]);
+/** Why something is reported. Moderators read UNDERAGE and STALKING first. */
+export const FlagCategory = z.enum(["SPAM", "HARASSMENT", "SEXUAL_OR_VIOLENT", "NOT_AT_PLACE", "STALKING", "UNDERAGE", "PRIVATE_INFO", "OTHER"]);
 export const ModerationAction = z.enum(["FLAGGED", "AUTO_HIDE", "HIDE", "DISMISS", "RESTORE", "ACCOUNT_DELETED", "SUSPEND", "UNSUSPEND"]);
 
 export const ErrorResponse = z
@@ -57,7 +59,8 @@ export const SignupRequest = z
     displayName: z.string().trim().min(1).max(60),
     handle: z.string().trim().toLowerCase().regex(/^[a-z0-9_]{3,24}$/),
     acceptTerms: z.literal(true),
-    confirm21: z.literal(true),
+    /** YYYY-MM-DD. Checked once for 21+ (403 `underage` if not) and never stored. */
+    birthdate: z.string().refine((v) => /^\d{4}-\d{2}-\d{2}$/.test(v), "Enter your birthdate as YYYY-MM-DD"),
   })
   .strict();
 export const LoginRequest = z.object({ email: z.string().trim().email().max(200), password: z.string().max(200) }).strict();
@@ -284,7 +287,7 @@ export const BlocksResponse = z.object({ blocks: z.array(z.object({ handle: z.st
 // ------------------------------------------------------------------------------------------------
 
 /** targetId: the stamp id; for USER, the account id or handle. */
-export const FlagRequest = z.object({ targetType: TargetType, targetId: z.string().min(1).max(64), reason: z.string().trim().min(3).max(300) }).strict();
+export const FlagRequest = z.object({ targetType: TargetType, targetId: z.string().min(1).max(64), reason: z.string().trim().min(3).max(300), category: FlagCategory.default("OTHER") }).strict();
 export const FlagResponse = z.object({ flag: z.object({ id: z.string() }).strict(), autoHidden: z.boolean() }).strict();
 export const ModActionRequest = z
   .object({ targetType: TargetType, targetId: z.string().min(1).max(64), action: z.enum(["HIDE", "DISMISS", "RESTORE", "SUSPEND", "UNSUSPEND"]), note: z.string().trim().max(300).optional() })
@@ -310,7 +313,7 @@ export const ModQueueItem = z
       })
       .strict()
       .nullable(),
-    flags: z.array(z.object({ id: z.string(), reason: z.string(), createdAt: IsoDate, by: z.string(), byRole: Role }).strict()),
+    flags: z.array(z.object({ id: z.string(), reason: z.string(), category: FlagCategory, createdAt: IsoDate, by: z.string(), byRole: Role }).strict()),
     history: z.array(z.object({ action: ModerationAction, by: z.string(), note: z.string().nullable(), at: IsoDate }).strict()),
   })
   .strict();
@@ -379,6 +382,7 @@ export type Attribution = z.infer<typeof Attribution>;
 export type PublicUser = z.infer<typeof PublicUser>;
 export type Role = z.infer<typeof Role>;
 export type TargetType = z.infer<typeof TargetType>;
+export type FlagCategory = z.infer<typeof FlagCategory>;
 export type FollowState = z.infer<typeof FollowState>;
 export type PersonView = z.infer<typeof PersonView>;
 export type PersonRow = z.infer<typeof PersonRow>;

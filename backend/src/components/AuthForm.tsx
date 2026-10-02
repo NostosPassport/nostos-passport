@@ -19,7 +19,6 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     const form: Record<string, unknown> = Object.fromEntries(fd);
     if (mode === "signup") {
       form.acceptTerms = fd.get("acceptTerms") === "on";
-      form.confirm21 = fd.get("confirm21") === "on";
     }
     try {
       await api(`/api/auth/${mode}`, { method: "POST", json: form });
@@ -54,9 +53,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       />
       {mode === "signup" && (
         <div className="space-y-2 text-sm">
-          <label className="flex items-start gap-2">
-            <input type="checkbox" name="confirm21" required className="mt-1" />
-            <span>I&apos;m 21 or older</span>
+          <label className="block space-y-1">
+            <span>Date of birth. Nostos is for people 21 and older. We check it once and don&apos;t keep it.</span>
+            <input name="birthdate" type="date" required className={input} autoComplete="bday" />
           </label>
           <label className="flex items-start gap-2">
             <input type="checkbox" name="acceptTerms" required className="mt-1" />

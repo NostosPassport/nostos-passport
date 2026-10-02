@@ -4,6 +4,7 @@ import type { Db } from "@/lib/db";
 import { hashPassword, verifyPassword, getDummyHash } from "@/lib/auth/password";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { MINUTE_MS } from "@/lib/time";
+import { isOldEnough, MIN_AGE, parseBirthdate } from "@/lib/age";
 import { assertCleanText, conflict, ServiceError, tooMany } from "@/server/errors";
 
 /** Bump when the Terms or Privacy Policy change materially; users who accepted an older version can be re-prompted. */
@@ -20,18 +21,24 @@ export const signupSchema = z
       .toLowerCase()
       .regex(/^[a-z0-9_]{3,24}$/, "Handle: 3-24 letters, numbers, underscore"),
     acceptTerms: z.literal(true, { errorMap: () => ({ message: "You need to accept the Terms and Privacy Policy" }) }),
-    confirm21: z.literal(true, { errorMap: () => ({ message: "You need to be 21 or older to use Nostos" }) }),
+    /** YYYY-MM-DD. Read once for the 21+ check and never stored. */
+    birthdate: z.string().refine((v) => parseBirthdate(v) !== null, "Enter your birthdate as YYYY-MM-DD"),
   })
   .strict();
 
 export const loginSchema = z.object({ email: z.string().trim().toLowerCase().email().max(200), password: z.string().max(200) }).strict();
 
-export async function signup(db: Db, input: unknown, opts: { client?: SessionClient } = {}) {
-  const data = signupSchema.parse(input);
+export const UNDERAGE_MESSAGE = `You need to be ${MIN_AGE} or older to use Nostos`;
+
+export async function signup(db: Db, input: unknown, opts: { client?: SessionClient; now?: Date } = {}) {
+  const { birthdate, ...data } = signupSchema.parse(input);
+  // The age gate comes before anything else touches the database. A refused attempt stores nothing about the person:
+  // no account, no email, no birthdate, no log row. The birthdate goes out of scope here and is never written anywhere.
+  if (!isOldEnough(birthdate, opts.now)) throw new ServiceError(403, "underage", UNDERAGE_MESSAGE);
   assertCleanText({ handle: data.handle, "display name": data.displayName });
   const existing = await db.user.findFirst({ where: { OR: [{ email: data.email }, { handle: data.handle }] } });
   if (existing) throw conflict(existing.email === data.email ? "Email already registered" : "Handle taken");
-  // Public signup always creates a plain USER. Elevated roles come from admin approval (claims) or seed.
+  // Public signup always creates a plain USER. Staff roles come from the command line or the seed.
   const passwordHash = await hashPassword(data.password);
   const user = await db.user
     .create({

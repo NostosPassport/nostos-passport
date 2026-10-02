@@ -15,7 +15,7 @@ const json = (body: unknown, headers: Record<string, string> = {}) =>
 const none = undefined as never;
 
 async function iosLogin(email = "ios@x.dev") {
-  await signup(prisma, { email, password: "long enough pw", displayName: "I", handle: email.split("@")[0]!.replace(/\W/g, "_"), acceptTerms: true, confirm21: true });
+  await signup(prisma, { email, password: "long enough pw", displayName: "I", handle: email.split("@")[0]!.replace(/\W/g, "_"), acceptTerms: true, birthdate: "1990-05-05" });
   const res = await loginRoute(new Request("http://localhost/api/auth/login", json({ email, password: "long enough pw" }, { "x-client": "ios" })), none);
   return { res, body: (await res.json()) as { token: string; expiresAt: string; user: { handle: string } } };
 }
@@ -34,10 +34,10 @@ describe("bearer tokens for iOS", () => {
   });
 
   it("signup with X-Client: ios also returns a token; web signup is unchanged (cookie, no token)", async () => {
-    const ios = await signupRoute(new Request("http://localhost/api/auth/signup", json({ email: "s1@x.dev", password: "long enough pw", displayName: "S", handle: "s_one", acceptTerms: true, confirm21: true }, { "x-client": "ios" })), none);
+    const ios = await signupRoute(new Request("http://localhost/api/auth/signup", json({ email: "s1@x.dev", password: "long enough pw", displayName: "S", handle: "s_one", acceptTerms: true, birthdate: "1990-05-05" }, { "x-client": "ios" })), none);
     expect(ios.status).toBe(201);
     expect((await ios.json()).token).toBeTruthy();
-    const web = await signupRoute(new Request("http://localhost/api/auth/signup", json({ email: "s2@x.dev", password: "long enough pw", displayName: "S", handle: "s_two", acceptTerms: true, confirm21: true })), none);
+    const web = await signupRoute(new Request("http://localhost/api/auth/signup", json({ email: "s2@x.dev", password: "long enough pw", displayName: "S", handle: "s_two", acceptTerms: true, birthdate: "1990-05-05" })), none);
     expect(web.headers.get("set-cookie")).toMatch(/lc_session=/);
     expect((await web.json()).token).toBeUndefined();
   });
@@ -134,7 +134,7 @@ describe("token hardening", () => {
   });
 
   it("X-Client matching tolerates case and whitespace", async () => {
-    await signup(prisma, { email: "w@x.dev", password: "long enough pw", displayName: "W", handle: "www", acceptTerms: true, confirm21: true });
+    await signup(prisma, { email: "w@x.dev", password: "long enough pw", displayName: "W", handle: "www", acceptTerms: true, birthdate: "1990-05-05" });
     const res = await loginRoute(new Request("http://localhost/api/auth/login", json({ email: "w@x.dev", password: "long enough pw" }, { "x-client": " IOS " })), none);
     expect((await res.json()).token).toBeTruthy();
   });
@@ -152,7 +152,7 @@ describe("token hardening", () => {
   it("logout: 401 for a dead bearer; cookie logout revokes the cookie session", async () => {
     const dead = await logoutRoute(new Request("http://localhost/api/auth/logout", { method: "POST", headers: { authorization: "Bearer dead-token-dead-token-dead-00" } }), none);
     expect(dead.status).toBe(401);
-    await signup(prisma, { email: "c@x.dev", password: "long enough pw", displayName: "C", handle: "ccc", acceptTerms: true, confirm21: true });
+    await signup(prisma, { email: "c@x.dev", password: "long enough pw", displayName: "C", handle: "ccc", acceptTerms: true, birthdate: "1990-05-05" });
     const web = await loginRoute(new Request("http://localhost/api/auth/login", json({ email: "c@x.dev", password: "long enough pw" })), none);
     const cookieToken = /lc_session=([^;]+)/.exec(web.headers.get("set-cookie") ?? "")![1]!;
     const out = await logoutRoute(new Request("http://localhost/api/auth/logout", { method: "POST", headers: { cookie: `${SESSION_COOKIE}=${cookieToken}` } }), none);

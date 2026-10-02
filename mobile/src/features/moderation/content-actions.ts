@@ -7,28 +7,30 @@ import { router } from "expo-router";
 import { ActionSheetIOS, Alert } from "react-native";
 
 import { api, ApiError, errorText } from "@/api";
-import type { TargetType } from "@/api/contracts";
+import type { FlagCategory, TargetType } from "@/api/contracts";
 import { useAuth } from "@/auth/auth-context";
 import { toast } from "@/components/ui/toast";
 import { haptics } from "@/lib/haptics";
 import { colors } from "@/theme";
 import { flaggedStore } from "./flagged-store";
 
-/** What a person can say is wrong. The server stores the sentence as the reason moderators read. */
-export const REPORT_REASONS = [
-  "Spam or scam",
-  "Harassment or hate",
-  "Sexual or violent content",
-  "Not at this place",
-  "Stalking or unwanted contact",
-  "Under 21 or looks underage",
-  "Someone's private information",
-] as const;
+/** What a person can say is wrong. The server stores the label as the reason and the category for moderators. */
+export const REPORT_REASONS: readonly { label: string; category: FlagCategory }[] = [
+  { label: "Spam or scam", category: "SPAM" },
+  { label: "Harassment or hate", category: "HARASSMENT" },
+  { label: "Sexual or violent content", category: "SEXUAL_OR_VIOLENT" },
+  { label: "Not at this place", category: "NOT_AT_PLACE" },
+  { label: "Stalking or unwanted contact", category: "STALKING" },
+  { label: "Under 21 or looks underage", category: "UNDERAGE" },
+  { label: "Someone's private information", category: "PRIVATE_INFO" },
+];
+
+export type ChosenReason = { reason: string; category: FlagCategory };
 
 export function useFlag() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (v: { targetType: TargetType; targetId: string; reason: string }) => api.flags.create(v),
+    mutationFn: (v: { targetType: TargetType; targetId: string; reason: string; category: FlagCategory }) => api.flags.create(v),
     onSuccess: (res, v) => {
       haptics.success();
       if (v.targetType === "STAMP") flaggedStore.add(v.targetId);
@@ -62,21 +64,22 @@ export function useBlock() {
 /** Ask for a reason, then flag. */
 export function chooseReportReason(
   title: string,
-  onPick: (reason: string) => void,
-  reasons: readonly string[] = REPORT_REASONS,
+  onPick: (chosen: ChosenReason) => void,
+  reasons: readonly { label: string; category: FlagCategory }[] = REPORT_REASONS,
   message = "Reports are reviewed by moderators. The person isn't told who reported them.",
 ) {
   ActionSheetIOS.showActionSheetWithOptions(
     {
       title,
       message,
-      options: [...reasons, "Cancel"],
+      options: [...reasons.map((r) => r.label), "Cancel"],
       cancelButtonIndex: reasons.length,
       tintColor: colors.accent,
       userInterfaceStyle: "dark",
     },
     (i) => {
-      if (i < reasons.length) onPick(reasons[i]!);
+      const r = reasons[i];
+      if (r) onPick({ reason: r.label, category: r.category });
     },
   );
 }
@@ -112,7 +115,7 @@ export function useStampActions(): (item: StampMenuItem) => ContentAction[] {
         destructive: true,
         onPress: () => {
           if (status !== "signedIn") return router.push("/sign-in");
-          chooseReportReason("Report this stamp", (reason) => flag.mutate({ targetType: "STAMP", targetId: item.id, reason }));
+          chooseReportReason("Report this stamp", (chosen) => flag.mutate({ targetType: "STAMP", targetId: item.id, ...chosen }));
         },
       });
       actions.push({

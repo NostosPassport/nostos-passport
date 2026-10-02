@@ -35,12 +35,18 @@ export type ApiTargetType = "STAMP" | "USER";
 const toDb = (t: ApiTargetType): ContentType => (t === "STAMP" ? "PHOTO" : "USER");
 const toApi = (t: ContentType): ApiTargetType => (t === "USER" ? "USER" : "STAMP");
 
+/** Moderators read these first: a minor on the app and someone being followed around are the worst reports. */
+export const URGENT_CATEGORIES = ["UNDERAGE", "STALKING"] as const;
+export const flagCategorySchema = z.enum(["SPAM", "HARASSMENT", "SEXUAL_OR_VIOLENT", "NOT_AT_PLACE", "STALKING", "UNDERAGE", "PRIVATE_INFO", "OTHER"]);
+
 export const flagSchema = z
   .object({
     targetType: z.enum(["STAMP", "USER"]),
     /** Content id; for USER targets, the account's id or handle. */
     targetId: z.string().min(1).max(64),
     reason: z.string().trim().min(3, "Say briefly what's wrong").max(300),
+    /** Defaults to OTHER. */
+    category: flagCategorySchema.default("OTHER"),
   })
   .strict();
 
@@ -119,7 +125,7 @@ export async function flagContent(db: Db, actor: Actor | null, raw: unknown, now
     });
     if (existing) throw conflict("You already flagged this");
     const flag = await tx.flag.create({
-      data: { targetType: input.targetType, targetId: targetId, venueId: target.venueId, flaggerId: me.userId, reason: input.reason, createdAt: now },
+      data: { targetType: input.targetType, targetId: targetId, venueId: target.venueId, flaggerId: me.userId, reason: input.reason, category: input.category, createdAt: now },
     });
     await tx.moderationEvent.create({
       data: { action: "FLAGGED", targetType: input.targetType, targetId: targetId, actorId: me.userId, note: input.reason, createdAt: now },
@@ -267,6 +273,7 @@ export async function moderationQueue(db: Db, actor: Actor | null) {
         flags: g.map((f) => ({
           id: f.id,
           reason: f.reason,
+          category: f.category,
           createdAt: f.createdAt,
           by: f.flagger.handle,
           byRole: f.flagger.role,
@@ -274,9 +281,16 @@ export async function moderationQueue(db: Db, actor: Actor | null) {
         history: events.filter((e) => e.targetId === first.targetId).map((e) => ({ action: e.action, by: e.actor?.handle ?? "system", note: e.note, at: e.createdAt })),
       };
     })
-    // Auto-hidden items first (they're hidden pending review), then oldest flag first.
-    .sort((a, b) => Number(Boolean(b.content?.hiddenAt)) - Number(Boolean(a.content?.hiddenAt)) || a.flags[0]!.createdAt.getTime() - b.flags[0]!.createdAt.getTime());
+    // Urgent categories first (underage, stalking), then auto-hidden items (hidden pending review), then oldest flag first.
+    .sort(
+      (a, b) =>
+        Number(isUrgent(b.flags)) - Number(isUrgent(a.flags)) ||
+        Number(Boolean(b.content?.hiddenAt)) - Number(Boolean(a.content?.hiddenAt)) ||
+        a.flags[0]!.createdAt.getTime() - b.flags[0]!.createdAt.getTime(),
+    );
 }
+
+const isUrgent = (flags: readonly { category: string }[]) => flags.some((f) => (URGENT_CATEGORIES as readonly string[]).includes(f.category));
 
 export async function recentModerationLog(db: Db, actor: Actor | null, take = 30) {
   assertModerator(actor);
