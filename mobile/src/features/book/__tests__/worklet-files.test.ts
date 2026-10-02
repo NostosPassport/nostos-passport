@@ -6,7 +6,7 @@
 import { readFileSync } from "fs";
 import path from "path";
 
-const WORKLET_MATH = ["foil.ts", "open-math.ts", "flip-math.ts", "landing.ts"];
+const WORKLET_MATH = ["foil.ts", "open-math.ts", "flip-math.ts", "landing.ts", "zoom.ts"];
 
 describe("worklet math files", () => {
   it.each(WORKLET_MATH)("%s starts with the worklet directive and imports nothing that isn't a worklet", (file) => {
@@ -14,6 +14,6 @@ describe("worklet math files", () => {
     const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").trimStart();
     expect(code.startsWith('"worklet";')).toBe(true);
     // Only other worklet math may be imported (a plain module would not be callable on the UI thread).
-    for (const m of src.matchAll(/^import .* from "(.*)";$/gm)) expect(["./flip-math", "./foil", "./open-math", "./landing"]).toContain(m[1]);
+    for (const m of src.matchAll(/^import .* from "(.*)";$/gm)) expect(["./flip-math", "./foil", "./open-math", "./landing", "./zoom"]).toContain(m[1]);
   });
 });

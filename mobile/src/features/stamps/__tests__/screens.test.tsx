@@ -32,6 +32,7 @@ jest.mock("@/api/queries", () => ({
   qk: jest.requireActual("@/api/keys").qk,
   useFeed: () => mockFeed,
   useStamp: () => mockStamp,
+  usePins: () => ({ data: { stamps: [] } }),
   useSongSearch: () => mockSongs,
   useMe: () => ({ data: { user: { handle: "me" } } }),
 }));

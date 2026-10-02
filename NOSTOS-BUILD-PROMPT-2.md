@@ -34,7 +34,7 @@ Nostos is STRICTLY PERSONAL for this version. No feed, no likes, no follows, no 
 - [x] F.5 Page flip (drag from edge, tap edges, rotateY hinge with live shading, springs, hold halfway, reduced motion crossfade)
 - [x] F.6 Stamps (Skia/SVG brass ink, deterministic design from place id, border from neighborhood, pure function with tests, completed-neighborhood foil stamp)
 - [x] F.7 Stamp landing (slam, ink spread, glow, shake, haptic, photos pin, "Added to page N", progress)
-- [ ] F.8 Visa spread (stamp left, scrapbook right up to 6 photos, drag rearrange persisted, full screen pinch zoom, caption typewriter, date, place, song ticket stub, menu)
+- [x] F.8 Visa spread (stamp left, scrapbook right up to 6 photos, drag rearrange persisted, full screen pinch zoom, caption typewriter, date, place, song ticket stub, menu)
 - [ ] F.9 Index (neighborhood progress rings, jump to pages)
 - [ ] F.10 Stamp flow (where are you list, km at 1000 m+, honesty banner, calm disabled state, compose, landing)
 - [ ] F.11 Map (dark, glowing brass pins, dim pins, bottom sheet, custom markers)
