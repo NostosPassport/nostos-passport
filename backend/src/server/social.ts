@@ -1,3 +1,5 @@
+import { notFound } from "@/server/errors";
+
 /**
  * SOCIAL_ENABLED (default off). Nostos v1 is strictly personal: no feed, follows, likes, sharing, activity or blocks, and
  * every passport is visible only to its owner. With the flag on, the social layer works as built in session 1.
@@ -5,4 +7,9 @@
  */
 export function socialEnabled(env: Record<string, string | undefined> = process.env): boolean {
   return ["1", "true", "yes"].includes((env.SOCIAL_ENABLED ?? "").trim().toLowerCase());
+}
+
+/** Moderation is part of the social layer: legacy reports never expose personal passports. */
+export function assertSocialEnabled() {
+  if (!socialEnabled()) throw notFound();
 }

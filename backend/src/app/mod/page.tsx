@@ -7,9 +7,12 @@ import { getCurrentActor } from "@/server/current";
 import { isModerator } from "@/server/permissions";
 import { moderationQueue, recentModerationLog } from "@/server/services/moderation";
 
+import { socialEnabled } from "@/server/social";
+
 export const dynamic = "force-dynamic";
 
 export default async function ModPage() {
+  if (!socialEnabled()) notFound();
   const actor = await getCurrentActor();
   if (!actor) redirect("/login?next=/mod");
   if (!isModerator(actor)) notFound();

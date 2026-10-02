@@ -21,3 +21,8 @@ device checklist is for that. No deployment was made.
 **Surprises:** the build prompt referenced an "existing reportError hook" and a DESIGN.md "section 8"; neither existed.
 The hook was created in the app (`mobile/src/lib/report-error.ts`) and DESIGN.md was written from the prompt's other
 sections (logged in OPEN-QUESTIONS 4).
+
+## Codex lane, phase 1
+- Verified reviewer references moderation.ts:233,305 at current HEAD: personal-mode HTTP returned 200 in both staff regression cases before the fix.
+- Social moderation services and web page now reject personal mode before reading legacy records; queue, hidden, log, decisions and direct flagging are covered. Records remain append-only.
+- Baseline gate: backend 269, mobile 292. Postgres is isolated on 5438; test database allowlist accepts exact nostos_codex_test.

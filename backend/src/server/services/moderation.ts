@@ -26,6 +26,8 @@ import { uploadUrl } from "@/server/media";
 import { subjectSelect } from "@/server/privacy";
 import { assertVisible } from "@/server/services/stamps";
 
+import { assertSocialEnabled } from "@/server/social";
+
 export const AUTO_HIDE_THRESHOLD = 3;
 export const AUTO_HIDE_MIN_ACCOUNT_AGE_MS = 7 * 24 * 3600_000;
 export const AUTO_HIDE_MIN_REPUTATION = 0.5;
@@ -97,6 +99,7 @@ async function lockTarget(tx: Prisma.TransactionClient, type: ContentType, id: s
 }
 
 export async function flagContent(db: Db, actor: Actor | null, raw: unknown, now = new Date()) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const parsed = flagSchema.parse(raw);
   const input = { ...parsed, targetType: toDb(parsed.targetType) };
@@ -163,6 +166,7 @@ export async function flagContent(db: Db, actor: Actor | null, raw: unknown, now
 
 /** Moderator decision. Everyone else gets 403. */
 export async function moderate(db: Db, actor: Actor | null, raw: unknown, now = new Date()) {
+  assertSocialEnabled();
   const mod = assertCanModerateContent(actor);
   const parsed = moderateSchema.parse(raw);
   const input = { ...parsed, targetType: toDb(parsed.targetType) };
@@ -231,6 +235,7 @@ export type QueueItem = Awaited<ReturnType<typeof moderationQueue>>[number];
 
 /** Open flags grouped by target, oldest first, with enough context to decide. Moderators only. */
 export async function moderationQueue(db: Db, actor: Actor | null) {
+  assertSocialEnabled();
   assertModerator(actor);
   const flags = await db.flag.findMany({
     where: { status: "OPEN" },
@@ -293,6 +298,7 @@ export async function moderationQueue(db: Db, actor: Actor | null) {
 const isUrgent = (flags: readonly { category: string }[]) => flags.some((f) => (URGENT_CATEGORIES as readonly string[]).includes(f.category));
 
 export async function recentModerationLog(db: Db, actor: Actor | null, take = 30) {
+  assertSocialEnabled();
   assertModerator(actor);
   return db.moderationEvent.findMany({ orderBy: { createdAt: "desc" }, take, include: { actor: { select: { handle: true } } } });
 }
@@ -303,6 +309,7 @@ export async function recentModerationLog(db: Db, actor: Actor | null, take = 30
  * excluded: they can never be restored.
  */
 export async function recentlyHidden(db: Db, actor: Actor | null, take = 50) {
+  assertSocialEnabled();
   assertModerator(actor);
   const [photos, users] = await Promise.all([
     db.photo.findMany({
