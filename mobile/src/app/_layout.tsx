@@ -1,4 +1,7 @@
+import { CormorantGaramond_500Medium, CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold } from "@expo-google-fonts/cormorant-garamond";
+import { CourierPrime_400Regular, CourierPrime_700Bold } from "@expo-google-fonts/courier-prime";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { useFonts } from "expo-font";
 import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -42,10 +45,12 @@ function RootNavigator() {
   useOfflineAnnouncer();
   const { status } = useAuth();
   const me = useMe();
+  // The serif and the typewriter. If they fail to load the system fonts are used and the app still opens.
+  const [fontsLoaded, fontError] = useFonts({ CormorantGaramond_500Medium, CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold, CourierPrime_400Regular, CourierPrime_700Bold });
   const signedIn = status === "signedIn";
   const meReady = signedIn && !!me.data;
   const needsTerms = meReady && me.data?.terms.needsAcceptance === true;
-  const ready = status !== "loading" && !(signedIn && me.isLoading);
+  const ready = status !== "loading" && !(signedIn && me.isLoading) && (fontsLoaded || !!fontError);
 
   useEffect(() => {
     if (ready) SplashScreen.hide();

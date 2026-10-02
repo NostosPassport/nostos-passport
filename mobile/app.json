@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "nostos",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0A0A0D",
+    "backgroundColor": "#000000",
     "platforms": [
       "ios"
     ],
@@ -59,7 +59,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0A0A0D",
+          "backgroundColor": "#000000",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 120
         }
@@ -81,7 +81,8 @@
           "photosPermission": "Choose a photo for your stamp.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,

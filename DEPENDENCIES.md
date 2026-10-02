@@ -70,6 +70,8 @@ The gate (scripts/check-deps.mjs) fails if a package.json dependency has no matc
 - jest@~29.7.0: mobile test runner
 - jest-expo@~57.0.5: dev tooling (build, test or lint)
 - typescript@~6.0.3: typecheck
+- @expo-google-fonts/cormorant-garamond@^0.4.1: the serif for titles and stamp text (bundled font files, works in Expo Go)
+- @expo-google-fonts/courier-prime@^0.4.1: the typewriter face for dates and captions (bundled font files)
 - @sentry/react-native@~7.11.0: error reporting, off unless the build sets EXPO_PUBLIC_SENTRY_ENABLED=1 and a DSN (no DSN is committed); loaded lazily, scrubbed of user data
 
 

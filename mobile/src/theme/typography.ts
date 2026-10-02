@@ -1,10 +1,18 @@
 /** SF Pro (the system font) on the iOS type scale. Sizes are size/line-height in points. */
 import type { TextStyle } from "react-native";
 
+import { fonts } from "./midnight";
+
 const scale = {
-  largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: "700" },
-  title: { fontSize: 28, lineHeight: 34, fontWeight: "700" },
-  title2: { fontSize: 22, lineHeight: 28, fontWeight: "600" },
+  // Titles are set in the serif (the family carries the weight, so fontWeight stays regular).
+  largeTitle: { fontFamily: fonts.serif, fontSize: 38, lineHeight: 44, fontWeight: "400" },
+  title: { fontFamily: fonts.serif, fontSize: 30, lineHeight: 36, fontWeight: "400" },
+  title2: { fontFamily: fonts.serif, fontSize: 24, lineHeight: 30, fontWeight: "400" },
+  /** Stamp text, plaques and page titles in the book. */
+  serifLabel: { fontFamily: fonts.serif, fontSize: 18, lineHeight: 22, fontWeight: "400", letterSpacing: 1.5 },
+  /** Dates, captions, page numbers: the typewriter. */
+  typewriter: { fontFamily: fonts.mono, fontSize: 15, lineHeight: 22, fontWeight: "400" },
+  typewriterSmall: { fontFamily: fonts.mono, fontSize: 12, lineHeight: 16, fontWeight: "400", letterSpacing: 0.5 },
   headline: { fontSize: 17, lineHeight: 22, fontWeight: "600" },
   body: { fontSize: 17, lineHeight: 22, fontWeight: "400" },
   callout: { fontSize: 16, lineHeight: 21, fontWeight: "400" },

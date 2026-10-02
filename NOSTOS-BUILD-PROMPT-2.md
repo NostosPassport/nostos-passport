@@ -22,7 +22,7 @@ Nostos is STRICTLY PERSONAL for this version. No feed, no likes, no follows, no 
 - [x] D.5 Oldest first ordering; stamp response includes page and slot from one shared layout function.
 
 ## E. Theme system
-- [ ] E.1 One theme "Midnight" in mobile/src/theme: black #000000, surfaces #0B0B0D #141418, brass #C9A24B, dim brass #8F7434, brass glow, bone #E8E4DC #A09C94 #6B6862, type scale, radii, spacing, shadows, motion durations and springs, stamp styles. No other hues, not even errors. Nothing white in chrome.
+- [x] E.1 One theme "Midnight" in mobile/src/theme: black #000000, surfaces #0B0B0D #141418, brass #C9A24B, dim brass #8F7434, brass glow, bone #E8E4DC #A09C94 #6B6862, type scale, radii, spacing, shadows, motion durations and springs, stamp styles. No other hues, not even errors. Nothing white in chrome.
 - [ ] E.2 Lint rule or test failing on color literals outside the theme file and on white; wired into the gate.
 - [ ] E.3 Settings: quiet "Customize, coming soon" row with a lock, opening a teaser sheet.
 
