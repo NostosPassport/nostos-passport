@@ -87,6 +87,10 @@ export default function Settings() {
         </ListGroup>
         )}
 
+        <ListGroup>
+          <ListRow icon="lock.fill" iconColor="dimBrass" title="Customize, coming soon" titleColor="textSecondary" chevron onPress={() => router.push("/customize")} accessibilityHint="Opens a note about what is coming" />
+        </ListGroup>
+
         <ListGroup header="Settings">
           {SOCIAL_ENABLED && <ListRow icon="hand.raised.fill" title="Blocked users" chevron onPress={() => router.push("/settings/blocked")} />}
           <ListRow icon="lock.fill" title="Privacy policy" external onPress={() => openWebPage(LEGAL.privacy)} />

@@ -17,6 +17,10 @@ export default function AppLayout() {
         name="location-permission"
         options={{ presentation: "formSheet", sheetAllowedDetents: [0.6], sheetGrabberVisible: true, sheetCornerRadius: radius.sheet, headerShown: false, contentStyle: { backgroundColor: colors.surface } }}
       />
+      <Stack.Screen
+        name="customize"
+        options={{ presentation: "formSheet", sheetAllowedDetents: [0.4], sheetGrabberVisible: true, sheetCornerRadius: radius.sheet, headerShown: false, contentStyle: { backgroundColor: colors.surface } }}
+      />
       <Stack.Screen name="settings/index" options={{ title: "Settings", headerLargeTitle: true }} />
       <Stack.Screen name="edit-profile" options={{ title: "Edit profile", presentation: "modal" }} />
       <Stack.Screen name="follow-requests" options={{ title: "Follow requests" }} />
