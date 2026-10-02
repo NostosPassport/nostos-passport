@@ -90,3 +90,8 @@ Seed accounts: `avaa` (private, four requests waiting), `maya_r` (public, verifi
 ## No blank screens
 - [ ] Open every screen above with a slow connection and with Airplane Mode: each shows a skeleton, a message or an error
       with Try again, never an empty screen. Swipe down on each modal to dismiss.
+
+## Book (session 2): phone checks
+
+- [ ] Cover: foil highlight follows a finger drag, follows tilt, shimmers when idle, and stops with Reduce Motion on.
+- [ ] Open animation: the cover swings on its left edge, shades while turning, and the page under it is shadowed then clears. With Reduce Motion it crossfades.
