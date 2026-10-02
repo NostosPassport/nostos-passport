@@ -89,7 +89,7 @@ proxied through the backend to Apple's public iTunes Search API with no user ide
 | `GET /api/places` | `PlacesResponse`: name, location, geofence. No live data |
 | `GET /api/places/:id` | `PlaceResponse` (id or slug) |
 | `GET /api/places/nearby?lat=&lng=` | `NearbyPlacesResponse`: inside or near the geofence, nearest first. The position is never stored |
-| `POST /api/places/:id/stamps` | `CreateStampResponse` (201). multipart: optional `photo`, `caption`, `songTitle`, `songArtist`, `songArtUrl`, `songSourceId`, `lat`, `lng`, optional `rating` |
+| `POST /api/places/:id/stamps` | `CreateStampResponse` (201). multipart: optional `photos` (up to 6, repeated), `caption`, `songTitle`, `songArtist`, `songArtUrl`, `songSourceId`, `lat`, `lng`, optional `rating` |
 
 ### Stamps, feed and passports
 
@@ -97,12 +97,17 @@ proxied through the backend to Apple's public iTunes Search API with no user ide
 |---|---|---|
 | `GET /api/stamps/:id` | | `StampResponse` (404 unless visible) |
 | `PATCH /api/stamps/:id` | `StampEditRequest`: caption and song only; frozen while a flag is open | `StampResponse` |
+| `POST /api/stamps/:id/photos` | multipart `photos` (repeated) | `StampResponse`: add photos to your own stamp, up to 6 in all |
+| `PATCH /api/stamps/:id/photos` | `PhotoLayoutRequest`: `{ photos: [{ id, position?, x?, y?, rotation? }] }` | `StampResponse`: the scrapbook layout and order, owner only |
+| `POST /api/stamps/:id/photos/:photoId/remove` | none | `StampResponse`: hides one photo for good, never deletes |
 | `POST /api/stamps/:id/remove` | none | `RemoveStampResponse`: "delete from profile", final, never a hard delete |
 | `PUT`, `DELETE /api/stamps/:id/like` | none | `LikeResponse`: one per person, not your own, not on hidden or removed stamps |
 | `GET /api/feed?before=` | | `FeedResponse`: stamps from people you follow, newest first, 30 per page |
 | `GET /api/users/:handle/stamps?before=` | | `UserStampsResponse` (403 `private_account`) |
 | `GET /api/users/:handle/places` | | `UserPlacesResponse`: distinct places with stamp count and latest stamp |
 | `GET /api/songs/search?q=` | | `SongSearchResponse`: signed in, rate limited (120 an hour) |
+
+A stamp holds up to 6 photos (`photos`, in page order, each with an optional scrapbook `x`, `y` as 0..1 of the page and `rotation` in degrees; `photoUrl` is the first). Photos are re-encoded, so no EXIF or GPS survives, and they are hidden, never deleted.
 
 A `StampView` carries the author (always a full profile view), the place, the song, likes and `mine`. It never carries
 coordinates, storage keys or user ids. `hidden` and `removed` are true only for staff.

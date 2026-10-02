@@ -29,6 +29,8 @@ import * as placeR from "@/app/api/places/[id]/route";
 import * as nearbyR from "@/app/api/places/nearby/route";
 import * as placeStampsR from "@/app/api/places/[id]/stamps/route";
 import * as stampR from "@/app/api/stamps/[id]/route";
+import * as stampPhotosR from "@/app/api/stamps/[id]/photos/route";
+import * as stampPhotoRemoveR from "@/app/api/stamps/[id]/photos/[photoId]/remove/route";
 import * as stampLikeR from "@/app/api/stamps/[id]/like/route";
 import * as stampRemoveR from "@/app/api/stamps/[id]/remove/route";
 import * as feedR from "@/app/api/feed/route";
@@ -79,6 +81,9 @@ const REGISTRY: Record<string, ZodTypeAny | "binary"> = {
   "POST /api/places/[id]/stamps": C.CreateStampResponse,
   "GET /api/stamps/[id]": C.StampResponse,
   "PATCH /api/stamps/[id]": C.StampResponse,
+  "POST /api/stamps/[id]/photos": C.StampResponse,
+  "PATCH /api/stamps/[id]/photos": C.StampResponse,
+  "POST /api/stamps/[id]/photos/[photoId]/remove": C.StampResponse,
   "PUT /api/stamps/[id]/like": C.LikeResponse,
   "DELETE /api/stamps/[id]/like": C.LikeResponse,
   "POST /api/stamps/[id]/remove": C.RemoveStampResponse,
@@ -243,6 +248,16 @@ describe("API contract", () => {
     await call("GET /api/feed", feedR.GET, { token: me, query: "?before=2999-01-01T00:00:00.000Z_zzzz" });
     await call("GET /api/users/[handle]/stamps", userStampsR.GET, { token: me, params: { handle: friend.handle } });
     await call("GET /api/users/[handle]/places", userPlacesR.GET, { token: me, params: { handle: friend.handle } });
+
+    // Photos: add, lay out, remove.
+    const more = new FormData();
+    more.append("photos", new Blob([new Uint8Array(png())], { type: "image/png" }), "a.png");
+    more.append("photos", new Blob([new Uint8Array(png())], { type: "image/png" }), "b.png");
+    const added = await call("POST /api/stamps/[id]/photos", stampPhotosR.POST, { token: me, params: { id: stampId }, form: more });
+    expect(added.stamp.photos).toHaveLength(3);
+    const laid = await call("PATCH /api/stamps/[id]/photos", stampPhotosR.PATCH, { token: me, params: { id: stampId }, body: { photos: [{ id: added.stamp.photos[1].id, x: 0.4, y: 0.6, rotation: -7 }] } });
+    expect(laid.stamp.photos[1]).toMatchObject({ x: 0.4, y: 0.6, rotation: -7 });
+    await call("POST /api/stamps/[id]/photos/[photoId]/remove", stampPhotoRemoveR.POST, { token: me, params: { id: stampId, photoId: added.stamp.photos[2].id } });
 
     // Stamp detail, likes, activity, edit, remove
     const friendStamp = myFeed.stamps[0].id as string;

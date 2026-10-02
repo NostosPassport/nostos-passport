@@ -40,7 +40,8 @@ export async function deleteAccount(db: Db, actor: Actor | null, raw: unknown, n
     // Every photo: visible ones are hidden now; already-hidden ones get the event too, so the record shows they
     // can never be restored (moderation refuses RESTORE for deleted authors).
     const photos = await tx.photo.findMany({ where: { userId: user.id }, select: { id: true, storageKey: true } });
-    photoKeys = photos.flatMap((p) => (p.storageKey ? [p.storageKey] : []));
+    const extra = await tx.stampPhoto.findMany({ where: { stampId: { in: photos.map((p) => p.id) } }, select: { storageKey: true } });
+    photoKeys = [...new Set([...photos.flatMap((p) => (p.storageKey ? [p.storageKey] : [])), ...extra.map((e) => e.storageKey)])];
     if (photos.length) {
       await tx.photo.updateMany({ where: { userId: user.id, hiddenAt: null }, data: { hiddenAt: now } });
       await tx.moderationEvent.createMany({

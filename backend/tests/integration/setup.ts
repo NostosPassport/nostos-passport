@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 
 const TABLES = [
   "rate_event", "verification_event", "photo_like", "follow_request", "block", "login_attempt",
-  "moderation_event", "flag", "follow", "photo", "venue", "session", "app_user",
+  "moderation_event", "flag", "follow", "stamp_photo", "photo", "venue", "session", "app_user",
 ];
 
 beforeEach(async () => {

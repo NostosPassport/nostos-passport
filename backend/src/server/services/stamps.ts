@@ -107,6 +107,7 @@ type StampRow = {
   countable: boolean;
   user: SubjectRow;
   venue: { id: string; slug: string; name: string; neighborhood: string };
+  photos: { id: string; storageKey: string; position: number; x: number | null; y: number | null; rotation: number | null }[];
 };
 
 const stampSelect = {
@@ -114,7 +115,11 @@ const stampSelect = {
   createdAt: true, editedAt: true, hiddenAt: true, removedAt: true, countable: true,
   user: { select: subjectSelect },
   venue: { select: { id: true, slug: true, name: true, neighborhood: true } },
-} as const;
+  /** Live photos only, in page order. */
+  photos: { where: { removedAt: null }, orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }], select: { id: true, storageKey: true, position: true, x: true, y: true, rotation: true } },
+};
+
+export const MAX_STAMP_PHOTOS = 6;
 
 export type StampView = Awaited<ReturnType<typeof toStampViews>>[number];
 
@@ -125,7 +130,9 @@ async function toStampViews(db: Db, actor: Actor | null, rows: readonly StampRow
   return Promise.all(
     rows.map(async (r) => ({
       id: r.id,
-      photoUrl: r.storageKey ? await uploadUrl(r.storageKey, now) : null,
+      photoUrl: r.photos[0] ? await uploadUrl(r.photos[0].storageKey, now) : null,
+      /** Up to 6, in page order. x and y are 0..1 of the page and rotation is degrees, null until the owner lays them out. */
+      photos: await Promise.all(r.photos.map(async (p) => ({ id: p.id, url: await uploadUrl(p.storageKey, now), position: p.position, x: p.x, y: p.y, rotation: p.rotation }))),
       caption: r.caption,
       song: r.songTitle ? { title: r.songTitle, artist: r.songArtist!, artUrl: r.songArtUrl, sourceId: r.songSourceId } : null,
       createdAt: r.createdAt,
@@ -141,53 +148,146 @@ async function toStampViews(db: Db, actor: Actor | null, rows: readonly StampRow
   );
 }
 
-/** Creates a stamp. `bytes` is optional: a stamp may be a caption, a song, or both with no photo. */
+/** Creates a stamp. Photos are optional (up to 6): a stamp may be a caption, a song, or both with no photo. */
 export async function createStamp(
   db: Db,
   actor: Actor | null,
   venueId: string,
-  input: { bytes?: Buffer | null; meta: unknown },
+  input: { bytes?: Buffer | null; photos?: Buffer[]; meta: unknown },
   now = new Date(),
   storage: BlobStorage = getStorage(),
 ) {
   const me = requireSignedIn(actor);
   const meta = stampMetaSchema.parse(input.meta);
-  const hasPhoto = Boolean(input.bytes && input.bytes.length > 0);
-  if (!hasPhoto && !meta.caption && meta.songTitle === undefined) throw badRequest("A stamp needs a photo, a caption or a song");
+  const buffers = [...(input.bytes ? [input.bytes] : []), ...(input.photos ?? [])].filter((b) => b.length > 0);
+  if (buffers.length > MAX_STAMP_PHOTOS) throw badRequest(`A stamp holds up to ${MAX_STAMP_PHOTOS} photos`);
+  if (buffers.length === 0 && !meta.caption && meta.songTitle === undefined) throw badRequest("A stamp needs a photo, a caption or a song");
   assertCleanText({ caption: meta.caption, "song title": meta.songTitle, "song artist": meta.songArtist });
   const place = await db.venue.findUnique({ where: { id: venueId }, select: { id: true, lat: true, lng: true, geofenceMeters: true } });
   if (!place) throw notFound("Place not found");
   if (me.geofenceExempt) {
     if (!isValidLatLng(meta)) throw badRequest("Invalid coordinates");
   } else assertInsideGeofence(meta, place);
-  const image = hasPhoto ? await processImage(input.bytes!) : null;
-
-  const key = image ? newStorageKey("photos", image.kind.ext) : null;
-  let wrote = false;
+  // Every photo is fully re-encoded: EXIF and GPS never reach storage (rule 5).
+  const images = await Promise.all(buffers.map((b) => processImage(b)));
+  const keys = images.map((img) => newStorageKey("photos", img.kind.ext));
+  const written: string[] = [];
   try {
     const row = await db.$transaction(async (tx) => {
       await lockAndCheckCooldown(tx, { userId: me.userId, venueId }, now);
       await consumeRate(tx, me.userId, "post", now);
       const created = await tx.photo.create({
         data: {
-          userId: me.userId, venueId, storageKey: key, mimeType: image?.kind.mime ?? null, caption: meta.caption, lat: meta.lat, lng: meta.lng,
+          userId: me.userId, venueId, storageKey: keys[0] ?? null, mimeType: images[0]?.kind.mime ?? null, caption: meta.caption, lat: meta.lat, lng: meta.lng,
           createdAt: now, countable: !me.geofenceExempt, rating: meta.rating ?? null,
           songTitle: meta.songTitle ?? null, songArtist: meta.songArtist ?? null, songArtUrl: meta.songArtUrl ?? null, songSourceId: meta.songSourceId ?? null,
         },
-        select: stampSelect,
+        select: { id: true },
       });
-      // Written last inside the transaction: if the write fails the row rolls back, and if the commit fails we clean up below.
-      if (key && image) {
-        await storage.put(key, image.bytes, image.kind.mime);
-        wrote = true;
+      for (const [i, img] of images.entries()) {
+        await tx.stampPhoto.create({ data: { stampId: created.id, storageKey: keys[i]!, mimeType: img.kind.mime, position: i, createdAt: now } });
       }
-      return created;
+      // Written last inside the transaction: if a write fails the rows roll back, and if the commit fails we clean up below.
+      for (const [i, img] of images.entries()) {
+        await storage.put(keys[i]!, img.bytes, img.kind.mime);
+        written.push(keys[i]!);
+      }
+      return tx.photo.findUniqueOrThrow({ where: { id: created.id }, select: stampSelect });
     });
     return (await toStampViews(db, me, [row], now))[0]!;
   } catch (err) {
-    if (wrote && key) await storage.delete(key).catch(() => {});
+    await Promise.all(written.map((k) => storage.delete(k).catch(() => {})));
     throw err;
   }
+}
+
+async function ownStamp(db: Db, actor: Actor | null, stampId: string) {
+  const me = requireSignedIn(actor);
+  const stamp = await db.photo.findUnique({ where: { id: stampId }, select: { id: true, userId: true, hiddenAt: true, removedAt: true, caption: true, songTitle: true } });
+  if (!stamp || stamp.removedAt) throw notFound("Stamp not found");
+  assertCanEditOwnContent(me, stamp);
+  if (stamp.hiddenAt) throw conflict("This stamp was hidden by a moderator and can't be edited");
+  return { me, stamp };
+}
+
+/** Add photos to your own stamp, up to 6 in all. They take the next free positions. */
+export async function addStampPhotos(db: Db, actor: Actor | null, stampId: string, buffers: Buffer[], now = new Date(), storage: BlobStorage = getStorage()) {
+  const { me, stamp } = await ownStamp(db, actor, stampId);
+  const live = await db.stampPhoto.findMany({ where: { stampId, removedAt: null }, select: { position: true } });
+  if (buffers.length === 0) throw badRequest("Attach at least one photo");
+  if (live.length + buffers.length > MAX_STAMP_PHOTOS) throw badRequest(`A stamp holds up to ${MAX_STAMP_PHOTOS} photos`);
+  const images = await Promise.all(buffers.map((b) => processImage(b)));
+  const keys = images.map((img) => newStorageKey("photos", img.kind.ext));
+  const free = [0, 1, 2, 3, 4, 5].filter((n) => !live.some((p) => p.position === n));
+  const written: string[] = [];
+  try {
+    await db.$transaction(async (tx) => {
+      for (const [i, img] of images.entries()) {
+        await tx.stampPhoto.create({ data: { stampId, storageKey: keys[i]!, mimeType: img.kind.mime, position: free[i]!, createdAt: now } });
+        await storage.put(keys[i]!, img.bytes, img.kind.mime);
+        written.push(keys[i]!);
+      }
+      await tx.photo.update({ where: { id: stampId }, data: { editedAt: now } });
+    });
+  } catch (err) {
+    await Promise.all(written.map((k) => storage.delete(k).catch(() => {})));
+    throw err;
+  }
+  void stamp;
+  return getStamp(db, me, stampId, now);
+}
+
+/** Remove one photo from your stamp (final: it is hidden, never deleted). A stamp can't be left with nothing in it. */
+export async function removeStampPhoto(db: Db, actor: Actor | null, stampId: string, photoId: string, now = new Date()) {
+  const { me, stamp } = await ownStamp(db, actor, stampId);
+  const live = await db.stampPhoto.findMany({ where: { stampId, removedAt: null }, select: { id: true } });
+  if (!live.some((p) => p.id === photoId)) throw notFound("Photo not found");
+  if (live.length === 1 && !stamp.caption.trim() && !stamp.songTitle) throw badRequest("A stamp needs a photo, a caption or a song");
+  await db.$transaction([
+    db.stampPhoto.update({ where: { id: photoId }, data: { removedAt: now } }),
+    db.photo.update({ where: { id: stampId }, data: { editedAt: now } }),
+  ]);
+  return getStamp(db, me, stampId, now);
+}
+
+export const photoLayoutSchema = z
+  .object({
+    photos: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1).max(64),
+            position: z.number().int().min(0).max(MAX_STAMP_PHOTOS - 1).optional(),
+            x: z.number().min(0).max(1).nullable().optional(),
+            y: z.number().min(0).max(1).nullable().optional(),
+            rotation: z.number().min(-45).max(45).nullable().optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(MAX_STAMP_PHOTOS),
+  })
+  .strict();
+
+/**
+ * The scrapbook layout: where each photo sits on the page (x, y as 0..1, rotation in degrees) and their order. Positions
+ * given for the live photos must stay unique. Only the owner may do this, and the files never change.
+ */
+export async function setPhotoLayout(db: Db, actor: Actor | null, stampId: string, raw: unknown, now = new Date()) {
+  const { me } = await ownStamp(db, actor, stampId);
+  const input = photoLayoutSchema.parse(raw);
+  const live = await db.stampPhoto.findMany({ where: { stampId, removedAt: null }, select: { id: true, position: true } });
+  const ids = new Set(live.map((p) => p.id));
+  if (new Set(input.photos.map((p) => p.id)).size !== input.photos.length || input.photos.some((p) => !ids.has(p.id))) throw badRequest("Those photos aren't on this stamp");
+  const after = new Map(live.map((p) => [p.id, p.position]));
+  for (const p of input.photos) if (p.position !== undefined) after.set(p.id, p.position);
+  if (new Set(after.values()).size !== after.size) throw badRequest("Each photo needs its own position");
+  await db.$transaction(
+    input.photos.map((p) =>
+      db.stampPhoto.update({ where: { id: p.id }, data: { ...(p.position !== undefined ? { position: p.position } : {}), ...(p.x !== undefined ? { x: p.x } : {}), ...(p.y !== undefined ? { y: p.y } : {}), ...(p.rotation !== undefined ? { rotation: p.rotation } : {}) } }),
+    ),
+  );
+  return getStamp(db, me, stampId, now);
 }
 
 /** Stamp detail. 404 when the viewer may not see it (privacy.ts#canSeeStamp), so existence isn't revealed. */

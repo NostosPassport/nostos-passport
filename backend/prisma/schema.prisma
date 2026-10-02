@@ -157,39 +157,60 @@ model Venue {
 /// A stamp: one visit to a place, with a photo, a caption, a song, or any mix (a CHECK requires at least one).
 /// Stamps are immutable except caption, song, moderation state (hidden_at) and removed_at (final); a trigger enforces it.
 model Photo {
-  id           String      @id @default(cuid())
-  userId       String      @map("user_id")
-  venueId      String      @map("venue_id")
+  id           String       @id @default(cuid())
+  userId       String       @map("user_id")
+  venueId      String       @map("venue_id")
   /// null = a stamp without a photo.
-  storageKey   String?     @unique @map("storage_key")
-  mimeType     String?     @map("mime_type")
+  storageKey   String?      @unique @map("storage_key")
+  mimeType     String?      @map("mime_type")
   /// Up to 280 characters (CHECK). Empty string when there is no caption.
   caption      String
   /// Song metadata only (no audio): from Apple's iTunes Search API, via our backend.
-  songTitle    String?     @map("song_title")
-  songArtist   String?     @map("song_artist")
-  songArtUrl   String?     @map("song_art_url")
-  songSourceId String?     @map("song_source_id")
+  songTitle    String?      @map("song_title")
+  songArtist   String?      @map("song_artist")
+  songArtUrl   String?      @map("song_art_url")
+  songSourceId String?      @map("song_source_id")
   /// Where the phone was when it stamped (kept for auditing the geofence check; never sent to viewers).
   lat          Float
   lng          Float
-  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
-  hiddenAt     DateTime?   @map("hidden_at") @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  hiddenAt     DateTime?    @map("hidden_at") @db.Timestamptz(3)
   /// Optional 1 to 10 (CHECK). Not shown in the UI for v1. Immutable.
-  rating       Int?        @db.SmallInt
-  editedAt     DateTime?   @map("edited_at") @db.Timestamptz(3)
+  rating       Int?         @db.SmallInt
+  editedAt     DateTime?    @map("edited_at") @db.Timestamptz(3)
   /// The author removed it from their profile ("delete" means hide). Final: a trigger refuses to clear it.
-  removedAt    DateTime?   @map("removed_at") @db.Timestamptz(3)
+  removedAt    DateTime?    @map("removed_at") @db.Timestamptz(3)
   /// Snapshot at write time: false when stamped by a geofence-exempt (App Review / QA) account: visible to its author only.
-  countable    Boolean     @default(true)
-  user         User        @relation(fields: [userId], references: [id])
-  venue        Venue       @relation(fields: [venueId], references: [id])
+  countable    Boolean      @default(true)
+  user         User         @relation(fields: [userId], references: [id])
+  venue        Venue        @relation(fields: [venueId], references: [id])
   likes        PhotoLike[]
+  photos       StampPhoto[]
 
   @@index([venueId, createdAt])
   @@index([userId, createdAt])
   @@index([createdAt, id])
   @@map("photo")
+}
+
+/// One photo on a stamp (up to 6 live ones, CHECK position 0 to 5 and a trigger). The scrapbook layout (x, y as 0..1 of the
+/// page, rotation in degrees) is the owner's to change; the file itself never changes. Removing a photo sets removed_at
+/// (final); rows are never deleted (trigger).
+model StampPhoto {
+  id         String    @id @default(cuid())
+  stampId    String    @map("stamp_id")
+  storageKey String    @unique @map("storage_key")
+  mimeType   String    @map("mime_type")
+  position   Int       @db.SmallInt
+  x          Float?
+  y          Float?
+  rotation   Float?
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  removedAt  DateTime? @map("removed_at") @db.Timestamptz(3)
+  stamp      Photo     @relation(fields: [stampId], references: [id])
+
+  @@index([stampId, position])
+  @@map("stamp_photo")
 }
 
 model Follow {

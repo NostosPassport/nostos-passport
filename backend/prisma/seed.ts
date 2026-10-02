@@ -20,7 +20,7 @@ import { placeholderPng } from "./placeholder-image";
 import { assertSeedAllowed } from "./seed-guard";
 import { CAPTIONS, PEOPLE, PLACES, SONGS } from "./seed-data";
 
-const TABLES = ["rate_event", "verification_event", "photo_like", "follow_request", "block", "login_attempt", "moderation_event", "flag", "follow", "photo", "venue", "session", "app_user"];
+const TABLES = ["rate_event", "verification_event", "photo_like", "follow_request", "block", "login_attempt", "moderation_event", "flag", "follow", "stamp_photo", "photo", "venue", "session", "app_user"];
 
 export type SeedOptions = { now?: Date; storage?: BlobStorage; env?: Record<string, string | undefined> };
 export type SeedSummary = { places: number; people: number; stamps: number; likes: number; follows: number; requests: number };
@@ -90,20 +90,34 @@ export async function seed(db: PrismaClient, opts: SeedOptions = {}): Promise<Se
       const hasSong = kind === "all" || kind === "song";
       const id = `seed_s_${String(++n).padStart(4, "0")}`;
       const song = hasSong ? rng.pick(SONGS) : null;
-      let key: string | null = null;
+      // 1 to 4 photos on a photo stamp; the first is the stamp's cover. Some get a scrapbook layout.
+      const keys: string[] = [];
       if (hasPhoto) {
-        key = `photos/seed${String(n).padStart(4, "0")}.png`;
-        await storage.put(key, placeholderPng(rng), "image/png");
+        const count = rng.weighted({ "1": 5, "2": 3, "3": 2, "4": 1 });
+        for (let k = 0; k < Number(count); k++) {
+          const key = `photos/seed${String(n).padStart(4, "0")}${k === 0 ? "" : `_${k}`}.png`;
+          await storage.put(key, placeholderPng(rng), "image/png");
+          keys.push(key);
+        }
       }
       const exempt = person.exempt === true;
       const where = exempt ? { lat: place.lat + 0.02, lng: place.lng } : near(place);
       await db.photo.create({
         data: {
-          id, userId: uid(person.handle), venueId: place.id, storageKey: key, mimeType: key ? "image/png" : null,
+          id, userId: uid(person.handle), venueId: place.id, storageKey: keys[0] ?? null, mimeType: keys[0] ? "image/png" : null,
           caption: hasCaption ? rng.pick(CAPTIONS) : "", songTitle: song?.title ?? null, songArtist: song?.artist ?? null,
           lat: where.lat, lng: where.lng, createdAt: ago(age), countable: !exempt,
         },
       });
+      for (const [k, key] of keys.entries()) {
+        const laid = rng.chance(0.5);
+        await db.stampPhoto.create({
+          data: {
+            stampId: id, storageKey: key, mimeType: "image/png", position: k, createdAt: ago(age),
+            ...(laid ? { x: Math.round(rng.next() * 80) / 100 + 0.1, y: Math.round(rng.next() * 80) / 100 + 0.1, rotation: Math.round((rng.next() - 0.5) * 20) } : {}),
+          },
+        });
+      }
       stampIds.push({ id, userId: uid(person.handle), hidden: false, countable: !exempt });
     }
   }

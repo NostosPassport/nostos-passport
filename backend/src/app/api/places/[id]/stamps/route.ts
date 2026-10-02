@@ -3,7 +3,7 @@ import { MAX_UPLOAD_BYTES } from "@/lib/storage";
 import { badRequest, ServiceError } from "@/server/errors";
 import { getActor, ok, route } from "@/server/http";
 import { requireSignedIn } from "@/server/permissions";
-import { createStamp } from "@/server/services/stamps";
+import { createStamp, MAX_STAMP_PHOTOS } from "@/server/services/stamps";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -20,20 +20,21 @@ export const POST = route<Ctx>(async (req, { params }) => {
   const lengthHeader = req.headers.get("content-length");
   if (!lengthHeader) throw new ServiceError(411, "length_required", "Content-Length is required for uploads");
   const declared = Number(lengthHeader);
-  if (!Number.isFinite(declared) || declared > MAX_UPLOAD_BYTES + 64 * 1024) throw new ServiceError(413, "too_large", "Photos must be 5 MB or smaller");
+  if (!Number.isFinite(declared) || declared > MAX_UPLOAD_BYTES * MAX_STAMP_PHOTOS + 256 * 1024) throw new ServiceError(413, "too_large", "Photos must be 5 MB or smaller");
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
     throw badRequest("Expected multipart/form-data");
   }
-  const file = form.get("photo");
-  if (file !== null && !(file instanceof Blob)) throw badRequest("photo must be a file");
+  // `photos` (repeated, up to 6); a single `photo` is accepted too.
+  const files = [...form.getAll("photos"), ...form.getAll("photo")];
+  if (files.some((f) => !(f instanceof Blob))) throw badRequest("photos must be files");
   const meta: Record<string, string> = {};
   for (const name of ["caption", "lat", "lng", "rating", "songTitle", "songArtist", "songArtUrl", "songSourceId"]) {
     const v = field(form, name);
     if (v !== undefined) meta[name] = v;
   }
-  const stamp = await createStamp(prisma, actor, id, { bytes: file ? Buffer.from(await file.arrayBuffer()) : null, meta });
+  const stamp = await createStamp(prisma, actor, id, { photos: await Promise.all((files as Blob[]).map(async (f) => Buffer.from(await f.arrayBuffer()))), meta });
   return ok({ stamp }, 201);
 });

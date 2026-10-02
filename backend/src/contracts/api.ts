@@ -139,10 +139,17 @@ export const Song = z.object({ title: z.string(), artist: z.string(), artUrl: z.
  * A stamp. Photo URLs are short-lived signed URLs (15-20 min): refetch rather than caching URLs. There are no
  * coordinates, storage keys or user ids anywhere in it. `hidden` / `removed` are true only for staff viewers.
  */
+/** One photo on a stamp. x and y are 0..1 of the page and rotation is degrees: null until the owner lays them out. */
+export const StampPhotoView = z
+  .object({ id: z.string(), url: z.string(), position: z.number().int().min(0).max(5), x: z.number().nullable(), y: z.number().nullable(), rotation: z.number().nullable() })
+  .strict();
 export const StampView = z
   .object({
     id: z.string(),
+    /** The first photo, or null. */
     photoUrl: z.string().nullable(),
+    /** Up to 6 photos in page order. */
+    photos: z.array(StampPhotoView).max(6),
     caption: z.string(),
     song: Song.nullable(),
     createdAt: IsoDate,
@@ -171,6 +178,15 @@ export const StampEditRequest = z
   .partial()
   .strict()
   .refine((v) => Object.keys(v).length > 0, "Nothing to change");
+/** PATCH /api/stamps/:id/photos: the scrapbook layout. Owner only. POST adds photos (multipart `photos`); POST .../photos/:photoId/remove removes one. */
+export const PhotoLayoutRequest = z
+  .object({
+    photos: z
+      .array(z.object({ id: z.string().min(1).max(64), position: z.number().int().min(0).max(5).optional(), x: z.number().min(0).max(1).nullable().optional(), y: z.number().min(0).max(1).nullable().optional(), rotation: z.number().min(-45).max(45).nullable().optional() }).strict())
+      .min(1)
+      .max(6),
+  })
+  .strict();
 export const RemoveStampResponse = z.object({ removed: z.literal(true) }).strict();
 /** PUT/DELETE /api/stamps/:id/like. */
 export const LikeResponse = z.object({ liked: z.boolean(), count: z.number().int(), viewerLiked: z.boolean() }).strict();
@@ -394,6 +410,8 @@ export type NearbyPlacesResponse = z.infer<typeof NearbyPlacesResponse>;
 export type LikeSummary = z.infer<typeof LikeSummary>;
 export type Song = z.infer<typeof Song>;
 export type StampView = z.infer<typeof StampView>;
+export type StampPhotoView = z.infer<typeof StampPhotoView>;
+export type PhotoLayoutRequest = z.infer<typeof PhotoLayoutRequest>;
 export type StampResponse = z.infer<typeof StampResponse>;
 export type StampEditRequest = z.infer<typeof StampEditRequest>;
 export type StampsPageResponse = z.infer<typeof StampsPageResponse>;

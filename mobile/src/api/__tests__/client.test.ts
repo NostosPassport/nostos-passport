@@ -202,7 +202,7 @@ describe("errorText", () => {
 
 describe("stamp and social endpoints", () => {
   const stamp = {
-    id: "s1", photoUrl: "https://cdn.example.test/s1.jpg", caption: "hi", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
+    id: "s1", photoUrl: "https://cdn.example.test/s1.jpg", photos: [{ id: "ph1", url: "https://cdn.example.test/s1.jpg", position: 0, x: null, y: null, rotation: null }], caption: "hi", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
     createdAt: "2026-09-24T02:00:00.000Z", editedAt: null, place: { id: "v1", slug: "velvet", name: "Velvet", neighborhood: "East Village" },
     author: { handle: "sam", displayName: "Sam", avatarUrl: null, verified: false }, mine: false, likes: { count: 3, viewerLiked: false }, hidden: false, removed: false,
   };
