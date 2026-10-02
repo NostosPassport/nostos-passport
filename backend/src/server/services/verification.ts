@@ -1,3 +1,4 @@
+import { assertSocialEnabled } from "@/server/social";
 /**
  * The verified badge: handpicked by an admin, no application flow. Every grant and revoke needs a note and is
  * written to the append-only `verification_event` log (a trigger rejects UPDATE and DELETE) in the same transaction
@@ -26,6 +27,7 @@ export const verificationSchema = z
   .strict();
 
 export async function setVerified(db: Db, actor: Actor | null, handle: string, raw: unknown, now = new Date()) {
+  assertSocialEnabled();
   const admin = assertAdmin(actor);
   const { verified, note } = verificationSchema.parse(raw);
   const user = await db.user.findUnique({ where: { handle: handle.toLowerCase() }, select: { id: true } });
@@ -45,6 +47,7 @@ export async function setVerified(db: Db, actor: Actor | null, handle: string, r
 
 /** Admin user search for the verification tools. Staff see real accounts (email included), private or not. */
 export async function adminSearchUsers(db: Db, actor: Actor | null, q: string) {
+  assertSocialEnabled();
   assertAdmin(actor);
   const query = q.trim().toLowerCase().replace(/^@/, "");
   if (query.length < 2) return [];
@@ -65,6 +68,7 @@ export async function adminSearchUsers(db: Db, actor: Actor | null, q: string) {
 
 /** The verification log, newest first (optionally for one account). */
 export async function verificationLog(db: Db, actor: Actor | null, handle?: string | null, take = 100) {
+  assertSocialEnabled();
   assertAdmin(actor);
   const user = handle ? await db.user.findUnique({ where: { handle: handle.toLowerCase() }, select: { id: true } }) : null;
   if (handle && !user) throw notFound("User not found");

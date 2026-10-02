@@ -40,3 +40,9 @@ sections (logged in OPEN-QUESTIONS 4).
 - Regressions reproduce remove-all-photos then clear-caption/song, last-photo SQL removal and concurrent emptying.
 - Editing and photo removal now lock the parent and check live stamp_photo rows inside one transaction. Deferred database constraint triggers check the final state at commit and serialize direct photo updates on the parent. Original storage_key never counts as live content. Caption whitespace matches JavaScript trim.
 - Migration preserves records and refuses deployment if historical empty live stamps need explicit review. Test fixtures from red runs are finally removed before subsequent migrations.
+
+## Codex lane, phase 5
+- Expanded audit reproduced six failures: direct social services, admin endpoints/page, and removed-photo previews across place/activity/moderation. Pin replacement already returns identical 400 status/body/headers for inaccessible and missing stamp IDs.
+- Guard all social/admin entry services and the admin web page. Foreign profile/passport services now 404 instead of returning a limited handle. Disabled-mode like summaries are zero. Strengthen invariant rule 11.
+- Summary URLs now select live photographs in layout order. Codex dev script and example URLs use 3001/5438; optional pooler is 6439 and its script never targets the other lane. Pooled runtime remains untested.
+- Repeatable-read probe reproduced an additional empty-stamp write skew: a caption transaction with an older snapshot committed after raw photo removal. A further forward migration advances the parent row version on photo updates; old snapshots now abort with Prisma P2034.

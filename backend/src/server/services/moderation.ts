@@ -22,7 +22,7 @@ import type { Db } from "@/lib/db";
 import type { Actor } from "@/server/actor";
 import { badRequest, conflict, notFound, tooMany } from "@/server/errors";
 import { assertCanModerateContent, assertModerator, requireSignedIn } from "@/server/permissions";
-import { uploadUrl } from "@/server/media";
+import { livePhotoCoverSelect, uploadUrl } from "@/server/media";
 import { subjectSelect } from "@/server/privacy";
 import { assertVisible } from "@/server/services/stamps";
 
@@ -252,7 +252,7 @@ export async function moderationQueue(db: Db, actor: Actor | null) {
   const user = { select: { handle: true, reputation: true, deletedAt: true } } as const;
   const authorOf = (u: { handle: string; deletedAt: Date | null }) => (u.deletedAt ? "Deleted user" : u.handle);
   const [photos, users, events] = await Promise.all([
-    db.photo.findMany({ where: { id: { in: ids("PHOTO") } }, include: { user } }),
+    db.photo.findMany({ where: { id: { in: ids("PHOTO") } }, include: { user, ...livePhotoCoverSelect } }),
     db.user.findMany({ where: { id: { in: ids("USER") } }, select: { id: true, handle: true, displayName: true, reputation: true, suspendedAt: true, createdAt: true, deletedAt: true } }),
     db.moderationEvent.findMany({
       where: { targetId: { in: [...groups.values()].map((g) => g[0]!.targetId) } },
@@ -261,7 +261,7 @@ export async function moderationQueue(db: Db, actor: Actor | null) {
     }),
   ]);
   const byId = new Map<string, { kind: ApiTargetType; preview: string; url?: string; author: string; authorRep: number; hiddenAt: Date | null; createdAt: Date }>();
-  for (const p of photos) byId.set(p.id, { kind: "STAMP", preview: stampPreview(p), url: p.storageKey ? await uploadUrl(p.storageKey) : undefined, author: authorOf(p.user), authorRep: p.user.reputation, hiddenAt: p.hiddenAt, createdAt: p.createdAt });
+  for (const p of photos) byId.set(p.id, { kind: "STAMP", preview: stampPreview(p), url: p.photos[0] ? await uploadUrl(p.photos[0].storageKey) : undefined, author: authorOf(p.user), authorRep: p.user.reputation, hiddenAt: p.hiddenAt, createdAt: p.createdAt });
   for (const u of users) {
     byId.set(u.id, { kind: "USER", preview: `Account: ${u.displayName}`, author: authorOf(u), authorRep: u.reputation, hiddenAt: u.suspendedAt, createdAt: u.createdAt });
   }
@@ -316,7 +316,7 @@ export async function recentlyHidden(db: Db, actor: Actor | null, take = 50) {
       where: { hiddenAt: { not: null }, user: { deletedAt: null } },
       orderBy: { hiddenAt: "desc" },
       take,
-      include: { user: { select: { handle: true, deletedAt: true } }, venue: { select: { name: true, slug: true } } },
+      include: { ...livePhotoCoverSelect, user: { select: { handle: true, deletedAt: true } }, venue: { select: { name: true, slug: true } } },
     }),
     db.user.findMany({ where: { suspendedAt: { not: null }, deletedAt: null }, orderBy: { suspendedAt: "desc" }, take, select: { id: true, handle: true, displayName: true, suspendedAt: true } }),
   ]);
@@ -325,7 +325,7 @@ export async function recentlyHidden(db: Db, actor: Actor | null, take = 50) {
     ...(await Promise.all(
       photos.map(async (p) => ({
         targetType: "STAMP" as const, targetId: p.id, venue: p.venue, preview: stampPreview(p),
-        url: p.storageKey ? await uploadUrl(p.storageKey) : undefined, author: p.user.handle, hiddenAt: p.hiddenAt!,
+        url: p.photos[0] ? await uploadUrl(p.photos[0].storageKey) : undefined, author: p.user.handle, hiddenAt: p.hiddenAt!,
       })),
     )),
     ...users.map((u) => ({ targetType: "USER" as const, targetId: u.id, venue: null, preview: `Account: ${u.displayName}`, author: u.handle, hiddenAt: u.suspendedAt! })),

@@ -1,3 +1,4 @@
+import { assertSocialEnabled, socialEnabled } from "@/server/social";
 /**
  * Stamps: one visit to a place, with a photo, a caption, a song, or any mix (at least one). A stamp is a row in the
  * `photo` table (the name is kept to avoid migration churn); the API and the app say "stamp".
@@ -18,7 +19,7 @@ import { localParts } from "@/lib/time";
 import { pageAndSlot } from "@/lib/layout";
 import { getStorage, newStorageKey, type BlobStorage } from "@/lib/storage";
 import type { Actor } from "@/server/actor";
-import { uploadUrl } from "@/server/media";
+import { livePhotoCoverSelect, uploadUrl } from "@/server/media";
 import { recordProgress } from "@/server/services/neighborhoods";
 import { assertCleanText, badRequest, conflict, notFound, ServiceError } from "@/server/errors";
 import { assertCanEditOwnContent, isModerator, requireSignedIn } from "@/server/permissions";
@@ -379,6 +380,7 @@ async function assertProfileVisible(db: Db, actor: Actor | null, handle: string)
   const user = await db.user.findUnique({ where: { handle: handle.toLowerCase() }, select: subjectSelect });
   if (!user || user.deletedAt || (user.suspendedAt && !isModerator(actor))) throw notFound("User not found");
   const isSelf = actor?.userId === user.id;
+  if (!socialEnabled() && !isSelf) throw notFound("User not found");
   if (actor && !isSelf && (await isBlockedEitherWay(db, actor.userId, user.id))) throw notFound("User not found");
   const resolve = await authorResolver(db, actor, [user.id]);
   if (resolve.access(toSubject(user)) === "limited") {
@@ -417,7 +419,7 @@ export async function listUserPlaces(db: Db, actor: Actor | null, handle: string
   const rows = await db.photo.findMany({
     where: profileStampsWhere(user.id, isSelf),
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    select: { id: true, createdAt: true, storageKey: true, caption: true, venue: { select: { id: true, slug: true, name: true, neighborhood: true, lat: true, lng: true } } },
+    select: { id: true, createdAt: true, ...livePhotoCoverSelect, caption: true, venue: { select: { id: true, slug: true, name: true, neighborhood: true, lat: true, lng: true } } },
   });
   const places = new Map<string, { place: (typeof rows)[number]["venue"]; stamps: number; latest: (typeof rows)[number] }>();
   for (const r of rows) {
@@ -430,7 +432,7 @@ export async function listUserPlaces(db: Db, actor: Actor | null, handle: string
       [...places.values()].map(async ({ place, stamps, latest }) => ({
         place,
         stamps,
-        latestStamp: { id: latest.id, createdAt: latest.createdAt, photoUrl: latest.storageKey ? await uploadUrl(latest.storageKey, now) : null, caption: latest.caption },
+        latestStamp: { id: latest.id, createdAt: latest.createdAt, photoUrl: latest.photos[0] ? await uploadUrl(latest.photos[0].storageKey, now) : null, caption: latest.caption },
       })),
     ),
   };
@@ -441,6 +443,7 @@ export async function listUserPlaces(db: Db, actor: Actor | null, handle: string
  * personalization, no suggestions (rule 9). Only approved follows, never blocked, suspended or deleted people.
  */
 export async function listFeed(db: Db, actor: Actor | null, before?: string | null, now = new Date()) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const c = before ? parseCursor(before) : null;
   const rows = await db.photo.findMany({

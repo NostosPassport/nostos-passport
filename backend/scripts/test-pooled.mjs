@@ -10,13 +10,13 @@ run("docker compose --profile pooler up -d pooler");
 // Wait until PgBouncer itself accepts TCP connections on the published port.
 const reachable = () =>
   new Promise((resolve) => {
-    const s = net.connect(6435, "127.0.0.1", () => (s.end(), resolve(true)));
+    const s = net.connect(6439, "127.0.0.1", () => (s.end(), resolve(true)));
     s.on("error", () => resolve(false));
   });
 let up = false;
 for (let i = 0; i < 40 && !(up = await reachable()); i++) await new Promise((r) => setTimeout(r, 250));
-if (!up) throw new Error("PgBouncer did not come up on :6435");
+if (!up) throw new Error("PgBouncer did not come up on :6439");
 run("pnpm exec vitest run --project integration", {
-  TEST_DATABASE_URL: "postgresql://nostos:nostos@localhost:6436/nostos_test?schema=public&pgbouncer=true",
-  TEST_DIRECT_URL: "postgresql://nostos:nostos@localhost:5435/nostos_test?schema=public",
+  TEST_DATABASE_URL: "postgresql://nostos:nostos@localhost:6439/nostos_codex_test?schema=public&pgbouncer=true",
+  TEST_DIRECT_URL: "postgresql://nostos:nostos@localhost:5438/nostos_codex_test?schema=public",
 });

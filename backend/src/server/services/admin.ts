@@ -1,3 +1,4 @@
+import { assertSocialEnabled } from "@/server/social";
 import { z } from "zod";
 import type { Db } from "@/lib/db";
 import type { Actor } from "@/server/actor";
@@ -11,6 +12,7 @@ export const userFlagsSchema = z.object({ geofenceExempt: z.boolean() }).strict(
  * everything they stamp is visible only to themselves.
  */
 export async function setUserFlags(db: Db, actor: Actor | null, handle: string, raw: unknown) {
+  assertSocialEnabled();
   assertAdmin(actor);
   const { geofenceExempt } = userFlagsSchema.parse(raw);
   const user = await db.user.findUnique({ where: { handle: handle.toLowerCase() }, select: { id: true, deletedAt: true } });

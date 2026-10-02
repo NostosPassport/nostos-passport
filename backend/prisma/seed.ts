@@ -123,7 +123,7 @@ export async function seed(db: PrismaClient, opts: SeedOptions = {}): Promise<Se
             },
           });
         }
-        });
+      });
       stampIds.push({ id, userId: uid(person.handle), hidden: false, countable: !exempt });
     }
   }

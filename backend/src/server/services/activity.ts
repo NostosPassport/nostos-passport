@@ -1,3 +1,4 @@
+import { assertSocialEnabled } from "@/server/social";
 /**
  * Activity (in-app only, no push): follow requests, new followers and likes on your stamps. Derived from the data
  * each time; there's no notifications table. People are shown as the rules allow (src/server/privacy.ts), blocked
@@ -11,17 +12,18 @@ import { personView, profileAccess, subjectSelect, toSubject, viewerOf } from "@
 import { blockedIdsFor } from "@/server/services/blocks";
 import { avatarUrl } from "@/server/services/people";
 import { followedAmong } from "@/server/privacy";
-import { uploadUrl } from "@/server/media";
+import { livePhotoCoverSelect, uploadUrl } from "@/server/media";
 
 export const ACTIVITY_DAYS = 30;
 export const ACTIVITY_MAX = 100;
 
 export async function listActivity(db: Db, actor: Actor | null, now = new Date()) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const since = new Date(now.getTime() - ACTIVITY_DAYS * DAY_MS);
   const blocked = await blockedIdsFor(db, me.userId);
   const active = { deletedAt: null, suspendedAt: null, id: { notIn: blocked } };
-  const stamp = { select: { id: true, storageKey: true, venue: { select: { name: true, slug: true } } } } as const;
+  const stamp = { select: { id: true, ...livePhotoCoverSelect, venue: { select: { name: true, slug: true } } } } as const;
   const [requests, followers, likes] = await Promise.all([
     db.followRequest.findMany({ where: { targetId: me.userId, requester: active }, orderBy: { createdAt: "desc" }, take: ACTIVITY_MAX, select: { createdAt: true, requester: { select: subjectSelect } } }),
     db.follow.findMany({ where: { followeeId: me.userId, createdAt: { gt: since }, follower: active }, orderBy: { createdAt: "desc" }, take: ACTIVITY_MAX, select: { createdAt: true, follower: { select: subjectSelect } } }),
@@ -40,7 +42,7 @@ export async function listActivity(db: Db, actor: Actor | null, now = new Date()
     const access = profileAccess(viewer, toSubject(p), follows.has(p.id));
     return personView(access, { ...p, verified: p.verifiedAt !== null }, access === "full" ? await avatarUrl(p.avatarKey, now) : null);
   };
-  const stampRef = async (p: { id: string; storageKey: string | null; venue: { name: string; slug: string } }) => ({ id: p.id, url: p.storageKey ? await uploadUrl(p.storageKey, now) : null, place: p.venue });
+  const stampRef = async (p: { id: string; photos: { storageKey: string }[]; venue: { name: string; slug: string } }) => ({ id: p.id, url: p.photos[0] ? await uploadUrl(p.photos[0].storageKey, now) : null, place: p.venue });
 
   const items = [
     ...(await Promise.all(requests.map(async (r) => ({ kind: "follow_request" as const, at: r.createdAt, person: await person(r.requester) })))),

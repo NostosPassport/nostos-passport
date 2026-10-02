@@ -1,3 +1,4 @@
+import { assertSocialEnabled, socialEnabled } from "@/server/social";
 /**
  * Likes on stamps: one per person per stamp, not your own, not on hidden or removed stamps, only on stamps you can see.
  * Counts exclude App Review likes. Likes never affect anything else (rule 10): they don't rank, feature or unlock.
@@ -16,7 +17,7 @@ export type LikeSummary = { count: number; viewerLiked: boolean };
 export async function likeSummaries(db: Db, stampIds: readonly string[], viewerId: string | null | undefined): Promise<Map<string, LikeSummary>> {
   const ids = [...new Set(stampIds)];
   const out = new Map<string, LikeSummary>(ids.map((id) => [id, { count: 0, viewerLiked: false }]));
-  if (!ids.length) return out;
+  if (!ids.length || !socialEnabled()) return out;
   const [counts, mine] = await Promise.all([
     // Suspended accounts' likes don't show in counts (deleted accounts' likes are gone).
     db.photoLike.groupBy({ by: ["photoId"], where: { photoId: { in: ids }, countable: true, user: { suspendedAt: null } }, _count: { _all: true } }),
@@ -39,6 +40,7 @@ async function likeableStamp(db: Db, actor: Actor, stampId: string) {
 }
 
 export async function likeStamp(db: Db, actor: Actor | null, stampId: string, now = new Date()) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const stamp = await likeableStamp(db, me, stampId);
   if (stamp.userId === me.userId) throw badRequest("You can't like your own stamp");
@@ -54,6 +56,7 @@ export async function likeStamp(db: Db, actor: Actor | null, stampId: string, no
 }
 
 export async function unlikeStamp(db: Db, actor: Actor | null, stampId: string) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   // Unliking works even if the stamp has since become invisible to you: it only removes your own row.
   await db.photoLike.deleteMany({ where: { userId: me.userId, photoId: stampId } });

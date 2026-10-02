@@ -212,12 +212,11 @@ describe("invariants", () => {
       const viewers = [null, await makeActor(), await makeActor({ role: "MODERATOR" }), await makeActor({ role: "ADMIN" })];
       for (const v of viewers) {
         await expect(getStamp(prisma, v, stamp.id)).rejects.toMatchObject({ status: 404 });
-        await expect(listUserStamps(prisma, v, owner.handle)).rejects.toMatchObject({ status: 403 });
-        await expect(listUserPlaces(prisma, v, owner.handle)).rejects.toMatchObject({ status: 403 });
-        const profile = JSON.stringify(wire(await getProfile(prisma, owner.handle, v)));
-        for (const secret of [stamp.id, venue.slug, "mine alone", '"counts"', '"displayName"', '"stamps"']) expect(profile).not.toContain(secret);
+        await expect(listUserStamps(prisma, v, owner.handle)).rejects.toMatchObject({ status: 404 });
+        await expect(listUserPlaces(prisma, v, owner.handle)).rejects.toMatchObject({ status: 404 });
+        await expect(getProfile(prisma, owner.handle, v)).rejects.toMatchObject({ status: 404 });
       }
-      expect((await listFeed(prisma, viewers[1]!)).stamps).toEqual([]);
+      await expect(listFeed(prisma, viewers[1]!)).rejects.toMatchObject({ status: 404 });
       await expect(getStamp(prisma, owner, stamp.id)).resolves.toBeTruthy();
     } finally {
       vi.unstubAllEnvs();

@@ -1,3 +1,4 @@
+import { assertSocialEnabled, socialEnabled } from "@/server/social";
 /**
  * People: profiles, follows and follow requests, followers and following lists, search, profile settings.
  *
@@ -50,6 +51,7 @@ async function followStates(db: Db, viewerId: string | null | undefined, ids: re
 
 /** Follow a public account (instant) or request to follow a private one. Idempotent. */
 export async function follow(db: Db, actor: Actor | null, handle: string, now = new Date()): Promise<{ state: FollowState }> {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const target = await activeUser(db, handle);
   if (target.id === me.userId) throw badRequest("You can't follow yourself");
@@ -78,6 +80,7 @@ export async function follow(db: Db, actor: Actor | null, handle: string, now = 
 
 /** Unfollow, or cancel a pending request. Idempotent. */
 export async function unfollow(db: Db, actor: Actor | null, handle: string): Promise<{ state: FollowState }> {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const target = await activeUser(db, handle, { allowSuspended: true });
   // Same pair lock as follow and approve: a cancel can't lose a race against its own approval.
@@ -91,6 +94,7 @@ export async function unfollow(db: Db, actor: Actor | null, handle: string): Pro
 
 /** Requests waiting for the signed-in user's decision, newest first. */
 export async function listFollowRequests(db: Db, actor: Actor | null, now = new Date()) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const rows = await db.followRequest.findMany({
     where: { targetId: me.userId, requester: { deletedAt: null, suspendedAt: null } },
@@ -115,6 +119,7 @@ export const requestDecisionSchema = z.object({ approve: z.boolean() }).strict()
 
 /** Approve or decline one request. Only requests addressed to the signed-in user can be found (404 otherwise). */
 export async function decideFollowRequest(db: Db, actor: Actor | null, handle: string, raw: unknown, now = new Date()) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const { approve } = requestDecisionSchema.parse(raw);
   const requester = await db.user.findUnique({ where: { handle: handle.toLowerCase() }, select: { id: true, deletedAt: true, suspendedAt: true } });
@@ -136,6 +141,7 @@ export async function decideFollowRequest(db: Db, actor: Actor | null, handle: s
 
 /** Approve every pending request at once (offered after switching a private account to public). */
 export async function approveAllFollowRequests(db: Db, actor: Actor | null, now = new Date()) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   return db.$transaction(async (tx) => {
     const pending = await tx.followRequest.findMany({ where: { targetId: me.userId }, select: { requesterId: true } });
@@ -156,6 +162,7 @@ export async function approveAllFollowRequests(db: Db, actor: Actor | null, now 
 
 /** Remove someone who follows you. Idempotent. */
 export async function removeFollower(db: Db, actor: Actor | null, handle: string) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const other = await activeUser(db, handle, { allowSuspended: true });
   await db.follow.deleteMany({ where: { followerId: other.id, followeeId: me.userId } });
@@ -179,6 +186,7 @@ export async function getProfile(db: Db, handle: string, viewer: Actor | null, n
   });
   if (!user) throw notFound("User not found");
   const isSelf = viewer?.userId === user.id;
+  if (!socialEnabled() && !isSelf) throw notFound("User not found");
   // Deleted accounts can't be looked up, and blocked users (either direction) don't see each other.
   if (user.deletedAt || (user.suspendedAt && !isModerator(viewer))) throw notFound("User not found");
   if (viewer && !isSelf && (await isBlockedEitherWay(db, viewer.userId, user.id))) throw notFound("User not found");
@@ -244,6 +252,7 @@ async function peopleView(db: Db, viewer: Actor | null, rows: SubjectRow[], now:
 
 /** Followers or following of a profile. Needs full access to the profile (403 `private_account` otherwise). */
 export async function listConnections(db: Db, viewer: Actor | null, handle: string, which: "followers" | "following", now = new Date()) {
+  assertSocialEnabled();
   const user = await db.user.findUnique({ where: { handle: handle.toLowerCase() }, select: subjectSelect });
   if (!user || user.deletedAt || (user.suspendedAt && !isModerator(viewer))) throw notFound("User not found");
   const blocked = await blockedIdsFor(db, viewer?.userId);
@@ -265,6 +274,7 @@ export async function listConnections(db: Db, viewer: Actor | null, handle: stri
  * Matching a private account's display name would reveal it, so those match on the handle only.
  */
 export async function searchUsers(db: Db, viewer: Actor | null, q: string, now = new Date()) {
+  assertSocialEnabled();
   const query = q.trim().toLowerCase().replace(/^@/, "");
   if (query.length < 2) return [];
   const nameVisible = [{ isPrivate: false }, ...(viewer ? [{ followers: { some: { followerId: viewer.userId } } }] : [])];
@@ -284,6 +294,7 @@ export async function searchUsers(db: Db, viewer: Actor | null, q: string, now =
 
 /** People you follow (approved follows only, so you have full access to each). */
 export async function listFollowing(db: Db, viewer: Actor | null, now = new Date()) {
+  assertSocialEnabled();
   const me = requireSignedIn(viewer);
   const rows = await db.follow.findMany({
     where: { followerId: me.userId, followee: { deletedAt: null, suspendedAt: null } },

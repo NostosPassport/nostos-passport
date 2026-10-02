@@ -1,3 +1,4 @@
+import { assertSocialEnabled } from "@/server/social";
 /**
  * Blocking (App Store Guideline 1.2). If A blocks B:
  *  - follows and pending follow requests between A and B are removed in both directions and can't be re-created
@@ -56,12 +57,14 @@ async function block(db: Db, blockerId: string, blockedId: string, now: Date) {
 }
 
 export async function blockUser(db: Db, actor: Actor | null, handle: string, now = new Date()) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const other = await target(db, handle);
   return block(db, me.userId, other.id, now);
 }
 
 export async function unblockUser(db: Db, actor: Actor | null, handle: string) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const other = await target(db, handle);
   await db.block.deleteMany({ where: { blockerId: me.userId, blockedId: other.id } });
@@ -70,6 +73,7 @@ export async function unblockUser(db: Db, actor: Actor | null, handle: string) {
 
 /** Your blocks, newest first. Handles only: a blocked pair always gets the limited view. */
 export async function listBlocks(db: Db, actor: Actor | null) {
+  assertSocialEnabled();
   const me = requireSignedIn(actor);
   const rows = await db.block.findMany({
     where: { blockerId: me.userId, blocked: { deletedAt: null } },

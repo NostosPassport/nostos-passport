@@ -3,9 +3,12 @@ import { TopBar } from "@/components/TopBar";
 import { VerificationTools } from "@/components/admin/VerificationTools";
 import { getCurrentActor } from "@/server/current";
 
+import { socialEnabled } from "@/server/social";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
+  if (!socialEnabled()) notFound();
   const actor = await getCurrentActor();
   if (!actor) redirect("/login?next=/admin");
   if (actor.role !== "ADMIN") notFound();

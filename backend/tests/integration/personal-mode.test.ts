@@ -88,13 +88,12 @@ describe("with social off", () => {
     expect((await call(userR.GET as H, "GET", s.token, { handle: s.me.handle.toUpperCase() })).status).toBe(200);
   });
 
-  it("services agree: another person's passport is limited and has no stamps, for everyone", async () => {
+  it("services agree: another person's passport is a 404 without handles or stamps, for everyone", async () => {
     const s = await scene();
     for (const v of [null, s.me, s.staff]) {
       await expect(getStamp(prisma, v, s.theirs.id)).rejects.toMatchObject({ status: 404 });
-      const p = await getProfile(prisma, s.other.handle, v);
-      expect(p.access).toBe("limited");
-      await expect(listUserStamps(prisma, v, s.other.handle)).rejects.toMatchObject({ status: 403 });
+      await expect(getProfile(prisma, s.other.handle, v)).rejects.toMatchObject({ status: 404 });
+      await expect(listUserStamps(prisma, v, s.other.handle)).rejects.toMatchObject({ status: 404 });
     }
     expect((await getProfile(prisma, s.me.handle, s.me)).access).toBe("full");
   });

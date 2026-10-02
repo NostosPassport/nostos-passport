@@ -1,4 +1,4 @@
-# Fixed project name: keeps the existing "nostos_nostos_pg" volume (and its data) now that this file lives in backend/.
+# Codex lane only: an independent project, volume and published ports.
 name: nostos-codex
 
 services:
@@ -33,7 +33,7 @@ services:
       MAX_CLIENT_CONN: 200
       DEFAULT_POOL_SIZE: 10
     ports:
-      - "6436:5432"
+      - "6439:5432"
 
 volumes:
   nostos_pg:
