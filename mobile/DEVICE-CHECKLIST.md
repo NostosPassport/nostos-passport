@@ -8,6 +8,10 @@ Seed accounts: `avaa` (private, four requests waiting), `maya_r` (public, verifi
 `kofi_b` (private), `moth_hopeful` (private, follows no one), `blocker_blake` and `blocked_bea` (a blocked pair),
 `mod_morgan` (moderator, one report in the queue), `admin`, `appreview` (stamps from anywhere, visible only to itself).
 
+> Session 2 made Nostos strictly personal (`SOCIAL_ENABLED` off). The sections below about the feed, likes, follows, requests,
+> other people's passports and Blocked users apply only when you run with the social layer on (backend `SOCIAL_ENABLED=1` and
+> `EXPO_PUBLIC_SOCIAL_ENABLED=1`). With it off, start at "Book (session 2): phone checks" at the end of this file.
+
 ## First launch and the age gate
 - [ ] Welcome screen: "Go somewhere. Get a stamp." with Create account, Sign in, Look around first. No mention of bars,
       vibes or venues.

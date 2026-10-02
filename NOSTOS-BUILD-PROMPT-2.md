@@ -42,9 +42,9 @@ Nostos is STRICTLY PERSONAL for this version. No feed, no likes, no follows, no 
 - [x] F.13 Dev-only Design gallery
 
 ## G. Tests and honesty
-- [ ] G.1 Unit-test logic: layout, deterministic stamp design, ordering and page numbers, photo slots, theme lint, geofence states, distance formatting, multi-photo rules.
-- [ ] G.2 Say visuals are untested in the review; list every effect; add each to DEVICE-CHECKLIST.md.
+- [x] G.1 Unit-test logic: layout, deterministic stamp design, ordering and page numbers, photo slots, theme lint, geofence states, distance formatting, multi-photo rules.
+- [x] G.2 Say visuals are untested in the review; list every effect; add each to DEVICE-CHECKLIST.md.
 
 ## H. Docs and handoff
-- [ ] H.1 DESIGN.md fully written incl. "Swappable screens".
+- [x] H.1 DESIGN.md fully written incl. "Swappable screens".
 - [ ] H.2 HANDOFF.md, both REVIEW.md, DECISIONS.md, OPEN-QUESTIONS.md, gate, bundles, session review with file:line and test names; tell the user how to open the Design gallery.
