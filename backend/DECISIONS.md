@@ -60,3 +60,29 @@ The Last Call web map, venue pages, owner dashboards and people pages are gone, 
 
 `prisma/seed.ts` exports `seed(db, options)` so tests can run it. Song seeds carry title and artist only (no art URL and no
 source id), so no made-up links exist. Seeded stamps use generated placeholder images through the configured storage driver.
+
+## Collections and places (session 2)
+
+- **Neighborhood boundaries: NYC's Neighborhood Tabulation Areas (2020), NYC Open Data dataset 9nt8-h7nd** (public domain city
+  data, `https://data.cityofnewyork.us/resource/9nt8-h7nd.geojson`). Chosen over OSM relations because it is one consistent,
+  complete, city-maintained partition with stable codes (BK0101 and so on), where OSM's neighborhood relations overlap and
+  leave gaps. We keep residential areas (ntatype 0) and parks and open space (ntatype 9), the outer ring of each polygon only,
+  simplified with Douglas-Peucker to about 6 m and rounded to 5 decimals: 237 areas in 400 KB (`prisma/data/neighborhoods.json`,
+  built by `scripts/build-neighborhoods.mjs`, loaded by `pnpm neighborhoods:import`). Holes and slivers are dropped, so a place
+  within 6 m of a border can land on the wrong side. Cemeteries, airports and other types are left out (a place there has no neighborhood).
+- **Progress** = distinct places you stamped in a neighborhood, over places in it. Only live, in-geofence stamps count (App Review
+  stamps and removed stamps don't). **A set is at least 3 places**: finishing a neighborhood of 1 or 2 places is not an achievement.
+  **A completion is earned once and never taken back** (`neighborhood_completion`), even if the neighborhood gains places later
+  or you remove a stamp. Progress is computed in the stamp's own transaction so the marker and the stamp commit together.
+- **The importer now takes any place worth a stamp**: bars, pubs, nightclubs, restaurants, cafes, theatres, cinemas, arts centres,
+  libraries, parks, gardens, playgrounds, museums, galleries, attractions, viewpoints, bookshops. The default area is Manhattan from
+  the Battery to 59th St (`--bbox S,W,N,E` for more). With neighborhoods loaded, a place is kept only if it is inside NYC and is
+  filed under its neighborhood; without them it falls back to the old East Village and Lower East Side outlines.
+- **Page and slot**: the oldest live stamp is page 1 slot 1, three slots to a page. Removing a stamp closes the gap behind it
+  (later stamps move up); the oldest never move. One function (`src/lib/layout.ts`), mirrored in the app, same test vectors.
+- **Multi-photo**: all of a stamp's photos live in `stamp_photo`; `photo.storage_key` stays as the first photo at creation (the
+  CHECK needs it) and is never read for display. The in-app camera rule is a client rule: the server cannot tell a camera from a
+  library, it only strips and limits.
+- **Pins** are their own table, owner only, up to 4, unpinning deletes the row (a layout choice, not content).
+- **Social off**: with `SOCIAL_ENABLED` off the privacy functions themselves treat every viewer but the owner as a stranger
+  (staff too), so even a forgotten route check cannot leak; social routes 404.

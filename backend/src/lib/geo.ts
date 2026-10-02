@@ -27,3 +27,14 @@ export function isValidLatLng(p: { lat: unknown; lng: unknown }): p is LatLng {
 export function withinGeofence(user: LatLng, venue: LatLng, radius = GEOFENCE_METERS): boolean {
   return distanceMeters(user, venue) <= radius;
 }
+
+/** Ray casting: is the point inside the ring? Ring is [lng, lat] pairs (closed or not). */
+export function pointInRing(pt: LatLng, ring: readonly (readonly [number, number])[]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i]!;
+    const [xj, yj] = ring[j]!;
+    if (yi > pt.lat !== yj > pt.lat && pt.lng < ((xj - xi) * (pt.lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}

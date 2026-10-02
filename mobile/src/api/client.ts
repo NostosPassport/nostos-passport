@@ -221,6 +221,9 @@ export function createApi(config: ApiConfig) {
       list: () => request("GET", "/api/places", C.PlacesResponse),
       get: (idOrSlug: string) => request("GET", `/api/places/${enc(idOrSlug)}`, C.PlaceResponse),
       /** Places inside or near the geofence of a position, nearest first. The server never stores the position. */
+      /** Your own page for a place: your stamps there (stacked by night) and whether you are inside its geofence now. */
+      mine: (idOrSlug: string, pos?: { lat: number; lng: number }) =>
+        request("GET", `/api/places/${enc(idOrSlug)}/mine${pos ? `?lat=${pos.lat}&lng=${pos.lng}` : ""}`, C.MyPlacePageResponse),
       nearby: (pos: { lat: number; lng: number }) => request("GET", `/api/places/nearby?lat=${pos.lat}&lng=${pos.lng}`, C.NearbyPlacesResponse),
       /** Upload a stamp with `upload("/api/places/:id/stamps", CreateStampResponse, form)`. */
     },
@@ -239,6 +242,13 @@ export function createApi(config: ApiConfig) {
 
     /** Home feed: people you follow, newest first. Pass the previous page's `nextBefore` for the next page. */
     feed: (before?: string | null) => request("GET", `/api/feed${before ? `?before=${enc(before)}` : ""}`, C.FeedResponse),
+
+    /** Your pinned stamps (up to 4) and the neighborhood index. Owner only. */
+    pins: {
+      get: () => request("GET", "/api/me/pins", C.PinsResponse),
+      set: (stampIds: string[]) => request("PUT", "/api/me/pins", C.PinsResponse, { stampIds }),
+    },
+    neighborhoods: () => request("GET", "/api/me/neighborhoods", C.NeighborhoodIndexResponse),
 
     songs: {
       search: (q: string) => request("GET", `/api/songs/search?q=${enc(q)}`, C.SongSearchResponse),

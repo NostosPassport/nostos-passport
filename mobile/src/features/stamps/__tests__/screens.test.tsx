@@ -47,7 +47,7 @@ jest.mock("@/features/moderation/flagged-store", () => ({ useFlaggedIds: () => n
 
 const stamp: StampView = {
   id: "s1", photoUrl: null, photos: [], page: 1, slot: 1, caption: "hello there", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
-  createdAt: "2026-09-24T02:00:00.000Z", editedAt: null, place: { id: "p1", slug: "velvet", name: "Velvet", neighborhood: "East Village" },
+  createdAt: "2026-09-24T02:00:00.000Z", editedAt: null, place: { id: "p1", slug: "velvet", name: "Velvet", neighborhood: "East Village", neighborhoodId: null },
   author: { handle: "sam", displayName: "Sam", avatarUrl: null, verified: false }, mine: false, likes: { count: 2, viewerLiked: false }, hidden: false, removed: false,
 };
 const wrap = async (ui: React.ReactElement) => render(<QueryClientProvider client={testQueryClient()}>{ui}</QueryClientProvider>);

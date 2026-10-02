@@ -3,7 +3,7 @@ import { MAX_UPLOAD_BYTES } from "@/lib/storage";
 import { badRequest, ServiceError } from "@/server/errors";
 import { getActor, ok, route } from "@/server/http";
 import { requireSignedIn } from "@/server/permissions";
-import { createStamp, MAX_STAMP_PHOTOS } from "@/server/services/stamps";
+import { createStampWithProgress, MAX_STAMP_PHOTOS } from "@/server/services/stamps";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -35,6 +35,6 @@ export const POST = route<Ctx>(async (req, { params }) => {
     const v = field(form, name);
     if (v !== undefined) meta[name] = v;
   }
-  const stamp = await createStamp(prisma, actor, id, { photos: await Promise.all((files as Blob[]).map(async (f) => Buffer.from(await f.arrayBuffer()))), meta });
-  return ok({ stamp }, 201);
+  const { stamp, progress } = await createStampWithProgress(prisma, actor, id, { photos: await Promise.all((files as Blob[]).map(async (f) => Buffer.from(await f.arrayBuffer()))), meta });
+  return ok({ stamp, progress }, 201);
 });

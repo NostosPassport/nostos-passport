@@ -1,5 +1,6 @@
 import type { Db } from "@/lib/db";
 import { assignSlugs, neighborhoodOf, parseOverpass, type OverpassElement } from "@/lib/osm";
+import { loadNeighborhoods, locate } from "@/server/services/neighborhoods";
 
 export type ImportResult = { fetched: number; created: number; updated: number; unchanged: number };
 
@@ -12,11 +13,13 @@ export type ImportResult = { fetched: number; created: number; updated: number; 
  * - Places that disappear from OSM are left alone (they may have stamps).
  */
 export async function importOsmVenues(db: Db, elements: readonly OverpassElement[]): Promise<ImportResult> {
-  const venues = parseOverpass(elements);
+  // With neighborhood boundaries loaded, any place inside NYC is kept and filed under its neighborhood.
+  const hoods = await loadNeighborhoods(db);
+  const venues = parseOverpass(elements, hoods.length ? (lat, lng) => locate(hoods, lat, lng) : undefined);
   return db.$transaction(
     async (tx) => {
       const existing = await tx.venue.findMany({
-        select: { id: true, slug: true, osmId: true, name: true, address: true, neighborhood: true, lat: true, lng: true },
+        select: { id: true, slug: true, osmId: true, name: true, address: true, neighborhood: true, lat: true, lng: true, neighborhoodId: true },
       });
       const byOsm = new Map(existing.filter((v) => v.osmId).map((v) => [v.osmId!, v]));
       const reserved = new Set(existing.filter((v) => !v.osmId).map((v) => v.slug));
@@ -31,18 +34,19 @@ export async function importOsmVenues(db: Db, elements: readonly OverpassElement
           if (usedSlugs.has(slug)) throw new Error(`Slug collision for ${v.osmId}: "${slug}" is already used`);
           usedSlugs.add(slug);
           await tx.venue.create({
-            data: { slug, osmId: v.osmId, name: v.name, address: v.address, neighborhood: v.neighborhood, lat: v.lat, lng: v.lng },
+            data: { slug, osmId: v.osmId, name: v.name, address: v.address, neighborhood: v.neighborhood, lat: v.lat, lng: v.lng, neighborhoodId: v.neighborhoodId ?? null },
           });
           result.created++;
           continue;
         }
-        const data: { lat?: number; lng?: number; neighborhood?: string; name?: string; address?: string } = {};
+        const data: { lat?: number; lng?: number; neighborhood?: string; neighborhoodId?: string; name?: string; address?: string } = {};
         if (current.lat !== v.lat || current.lng !== v.lng) {
           data.lat = v.lat;
           data.lng = v.lng;
         }
-        const hood = neighborhoodOf(v.lat, v.lng) ?? current.neighborhood;
+        const hood = v.neighborhoodId ? v.neighborhood : (neighborhoodOf(v.lat, v.lng) ?? current.neighborhood);
         if (hood !== current.neighborhood) data.neighborhood = hood;
+        if (v.neighborhoodId && v.neighborhoodId !== current.neighborhoodId) data.neighborhoodId = v.neighborhoodId;
         const namesDiffer = current.name !== v.name || current.address !== v.address;
         if (namesDiffer) Object.assign(data, { name: v.name, address: v.address });
         if (Object.keys(data).length) {

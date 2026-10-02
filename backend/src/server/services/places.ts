@@ -6,8 +6,8 @@ import { distanceMeters } from "@/lib/geo";
 import { notFound } from "@/server/errors";
 import { OSM_ATTRIBUTION } from "@/lib/osm";
 
-const placeSelect = { id: true, slug: true, name: true, address: true, neighborhood: true, lat: true, lng: true, geofenceMeters: true, osmId: true } as const;
-type PlaceRow = { id: string; slug: string; name: string; address: string; neighborhood: string; lat: number; lng: number; geofenceMeters: number; osmId: string | null };
+const placeSelect = { id: true, slug: true, name: true, address: true, neighborhood: true, lat: true, lng: true, geofenceMeters: true, neighborhoodId: true, osmId: true } as const;
+type PlaceRow = { id: string; slug: string; name: string; address: string; neighborhood: string; lat: number; lng: number; geofenceMeters: number; neighborhoodId: string | null; osmId: string | null };
 
 export type PlaceView = {
   id: string;
@@ -18,6 +18,8 @@ export type PlaceView = {
   lat: number;
   lng: number;
   geofenceMeters: number;
+  /** The NYC neighborhood this place is in, when known. */
+  neighborhoodId: string | null;
   /** Imported from OpenStreetMap (show "© OpenStreetMap contributors"). */
   fromOsm: boolean;
 };

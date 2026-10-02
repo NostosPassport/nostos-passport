@@ -102,19 +102,20 @@ model User {
 
   sessions               Session[]
   photos                 Photo[]
-  following              Follow[]            @relation("follower")
-  followers              Follow[]            @relation("followee")
+  following              Follow[]                 @relation("follower")
+  followers              Follow[]                 @relation("followee")
   flags                  Flag[]
   moderationEvents       ModerationEvent[]
-  blocking               Block[]             @relation("blocker")
-  blockedBy              Block[]             @relation("blocked")
-  followRequestsSent     FollowRequest[]     @relation("requester")
-  followRequestsReceived FollowRequest[]     @relation("requestTarget")
+  blocking               Block[]                  @relation("blocker")
+  blockedBy              Block[]                  @relation("blocked")
+  followRequestsSent     FollowRequest[]          @relation("requester")
+  followRequestsReceived FollowRequest[]          @relation("requestTarget")
   likes                  PhotoLike[]
-  verificationEvents     VerificationEvent[] @relation("verifiedUser")
-  verificationActions    VerificationEvent[] @relation("verifier")
+  verificationEvents     VerificationEvent[]      @relation("verifiedUser")
+  verificationActions    VerificationEvent[]      @relation("verifier")
   rateEvents             RateEvent[]
   pinned                 PinnedStamp[]
+  completions            NeighborhoodCompletion[]
 
   @@map("app_user")
 }
@@ -135,19 +136,22 @@ model Session {
 
 /// A place (the table keeps its old name). Name, location and geofence only: no live data.
 model Venue {
-  id             String   @id @default(cuid())
-  slug           String   @unique
+  id             String        @id @default(cuid())
+  slug           String        @unique
   name           String
   address        String
   neighborhood   String
   lat            Float
   lng            Float
   /// Radius in meters within which a phone may stamp this place (server-checked).
-  geofenceMeters Int      @default(100) @map("geofence_meters")
+  geofenceMeters Int           @default(100) @map("geofence_meters")
+  /// The NYC neighborhood the place is in (assigned from the boundaries), for the passport's collections.
+  neighborhoodId String?       @map("neighborhood_id")
+  hood           Neighborhood? @relation(fields: [neighborhoodId], references: [id])
   /// OpenStreetMap element ("node/123", "way/456") for imported places (ODbL: attribute "© OpenStreetMap contributors").
-  osmId          String?  @unique @map("osm_id")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  osmId          String?       @unique @map("osm_id")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   photos Photo[]
   flags  Flag[]
@@ -193,6 +197,37 @@ model Photo {
   @@index([userId, createdAt])
   @@index([createdAt, id])
   @@map("photo")
+}
+
+/// A neighborhood (NYC Neighborhood Tabulation Area, 2020; public NYC Open Data). `boundary` is an array of outer rings,
+/// each an array of [lng, lat]; the bbox columns make point lookups cheap. Loaded by `pnpm neighborhoods:import`.
+model Neighborhood {
+  id          String                   @id
+  name        String
+  borough     String
+  boundary    Json
+  minLat      Float                    @map("min_lat")
+  maxLat      Float                    @map("max_lat")
+  minLng      Float                    @map("min_lng")
+  maxLng      Float                    @map("max_lng")
+  places      Venue[]
+  completions NeighborhoodCompletion[]
+
+  @@map("neighborhood")
+}
+
+/// Earned once, when a person has stamped every place in a neighborhood (a set of at least 3). Never taken back, even if
+/// places are added later. Owner only.
+model NeighborhoodCompletion {
+  userId         String       @map("user_id")
+  neighborhoodId String       @map("neighborhood_id")
+  completedAt    DateTime     @map("completed_at") @db.Timestamptz(3)
+  stampId        String       @map("stamp_id")
+  user           User         @relation(fields: [userId], references: [id])
+  neighborhood   Neighborhood @relation(fields: [neighborhoodId], references: [id])
+
+  @@id([userId, neighborhoodId])
+  @@map("neighborhood_completion")
 }
 
 /// One photo on a stamp (up to 6 live ones, CHECK position 0 to 5 and a trigger). The scrapbook layout (x, y as 0..1 of the

@@ -1,6 +1,6 @@
 /**
  * OpenStreetMap venue import: pure parsing. Data © OpenStreetMap contributors, ODbL 1.0.
- * Pulls `amenity=bar|pub|nightclub` in the East Village + Lower East Side via Overpass.
+ * Pulls places worth a stamp via Overpass: bars, restaurants, cafes, theatres, museums, parks and more (see PLACE_KINDS).
  */
 export const OSM_ATTRIBUTION = {
   text: "© OpenStreetMap contributors",
@@ -62,9 +62,30 @@ export function neighborhoodOf(lat: number, lng: number): "East Village" | "Lowe
   return null;
 }
 
+/** What counts as a place: OSM key and the values kept. Bars and clubs are no longer the only kind (Nostos is about anywhere). */
+export const PLACE_KINDS = {
+  amenity: ["bar", "pub", "nightclub", "restaurant", "cafe", "theatre", "cinema", "arts_centre", "library"],
+  leisure: ["park", "garden", "playground"],
+  tourism: ["museum", "gallery", "attraction", "viewpoint"],
+  shop: ["books"],
+} as const;
+
+/** The default import area: Manhattan from the Battery up to 59th St. Pass another bbox to the importer for more. */
+export const DEFAULT_BBOX = [40.7, -74.02, 40.77, -73.93] as const;
+
 export function overpassQuery(bbox: readonly [number, number, number, number] = EV_LES_BBOX) {
   const b = bbox.join(",");
-  return `[out:json][timeout:60];(nwr["amenity"~"^(bar|pub|nightclub)$"](${b}););out center tags;`;
+  const parts = Object.entries(PLACE_KINDS).map(([key, values]) => `nwr["${key}"~"^(${values.join("|")})$"]["name"](${b});`);
+  return `[out:json][timeout:180];(${parts.join("")});out center tags;`;
+}
+
+/** The kind of place an element is (its OSM value), or null if it isn't one we keep. */
+export function placeKind(tags: Record<string, string>): string | null {
+  for (const [key, values] of Object.entries(PLACE_KINDS)) {
+    const v = tags[key];
+    if (v && (values as readonly string[]).includes(v)) return v;
+  }
+  return null;
 }
 
 export type OverpassElement = {
@@ -76,7 +97,9 @@ export type OverpassElement = {
   tags?: Record<string, string>;
 };
 
-export type OsmVenue = { osmId: string; name: string; address: string; neighborhood: "East Village" | "Lower East Side"; lat: number; lng: number; kind: string };
+export type OsmVenue = { osmId: string; name: string; address: string; neighborhood: string; neighborhoodId?: string; lat: number; lng: number; kind: string };
+/** Finds the neighborhood containing a point (from the neighborhoods table). Without one, the old East Village and Lower East Side outlines are used. */
+export type Locate = (lat: number, lng: number) => { id: string; name: string } | null;
 
 export function slugify(name: string): string {
   return (
@@ -107,7 +130,7 @@ const normName = (n: string) => slugify(n).replace(/-/g, "");
  * over way over relation, then lowest id). Addresses come from addr:* tags; when absent the address is "".
  * Sorted by osmId.
  */
-export function parseOverpass(elements: readonly OverpassElement[]): OsmVenue[] {
+export function parseOverpass(elements: readonly OverpassElement[], locate?: Locate): OsmVenue[] {
   const candidates: (OsmVenue & { rank: [number, number, number] })[] = [];
   for (const el of elements) {
     const tags = el.tags ?? {};
@@ -115,12 +138,14 @@ export function parseOverpass(elements: readonly OverpassElement[]): OsmVenue[] 
     const lat = el.lat ?? el.center?.lat;
     const lng = el.lon ?? el.center?.lon;
     if (!name || lat == null || lng == null) continue;
-    if (!["bar", "pub", "nightclub"].includes(tags.amenity ?? "")) continue;
-    const neighborhood = neighborhoodOf(lat, lng);
+    const kind = placeKind(tags);
+    if (!kind) continue;
+    const hood = locate ? locate(lat, lng) : null;
+    const neighborhood = locate ? hood?.name : neighborhoodOf(lat, lng);
     if (!neighborhood) continue;
     const street = [tags["addr:housenumber"], tags["addr:street"]].filter(Boolean).join(" ").trim().slice(0, 120);
     candidates.push({
-      osmId: `${el.type}/${el.id}`, name: name.slice(0, 80), address: street, neighborhood, lat, lng, kind: tags.amenity!,
+      osmId: `${el.type}/${el.id}`, name: name.slice(0, 80), address: street, neighborhood, ...(hood ? { neighborhoodId: hood.id } : {}), lat, lng, kind,
       rank: [street ? 0 : 1, el.type === "node" ? 0 : el.type === "way" ? 1 : 2, el.id],
     });
   }
@@ -130,7 +155,7 @@ export function parseOverpass(elements: readonly OverpassElement[]): OsmVenue[] 
     if (!kept.some((k) => normName(k.name) === normName(c.name) && closeTogether(k, c, 60))) kept.push(c);
   }
   return kept
-    .map((c): OsmVenue => ({ osmId: c.osmId, name: c.name, address: c.address, neighborhood: c.neighborhood, lat: c.lat, lng: c.lng, kind: c.kind }))
+    .map((c): OsmVenue => ({ osmId: c.osmId, name: c.name, address: c.address, neighborhood: c.neighborhood, ...(c.neighborhoodId ? { neighborhoodId: c.neighborhoodId } : {}), lat: c.lat, lng: c.lng, kind: c.kind }))
     .sort((a, b) => (a.osmId < b.osmId ? -1 : a.osmId > b.osmId ? 1 : 0));
 }
 

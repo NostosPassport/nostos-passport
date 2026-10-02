@@ -18,6 +18,7 @@ import { pageAndSlot } from "@/lib/layout";
 import { getStorage, newStorageKey, type BlobStorage } from "@/lib/storage";
 import type { Actor } from "@/server/actor";
 import { uploadUrl } from "@/server/media";
+import { recordProgress } from "@/server/services/neighborhoods";
 import { assertCleanText, badRequest, conflict, notFound, ServiceError } from "@/server/errors";
 import { assertCanEditOwnContent, isModerator, requireSignedIn } from "@/server/permissions";
 import { authorResolver, canSeeStamp, subjectSelect, toSubject, type SubjectRow } from "@/server/privacy";
@@ -108,7 +109,7 @@ type StampRow = {
   removedAt: Date | null;
   countable: boolean;
   user: SubjectRow;
-  venue: { id: string; slug: string; name: string; neighborhood: string };
+  venue: { id: string; slug: string; name: string; neighborhood: string; neighborhoodId: string | null };
   photos: { id: string; storageKey: string; position: number; x: number | null; y: number | null; rotation: number | null }[];
 };
 
@@ -116,7 +117,7 @@ const stampSelect = {
   id: true, userId: true, storageKey: true, caption: true, songTitle: true, songArtist: true, songArtUrl: true, songSourceId: true,
   createdAt: true, editedAt: true, hiddenAt: true, removedAt: true, countable: true,
   user: { select: subjectSelect },
-  venue: { select: { id: true, slug: true, name: true, neighborhood: true } },
+  venue: { select: { id: true, slug: true, name: true, neighborhood: true, neighborhoodId: true } },
   /** Live photos only, in page order. */
   photos: { where: { removedAt: null }, orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }], select: { id: true, storageKey: true, position: true, x: true, y: true, rotation: true } },
 };
@@ -161,7 +162,7 @@ async function toStampViews(db: Db, actor: Actor | null, rows: readonly StampRow
       ...(places.has(r.id) ? pageAndSlot(places.get(r.id)!) : { page: null, slot: null }),
       createdAt: r.createdAt,
       editedAt: r.editedAt,
-      place: { id: r.venue.id, slug: r.venue.slug, name: r.venue.name, neighborhood: r.venue.neighborhood },
+      place: { id: r.venue.id, slug: r.venue.slug, name: r.venue.name, neighborhood: r.venue.neighborhood, neighborhoodId: r.venue.neighborhoodId },
       author: { handle: r.user.handle, displayName: r.user.displayName, avatarUrl: await avatarUrl(r.user.avatarKey, now), verified: r.user.verifiedAt !== null },
       mine: actor?.userId === r.userId,
       likes: likes.get(r.id) ?? none,
@@ -173,7 +174,12 @@ async function toStampViews(db: Db, actor: Actor | null, rows: readonly StampRow
 }
 
 /** Creates a stamp. Photos are optional (up to 6): a stamp may be a caption, a song, or both with no photo. */
-export async function createStamp(
+export async function createStamp(db: Db, actor: Actor | null, venueId: string, input: { bytes?: Buffer | null; photos?: Buffer[]; meta: unknown }, now = new Date(), storage: BlobStorage = getStorage()) {
+  return (await createStampWithProgress(db, actor, venueId, input, now, storage)).stamp;
+}
+
+/** The same, plus the neighborhood progress this stamp made (for the landing animation). */
+export async function createStampWithProgress(
   db: Db,
   actor: Actor | null,
   venueId: string,
@@ -196,6 +202,7 @@ export async function createStamp(
   const images = await Promise.all(buffers.map((b) => processImage(b)));
   const keys = images.map((img) => newStorageKey("photos", img.kind.ext));
   const written: string[] = [];
+  let progress: Awaited<ReturnType<typeof recordProgress>> = null;
   try {
     const row = await db.$transaction(async (tx) => {
       await lockAndCheckCooldown(tx, { userId: me.userId, venueId }, now);
@@ -211,6 +218,8 @@ export async function createStamp(
       for (const [i, img] of images.entries()) {
         await tx.stampPhoto.create({ data: { stampId: created.id, storageKey: keys[i]!, mimeType: img.kind.mime, position: i, createdAt: now } });
       }
+      // App Review stamps (outside the geofence) never count toward a neighborhood.
+      if (!me.geofenceExempt) progress = await recordProgress(tx, me.userId, venueId, created.id, now);
       // Written last inside the transaction: if a write fails the rows roll back, and if the commit fails we clean up below.
       for (const [i, img] of images.entries()) {
         await storage.put(keys[i]!, img.bytes, img.kind.mime);
@@ -218,7 +227,7 @@ export async function createStamp(
       }
       return tx.photo.findUniqueOrThrow({ where: { id: created.id }, select: stampSelect });
     });
-    return (await toStampViews(db, me, [row], now))[0]!;
+    return { stamp: (await toStampViews(db, me, [row], now))[0]!, progress };
   } catch (err) {
     await Promise.all(written.map((k) => storage.delete(k).catch(() => {})));
     throw err;
@@ -471,7 +480,7 @@ export const stampDay = (d: Date) => {
  */
 export async function getMyPlacePage(db: Db, actor: Actor | null, idOrSlug: string, pos?: { lat: number; lng: number } | null, now = new Date()) {
   const me = requireSignedIn(actor);
-  const place = await db.venue.findFirst({ where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] }, select: { id: true, slug: true, name: true, address: true, neighborhood: true, lat: true, lng: true, geofenceMeters: true, osmId: true } });
+  const place = await db.venue.findFirst({ where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] }, select: { id: true, slug: true, name: true, address: true, neighborhood: true, neighborhoodId: true, lat: true, lng: true, geofenceMeters: true, osmId: true } });
   if (!place) throw notFound("Place not found");
   const rows = await db.photo.findMany({ where: { userId: me.userId, venueId: place.id, hiddenAt: null, removedAt: null }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: stampSelect });
   const stamps = await toStampViews(db, me, rows, now);

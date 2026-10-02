@@ -9,8 +9,8 @@ const sample = (JSON.parse(readFileSync("tests/fixtures/overpass-sample.json", "
 
 describe("venues:import", () => {
   it("creates places with the default geofence, and is idempotent", async () => {
-    expect(await importOsmVenues(prisma, sample)).toMatchObject({ fetched: 4, created: 4, updated: 0 });
-    expect(await importOsmVenues(prisma, sample)).toMatchObject({ created: 0, updated: 0, unchanged: 4 });
+    expect(await importOsmVenues(prisma, sample)).toMatchObject({ fetched: 5, created: 5, updated: 0 });
+    expect(await importOsmVenues(prisma, sample)).toMatchObject({ created: 0, updated: 0, unchanged: 5 });
     const v = await prisma.venue.findUniqueOrThrow({ where: { osmId: "node/1001" } });
     expect(v).toMatchObject({ slug: "test-tavern-n1001", geofenceMeters: 100 });
     expect((await prisma.venue.findUniqueOrThrow({ where: { osmId: "way/2001" } })).slug).toBe("test-tavern-w2001");

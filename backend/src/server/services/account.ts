@@ -53,6 +53,7 @@ export async function deleteAccount(db: Db, actor: Actor | null, raw: unknown, n
     await tx.followRequest.deleteMany({ where: { OR: [{ requesterId: user.id }, { targetId: user.id }] } });
     await tx.photoLike.deleteMany({ where: { userId: user.id } });
     await tx.pinnedStamp.deleteMany({ where: { userId: user.id } });
+    await tx.neighborhoodCompletion.deleteMany({ where: { userId: user.id } });
     await tx.rateEvent.deleteMany({ where: { userId: user.id } });
     // Under the badge lock, re-read: a grant racing this deletion is either logged-and-revoked here or refused.
     await lockVerification(tx, user.id);

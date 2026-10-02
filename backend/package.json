@@ -24,7 +24,8 @@
     "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "test:pooled": "node scripts/test-pooled.mjs",
     "venues:import": "tsx scripts/import-osm-venues.ts",
-    "user:role": "tsx scripts/set-role.ts"
+    "user:role": "tsx scripts/set-role.ts",
+    "neighborhoods:import": "tsx scripts/import-neighborhoods.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

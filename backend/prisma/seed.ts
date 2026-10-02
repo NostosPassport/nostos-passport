@@ -16,6 +16,7 @@ import { mulberry32 } from "../src/lib/rng";
 import { DAY_MS, HOUR_MS, MINUTE_MS } from "../src/lib/time";
 import { storageFromEnv, type BlobStorage } from "../src/lib/storage";
 import { CURRENT_TERMS_VERSION } from "../src/server/services/auth";
+import { assignNeighborhoods, importNeighborhoods } from "../src/server/services/neighborhoods";
 import { placeholderPng } from "./placeholder-image";
 import { assertSeedAllowed } from "./seed-guard";
 import { CAPTIONS, PEOPLE, PLACES, SONGS } from "./seed-data";
@@ -37,6 +38,9 @@ export async function seed(db: PrismaClient, opts: SeedOptions = {}): Promise<Se
 
   await db.$executeRawUnsafe(`TRUNCATE TABLE ${TABLES.map((t) => `"${t}"`).join(", ")} RESTART IDENTITY CASCADE`);
   await db.venue.createMany({ data: PLACES.map((p, i) => ({ id: `seed_v_${String(i + 1).padStart(3, "0")}`, ...p })) });
+  // Neighborhoods are reference data: load them, then file every place under the one that contains it.
+  await importNeighborhoods(db);
+  await assignNeighborhoods(db);
   const places = await db.venue.findMany({ orderBy: { id: "asc" } });
 
   // ---------------- People ----------------

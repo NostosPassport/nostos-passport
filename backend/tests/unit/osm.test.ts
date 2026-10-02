@@ -5,16 +5,19 @@ import { assignSlugs, neighborhoodOf, overpassQuery, parseOverpass, slugify, typ
 const sample = (JSON.parse(readFileSync("tests/fixtures/overpass-sample.json", "utf8")) as { elements: OverpassElement[] }).elements;
 
 describe("OSM parsing", () => {
-  it("queries bars, pubs and nightclubs in a box covering both neighborhoods", () => {
+  it("queries bars, restaurants, cafes, parks, museums and bookstores in a box covering both neighborhoods", () => {
     const q = overpassQuery();
-    expect(q).toContain('"amenity"~"^(bar|pub|nightclub)$"');
+    expect(q).toContain('"amenity"~"^(bar|pub|nightclub|restaurant|cafe|');
+    expect(q).toContain('"leisure"~"^(park|garden|playground)$"');
+    expect(q).toContain('"tourism"~');
+    expect(q).toContain('"shop"~"^(books)$"');
     expect(q).toContain("40.7115,-73.9945,40.7345,-73.972");
     expect(q).toContain("out center tags");
   });
 
-  it("keeps named bars/pubs/nightclubs inside EV/LES, uses way centers, blank address when unmapped", () => {
+  it("keeps named places (bars, restaurants...) inside EV/LES, uses way centers, blank address when unmapped", () => {
     const venues = parseOverpass(sample);
-    expect(venues.map((v) => v.osmId)).toEqual(["node/1001", "node/1002", "node/1006", "way/2001"]);
+    expect(venues.map((v) => v.osmId)).toEqual(["node/1001", "node/1002", "node/1005", "node/1006", "way/2001"]);
     expect(venues.find((v) => v.osmId === "way/2001")).toMatchObject({ lat: 40.721, lng: -73.986, kind: "pub" });
     expect(venues.find((v) => v.osmId === "node/1001")).toMatchObject({ address: "12 Avenue A", neighborhood: "East Village" });
     expect(venues.find((v) => v.osmId === "node/1002")).toMatchObject({ address: "", neighborhood: "Lower East Side" });

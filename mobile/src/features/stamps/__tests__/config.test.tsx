@@ -14,7 +14,7 @@ jest.mock("@/api", () => ({ api: {}, mediaUrl: (u: string) => u, errorText: (_e:
 
 const stamp = {
   id: "s1", photoUrl: null, caption: "hello", song: null, createdAt: "2026-09-24T02:00:00.000Z", editedAt: null,
-  place: { id: "p1", slug: "v", name: "Velvet", neighborhood: "East Village" },
+  place: { id: "p1", slug: "v", name: "Velvet", neighborhood: "East Village", neighborhoodId: null },
   author: { handle: "sam", displayName: "Sam", avatarUrl: null, verified: false }, mine: true, likes: { count: 2, viewerLiked: false }, hidden: false, removed: false,
 };
 

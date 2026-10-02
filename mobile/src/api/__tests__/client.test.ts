@@ -24,7 +24,7 @@ function setup(respond: (call: Call) => Response | Promise<Response>, token: str
 }
 
 const place = {
-  id: "v1", slug: "velvet", name: "Velvet", address: "1 Ave A", neighborhood: "East Village", lat: 40.72, lng: -73.98, geofenceMeters: 100, fromOsm: true,
+  id: "v1", slug: "velvet", name: "Velvet", address: "1 Ave A", neighborhood: "East Village", lat: 40.72, lng: -73.98, geofenceMeters: 100, neighborhoodId: null, fromOsm: true,
 };
 const placesBody = { places: [place], attribution: { text: "© OpenStreetMap contributors", url: "https://www.openstreetmap.org/copyright", license: "ODbL-1.0" } };
 
@@ -203,7 +203,7 @@ describe("errorText", () => {
 describe("stamp and social endpoints", () => {
   const stamp = {
     id: "s1", photoUrl: "https://cdn.example.test/s1.jpg", page: 1, slot: 1, photos: [{ id: "ph1", url: "https://cdn.example.test/s1.jpg", position: 0, x: null, y: null, rotation: null }], caption: "hi", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
-    createdAt: "2026-09-24T02:00:00.000Z", editedAt: null, place: { id: "v1", slug: "velvet", name: "Velvet", neighborhood: "East Village" },
+    createdAt: "2026-09-24T02:00:00.000Z", editedAt: null, place: { id: "v1", slug: "velvet", name: "Velvet", neighborhood: "East Village", neighborhoodId: null },
     author: { handle: "sam", displayName: "Sam", avatarUrl: null, verified: false }, mine: false, likes: { count: 3, viewerLiked: false }, hidden: false, removed: false,
   };
 

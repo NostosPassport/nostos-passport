@@ -1,18 +1,21 @@
 /**
- * pnpm venues:import [--dry-run] [--file overpass.json] [--allow-demo]
- * Pulls bars, pubs and nightclubs in the East Village + LES from the OpenStreetMap Overpass API and upserts them
+* pnpm venues:import [--dry-run] [--file overpass.json] [--allow-demo] [--bbox S,W,N,E]
+ * Pulls places (bars, restaurants, cafes, theatres, museums, parks and more; default area: Manhattan up to 59th St) from the OpenStreetMap Overpass API and upserts them
  * (idempotent on osm_id). Data © OpenStreetMap contributors, ODbL. Uses DATABASE_URL (run against production with
  * the production env loaded; see DEPLOY.md).
  */
 import { readFileSync, existsSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
-import { overpassQuery, parseOverpass, type OverpassElement } from "../src/lib/osm";
+import { DEFAULT_BBOX, overpassQuery, parseOverpass, type OverpassElement } from "../src/lib/osm";
 import { importOsmVenues } from "../src/server/services/osm-import";
+import { loadNeighborhoods, locate } from "../src/server/services/neighborhoods";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const fileIdx = args.indexOf("--file");
+const bboxIdx = args.indexOf("--bbox");
+const bbox = (bboxIdx >= 0 ? args[bboxIdx + 1]!.split(",").map(Number) : [...DEFAULT_BBOX]) as [number, number, number, number];
 const endpoint = process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";
 
 async function fetchElements(): Promise<OverpassElement[]> {
@@ -20,7 +23,7 @@ async function fetchElements(): Promise<OverpassElement[]> {
   const res = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": "Nostos-venue-import/1.0 (support@REPLACE-ME)" },
-    body: new URLSearchParams({ data: overpassQuery() }),
+    body: new URLSearchParams({ data: overpassQuery(bbox) }),
     signal: AbortSignal.timeout(120_000),
   });
   if (!res.ok) throw new Error(`Overpass ${res.status}: ${(await res.text()).slice(0, 200)}`);
@@ -39,27 +42,28 @@ async function fetchElements(): Promise<OverpassElement[]> {
 }
 
 const elements = await fetchElements();
-// Sanity check: these two neighborhoods have well over a hundred mapped bars. A tiny result means a bad response.
-const MIN_EXPECTED = Number(process.env.OSM_MIN_EXPECTED ?? 50);
-if (fileIdx < 0 && parseOverpass(elements).length < MIN_EXPECTED) {
-  throw new Error(`Only ${parseOverpass(elements).length} venues parsed (expected >= ${MIN_EXPECTED}); refusing to import a partial result`);
-}
-if (dryRun) {
-  const venues = parseOverpass(elements);
-  console.log(`[venues:import] dry run: ${elements.length} elements -> ${venues.length} named venues`);
-  for (const v of venues.slice(0, 15)) console.log(`  ${v.osmId.padEnd(16)} ${v.kind.padEnd(10)} ${v.neighborhood.padEnd(16)} ${v.name} (${v.address})`);
-  if (venues.length > 15) console.log(`  … ${venues.length - 15} more`);
-} else {
-  const db = new PrismaClient();
-  try {
-    // Real venues belong in production (and local experiments), not next to the fictional demo seed.
+const db = new PrismaClient();
+try {
+  // With neighborhood boundaries loaded (pnpm neighborhoods:import), places are kept when inside NYC and filed under their neighborhood.
+  const hoods = await loadNeighborhoods(db);
+  const locateFn = hoods.length ? (lat: number, lng: number) => locate(hoods, lat, lng) : undefined;
+  const parsed = parseOverpass(elements, locateFn);
+  // Sanity check: the default area has thousands of mapped places. A tiny result means a bad response.
+  const MIN_EXPECTED = Number(process.env.OSM_MIN_EXPECTED ?? 50);
+  if (fileIdx < 0 && parsed.length < MIN_EXPECTED) throw new Error(`Only ${parsed.length} places parsed (expected >= ${MIN_EXPECTED}); refusing to import a partial result`);
+  if (dryRun) {
+    console.log(`[venues:import] dry run: ${elements.length} elements -> ${parsed.length} named places`);
+    for (const v of parsed.slice(0, 15)) console.log(`  ${v.osmId.padEnd(16)} ${v.kind.padEnd(12)} ${v.neighborhood.padEnd(24)} ${v.name} (${v.address})`);
+    if (parsed.length > 15) console.log(`  ... ${parsed.length - 15} more`);
+  } else {
+    // Real places belong in production (and local experiments), not next to the fictional demo seed.
     const demo = await db.venue.count({ where: { id: { startsWith: "seed_v_" } } });
     if (demo > 0 && !args.includes("--allow-demo")) {
-      throw new Error(`This database has ${demo} demo-seed venues. Import real venues into a database without the demo seed, or pass --allow-demo.`);
+      throw new Error(`This database has ${demo} demo-seed places. Import real places into a database without the demo seed, or pass --allow-demo.`);
     }
     const r = await importOsmVenues(db, elements);
-    console.log(`[venues:import] ${r.fetched} venues: ${r.created} created, ${r.updated} updated, ${r.unchanged} unchanged`);
-  } finally {
-    await db.$disconnect();
+    console.log(`[venues:import] ${r.fetched} places: ${r.created} created, ${r.updated} updated, ${r.unchanged} unchanged`);
   }
+} finally {
+  await db.$disconnect();
 }

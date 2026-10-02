@@ -78,6 +78,7 @@ proxied through the backend to Apple's public iTunes Search API with no user ide
 | `POST /api/me/delete` | `DeleteAccountRequest` | `DeleteAccountResponse`: anonymizes the account, hides its stamps, removes the files |
 | `GET`, `PATCH /api/me/profile` | `ProfileSettingsRequest` | `ProfileSettingsResponse` |
 | `POST`, `DELETE /api/me/avatar` | multipart `photo` | `AvatarResponse` |
+| `GET /api/me/neighborhoods` | | `NeighborhoodIndexResponse`: every neighborhood with places and your visited/total, a completion marker once a set (3+ places) is finished. Owner only |
 | `GET`, `PUT /api/me/pins` | `PinsRequest` `{ stampIds }` (up to 4 of your own) | `PinsResponse`: pinned stamps, owner only |
 | `GET /api/me/activity` | | `ActivityResponse`: follow requests, new followers, likes on your stamps |
 | `GET /api/me/following` | | `FollowingResponse` |
@@ -91,7 +92,7 @@ proxied through the backend to Apple's public iTunes Search API with no user ide
 | `GET /api/places/:id` | `PlaceResponse` (id or slug) |
 | `GET /api/places/nearby?lat=&lng=` | `NearbyPlacesResponse`: inside or near the geofence, nearest first. The position is never stored |
 | `GET /api/places/:id/mine?lat=&lng=` | `MyPlacePageResponse`: your own stamps there (stacked by night, oldest first) and `inside`, whether the position is within the geofence now (null without one). The position is not stored |
-| `POST /api/places/:id/stamps` | `CreateStampResponse` (201). multipart: optional `photos` (up to 6, repeated), `caption`, `songTitle`, `songArtist`, `songArtUrl`, `songSourceId`, `lat`, `lng`, optional `rating` |
+| `POST /api/places/:id/stamps` | `CreateStampResponse` (201): `{ stamp, progress }`, where `progress` is your standing in the place's neighborhood (null if it has none). multipart: optional `photos` (up to 6, repeated), `caption`, `songTitle`, `songArtist`, `songArtUrl`, `songSourceId`, `lat`, `lng`, optional `rating` |
 
 ### Stamps, feed and passports
 

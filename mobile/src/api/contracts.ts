@@ -1,5 +1,5 @@
 /**
- * COPIED VERBATIM from backend/src/contracts/api.ts (this repo, commit e4d6039).
+ * COPIED VERBATIM from backend/src/contracts/api.ts (this repo, commit 33bc4dd).
  * Do not edit here: change the backend contract, then re-copy with `npm run sync:contracts`.
  */
 /**
@@ -50,7 +50,7 @@ export const FollowState = z.enum(["none", "requested", "following"]);
 export const PersonView = z.object({ handle: z.string(), displayName: z.string().nullable(), avatarUrl: z.string().nullable(), verified: z.boolean() }).strict();
 /** A person plus the viewer's follow state toward them (drives Follow / Requested / Following buttons). */
 export const PersonRow = PersonView.extend({ follow: FollowState, isSelf: z.boolean() }).strict();
-export const PlaceRef = z.object({ id: z.string(), slug: z.string(), name: z.string(), neighborhood: z.string() }).strict();
+export const PlaceRef = z.object({ id: z.string(), slug: z.string(), name: z.string(), neighborhood: z.string(), neighborhoodId: z.string().nullable() }).strict();
 
 // ------------------------------------------------------------------------------------------------
 // Auth and account
@@ -110,6 +110,8 @@ export const Place = z
     neighborhood: z.string(), lat: z.number(), lng: z.number(),
     /** Radius in meters within which a phone may stamp this place (the server checks it again on every stamp). */
     geofenceMeters: z.number().int(),
+    /** The NYC neighborhood the place is in, when known. */
+    neighborhoodId: z.string().nullable(),
     fromOsm: z.boolean(),
   })
   .strict();
@@ -175,7 +177,19 @@ export const StampResponse = z.object({ stamp: StampView }).strict();
  * `songArtUrl`, `songSourceId`, `lat`, `lng` (and an optional `rating` 1-10 that v1 doesn't show). At least one of
  * photo, caption or song. 403 outside the geofence, with a message that says how far away you are.
  */
-export const CreateStampResponse = StampResponse;
+/** Progress through a neighborhood: visited places over total, and whether this stamp finished the set (a set is at least 3 places). */
+export const NeighborhoodProgress = z
+  .object({ neighborhoodId: z.string(), name: z.string(), borough: z.string(), visited: z.number().int(), total: z.number().int(), complete: z.boolean(), justCompleted: z.boolean(), newPlace: z.boolean() })
+  .strict();
+/** `progress` is null when the place has no neighborhood (or the stamp is an App Review stamp). */
+export const CreateStampResponse = z.object({ stamp: StampView, progress: NeighborhoodProgress.nullable() }).strict();
+/** GET /api/me/neighborhoods: the passport's index. Started first. Owner only. */
+export const NeighborhoodIndexResponse = z
+  .object({
+    neighborhoods: z.array(z.object({ neighborhoodId: z.string(), name: z.string(), borough: z.string(), visited: z.number().int(), total: z.number().int(), complete: z.boolean(), completedAt: IsoDate.nullable(), percent: z.number().int() }).strict()),
+    totals: z.object({ neighborhoodsStarted: z.number().int(), neighborhoodsComplete: z.number().int() }).strict(),
+  })
+  .strict();
 /** PATCH /api/stamps/:id: caption and song; send only changed fields. `song: null` removes the song. */
 export const StampEditRequest = z
   .object({
@@ -431,6 +445,8 @@ export type PlacesResponse = z.infer<typeof PlacesResponse>;
 export type NearbyPlacesResponse = z.infer<typeof NearbyPlacesResponse>;
 export type LikeSummary = z.infer<typeof LikeSummary>;
 export type Song = z.infer<typeof Song>;
+export type NeighborhoodProgress = z.infer<typeof NeighborhoodProgress>;
+export type NeighborhoodIndexResponse = z.infer<typeof NeighborhoodIndexResponse>;
 export type StampView = z.infer<typeof StampView>;
 export type StampPhotoView = z.infer<typeof StampPhotoView>;
 export type PhotoLayoutRequest = z.infer<typeof PhotoLayoutRequest>;
