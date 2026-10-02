@@ -12,8 +12,8 @@ fail() { echo "GATE FAIL: $1"; exit 1; }
 step() { echo "== gate: $1"; }
 
 step "disk (5 GB free)"
-avail_kb=$(df -Pk / | awk 'NR==2 {print $4}')
-[ "$avail_kb" -ge 5242880 ] || fail "under 5 GB free on / (${avail_kb} KB)"
+avail_kb=$(df -Pk /System/Volumes/Data | awk 'NR==2 {print $4}')
+[ "$avail_kb" -ge 5242880 ] || fail "under 5 GB free on /System/Volumes/Data (${avail_kb} KB)"
 
 step "repo hygiene"
 git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$' | grep -q . && fail "a .env file is tracked"

@@ -40,7 +40,7 @@ Each has a test in `backend/tests/integration/invariants.test.ts`. The gate fail
 
 ## Team rules
 - Branch `build` only. Never push, never force-push, never open a PR, never commit .env.
-- Check `df -h /` before large installs. Never install Xcode.
+- Check `df -h /System/Volumes/Data` (not `/`, which misreports on macOS) before large installs. Never install Xcode.
 - Never run two backend test processes at once (they share one test database).
 - Use `npx expo install` for native packages and check the Expo SDK docs (see mobile/AGENTS.md).
 - No em dashes in any text you write.

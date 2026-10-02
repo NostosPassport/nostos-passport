@@ -5,7 +5,7 @@ Limits are enforced by gates and ledgers, never by the builder's word. The revie
 
 ## The loop
 1. Orient: `git log --oneline | head -30`, `tail -20 LEDGER.md`, the newest file in `reviews/`, `OPEN-QUESTIONS.md`.
-2. Read CLAUDE.md, ENGINE.md, NOSTOS-BUILD-PROMPT.md and DESIGN.md.
+2. Read CLAUDE.md, ENGINE.md, NOSTOS-BUILD-PROMPT.md, then NOSTOS-BUILD-PROMPT-2.md (it supersedes the earlier prompt where they disagree: Nostos is strictly personal, no social, a literal passport book), then DESIGN.md.
 3. Run `scripts/gate.sh` for a baseline. If it is red, fixing it is the first task.
 4. Take the first unfinished task in NOSTOS-BUILD-PROMPT.md. Checkboxes are hints: prove the task is not already done
    by finding its code and its test before building anything.
