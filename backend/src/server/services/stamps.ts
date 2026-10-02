@@ -11,6 +11,7 @@
  *  - Song data is metadata only; no audio. The art URL must come from Apple's artwork CDN.
  */
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import type { Db } from "@/lib/db";
 import { distanceMeters, isValidLatLng } from "@/lib/geo";
 import { localParts } from "@/lib/time";
@@ -234,7 +235,7 @@ export async function createStampWithProgress(
   }
 }
 
-async function ownStamp(db: Db, actor: Actor | null, stampId: string) {
+async function ownStamp(db: Db | Prisma.TransactionClient, actor: Actor | null, stampId: string) {
   const me = requireSignedIn(actor);
   const stamp = await db.photo.findUnique({ where: { id: stampId }, select: { id: true, userId: true, hiddenAt: true, removedAt: true, caption: true, songTitle: true } });
   if (!stamp || stamp.removedAt) throw notFound("Stamp not found");
@@ -253,16 +254,23 @@ export async function addStampPhotos(db: Db, actor: Actor | null, stampId: strin
   throw badRequest("Photos can only be attached when creating a stamp");
 }
 
-/** Remove one photo from your stamp (final: it is hidden, never deleted). A stamp can't be left with nothing in it. */
+/** Lock the parent before reading any editable content or live photo count. */
+async function lockStamp(tx: Prisma.TransactionClient, stampId: string) {
+  await tx.$queryRaw`SELECT id FROM photo WHERE id = ${stampId} FOR UPDATE`;
+}
+
+/** Remove one photo permanently, atomically with the actual live-content check. */
 export async function removeStampPhoto(db: Db, actor: Actor | null, stampId: string, photoId: string, now = new Date()) {
-  const { me, stamp } = await ownStamp(db, actor, stampId);
-  const live = await db.stampPhoto.findMany({ where: { stampId, removedAt: null }, select: { id: true } });
-  if (!live.some((p) => p.id === photoId)) throw notFound("Photo not found");
-  if (live.length === 1 && !stamp.caption.trim() && !stamp.songTitle) throw badRequest("A stamp needs a photo, a caption or a song");
-  await db.$transaction([
-    db.stampPhoto.update({ where: { id: photoId }, data: { removedAt: now } }),
-    db.photo.update({ where: { id: stampId }, data: { editedAt: now } }),
-  ]);
+  const me = requireSignedIn(actor);
+  await db.$transaction(async (tx) => {
+    await lockStamp(tx, stampId);
+    const { stamp } = await ownStamp(tx, me, stampId);
+    const live = await tx.stampPhoto.findMany({ where: { stampId, removedAt: null }, select: { id: true } });
+    if (!live.some((p) => p.id === photoId)) throw notFound("Photo not found");
+    if (live.length === 1 && !stamp.caption.trim() && !stamp.songTitle) throw badRequest("A stamp needs a photo, a caption or a song");
+    await tx.stampPhoto.update({ where: { id: photoId }, data: { removedAt: now } });
+    await tx.photo.update({ where: { id: stampId }, data: { editedAt: now } });
+  });
   return getStamp(db, me, stampId, now);
 }
 
@@ -327,29 +335,33 @@ export async function editStamp(db: Db, actor: Actor | null, stampId: string, ra
   const me = requireSignedIn(actor);
   const input = stampEditSchema.parse(raw);
   assertCleanText({ caption: input.caption, "song title": input.song?.title, "song artist": input.song?.artist });
-  const stamp = await db.photo.findUnique({ where: { id: stampId } });
-  if (!stamp || stamp.removedAt) throw notFound("Stamp not found");
-  assertCanEditOwnContent(me, stamp);
-  if (stamp.hiddenAt) throw conflict("This stamp was hidden by a moderator and can't be edited");
-  // Freeze while a moderator is looking at it, so it can't be rewritten mid-review.
-  if ((await db.flag.count({ where: { targetType: "PHOTO", targetId: stamp.id, status: "OPEN" } })) > 0) {
-    throw conflict("This stamp is under moderator review, so it can't be edited right now");
-  }
-  const caption = input.caption ?? stamp.caption;
-  const song =
-    input.song === undefined
-      ? stamp.songTitle ? { title: stamp.songTitle, artist: stamp.songArtist!, artUrl: stamp.songArtUrl, sourceId: stamp.songSourceId } : null
-      : input.song && { title: input.song.title, artist: input.song.artist, artUrl: input.song.artUrl ?? null, sourceId: input.song.sourceId ?? null };
-  if (!stamp.storageKey && !caption.trim() && !song) throw badRequest("A stamp needs a photo, a caption or a song");
-  await db.photo.update({
-    where: { id: stamp.id },
-    data: {
-      caption,
-      songTitle: song?.title ?? null, songArtist: song?.artist ?? null, songArtUrl: song?.artUrl ?? null, songSourceId: song?.sourceId ?? null,
-      editedAt: now,
-    },
+  await db.$transaction(async (tx) => {
+    await lockStamp(tx, stampId);
+    const stamp = await tx.photo.findUnique({ where: { id: stampId } });
+    if (!stamp || stamp.removedAt) throw notFound("Stamp not found");
+    assertCanEditOwnContent(me, stamp);
+    if (stamp.hiddenAt) throw conflict("This stamp was hidden by a moderator and can't be edited");
+    // Freeze while a moderator is looking at it, so it can't be rewritten mid-review.
+    if ((await tx.flag.count({ where: { targetType: "PHOTO", targetId: stamp.id, status: "OPEN" } })) > 0) {
+      throw conflict("This stamp is under moderator review, so it can't be edited right now");
+    }
+    const caption = input.caption ?? stamp.caption;
+    const song =
+      input.song === undefined
+        ? stamp.songTitle ? { title: stamp.songTitle, artist: stamp.songArtist!, artUrl: stamp.songArtUrl, sourceId: stamp.songSourceId } : null
+        : input.song && { title: input.song.title, artist: input.song.artist, artUrl: input.song.artUrl ?? null, sourceId: input.song.sourceId ?? null };
+    const livePhotos = await tx.stampPhoto.count({ where: { stampId, removedAt: null } });
+    if (livePhotos === 0 && !caption.trim() && !song) throw badRequest("A stamp needs a photo, a caption or a song");
+    await tx.photo.update({
+      where: { id: stamp.id },
+      data: {
+        caption,
+        songTitle: song?.title ?? null, songArtist: song?.artist ?? null, songArtUrl: song?.artUrl ?? null, songSourceId: song?.sourceId ?? null,
+        editedAt: now,
+      },
+    });
   });
-  return getStamp(db, me, stamp.id, now);
+  return getStamp(db, me, stampId, now);
 }
 
 /** "Delete from profile": hides the stamp everywhere for good (removed_at, final). Nothing is deleted. */

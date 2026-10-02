@@ -35,3 +35,8 @@ sections (logged in OPEN-QUESTIONS 4).
 - Three creation-only regression cases failed before implementation, including direct append after a parent update.
 - Later append rejects before image processing/storage. Forward migration adds a database-forced immutable creation transaction and checks it on every photo insert. Six-photo limits, EXIF stripping, layout and final removal coverage remain. Demo seed now creates each photo set atomically with its parent.
 - Contract comment changed; generated mobile contract is synchronized in this same commit. Merge should regenerate it with npm run sync:contracts.
+
+## Codex lane, phase 4
+- Regressions reproduce remove-all-photos then clear-caption/song, last-photo SQL removal and concurrent emptying.
+- Editing and photo removal now lock the parent and check live stamp_photo rows inside one transaction. Deferred database constraint triggers check the final state at commit and serialize direct photo updates on the parent. Original storage_key never counts as live content. Caption whitespace matches JavaScript trim.
+- Migration preserves records and refuses deployment if historical empty live stamps need explicit review. Test fixtures from red runs are finally removed before subsequent migrations.

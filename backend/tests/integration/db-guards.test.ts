@@ -52,7 +52,11 @@ describe("database guards", () => {
     await expect(prisma.photo.create({ data: { ...base, caption: "   " } })).rejects.toThrow(/photo_has_content/);
     await expect(prisma.photo.create({ data: { ...base, caption: "hello" } })).resolves.toBeTruthy();
     await expect(prisma.photo.create({ data: { ...base, caption: "", songTitle: "T", songArtist: "A" } })).resolves.toBeTruthy();
-    await expect(prisma.photo.create({ data: { ...base, caption: "", storageKey: "photos/p.png", mimeType: "image/png" } })).resolves.toBeTruthy();
+    await expect(prisma.photo.create({ data: { ...base, caption: "", storageKey: "photos/stale.png", mimeType: "image/png" } })).rejects.toThrow(/photo_has_content/);
+    await expect(prisma.$transaction(async (tx) => {
+      const p = await tx.photo.create({ data: { ...base, caption: "", storageKey: "photos/p.png", mimeType: "image/png" } });
+      await tx.stampPhoto.create({ data: { stampId: p.id, storageKey: "photos/p.png", mimeType: "image/png", position: 0 } });
+    })).resolves.toBeUndefined();
     // A photo has both key and type; a song has title and artist; art must be https.
     await expect(prisma.photo.create({ data: { ...base, caption: "x", storageKey: "photos/q.png" } })).rejects.toThrow(/photo_storage_pair/);
     await expect(prisma.photo.create({ data: { ...base, caption: "x", songTitle: "T" } })).rejects.toThrow(/photo_song_shape/);
