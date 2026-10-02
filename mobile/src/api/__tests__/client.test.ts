@@ -1,5 +1,5 @@
 import { ApiError, BAD_RESPONSE_MESSAGE, createApi, errorText, OFFLINE_MESSAGE, onlyUnknownKeys, parseResponse } from "../client";
-import { PresenceResponse, VenuesResponse } from "../contracts";
+import { NearbyPlacesResponse, PlacesResponse } from "../contracts";
 
 type Call = { url: string; init: RequestInit };
 
@@ -23,18 +23,17 @@ function setup(respond: (call: Call) => Response | Promise<Response>, token: str
   return { api, calls, onInvalidToken };
 }
 
-const venue = {
-  id: "v1", slug: "velvet", name: "Velvet", address: "1 Ave A", neighborhood: "East Village", lat: 40.72, lng: -73.98,
-  vibe: "PACKED", vibeReports: 5, hereNow: 4, goingTonight: 18, friendsGoing: 1, activity: 13, promoted: false, fromOsm: true,
+const place = {
+  id: "v1", slug: "velvet", name: "Velvet", address: "1 Ave A", neighborhood: "East Village", lat: 40.72, lng: -73.98, geofenceMeters: 100, fromOsm: true,
 };
-const venuesBody = { venues: [venue], attribution: { text: "© OpenStreetMap contributors", url: "https://www.openstreetmap.org/copyright", license: "ODbL-1.0" }, at: "2026-09-24T02:00:00.000Z" };
+const placesBody = { places: [place], attribution: { text: "© OpenStreetMap contributors", url: "https://www.openstreetmap.org/copyright", license: "ODbL-1.0" } };
 
 describe("api client", () => {
   it("sends the bearer token and X-Client: ios, and parses the response", async () => {
-    const { api, calls } = setup(() => jsonResponse(200, venuesBody));
-    const res = await api.venues.list();
-    expect(res.venues[0].name).toBe("Velvet");
-    expect(calls[0].url).toBe("https://api.example.test/api/venues");
+    const { api, calls } = setup(() => jsonResponse(200, placesBody));
+    const res = await api.places.list();
+    expect(res.places[0].name).toBe("Velvet");
+    expect(calls[0].url).toBe("https://api.example.test/api/places");
     const h = calls[0].init.headers as Record<string, string>;
     expect(h.Authorization).toBe("Bearer tok_abcdefghijklmnopqrstuvwxyz");
     expect(h["X-Client"]).toBe("ios");
@@ -54,18 +53,18 @@ describe("api client", () => {
   });
 
   it("surfaces the server's message and code unchanged (geofence 403)", async () => {
-    const message = "You need to be within 100m of the venue to post (you're 140m away)";
+    const message = "You need to be within 100 m of this place to stamp it (you're 140 m away)";
     const { api } = setup(() => jsonResponse(403, { error: "forbidden", message }));
-    const err = await api.venues.report("v1", { type: "VIBE", vibe: "PACKED", lat: 40.7, lng: -73.9 }).catch((e) => e);
+    const err = await api.stamps.get("s1").catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err).toMatchObject({ status: 403, code: "forbidden", message });
     expect(err.isClientError).toBe(true);
   });
 
   it("surfaces cooldowns (429) with the server's message", async () => {
-    const message = "You already posted a vibe update here. Try again in 12 min.";
+    const message = "You already stamped this place. Try again in 12 min.";
     const { api } = setup(() => jsonResponse(429, { error: "rate_limited", message }));
-    await expect(api.venues.report("v1", { type: "VIBE", vibe: "BUSY", lat: 0, lng: 0 })).rejects.toMatchObject({ code: "rate_limited", message });
+    await expect(api.stamps.get("s1")).rejects.toMatchObject({ code: "rate_limited", message });
   });
 
   it("calls onInvalidToken only for 401 invalid_token", async () => {
@@ -82,16 +81,16 @@ describe("api client", () => {
     const { api } = setup(() => {
       throw new TypeError("Network request failed");
     });
-    await expect(api.venues.list()).rejects.toMatchObject({ status: 0, code: "offline", message: OFFLINE_MESSAGE });
+    await expect(api.places.list()).rejects.toMatchObject({ status: 0, code: "offline", message: OFFLINE_MESSAGE });
   });
 
   it("maps non-JSON errors and contract mismatches to a generic message", async () => {
     const gateway = setup(() => new Response("<html>502</html>", { status: 502 }));
-    await expect(gateway.api.venues.list()).rejects.toMatchObject({ status: 502, code: "bad_response", message: BAD_RESPONSE_MESSAGE });
+    await expect(gateway.api.places.list()).rejects.toMatchObject({ status: 502, code: "bad_response", message: BAD_RESPONSE_MESSAGE });
 
     const spy = jest.spyOn(console, "error").mockImplementation(() => undefined);
-    const drift = setup(() => jsonResponse(200, { ...venuesBody, venues: [{ ...venue, vibe: "ON_FIRE" }] }));
-    await expect(drift.api.venues.list()).rejects.toMatchObject({ code: "bad_response" });
+    const drift = setup(() => jsonResponse(200, { ...placesBody, places: [{ ...place, geofenceMeters: "wide" }] }));
+    await expect(drift.api.places.list()).rejects.toMatchObject({ code: "bad_response" });
     spy.mockRestore();
   });
 
@@ -107,31 +106,38 @@ describe("api client", () => {
   });
 
   it("uses the right verbs for toggles", async () => {
-    const { api, calls } = setup(() => jsonResponse(200, { going: false, night: "2026-09-23", goingTonight: 3 }));
-    await api.venues.rsvp("v1", true);
-    await api.venues.rsvp("v1", false);
+    const { api, calls } = setup(() => jsonResponse(200, { state: "following" }));
+    await api.users.follow("sam", true);
+    await api.users.follow("sam", false);
     expect(calls.map((c) => c.init.method)).toEqual(["PUT", "DELETE"]);
+  });
+
+  it("sends the position to nearby places as a query and nothing else", async () => {
+    const { api, calls } = setup(() => jsonResponse(200, { places: [] }));
+    await api.places.nearby({ lat: 40.7265, lng: -73.9845 });
+    expect(calls[0].url).toBe("https://api.example.test/api/places/nearby?lat=40.7265&lng=-73.9845");
+    expect(calls[0].init.method).toBe("GET");
   });
 });
 
 describe("forward compatibility", () => {
   it("accepts responses whose only problem is a field this app doesn't know yet", () => {
     const spy = jest.spyOn(console, "info").mockImplementation(() => undefined);
-    const withNewField = { ...venuesBody, venues: [{ ...venue, newThing: 1 }], alsoNew: true };
-    const parsed = parseResponse(VenuesResponse, withNewField, "/api/venues");
-    expect(parsed.venues[0].name).toBe("Velvet");
+    const withNewField = { ...placesBody, places: [{ ...place, newThing: 1 }], alsoNew: true };
+    const parsed = parseResponse(PlacesResponse, withNewField, "/api/places");
+    expect(parsed.places[0].name).toBe("Velvet");
     spy.mockRestore();
   });
 
-  it("still accepts unknown keys inside a union branch", () => {
+  it("still accepts unknown keys inside a nested object", () => {
     const spy = jest.spyOn(console, "info").mockImplementation(() => undefined);
-    const body = { here: false, reason: "outside", distanceM: 140, radiusM: 100, extra: "x" };
-    expect(parseResponse(PresenceResponse, body, "/presence")).toMatchObject({ here: false, distanceM: 140 });
+    const body = { places: [{ ...place, distanceM: 140, inside: false, extra: "x" }] };
+    expect(parseResponse(NearbyPlacesResponse, body, "/nearby")).toMatchObject({ places: [{ distanceM: 140 }] });
     spy.mockRestore();
   });
 
   it("rejects missing or mistyped fields", () => {
-    const r = VenuesResponse.safeParse({ ...venuesBody, venues: [{ ...venue, hereNow: "4" }] });
+    const r = PlacesResponse.safeParse({ ...placesBody, places: [{ ...place, geofenceMeters: "100" }] });
     expect(r.success).toBe(false);
     if (!r.success) expect(onlyUnknownKeys(r.error.issues)).toBe(false);
   });
@@ -150,7 +156,7 @@ describe("hardening", () => {
           init.signal?.addEventListener("abort", () => reject(new Error("aborted")));
         })) as unknown as typeof fetch,
     });
-    await expect(api.venues.list()).rejects.toMatchObject({ code: "timeout" });
+    await expect(api.places.list()).rejects.toMatchObject({ code: "timeout" });
   });
 
   it("still recognizes invalid_token when the error body gains a field", async () => {
@@ -169,13 +175,13 @@ describe("hardening", () => {
 
   it("never reports a dead token for a request that sent none", async () => {
     const { api, onInvalidToken } = setup(() => jsonResponse(401, { error: "invalid_token", message: "x" }), null);
-    await expect(api.venues.list()).rejects.toMatchObject({ code: "invalid_token" });
+    await expect(api.places.list()).rejects.toMatchObject({ code: "invalid_token" });
     expect(onInvalidToken).not.toHaveBeenCalled();
   });
 
   it("uses its own sentence for 5xx even when the body is JSON", async () => {
     const { api } = setup(() => jsonResponse(500, { error: "internal", message: "PrismaClientKnownRequestError at line 3" }));
-    await expect(api.venues.list()).rejects.toMatchObject({ status: 500, message: BAD_RESPONSE_MESSAGE });
+    await expect(api.places.list()).rejects.toMatchObject({ status: 500, message: BAD_RESPONSE_MESSAGE });
   });
 
   it("logout sends the token it is given, not the current one", async () => {
@@ -194,40 +200,63 @@ describe("errorText", () => {
   });
 });
 
-describe("social endpoints", () => {
-  const post = {
-    id: "p1", url: "https://cdn.example.test/p1.jpg", rating: 8, caption: "", shared: true, createdAt: "2026-09-24T02:00:00.000Z", editedAt: null,
-    author: { kind: "anonymous" }, venue: { name: "Velvet", slug: "velvet" }, mine: false, ratingEditableUntil: null, likes: { count: 3, viewerLiked: false },
+describe("stamp and social endpoints", () => {
+  const stamp = {
+    id: "s1", photoUrl: "https://cdn.example.test/s1.jpg", caption: "hi", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
+    createdAt: "2026-09-24T02:00:00.000Z", editedAt: null, place: { id: "v1", slug: "velvet", name: "Velvet", neighborhood: "East Village" },
+    author: { handle: "sam", displayName: "Sam", avatarUrl: null, verified: false }, mine: false, likes: { count: 3, viewerLiked: false }, hidden: false, removed: false,
   };
 
-  it("pages a profile grid with the server's opaque cursor, encoded", async () => {
-    const { api, calls } = setup(() => jsonResponse(200, { posts: [], nextBefore: null }));
-    await api.users.posts("sam");
-    await api.users.posts("sam", "2026-09-24T02:00:00.000Z_p1");
-    expect(calls[0].url).toBe("https://api.example.test/api/users/sam/posts");
-    expect(calls[1].url).toBe("https://api.example.test/api/users/sam/posts?before=2026-09-24T02%3A00%3A00.000Z_p1");
+  it("pages the feed and a passport grid with the server's opaque cursor, encoded", async () => {
+    const { api, calls } = setup(() => jsonResponse(200, { stamps: [], nextBefore: null }));
+    await api.feed();
+    await api.feed("2026-09-24T02:00:00.000Z_s1");
+    await api.users.stamps("sam");
+    await api.users.stamps("sam", "2026-09-24T02:00:00.000Z_s1");
+    expect(calls.map((c) => c.url)).toEqual([
+      "https://api.example.test/api/feed",
+      "https://api.example.test/api/feed?before=2026-09-24T02%3A00%3A00.000Z_s1",
+      "https://api.example.test/api/users/sam/stamps",
+      "https://api.example.test/api/users/sam/stamps?before=2026-09-24T02%3A00%3A00.000Z_s1",
+    ]);
   });
 
   it("likes with PUT and unlikes with DELETE", async () => {
     const { api, calls } = setup(() => jsonResponse(200, { liked: true, count: 4, viewerLiked: true }));
-    await api.posts.like("p1", true);
-    await api.posts.like("p1", false);
+    await api.stamps.like("s1", true);
+    await api.stamps.like("s1", false);
     expect(calls.map((c) => [c.init.method, c.url])).toEqual([
-      ["PUT", "https://api.example.test/api/posts/p1/like"],
-      ["DELETE", "https://api.example.test/api/posts/p1/like"],
+      ["PUT", "https://api.example.test/api/stamps/s1/like"],
+      ["DELETE", "https://api.example.test/api/stamps/s1/like"],
     ]);
   });
 
-  it("removes a post with POST /remove, never DELETE", async () => {
+  it("removes a stamp with POST /remove, never DELETE", async () => {
     const { api, calls } = setup(() => jsonResponse(200, { removed: true }));
-    await api.posts.remove("p1");
-    expect([calls[0].init.method, calls[0].url]).toEqual(["POST", "https://api.example.test/api/posts/p1/remove"]);
+    await api.stamps.remove("s1");
+    expect([calls[0].init.method, calls[0].url]).toEqual(["POST", "https://api.example.test/api/stamps/s1/remove"]);
   });
 
-  it("parses a post with an Anonymous author", async () => {
-    const { api } = setup(() => jsonResponse(200, { post }));
-    const res = await api.posts.get("p1");
-    expect(res.post.author).toEqual({ kind: "anonymous" });
+  it("edits only the fields it is given, and a null song removes it", async () => {
+    const { api, calls } = setup(() => jsonResponse(200, { stamp }));
+    await api.stamps.edit("s1", { song: null });
+    expect(calls[0].init.method).toBe("PATCH");
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({ song: null });
+  });
+
+  it("parses a stamp with its author, song and place", async () => {
+    const { api } = setup(() => jsonResponse(200, { stamp }));
+    const res = await api.stamps.get("s1");
+    expect(res.stamp.author).toEqual({ handle: "sam", displayName: "Sam", avatarUrl: null, verified: false });
+    expect(res.stamp.song?.title).toBe("Heroes");
+    expect(res.stamp.place.slug).toBe("velvet");
+  });
+
+  it("searches songs with an encoded query", async () => {
+    const { api, calls } = setup(() => jsonResponse(200, { songs: [{ title: "Heroes", artist: "David Bowie", album: null, artUrl: null, sourceId: "1" }] }));
+    const res = await api.songs.search("david & bowie");
+    expect(calls[0].url).toBe("https://api.example.test/api/songs/search?q=david%20%26%20bowie");
+    expect(res.songs[0].sourceId).toBe("1");
   });
 
   it("decides a follow request and approves all", async () => {
@@ -239,15 +268,9 @@ describe("social endpoints", () => {
     expect([calls[1].init.method, calls[1].url]).toEqual(["POST", "https://api.example.test/api/me/follow-requests/approve-all"]);
   });
 
-  it("asks for a featured month only when one is given", async () => {
-    const { api, calls } = setup(() => jsonResponse(200, { month: "2026-08", nights: [] }));
-    await api.venues.featured("v1");
-    await api.venues.featured("v1", "2026-08");
-    expect(calls.map((c) => c.url)).toEqual(["https://api.example.test/api/venues/v1/featured", "https://api.example.test/api/venues/v1/featured?month=2026-08"]);
-  });
-
-  it("surfaces 403 private_account on a follower list", async () => {
+  it("surfaces 403 private_account on a follower list and on a stamps grid", async () => {
     const { api } = setup(() => jsonResponse(403, { error: "private_account", message: "This account is private." }));
     await expect(api.users.people("sam", "followers")).rejects.toMatchObject({ status: 403, code: "private_account" });
+    await expect(api.users.stamps("sam")).rejects.toMatchObject({ status: 403, code: "private_account" });
   });
 });

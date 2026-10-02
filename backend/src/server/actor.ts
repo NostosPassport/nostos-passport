@@ -8,24 +8,18 @@ export type Actor = {
   role: Role;
   handle: string;
   displayName: string;
-  /** Venues with an APPROVED claim. Only meaningful for VENUE_OWNER. */
-  ownedVenueIds: string[];
-  /** App Review / QA account: may post from anywhere; its posts never count (see DECISIONS.md). */
+  /** App Review / QA account: may stamp from anywhere; its stamps are visible only to itself. */
   geofenceExempt: boolean;
 };
 
 export async function loadActor(db: Db, userId: string): Promise<Actor | null> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    include: { claims: { where: { status: "APPROVED" }, select: { venueId: true } } },
-  });
+  const user = await db.user.findUnique({ where: { id: userId } });
   if (!user || user.deletedAt || user.suspendedAt) return null;
   return {
     userId: user.id,
     role: user.role,
     handle: user.handle,
     displayName: user.displayName,
-    ownedVenueIds: user.role === "VENUE_OWNER" ? user.claims.map((c) => c.venueId) : [],
     geofenceExempt: user.geofenceExempt,
   };
 }

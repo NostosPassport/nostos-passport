@@ -6,8 +6,6 @@
  *
  * Uses the dev seed accounts (password `lastcall-dev`), including the geofence-exempt @appreview.
  */
-import { toNyLocal } from "@/lib/ny-time";
-
 import { createApi, type Api } from "../client";
 
 const BASE = process.env.NOSTOS_LIVE_API;
@@ -31,63 +29,31 @@ d("live backend", () => {
 
   it("public endpoints parse", async () => {
     const api = createApi({ baseUrl: BASE!, getToken: () => null, onInvalidToken: () => undefined });
-    const { venues, attribution } = await api.venues.list();
-    expect(venues.length).toBeGreaterThan(0);
+    const { places, attribution } = await api.places.list();
+    expect(places.length).toBeGreaterThan(0);
     expect(attribution === null || attribution.text === "© OpenStreetMap contributors").toBe(true);
-    const page = await api.venues.get(venues[0].slug);
-    expect(page.official.id).toBe(venues[0].id);
-    expect(page.viewer).toEqual({ going: false, hereNow: false, ownsVenue: false });
+    const one = await api.places.get(places[0]!.slug);
+    expect(one.place.id).toBe(places[0]!.id);
     await api.users.search("ma");
   });
 
-  it("a signed-in user: me, venue, presence, report, rsvp, comment, people", async () => {
+  it("a signed-in user: me, nearby places, feed, passport, lists, requests, activity", async () => {
     const api = await signedIn("appreview@lastcall.dev");
     const me = await api.me.get();
     expect(me.settings.geofenceExempt).toBe(true);
-    const { venues } = await api.venues.list();
-    const v = venues[0];
-    const page = await api.venues.get(v.id);
-
-    const presence = await api.venues.presence(v.id, { lat: v.lat, lng: v.lng });
-    expect(typeof presence.distanceM).toBe("number");
-
-    const report = await api.venues.report(v.id, { type: "VIBE", vibe: "BUSY", lat: v.lat, lng: v.lng }).catch((e) => e);
-    // A second run within 15 minutes hits the cooldown: that's a well-formed 429.
-    if (report instanceof Error) expect(report).toMatchObject({ status: 429, code: "rate_limited" });
-    else expect(report.report.type).toBe("VIBE");
-
-    const going = await api.venues.rsvp(v.id, !page.viewer.going);
-    expect(going.going).toBe(!page.viewer.going);
-    await api.venues.rsvp(v.id, page.viewer.going);
-
-    const c = await api.venues.comment(v.id, "Live contract check").catch((e) => e);
-    if (c instanceof Error) expect(c).toMatchObject({ status: 429 });
-
+    const { places } = await api.places.list();
+    const p = places[0]!;
+    const near = await api.places.nearby({ lat: p.lat, lng: p.lng });
+    expect(near.places[0]?.inside).toBe(true);
+    await api.feed();
     await api.me.following();
     await api.me.blocks();
+    await api.me.activity();
+    await api.me.followRequests();
     const self = await api.users.get(me.user.handle);
     expect(self.relationship.isSelf).toBe(true);
-    await api.owner.overview();
-  });
-
-  it("an owner's dashboard parses, and owner edits and promos round-trip", async () => {
-    const api = await signedIn("owner_velvet@lastcall.dev");
-    const me = await api.me.get();
-    expect(me.ownedVenues.length).toBeGreaterThan(0);
-    const venueId = me.ownedVenues[0].id;
-    const dash = await api.owner.dashboard(venueId);
-    expect(dash.page.viewer.ownsVenue).toBe(true);
-
-    const before = dash.venue.dressCode ?? "";
-    await api.owner.updateInfo(venueId, { dressCode: "Live check" });
-    await api.owner.updateInfo(venueId, { dressCode: before });
-
-    // Promo times use the app's New York formatting.
-    const start = new Date(Date.now() + 60 * 60 * 1000);
-    const end = new Date(Date.now() + 3 * 60 * 60 * 1000);
-    const { promo } = await api.owner.createPromo(venueId, { title: "Live check", body: "Contract test promo", startsAt: toNyLocal(start), endsAt: toNyLocal(end) });
-    expect(Math.abs(Date.parse(promo.startsAt) - start.getTime())).toBeLessThan(60_000);
-    await api.owner.endPromo(promo.id);
+    await api.users.stamps(me.user.handle);
+    await api.users.places(me.user.handle);
   });
 
   it("moderator screens parse", async () => {
@@ -97,50 +63,23 @@ d("live backend", () => {
     await api.mod.log();
   });
 
-  it("social: profiles, grid, places, lists, requests, activity, posts, likes, featured galleries", async () => {
+  it("social: a private passport is limited to a stranger, and the stamp lists are refused", async () => {
     const ava = await signedIn("avaa@lastcall.dev");
-    const me = await ava.me.get();
-    const handle = me.user.handle;
-    await ava.me.profile();
+    const handle = (await ava.me.get()).user.handle;
     const own = await ava.users.get(handle);
     expect(own.access).toBe("full");
-    const grid = await ava.users.posts(handle);
-    if (grid.nextBefore) await ava.users.posts(handle, grid.nextBefore);
-    await ava.users.places(handle);
-    await ava.users.people(handle, "followers");
-    await ava.users.people(handle, "following");
-    await ava.me.followRequests();
-    await ava.me.activity();
-    const post = grid.posts[0] ? await ava.posts.get(grid.posts[0].id) : null;
-    if (post) expect(post.post.mine).toBe(true);
+    const grid = await ava.users.stamps(handle);
+    if (grid.nextBefore) await ava.users.stamps(handle, grid.nextBefore);
+    if (grid.stamps[0]) expect((await ava.stamps.get(grid.stamps[0].id)).stamp.mine).toBe(true);
 
-    // Someone else's view of a private account they don't follow: the limited shape, and lists refused.
-    const stranger = await signedIn("moth_hopeful@lastcall.dev");
     // The seed keeps @avaa private, and @moth_hopeful follows no one.
+    const stranger = await signedIn("moth_hopeful@lastcall.dev");
     const limited = await stranger.users.get(handle);
     expect(limited.access).toBe("limited");
     await expect(stranger.users.people(handle, "followers")).rejects.toMatchObject({ status: 403, code: "private_account" });
-
-    // A venue page with featured photos, its month gallery and a like round-trip on a shared post.
-    const { venues } = await stranger.venues.list();
-    for (const v of venues) {
-      const page = await stranger.venues.get(v.slug);
-      const month = page.featured.archive[0]?.month;
-      if (!month) continue;
-      await stranger.venues.featured(page.official.id, month);
-      const target = [...page.live.livePhotos, ...page.featured.thisMonth.photos].find((p) => p.likes && !p.mine);
-      if (target?.likes) {
-        const before = target.likes.viewerLiked;
-        try {
-          const liked = await stranger.posts.like(target.id, !before);
-          expect(liked.viewerLiked).toBe(!before);
-        } finally {
-          // Put it back even if the check failed, so reruns start from the seeded state.
-          await stranger.posts.like(target.id, before);
-        }
-      }
-      break;
-    }
+    await expect(stranger.users.stamps(handle)).rejects.toMatchObject({ status: 403, code: "private_account" });
+    await expect(stranger.users.places(handle)).rejects.toMatchObject({ status: 403, code: "private_account" });
+    if (grid.stamps[0]) await expect(stranger.stamps.get(grid.stamps[0].id)).rejects.toMatchObject({ status: 404 });
   });
 
   it("a dead token is reported as invalid_token", async () => {

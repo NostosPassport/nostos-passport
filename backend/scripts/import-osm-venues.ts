@@ -58,7 +58,7 @@ if (dryRun) {
       throw new Error(`This database has ${demo} demo-seed venues. Import real venues into a database without the demo seed, or pass --allow-demo.`);
     }
     const r = await importOsmVenues(db, elements);
-    console.log(`[venues:import] ${r.fetched} venues: ${r.created} created, ${r.updated} updated, ${r.unchanged} unchanged, ${r.skippedClaimed} claimed (name/address kept)`);
+    console.log(`[venues:import] ${r.fetched} venues: ${r.created} created, ${r.updated} updated, ${r.unchanged} unchanged`);
   } finally {
     await db.$disconnect();
   }

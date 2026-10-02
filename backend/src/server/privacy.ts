@@ -1,24 +1,23 @@
 /**
- * Who can see what (the social layer's privacy rules). Every payload that names a person goes through this file.
+ * Who can see what. Every payload that names a person or shows a stamp goes through this file.
  *
- * Accounts are private by default. A viewer sees a person's **full** profile (display name, photo, bio, counts,
- * posts, Regular badges, featured history) when any of these hold:
+ * Accounts are private by default. A viewer sees a person's **full** profile (display name, photo, bio, counts, stamps,
+ * places) when any of these hold:
  *  - the viewer is that person, or a moderator/admin (staff always see real people);
  *  - the account is public;
  *  - the viewer is an approved follower (a pending request is not enough).
- * Otherwise the viewer gets the **limited** view: the handle, the verified badge and a generic avatar only.
+ * Otherwise the viewer gets the **limited** view: the handle, the verified badge and a generic avatar only, and no
+ * stamps or places at all.
  *
- * Authors on venue pages (photos, comments, replies, featured photos) are resolved per viewer: the handle (with
- * the verified badge and the Regular badge) only when the viewer may see the full profile, otherwise
- * "Anonymous" with no handle and no link. A private author's handle never reaches a viewer who can't see it.
- * Deleted accounts are "Deleted user" for everyone.
+ * A stamp is shown only to people who may see its author's full profile, so a stamp always comes with its author.
+ * Nothing in Nostos is ever labeled "Anonymous". Deleted accounts are "Deleted user" and their stamps are hidden.
  *
- * Blocks (either direction) override everything except staff: a blocked pair gets the limited view, "Anonymous",
- * and no photos. Callers also filter blocked people out (and 404 their profiles); these rules are the backstop
- * so a forgotten caller check can't leak.
+ * Blocks (either direction) override everything except staff: a blocked pair gets the limited view and no stamps.
+ * Callers also filter blocked people out (and 404 their profiles); these rules are the backstop so a forgotten caller
+ * check can't leak.
  *
- * Suspended accounts are limited/"Anonymous" to everyone but staff (their profile 404s, so a handle would lead
- * nowhere), and callers' lists and search skip them.
+ * Suspended accounts are limited to everyone but staff (their profile 404s, so a handle would lead nowhere), and
+ * callers' lists and search skip them.
  *
  * The functions here are pure; `followedAmong` and `blockedAmong` load the relations they need.
  */
@@ -49,23 +48,6 @@ export function profileAccess(viewer: Viewer, subject: Subject, viewerFollows: b
   return viewer && viewerFollows ? "full" : "limited";
 }
 
-export type AuthorView =
-  | { kind: "user"; handle: string; verified: boolean; regular: boolean }
-  | { kind: "anonymous" }
-  | { kind: "deleted" };
-
-export type AuthorSubject = Subject & { handle: string; verified: boolean };
-
-/**
- * Author of a photo, comment or reply as this viewer may see it. `regular` is the author's Regular status at the
- * venue being shown (false outside a venue context); it's only ever attached to a visible handle.
- */
-export function resolveAuthor(viewer: Viewer, author: AuthorSubject, viewerFollows: boolean, regular = false, blocked = false): AuthorView {
-  if (author.deleted) return { kind: "deleted" };
-  if (profileAccess(viewer, author, viewerFollows, blocked) === "limited") return { kind: "anonymous" };
-  return { kind: "user", handle: author.handle, verified: author.verified, regular };
-}
-
 /** A person in a list (search, followers, requests, activity). The handle and badge always; the rest when allowed. */
 export type PersonView = { handle: string; displayName: string | null; avatarUrl: string | null; verified: boolean };
 
@@ -79,37 +61,25 @@ export function personView(
     : { handle: person.handle, displayName: null, avatarUrl: null, verified: person.verified };
 }
 
-/** What a photo is, for visibility decisions. */
-export type PhotoSubject = {
+/** What a stamp is, for visibility decisions. */
+export type StampSubject = {
   authorId: string;
-  /** null = live-only photo (always shown on the venue page, never on the profile). */
-  rating: number | null;
-  shared: boolean;
   hidden: boolean;
   removed: boolean;
-  /** false = posted by a geofence-exempt (App Review) account: visible to its author only. */
+  /** false = stamped by a geofence-exempt (App Review) account: visible to its author only. */
   countable: boolean;
 };
 
-/** Whether the photo appears in its venue's feed (live, earlier and featured) for this viewer, before blocks. */
-export function inVenueFeed(viewer: Viewer, photo: PhotoSubject): boolean {
-  if (photo.hidden || photo.removed) return false;
-  if (!photo.countable && viewer?.userId !== photo.authorId) return false;
-  return photo.rating === null || photo.shared;
-}
-
 /**
- * Whether the viewer may open this post (post detail). Posts only: a live-only photo is reachable through the
- * venue feed's time window, never by id. Shared posts are public, with the author resolved per viewer; unshared
- * posts need the full profile. Hidden and removed posts are for staff only (so a flagged post an author removes
- * can still be moderated). A block in either direction hides it from the other side.
+ * Whether the viewer may open this stamp, or see it in any list. Staff see everything (so a flagged stamp an author
+ * removed can still be moderated). Hidden and removed stamps are for staff only. The author sees their own. Everyone
+ * else needs the full profile of the author, no block in either direction, and a countable (non-exempt) stamp.
  */
-export function canSeePhoto(viewer: Viewer, photo: PhotoSubject, authorAccess: Access, blocked = false): boolean {
+export function canSeeStamp(viewer: Viewer, stamp: StampSubject, authorAccess: Access, blocked = false): boolean {
   if (viewer?.staff) return true;
-  if (photo.rating === null || photo.removed || photo.hidden) return false;
-  if (viewer?.userId === photo.authorId) return true;
-  if (blocked || !photo.countable) return false;
-  if (photo.shared) return true;
+  if (stamp.removed || stamp.hidden) return false;
+  if (viewer?.userId === stamp.authorId) return true;
+  if (blocked || !stamp.countable) return false;
   return authorAccess === "full";
 }
 
@@ -143,7 +113,6 @@ export async function authorResolver(db: Db, actor: Actor | null, authorIds: rea
     follows,
     blocks,
     access: (s: Subject) => profileAccess(viewer, s, follows.has(s.id), blocks.has(s.id)),
-    author: (s: AuthorSubject, regular = false) => resolveAuthor(viewer, s, follows.has(s.id), regular, blocks.has(s.id)),
   };
 }
 
@@ -156,6 +125,6 @@ export type SubjectRow = {
   id: string; handle: string; displayName: string; isPrivate: boolean; deletedAt: Date | null; suspendedAt: Date | null; verifiedAt: Date | null; avatarKey: string | null;
 };
 
-export const toSubject = (u: SubjectRow): AuthorSubject => ({
+export const toSubject = (u: SubjectRow): Subject & { handle: string; verified: boolean } => ({
   id: u.id, handle: u.handle, isPrivate: u.isPrivate, deleted: u.deletedAt !== null, suspended: u.suspendedAt !== null, verified: u.verifiedAt !== null,
 });

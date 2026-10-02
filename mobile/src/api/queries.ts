@@ -1,7 +1,5 @@
 /** Query keys and shared hooks for server state. */
-import { keepPreviousData, useInfiniteQuery, useQuery, type QueryClient } from "@tanstack/react-query";
-
-import type { VenuePageResponse } from "./contracts";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { api } from "./index";
 import { qk } from "./keys";
@@ -14,8 +12,27 @@ export function useMe() {
   return useQuery({ queryKey: qk.me, queryFn: () => api.me.get(), enabled: status === "signedIn", staleTime: 60_000 });
 }
 
-export function useVenues() {
-  return useQuery({ queryKey: qk.venues, queryFn: api.venues.list, refetchInterval: 60_000 });
+export function usePlaces() {
+  return useQuery({ queryKey: qk.places, queryFn: api.places.list, staleTime: 5 * 60_000 });
+}
+
+/** Places inside or near the geofence of a position, nearest first. The position is rounded so a few steps don't refetch. */
+export function useNearbyPlaces(pos: { lat: number; lng: number } | null) {
+  const lat = pos ? Math.round(pos.lat * 10_000) / 10_000 : 0;
+  const lng = pos ? Math.round(pos.lng * 10_000) / 10_000 : 0;
+  return useQuery({ queryKey: qk.nearby(lat, lng), queryFn: () => api.places.nearby({ lat, lng }), enabled: pos !== null, staleTime: 30_000 });
+}
+
+/** Home feed: people you follow, newest first, 30 per page. Pages come from the server's opaque `nextBefore` cursor. */
+export function useFeed() {
+  const { status } = useAuth();
+  return useInfiniteQuery({
+    queryKey: qk.feed,
+    queryFn: ({ pageParam }) => api.feed(pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.nextBefore,
+    enabled: status === "signedIn",
+  });
 }
 
 export function useFollowing() {
@@ -23,33 +40,15 @@ export function useFollowing() {
   return useQuery({ queryKey: qk.following, queryFn: api.me.following, enabled: status === "signedIn", staleTime: 60_000, refetchInterval: 60_000 });
 }
 
-/** Venue page; refetched every 60 s while the screen is mounted (it's only mounted while open). */
-export function useVenue(idOrSlug: string, enabled = true) {
-  return useQuery({ queryKey: qk.venue(idOrSlug), queryFn: () => api.venues.get(idOrSlug), refetchInterval: 60_000, enabled });
-}
-
-/**
- * Refetch a venue page however it was opened (by id or by slug), plus the map.
- * Cache keys are the route param, so match on the loaded page's id too.
- */
-export function invalidateVenue(queryClient: QueryClient, venueId: string) {
-  return Promise.all([
-    queryClient.invalidateQueries({
-      predicate: (q) => q.queryKey[0] === "venue" && (q.queryKey[1] === venueId || (q.state.data as VenuePageResponse | undefined)?.official.id === venueId),
-    }),
-    queryClient.invalidateQueries({ queryKey: qk.venues }),
-  ]);
-}
-
 export function useUserProfile(handle: string) {
   return useQuery({ queryKey: qk.user(handle), queryFn: () => api.users.get(handle) });
 }
 
-/** A profile's Posts grid, 30 per page. Pages come from the server's opaque `nextBefore` cursor. */
-export function useUserPosts(handle: string, enabled = true) {
+/** A passport's Stamps grid, 30 per page. */
+export function useUserStamps(handle: string, enabled = true) {
   return useInfiniteQuery({
-    queryKey: qk.userPosts(handle),
-    queryFn: ({ pageParam }) => api.users.posts(handle, pageParam),
+    queryKey: qk.userStamps(handle),
+    queryFn: ({ pageParam }) => api.users.stamps(handle, pageParam),
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextBefore,
     enabled,
@@ -60,7 +59,7 @@ export function useUserPlaces(handle: string, enabled = true) {
   return useQuery({ queryKey: qk.userPlaces(handle), queryFn: () => api.users.places(handle), enabled });
 }
 
-/** Followers or following of a profile you have full access to. */
+/** Followers or following of a passport you have full access to. */
 export function usePeopleList(handle: string, list: "followers" | "following") {
   return useQuery({ queryKey: qk.people(handle, list), queryFn: () => api.users.people(handle, list) });
 }
@@ -77,13 +76,8 @@ export function useActivity() {
   return useQuery({ queryKey: qk.activity, queryFn: api.me.activity });
 }
 
-export function usePost(id: string) {
-  return useQuery({ queryKey: qk.post(id), queryFn: () => api.posts.get(id) });
-}
-
-/** One month's featured gallery for a venue (`month` = YYYY-MM). */
-export function useFeaturedMonth(venueId: string, month: string, enabled = true) {
-  return useQuery({ queryKey: qk.featuredMonth(venueId, month), queryFn: () => api.venues.featured(venueId, month), enabled });
+export function useStamp(id: string) {
+  return useQuery({ queryKey: qk.stamp(id), queryFn: () => api.stamps.get(id) });
 }
 
 export function useUserSearch(q: string) {
@@ -98,12 +92,20 @@ export function useUserSearch(q: string) {
   });
 }
 
-export function useBlocks() {
-  return useQuery({ queryKey: qk.blocks, queryFn: api.me.blocks });
+export function useSongSearch(q: string) {
+  const query = q.trim();
+  return useQuery({
+    queryKey: qk.songSearch(query),
+    queryFn: () => api.songs.search(query),
+    enabled: query.length >= 2,
+    staleTime: 5 * 60_000,
+    retry: false,
+    placeholderData: keepPreviousData,
+  });
 }
 
-export function useOwnerDashboard(venueId: string) {
-  return useQuery({ queryKey: qk.ownerDashboard(venueId), queryFn: () => api.owner.dashboard(venueId), refetchInterval: 60_000 });
+export function useBlocks() {
+  return useQuery({ queryKey: qk.blocks, queryFn: api.me.blocks });
 }
 
 export function useModQueue() {

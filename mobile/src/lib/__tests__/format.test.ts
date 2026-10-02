@@ -1,14 +1,4 @@
-import { coverInputToApi, formatAge, formatCents, formatClock, formatDistance, initial, nightDayIndex, plural, venueSummary } from "../format";
-
-describe("formatCents", () => {
-  it.each([
-    [0, "Free"],
-    [2000, "$20"],
-    [1250, "$12.50"],
-    [1205, "$12.05"],
-    [50000, "$500"],
-  ])("%i -> %s", (cents, out) => expect(formatCents(cents)).toBe(out));
-});
+import { formatAge, formatDistance, initial, plural } from "../format";
 
 describe("formatDistance", () => {
   it.each([
@@ -17,9 +7,14 @@ describe("formatDistance", () => {
     [999, "999 m"],
     [1000, "1.0 km"],
     [1260, "1.3 km"],
+    [1815, "1.8 km"],
     [12400, "12 km"],
     [-5, "0 m"],
   ])("%d -> %s", (m, out) => expect(formatDistance(m)).toBe(out));
+
+  it("never shows meters from 1000 up (a known device bug: '1815 m')", () => {
+    for (const m of [1000, 1001, 1815, 5000, 9999, 20000]) expect(formatDistance(m)).toMatch(/ km$/);
+  });
 });
 
 describe("formatAge", () => {
@@ -33,56 +28,21 @@ describe("formatAge", () => {
   ])("%s -> %s", (iso, out) => expect(formatAge(iso, now)).toBe(out));
 });
 
-describe("formatClock", () => {
+describe("plural", () => {
+  it("handles one and many", () => {
+    expect(plural(1, "stamp")).toBe("1 stamp");
+    expect(plural(4, "stamp")).toBe("4 stamps");
+    expect(plural(0, "place")).toBe("0 places");
+    expect(plural(2, "person", "people")).toBe("2 people");
+  });
+});
+
+describe("initial", () => {
   it.each([
-    ["21:30", "9:30 PM"],
-    ["00:00", "12 AM"],
-    ["12:00", "12 PM"],
-    ["04:00", "4 AM"],
-  ])("%s -> %s", (hhmm, out) => expect(formatClock(hhmm)).toBe(out));
-});
-
-describe("nightDayIndex (5am New York boundary)", () => {
-  it("counts 1am Saturday as Friday night", () => {
-    // 2026-09-26 01:00 EDT = 05:00Z, a Saturday
-    expect(nightDayIndex(new Date("2026-09-26T05:00:00Z"))).toBe(5);
-  });
-  it("switches to the new day at 5am", () => {
-    expect(nightDayIndex(new Date("2026-09-26T09:00:00Z"))).toBe(6);
-  });
-});
-
-describe("coverInputToApi", () => {
-  it.each([
-    ["", ""],
-    ["0", "free"],
-    ["20", "20"],
-    ["12.5", "12.50"],
-    ["abc", ""],
-  ])("%s -> %s", (input, out) => expect(coverInputToApi(input)).toBe(out));
-});
-
-describe("text helpers", () => {
-  it("pluralizes", () => {
-    expect(plural(1, "report")).toBe("1 report");
-    expect(plural(4, "report")).toBe("4 reports");
-  });
-  it("summarizes a venue for the list", () => {
-    expect(venueSummary({ vibe: "PACKED", hereNow: 4, goingTonight: 18 })).toBe("Packed · 4 here · 18 going");
-    expect(venueSummary({ vibe: "NO_DATA", hereNow: 0, goingTonight: 0 })).toBe("No reports in the last hour");
-  });
-  it("builds avatar initials", () => {
-    expect(initial("@maya")).toBe("M");
-    expect(initial("")).toBe("?");
-    expect(initial(null)).toBe("?");
-  });
-});
-
-describe("monthName", () => {
-  const { monthName, monthBest } = jest.requireActual("../format") as typeof import("../format");
-  it("names a month, with the year only when it isn't this one", () => {
-    expect(monthName("2026-10", 2026)).toBe("October");
-    expect(monthName("2025-12", 2026)).toBe("December 2025");
-    expect(monthBest("2026-09", 2026)).toBe("September's best");
-  });
+    ["maya", "M"],
+    ["@maya", "M"],
+    ["  zed", "Z"],
+    ["", "?"],
+    [null, "?"],
+  ])("%s -> %s", (name, out) => expect(initial(name)).toBe(out));
 });

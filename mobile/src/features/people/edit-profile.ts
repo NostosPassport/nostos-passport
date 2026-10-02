@@ -25,8 +25,29 @@ export function profileProblem(values: ProfileValues): string | null {
 /** The toggle's one-line explanation, for the state it's in now. */
 export function privacyNote(isPrivate: boolean): string {
   return isPrivate
-    ? "Only people you approve see your posts, places and badges. On venue pages, people you haven't approved see you as Anonymous."
-    : "Anyone can see your profile and posts. Your handle shows on your past venue photos too.";
+    ? "Only people you approve see your stamps, places and counts. Everyone else sees your handle and a Follow button."
+    : "Anyone can see your passport: all your stamps and every place you've been.";
+}
+
+/** True when this save switches the account from private to public, which changes what strangers can see. */
+export function goesPublic(initial: ProfileValues, change: ProfileSettingsRequest): boolean {
+  return initial.isPrivate && change.isPrivate === false;
+}
+
+/**
+ * The alert shown before switching from private to public. It lists exactly what changes, so nobody makes their
+ * passport public by accident.
+ */
+export function goingPublicAlert(counts?: { stamps: number; places: number }): { title: string; message: string; confirm: string } {
+  const have = counts && (counts.stamps > 0 || counts.places > 0) ? ` That includes your ${counts.stamps} ${counts.stamps === 1 ? "stamp" : "stamps"} and ${counts.places} ${counts.places === 1 ? "place" : "places"} so far.` : "";
+  return {
+    title: "Make your passport public?",
+    message:
+      "Anyone, signed in or not, will be able to see all of your stamps (photos, captions and songs) and every place you've been, including the ones you've already stamped." +
+      have +
+      " People will be able to follow you without asking. Pending follow requests stay pending until you approve them. You can switch back to private any time.",
+    confirm: "Make public",
+  };
 }
 
 /** Ask "Approve N pending requests?" only after switching from private to public with requests waiting. */

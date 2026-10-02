@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Alert, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
 import { api, errorText, mediaUrl } from "@/api";
-import type { ContentType, ModQueueItem } from "@/api/contracts";
+import type { TargetType, ModQueueItem } from "@/api/contracts";
 import { useModHidden, useModLog, useModQueue } from "@/api/queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,16 +14,18 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { toast, ToastHost } from "@/components/ui/toast";
-import { actionWord, prettyPreview, reputationText } from "@/features/moderation/format";
+import { actionWord, reputationText } from "@/features/moderation/format";
 import { formatAge, plural } from "@/lib/format";
 import { haptics } from "@/lib/haptics";
 import { colors, hairlineWidth, radius, screenPadding, size, space } from "@/theme";
 
 type Tab = "queue" | "hidden" | "log";
-type Target = { targetType: ContentType; targetId: string; author: string; venue: string | null; autoHidden?: boolean };
+type Target = { targetType: TargetType; targetId: string; author: string; venue: string | null; autoHidden?: boolean };
 type Action = "HIDE" | "DISMISS" | "RESTORE" | "SUSPEND" | "UNSUSPEND";
 
-const NOUN: Record<ContentType, string> = { PHOTO: "Photo", COMMENT: "Comment", REPORT: "Report", USER: "Account" };
+const NOUN: Record<TargetType, string> = { STAMP: "Stamp", USER: "Account" };
+/** The log keeps the database's names, including content types older entries may carry. */
+const LOG_NOUN: Record<string, string> = { PHOTO: "Stamp", COMMENT: "Comment", REPORT: "Report", USER: "Account" };
 const VERB: Record<Action, { title: string; done: string; destructive: boolean }> = {
   HIDE: { title: "Hide", done: "Hidden.", destructive: true },
   DISMISS: { title: "Dismiss flags", done: "Flags dismissed.", destructive: false },
@@ -42,11 +44,11 @@ export default function Moderation() {
   const [refreshing, setRefreshing] = useState(false);
 
   const act = useMutation({
-    mutationFn: (v: { targetType: ContentType; targetId: string; action: Action; note?: string }) => api.mod.act(v),
+    mutationFn: (v: { targetType: TargetType; targetId: string; action: Action; note?: string }) => api.mod.act(v),
     onSuccess: (_r, v) => {
       haptics.success();
       toast.show(VERB[v.action].done);
-      for (const key of [["mod"], ["venue"], ["venues"], ["user"], ["owner"]]) void queryClient.invalidateQueries({ queryKey: key });
+      for (const key of [["mod"], ["feed"], ["user"], ["stamp"]]) void queryClient.invalidateQueries({ queryKey: key });
     },
     onError: (e) => {
       haptics.warning();
@@ -143,7 +145,7 @@ export default function Moderation() {
                 <ListRow
                   key={`${h.targetType}:${h.targetId}`}
                   leading={h.url ? <Image source={{ uri: mediaUrl(h.url) }} style={styles.thumb} contentFit="cover" accessibilityLabel={`Hidden photo by ${h.author}`} /> : undefined}
-                  title={prettyPreview(h.preview) || NOUN[h.targetType]}
+                  title={h.preview || NOUN[h.targetType]}
                   subtitle={`${NOUN[h.targetType]} by ${h.author}${h.venue ? ` at ${h.venue.name}` : ""} · ${formatAge(h.hiddenAt)}`}
                   trailing={
                     <Button
@@ -174,7 +176,7 @@ export default function Moderation() {
               {log.data.events.map((e) => (
                 <ListRow
                   key={e.id}
-                  title={`${actionWord(e.action)} \u00B7 ${NOUN[e.targetType]}`}
+                  title={`${actionWord(e.action)} \u00B7 ${LOG_NOUN[e.targetType] ?? e.targetType}`}
                   subtitle={`${e.by} \u00B7 ${formatAge(e.createdAt)}${e.note ? ` \u00B7 \u201C${e.note}\u201D` : ""}`}
                 />
               ))}
@@ -205,8 +207,8 @@ function QueueCard({ item, busy, onAct }: { item: ModQueueItem; busy: boolean; o
 
       {c ? (
         <View style={styles.preview}>
-          {c.url && <Image source={{ uri: mediaUrl(c.url) }} style={styles.photo} contentFit="cover" accessibilityLabel="Flagged photo" />}
-          {!!c.preview && <Text variant="body">{prettyPreview(c.preview)}</Text>}
+          {c.url && <Image source={{ uri: mediaUrl(c.url) }} style={styles.photo} contentFit="cover" accessibilityLabel="Flagged stamp" />}
+          {!!c.preview && <Text variant="body">{c.preview}</Text>}
           <Text variant="footnote" color="textTertiary">
             {c.author} · {reputationText(c.authorRep)} · {formatAge(c.createdAt)}
           </Text>
@@ -223,8 +225,7 @@ function QueueCard({ item, busy, onAct }: { item: ModQueueItem; busy: boolean; o
             <Text variant="subhead">&ldquo;{f.reason}&rdquo;</Text>
             <Text variant="footnote" color="textTertiary">
               {f.by}
-              {f.byRole !== "USER" && f.byRole !== "VENUE_OWNER" ? ` · ${f.byRole.toLowerCase()}` : ""}
-              {f.byVenueOwner ? " · this venue\u2019s owner" : f.byOtherVenueOwner ? " · another venue\u2019s owner" : ""} · {formatAge(f.createdAt)}
+              {f.byRole !== "USER" ? ` · ${f.byRole.toLowerCase()}` : ""} · {formatAge(f.createdAt)}
             </Text>
           </View>
         ))}

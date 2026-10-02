@@ -6,7 +6,7 @@ import { api } from "@/lib/api-client";
 
 type U = { email: string; handle: string; displayName: string; role: string; reputation: number; createdAt: string };
 
-const ROLE_ORDER = ["ADMIN", "MODERATOR", "VENUE_OWNER", "USER"];
+const ROLE_ORDER = ["ADMIN", "MODERATOR", "USER"];
 
 export function DevLoginList({ users, password }: { users: U[]; password: string }) {
   const router = useRouter();

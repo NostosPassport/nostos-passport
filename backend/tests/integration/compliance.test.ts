@@ -5,30 +5,18 @@ import { hashPassword } from "@/lib/auth/password";
 import { login, signup, CURRENT_TERMS_VERSION } from "@/server/services/auth";
 import { deleteAccount } from "@/server/services/account";
 import { blockUser, listBlocks, unblockUser } from "@/server/services/blocks";
-import { recordPresence, setGoingTonight } from "@/server/services/social";
 import { follow, getProfile, searchUsers } from "@/server/services/people";
-import { addComment, replyAsVenue } from "@/server/services/comments";
-import { submitReport } from "@/server/services/reports";
-import { submitPhoto } from "@/server/services/photos";
-import { createPromo } from "@/server/services/owner";
-import { getVenuePage, listVenuesForMap, venueAccuracy } from "@/server/services/venues";
-import { recomputeAllReputations } from "@/server/services/reputation";
+import { flagContent, moderate, moderationQueue } from "@/server/services/moderation";
+import { getStamp, listUserStamps } from "@/server/services/stamps";
 import { setUserFlags } from "@/server/services/admin";
 import { acceptCurrentTerms, getMe } from "@/server/services/me";
 import { loadActor } from "@/server/actor";
 import { GET as meRoute } from "@/app/api/me/route";
 import { PATCH as adminUserRoute } from "@/app/api/admin/users/[handle]/route";
 import { installMemoryStorage } from "./mem-storage";
-import { PNG } from "pngjs";
-import { actorFor, makeActor, makeOwner, makeUser, makeVenue, INSIDE, OUTSIDE } from "./factories";
+import { actorFor, makeActor, makeStamp, makeUser, makeVenue, OUTSIDE } from "./factories";
 
-installMemoryStorage();
-const png = () => {
-  const p = new PNG({ width: 2, height: 2 });
-  p.data.fill(120);
-  return PNG.sync.write(p);
-};
-const MIN = 60_000;
+const mem = installMemoryStorage();
 
 async function userWithPassword(handle: string, password = "correct horse battery") {
   const u = await makeUser({ handle });
@@ -43,7 +31,7 @@ describe("account deletion (5.1.1(v)): anonymize, never delete content", () => {
     await expect(deleteAccount(prisma, null, { password: "x" })).rejects.toMatchObject({ status: 401 });
   });
 
-  it("scrubs identity, revokes sessions, removes social ties, hides photos, keeps reports and comments", async () => {
+  it("scrubs identity, revokes sessions, removes social ties, hides stamps and deletes their image files", async () => {
     const venue = await makeVenue();
     const me = await userWithPassword("leaver");
     const friend = await makeActor();
@@ -51,12 +39,8 @@ describe("account deletion (5.1.1(v)): anonymize, never delete content", () => {
     await follow(prisma, me, friend.handle);
     await follow(prisma, friend, me.handle);
     await blockUser(prisma, me, other.handle);
-    await setGoingTonight(prisma, me, venue.id, true);
-    await recordPresence(prisma, me, venue.id, INSIDE);
-    await prisma.venueClaim.create({ data: { venueId: venue.id, userId: me.userId } });
-    const report = await submitReport(prisma, me, venue.id, { type: "VIBE", vibe: "PACKED", ...INSIDE });
-    const comment = await addComment(prisma, me, venue.id, { body: "great night" });
-    const photo = await submitPhoto(prisma, me, venue.id, { bytes: png(), meta: { caption: "dance floor", ...INSIDE } });
+    const stamp = await makeStamp(me, venue.id, { caption: "dance floor" });
+    const key = (await prisma.photo.findUniqueOrThrow({ where: { id: stamp.id } })).storageKey!;
     const { token } = await createSession(prisma, me.userId, { client: "IOS" });
 
     await deleteAccount(prisma, me, { password: "correct horse battery" });
@@ -70,17 +54,11 @@ describe("account deletion (5.1.1(v)): anonymize, never delete content", () => {
     expect(await prisma.session.count({ where: { userId: me.userId } })).toBe(0);
     expect(await prisma.follow.count({ where: { OR: [{ followerId: me.userId }, { followeeId: me.userId }] } })).toBe(0);
     expect(await prisma.block.count({ where: { OR: [{ blockerId: me.userId }, { blockedId: me.userId }] } })).toBe(0);
-    expect(await prisma.rsvp.count({ where: { userId: me.userId } })).toBe(0);
-    expect(await prisma.presence.count({ where: { userId: me.userId } })).toBe(0);
-    expect(await prisma.venueClaim.count({ where: { userId: me.userId } })).toBe(0);
 
-    expect((await prisma.photo.findUniqueOrThrow({ where: { id: photo.id } })).hiddenAt).not.toBeNull();
-    expect(await prisma.moderationEvent.findFirst({ where: { targetId: photo.id, action: "ACCOUNT_DELETED" } })).toMatchObject({ actorId: null });
-    expect(await prisma.report.findUnique({ where: { id: report.id } })).not.toBeNull();
-    const page = await getVenuePage(prisma, venue.slug, null);
-    expect(page.live.comments.find((c) => c.id === comment.id)).toMatchObject({ body: "great night", author: { kind: "deleted" } });
-    expect(page.live.consensus.vibe.reportCount).toBe(1);
-    expect(page.live.livePhotos).toHaveLength(0);
+    expect((await prisma.photo.findUniqueOrThrow({ where: { id: stamp.id } })).hiddenAt).not.toBeNull();
+    expect(mem.has(key)).toBe(false);
+    expect(await prisma.moderationEvent.findFirst({ where: { targetId: stamp.id, action: "ACCOUNT_DELETED" } })).toMatchObject({ actorId: null });
+    await expect(getStamp(prisma, friend, stamp.id)).rejects.toMatchObject({ status: 404 });
 
     await expect(login(prisma, { email: "leaver@real.dev", password: "correct horse battery" })).rejects.toMatchObject({ status: 401 });
     await expect(getProfile(prisma, "leaver", null)).rejects.toMatchObject({ status: 404 });
@@ -92,14 +70,21 @@ describe("account deletion (5.1.1(v)): anonymize, never delete content", () => {
     expect(res.status).toBe(401);
   });
 
-  it("a deleted owner stops owning their venue", async () => {
+  it("a deleted account's stamps stay hidden for good: RESTORE is refused and DISMISS never un-hides", async () => {
     const venue = await makeVenue();
-    const owner = await makeOwner(venue.id);
-    await prisma.user.update({ where: { id: owner.userId }, data: { passwordHash: await hashPassword("owner password") } });
-    await deleteAccount(prisma, owner, { password: "owner password" });
-    const row = await prisma.user.findUniqueOrThrow({ where: { id: owner.userId } });
-    expect(row.role).toBe("USER");
-    expect(await prisma.venueClaim.count({ where: { venueId: venue.id } })).toBe(0);
+    const me = await makeActor({ isPrivate: false });
+    await prisma.user.update({ where: { id: me.userId }, data: { passwordHash: await hashPassword("pw pw pw pw") } });
+    const visible = await makeStamp(me, venue.id, { caption: "one" });
+    const flagged = await makeStamp(me, venue.id, { caption: "two", now: new Date(Date.now() + 16 * 60_000) });
+    for (let i = 0; i < 3; i++) await flagContent(prisma, await makeActor(), { targetType: "STAMP", targetId: flagged.id, reason: "fake" });
+    expect((await prisma.photo.findUniqueOrThrow({ where: { id: flagged.id } })).hiddenAt).not.toBeNull();
+
+    await deleteAccount(prisma, me, { password: "pw pw pw pw" });
+    const mod = await makeActor({ role: "MODERATOR" });
+    await expect(moderate(prisma, mod, { targetType: "STAMP", targetId: visible.id, action: "RESTORE" })).rejects.toMatchObject({ status: 409 });
+    await moderate(prisma, mod, { targetType: "STAMP", targetId: flagged.id, action: "DISMISS" });
+    expect((await prisma.photo.findUniqueOrThrow({ where: { id: flagged.id } })).hiddenAt).not.toBeNull();
+    expect(await prisma.moderationEvent.count({ where: { action: "ACCOUNT_DELETED" } })).toBe(2);
   });
 });
 
@@ -109,60 +94,9 @@ describe("blocking (1.2)", () => {
     await follow(prisma, a, b.handle);
     await follow(prisma, b, a.handle);
     await blockUser(prisma, a, b.handle);
-    expect(await prisma.follow.count()).toBe(0);
+    expect(await prisma.follow.count({ where: { OR: [{ followerId: a.userId }, { followerId: b.userId }] } })).toBe(0);
     await expect(follow(prisma, a, b.handle)).rejects.toMatchObject({ status: 403 });
     await expect(follow(prisma, b, a.handle)).rejects.toMatchObject({ status: 403 });
-  });
-
-  it("hides each side's photos, comments, replies and profile from the other, and from search", async () => {
-    const venue = await makeVenue();
-    const owner = await makeOwner(venue.id);
-    const [a, b, bystander] = [await makeActor(), await makeActor(), await makeActor()];
-    const ca = await addComment(prisma, a, venue.id, { body: "from a" });
-    await addComment(prisma, b, venue.id, { body: "from b" });
-    await replyAsVenue(prisma, owner, ca.id, { body: "venue reply" });
-    await submitPhoto(prisma, a, venue.id, { bytes: png(), meta: { caption: "a pic", ...INSIDE } });
-    await submitPhoto(prisma, b, venue.id, { bytes: png(), meta: { caption: "b pic", ...INSIDE } });
-    await blockUser(prisma, a, b.handle);
-
-    const view = async (who: typeof a | null) => {
-      const p = await getVenuePage(prisma, venue.slug, who);
-      return { comments: p.live.comments.map((c) => c.body).sort(), photos: p.live.livePhotos.map((x) => x.caption).sort() };
-    };
-    expect(await view(a)).toEqual({ comments: ["from a"], photos: ["a pic"] });
-    expect(await view(b)).toEqual({ comments: ["from a", "from b"].filter((c) => c === "from b"), photos: ["b pic"] });
-    expect(await view(bystander)).toEqual({ comments: ["from a", "from b"], photos: ["a pic", "b pic"] });
-    await expect(getProfile(prisma, b.handle, a)).rejects.toMatchObject({ status: 404 });
-    await expect(getProfile(prisma, a.handle, b)).rejects.toMatchObject({ status: 404 });
-    expect((await searchUsers(prisma, a, b.handle)).map((u) => u.handle)).not.toContain(b.handle);
-    expect((await searchUsers(prisma, b, a.handle)).map((u) => u.handle)).not.toContain(a.handle);
-
-    // Owner blocking a commenter hides that comment for the owner only; the owner's replies disappear for the blocked user.
-    await blockUser(prisma, owner, a.handle);
-    const forA = await getVenuePage(prisma, venue.slug, a);
-    expect(forA.live.comments.find((c) => c.id === ca.id)!.replies).toHaveLength(0);
-  });
-
-  it("does not change consensus, counts or reputation", async () => {
-    const venue = await makeVenue();
-    const [a, b, c] = [await makeActor(), await makeActor(), await makeActor()];
-    for (const u of [a, b, c]) {
-      await submitReport(prisma, u, venue.id, { type: "VIBE", vibe: "PACKED", ...INSIDE });
-      await setGoingTonight(prisma, u, venue.id, true);
-      await recordPresence(prisma, u, venue.id, INSIDE);
-    }
-    const at = new Date();
-    const agg = async (who: typeof a) => {
-      const p = await getVenuePage(prisma, venue.slug, who, at);
-      return { consensus: p.live.consensus, here: p.live.hereNow, going: p.live.goingTonight, accuracy: p.official.accuracy };
-    };
-    const before = await agg(a);
-    await blockUser(prisma, a, b.handle);
-    await blockUser(prisma, c, a.handle);
-    expect(await agg(a)).toEqual(before);
-    expect(await agg(b)).toEqual(before);
-    const map = (await listVenuesForMap(prisma, a, at)).find((v) => v.id === venue.id)!;
-    expect(map).toMatchObject({ hereNow: 3, goingTonight: 3, vibe: "PACKED" });
   });
 
   it("lists and undoes blocks; can't block yourself", async () => {
@@ -177,16 +111,13 @@ describe("blocking (1.2)", () => {
 });
 
 describe("objectionable content filter at every entry point", () => {
-  it("rejects slurs/explicit terms in comments, captions, handles, display names, replies and promos with a clear 400", async () => {
+  it("rejects slurs and explicit terms in captions, song fields, handles and display names with a clear 400", async () => {
     const venue = await makeVenue();
-    const owner = await makeOwner(venue.id);
     const me = await makeActor();
     const bad = { status: 400, code: "objectionable_content" };
-    await expect(addComment(prisma, me, venue.id, { body: "total f4gg0t bartender" })).rejects.toMatchObject(bad);
-    await expect(submitPhoto(prisma, me, venue.id, { bytes: png(), meta: { caption: "porn night", ...INSIDE } })).rejects.toMatchObject(bad);
-    const c = await addComment(prisma, me, venue.id, { body: "great cocktails" });
-    await expect(replyAsVenue(prisma, owner, c.id, { body: "thanks retard" })).rejects.toMatchObject(bad);
-    await expect(createPromo(prisma, owner, venue.id, { title: "Whore night", body: "come", startsAt: "2030-01-01T20:00", endsAt: "2030-01-01T23:00" }, new Date("2029-12-31T00:00:00Z"))).rejects.toMatchObject(bad);
+    await expect(makeStamp(me, venue.id, { caption: "porn night" })).rejects.toMatchObject(bad);
+    await expect(makeStamp(me, venue.id, { caption: "ok", meta: { songTitle: "total f4gg0t", songArtist: "Someone" } })).rejects.toMatchObject(bad);
+    await expect(makeStamp(me, venue.id, { caption: "ok", meta: { songTitle: "Fine", songArtist: "porn star" } })).rejects.toMatchObject(bad);
     const base = { email: "n@x.dev", password: "long enough pw", acceptTerms: true, confirm21: true };
     await expect(signup(prisma, { ...base, handle: "xxniggerxx", displayName: "ok" })).rejects.toMatchObject(bad);
     await expect(signup(prisma, { ...base, handle: "fine_handle", displayName: "Slut Queen" })).rejects.toMatchObject(bad);
@@ -216,48 +147,37 @@ describe("terms acceptance", () => {
 });
 
 describe("geofence-exempt review accounts", () => {
-  async function exemptActor() {
-    const u = await makeUser();
+  async function exempt() {
+    const u = await makeUser({ isPrivate: false });
     await prisma.user.update({ where: { id: u.id }, data: { geofenceExempt: true } });
     return (await actorFor(u.id))!;
   }
 
-  it("can post from anywhere, but nothing counts: consensus, counts, accuracy, reputation", async () => {
-    const venue = await makeVenue({ officialCoverCents: 1000 });
-    const reviewer = await exemptActor();
-    await submitReport(prisma, reviewer, venue.id, { type: "VIBE", vibe: "DEAD", ...OUTSIDE });
-    await submitReport(prisma, reviewer, venue.id, { type: "COVER", cover: "50", ...OUTSIDE });
-    await recordPresence(prisma, reviewer, venue.id, OUTSIDE);
-    await setGoingTonight(prisma, reviewer, venue.id, true);
-    const photo = await submitPhoto(prisma, reviewer, venue.id, { bytes: png(), meta: { caption: "review test", ...OUTSIDE } });
-    expect(await prisma.report.count({ where: { userId: reviewer.userId } })).toBe(2); // stored
-    const now = new Date();
-
-    const page = await getVenuePage(prisma, venue.slug, null, now);
-    expect(page.live.consensus.vibe.reportCount).toBe(0);
-    expect(page.live.consensus.cover.reportCount).toBe(0);
-    expect(page.live.hereNow).toBe(0);
-    expect(page.live.goingTonight).toBe(0);
-    expect(page.live.livePhotos).toHaveLength(0);
-    // The reviewer sees their own photo, so the upload flow is verifiable.
-    expect((await getVenuePage(prisma, venue.slug, reviewer, now)).live.livePhotos.map((p) => p.id)).toEqual([photo.id]);
-    expect((await listVenuesForMap(prisma, null, now)).find((v) => v.id === venue.id)).toMatchObject({ vibe: "NO_DATA", activity: 0, hereNow: 0 });
+  it("can stamp from anywhere, but only they ever see it: not strangers, not followers, not the feed, not the profile", async () => {
+    const venue = await makeVenue();
+    const reviewer = await exempt();
+    const follower = await makeActor();
+    await follow(prisma, follower, reviewer.handle);
+    const s = await makeStamp(reviewer, venue.id, { at: OUTSIDE });
+    expect((await prisma.photo.findUniqueOrThrow({ where: { id: s.id } })).countable).toBe(false);
+    await expect(getStamp(prisma, follower, s.id)).rejects.toMatchObject({ status: 404 });
+    await expect(getStamp(prisma, reviewer, s.id)).resolves.toBeTruthy();
+    expect((await listUserStamps(prisma, follower, reviewer.handle)).stamps).toEqual([]);
+    expect((await listUserStamps(prisma, reviewer, reviewer.handle)).stamps).toHaveLength(1);
   });
 
-  it("is excluded from accuracy windows and from reputation verdicts", async () => {
-    const venue = await makeVenue({ officialCoverCents: 1000 });
-    const H = 3600_000;
-    const now = new Date();
-    const base = Math.floor(now.getTime() / H) * H;
-    const reviewers = [await exemptActor(), await exemptActor(), await exemptActor()];
-    for (let k = 1; k <= 5; k++) {
-      for (const r of reviewers) {
-        await prisma.report.create({ data: { userId: r.userId, venueId: venue.id, type: "COVER", coverCents: 5000, ...INSIDE, countable: false, createdAt: new Date(base - k * H + 60_000) } });
-      }
-    }
-    expect(await venueAccuracy(prisma, venue.id, now)).toMatchObject({ qualifyingWindows: 0 });
-    const res = await recomputeAllReputations(prisma, now);
-    expect(res.judged).toBe(0);
+  it("countable is a write-time snapshot: toggling the flag later changes neither past exempt nor past real stamps", async () => {
+    const venue = await makeVenue();
+    const admin = await makeActor({ role: "ADMIN" });
+    const reviewer = await exempt();
+    const real = await makeActor({ isPrivate: false });
+    const a = await makeStamp(reviewer, venue.id, { at: OUTSIDE });
+    const b = await makeStamp(real, venue.id);
+    await setUserFlags(prisma, admin, reviewer.handle, { geofenceExempt: false });
+    await setUserFlags(prisma, admin, real.handle, { geofenceExempt: true });
+    expect((await prisma.photo.findUniqueOrThrow({ where: { id: a.id } })).countable).toBe(false);
+    expect((await prisma.photo.findUniqueOrThrow({ where: { id: b.id } })).countable).toBe(true);
+    await expect(prisma.photo.update({ where: { id: a.id }, data: { countable: true } })).rejects.toThrow();
   });
 
   it("only an admin can set the flag (service and HTTP)", async () => {
@@ -274,6 +194,36 @@ describe("geofence-exempt review accounts", () => {
     expect((await prisma.user.findUniqueOrThrow({ where: { id: target.userId } })).geofenceExempt).toBe(true);
     // Not settable through signup or any user-facing payload.
     await expect(signup(prisma, { email: "g@x.dev", password: "long enough pw", displayName: "G", handle: "ggg", acceptTerms: true, confirm21: true, geofenceExempt: true })).rejects.toThrow(/Unrecognized key/);
-    void MIN;
+  });
+});
+
+describe("reporting and suspending accounts", () => {
+  it("users report a profile by handle; a moderator suspends: signed out, can't sign in, profile gone; then unsuspend", async () => {
+    const abuser = await makeActor();
+    await prisma.user.update({ where: { id: abuser.userId }, data: { passwordHash: await hashPassword("abuser password"), email: "abuser@x.dev" } });
+    const { token } = await createSession(prisma, abuser.userId, { client: "IOS" });
+    await flagContent(prisma, await makeActor(), { targetType: "USER", targetId: abuser.handle, reason: "harassing people" });
+    const mod = await makeActor({ role: "MODERATOR" });
+    const queue = await moderationQueue(prisma, mod);
+    expect(queue[0]).toMatchObject({ targetType: "USER", targetId: abuser.userId, venue: null });
+
+    await expect(moderate(prisma, mod, { targetType: "USER", targetId: abuser.userId, action: "HIDE" })).rejects.toThrow(/suspended/);
+    await moderate(prisma, mod, { targetType: "USER", targetId: abuser.userId, action: "SUSPEND", note: "harassment" });
+    expect(await prisma.session.count({ where: { userId: abuser.userId } })).toBe(0);
+    expect((await meRoute(new Request("http://localhost/api/me", { headers: { authorization: `Bearer ${token}` } }), undefined as never)).status).toBe(401);
+    await expect(login(prisma, { email: "abuser@x.dev", password: "abuser password" })).rejects.toMatchObject({ status: 403, code: "account_suspended" });
+    await expect(getProfile(prisma, abuser.handle, await makeActor())).rejects.toMatchObject({ status: 404 });
+    await expect(getProfile(prisma, abuser.handle, mod)).resolves.toBeTruthy();
+    expect((await searchUsers(prisma, await makeActor(), abuser.handle)).length).toBe(0);
+    expect(await prisma.moderationEvent.findFirst({ where: { action: "SUSPEND", targetId: abuser.userId } })).toMatchObject({ actorId: mod.userId, note: "harassment" });
+
+    await moderate(prisma, mod, { targetType: "USER", targetId: abuser.userId, action: "UNSUSPEND" });
+    await expect(login(prisma, { email: "abuser@x.dev", password: "abuser password" })).resolves.toBeTruthy();
+  });
+
+  it("only moderators suspend; you can't report yourself", async () => {
+    const target = await makeActor();
+    await expect(moderate(prisma, await makeActor(), { targetType: "USER", targetId: target.userId, action: "SUSPEND" })).rejects.toMatchObject({ status: 403 });
+    await expect(flagContent(prisma, target, { targetType: "USER", targetId: target.handle, reason: "me me me" })).rejects.toMatchObject({ status: 400 });
   });
 });

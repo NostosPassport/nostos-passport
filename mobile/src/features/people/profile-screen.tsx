@@ -4,10 +4,9 @@ import { ActionSheetIOS, Pressable, RefreshControl, ScrollView, StyleSheet, View
 
 import { ApiError, errorText } from "@/api";
 import type { ProfileResponse } from "@/api/contracts";
-import { useMe, useUserPosts, useUserProfile } from "@/api/queries";
+import { useMe, useUserProfile, useUserStamps } from "@/api/queries";
 import { useAuth } from "@/auth/auth-context";
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { HeaderButton } from "@/components/ui/header-button";
 import { Icon } from "@/components/ui/icon";
@@ -19,17 +18,16 @@ import { Text } from "@/components/ui/text";
 import { ToastHost } from "@/components/ui/toast";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { chooseReportReason, confirmBlock, useBlock, useFlag } from "@/features/moderation/content-actions";
-import { monthName, plural } from "@/lib/format";
-import { colors, hairlineWidth, radius, screenPadding, size, space } from "@/theme";
-import { PlacesTab, PostsGrid } from "./profile-tabs";
+import { colors, radius, screenPadding, size, space } from "@/theme";
+import { PlacesTab, StampsGrid } from "./profile-tabs";
 import { followButton, useFollow } from "./use-follow";
 
-type Tab = "posts" | "places";
-/** Ask for the next page of posts this close to the end of the scroll view. */
+type Tab = "stamps" | "places";
+/** Ask for the next page of stamps this close to the end of the scroll view. */
 const NEXT_PAGE_DISTANCE = 600;
 
 /**
- * A profile: yours (Edit profile, requests, activity) or someone else's (Follow / Requested / Following, Report, Block).
+ * A passport: yours (Edit profile, requests, settings) or someone else's (Follow / Requested / Following, Report, Block).
  * A private account you don't follow arrives `access: "limited"`: handle, badge, a generic avatar and the follow button.
  */
 export function ProfileScreen({ handle, modal, own }: { handle: string; modal?: boolean; own?: boolean }) {
@@ -38,8 +36,8 @@ export function ProfileScreen({ handle, modal, own }: { handle: string; modal?: 
   const profile = useUserProfile(handle);
   const p = profile.data;
   const full = p?.access === "full";
-  const posts = useUserPosts(handle, full);
-  const [tab, setTab] = useState<Tab>("posts");
+  const stamps = useUserStamps(handle, full);
+  const [tab, setTab] = useState<Tab>("stamps");
   const [refreshing, setRefreshing] = useState(false);
   const flag = useFlag();
   const block = useBlock();
@@ -63,13 +61,13 @@ export function ProfileScreen({ handle, modal, own }: { handle: string; modal?: 
 
   const refresh = async () => {
     setRefreshing(true);
-    await Promise.all([profile.refetch(), full ? posts.refetch() : null]).finally(() => setRefreshing(false));
+    await Promise.all([profile.refetch(), full ? stamps.refetch() : null]).finally(() => setRefreshing(false));
   };
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
     const nearEnd = layoutMeasurement.height + contentOffset.y >= contentSize.height - NEXT_PAGE_DISTANCE;
-    if (nearEnd && tab === "posts" && posts.hasNextPage && !posts.isFetchingNextPage && !posts.isFetchNextPageError) void posts.fetchNextPage();
+    if (nearEnd && tab === "stamps" && stamps.hasNextPage && !stamps.isFetchingNextPage && !stamps.isFetchNextPageError) void stamps.fetchNextPage();
   };
 
   const notFound = profile.error instanceof ApiError && profile.error.status === 404;
@@ -110,24 +108,22 @@ export function ProfileScreen({ handle, modal, own }: { handle: string; modal?: 
                 <Icon name="lock.fill" color="textSecondary" size={size.icon} />
                 <Text variant="headline">This account is private</Text>
                 <Text variant="callout" color="textSecondary">
-                  {p.relationship.follow === "requested" ? "Your request is waiting for their approval." : "Follow to see their posts and places."}
+                  {p.relationship.follow === "requested" ? "Your request is waiting for their approval." : "Follow to see their stamps and places."}
                 </Text>
               </View>
             ) : (
               <>
-                <Standing p={p} />
-                <Plans p={p} />
                 <View style={styles.tabs}>
                   <SegmentedControl
                     segments={[
-                      { key: "posts", label: "Posts" },
+                      { key: "stamps", label: "Stamps" },
                       { key: "places", label: "Places" },
                     ]}
                     value={tab}
                     onChange={setTab}
-                    accessibilityLabel="Profile sections"
+                    accessibilityLabel="Passport sections"
                   />
-                  {tab === "posts" ? <PostsGrid posts={posts} own={!!isSelf} /> : <PlacesTab handle={p.user.handle} />}
+                  {tab === "stamps" ? <StampsGrid stamps={stamps} own={!!isSelf} /> : <PlacesTab handle={p.user.handle} />}
                 </View>
               </>
             )}
@@ -159,7 +155,7 @@ export function ProfileScreen({ handle, modal, own }: { handle: string; modal?: 
 function Header({ p }: { p: ProfileResponse }) {
   const full = p.access === "full" ? p : null;
   const handle = p.user.handle;
-  const spoken = [full?.user.displayName, `@${handle}`, p.user.verified ? "verified" : null, full?.user.isVenueAccount ? "venue account" : null].filter(Boolean).join(", ");
+  const spoken = [full?.user.displayName, `@${handle}`, p.user.verified ? "verified" : null].filter(Boolean).join(", ");
   const openList = (list: "followers" | "following") => router.push({ pathname: "/connections", params: { handle, list } });
 
   return (
@@ -174,13 +170,13 @@ function Header({ p }: { p: ProfileResponse }) {
             </Text>
             {p.user.verified && <VerifiedBadge accessible={false} />}
           </View>
-          {full?.user.isVenueAccount && <Badge label="Venue account" />}
         </View>
       </View>
 
       {full && (
         <View style={styles.counts}>
-          <Count value={full.user.counts.posts} label="Posts" />
+          <Count value={full.user.counts.stamps} label="Stamps" />
+          <Count value={full.user.counts.places} label="Places" />
           <Count value={full.user.counts.followers} label="Followers" onPress={() => openList("followers")} />
           <Count value={full.user.counts.following} label="Following" onPress={() => openList("following")} />
         </View>
@@ -255,7 +251,6 @@ function OwnActions() {
           chevron
           onPress={() => router.push("/follow-requests")}
         />
-        <ListRow icon="bell" title="Activity" chevron onPress={() => router.push("/activity")} />
       </ListGroup>
     </View>
   );
@@ -269,79 +264,6 @@ export function CountBadge({ count }: { count: number }) {
         {count > 99 ? "99+" : count}
       </Text>
     </View>
-  );
-}
-
-/** "Regular at ___" badges and "Featured at ___, October" entries. */
-function Standing({ p }: { p: Extract<ProfileResponse, { access: "full" }> }) {
-  const year = new Date().getFullYear();
-  if (p.regularAt.length === 0 && p.featured.length === 0) return null;
-  return (
-    <View style={styles.standing}>
-      {p.regularAt.length > 0 && (
-        <View style={styles.regulars}>
-          {p.regularAt.map((v) => (
-            <Pressable
-              key={v.slug}
-              onPress={() => router.push({ pathname: "/venue/[id]", params: { id: v.slug } })}
-              accessibilityRole="button"
-              accessibilityLabel={`Regular at ${v.name}`}
-              style={({ pressed }) => [styles.regular, pressed && styles.regularPressed]}
-            >
-              <Icon name="mappin.and.ellipse" color="textSecondary" size={size.iconTiny} />
-              <Text variant="footnote" weight="semibold" numberOfLines={1}>
-                Regular at {v.name}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-      {p.featured.length > 0 && (
-        <ListGroup header="Featured">
-          {p.featured.map((f) => (
-            <ListRow
-              key={`${f.venue.slug}-${f.month}`}
-              icon="rosette"
-              title={`Featured at ${f.venue.name}, ${monthName(f.month, year)}`}
-              subtitle={f.count > 1 ? plural(f.count, "photo") : undefined}
-              chevron
-              onPress={() => router.push({ pathname: "/venue/featured", params: { id: f.venue.slug, month: f.month } })}
-            />
-          ))}
-        </ListGroup>
-      )}
-    </View>
-  );
-}
-
-/** Tonight's plans (mutual follows only) and, for venue accounts, their venues. Unchanged from before the social layer. */
-function Plans({ p }: { p: Extract<ProfileResponse, { access: "full" }> }) {
-  return (
-    <>
-      {p.goingTonight !== null && (
-        <ListGroup header="Tonight" footer={p.relationship.isSelf ? "Only people you follow back can see this." : undefined}>
-          {p.goingTonight.length === 0 ? (
-            <ListRow title="No plans yet" />
-          ) : (
-            p.goingTonight.map((v) => (
-              <ListRow key={v.slug} icon="calendar" title={`Going to ${v.name}`} chevron onPress={() => router.push({ pathname: "/venue/[id]", params: { id: v.slug } })} />
-            ))
-          )}
-        </ListGroup>
-      )}
-      {p.goingTonight === null && !p.relationship.isSelf && (
-        <Text variant="footnote" color="textTertiary">
-          {p.relationship.follow === "following" ? "Plans are shared when you follow each other." : "Follow each other to see plans."}
-        </Text>
-      )}
-      {p.user.venues.length > 0 && (
-        <ListGroup header="Venues">
-          {p.user.venues.map((v) => (
-            <ListRow key={v.slug} icon="storefront.fill" title={v.name} chevron onPress={() => router.push({ pathname: "/venue/[id]", params: { id: v.slug } })} />
-          ))}
-        </ListGroup>
-      )}
-    </>
   );
 }
 
@@ -360,18 +282,5 @@ const styles = StyleSheet.create({
   private: { gap: space.xs, alignItems: "flex-start" },
   own: { gap: space.lg },
   countBadge: { minWidth: size.markerBadge + space.xs, paddingHorizontal: space.xs, borderRadius: radius.pill, backgroundColor: colors.elevated, alignItems: "center" },
-  standing: { gap: space.lg },
-  regulars: { flexDirection: "row", flexWrap: "wrap", gap: space.xs },
-  regular: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.xxs,
-    minHeight: size.hitTarget,
-    paddingHorizontal: space.sm,
-    borderRadius: radius.chip,
-    borderWidth: hairlineWidth,
-    borderColor: colors.textTertiary,
-  },
-  regularPressed: { backgroundColor: colors.pressedOverlay },
   tabs: { gap: space.md },
 });

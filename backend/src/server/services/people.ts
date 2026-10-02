@@ -3,7 +3,7 @@
  *
  * Privacy (src/server/privacy.ts): accounts are private by default. Following a public account is instant;
  * following a private one creates a request its owner approves or declines. Only approved follows exist in the
- * `follow` table, so "friends" for plans (mutual follows) are mutual *approved* follows by construction.
+ * `follow` table.
  * A viewer without full access to a private profile gets the handle, the verified badge and a Request button only.
  *
  * Blocking removes follows and pending requests in both directions and prevents new ones (blocks.ts).
@@ -12,16 +12,13 @@ import sharp from "sharp";
 import { z } from "zod";
 import type { Db } from "@/lib/db";
 import { getStorage, MAX_UPLOAD_BYTES, newStorageKey, sniffImage, type BlobStorage } from "@/lib/storage";
-import { nightKey } from "@/lib/time";
 import type { Actor } from "@/server/actor";
 import { assertCleanText, badRequest, forbidden, notFound, ServiceError } from "@/server/errors";
 import { isModerator, requireSignedIn } from "@/server/permissions";
 import { followedAmong, personView, profileAccess, subjectSelect, toSubject, viewerOf, type PersonView, type SubjectRow } from "@/server/privacy";
 import { consumeRate } from "@/server/rate-limit";
 import { blockedIdsFor, isBlockedEitherWay, lockPair } from "@/server/services/blocks";
-import { uploadUrl } from "@/server/services/venues";
-import { regularVenuesOf } from "@/server/services/regulars";
-import { featuredHistory } from "@/server/services/gallery";
+import { uploadUrl } from "@/server/media";
 
 export type FollowState = "none" | "requested" | "following";
 
@@ -169,16 +166,15 @@ export async function removeFollower(db: Db, actor: Actor | null, handle: string
 // Profiles and lists
 // ------------------------------------------------------------------------------------------------
 
-/** Posts on a profile: rated photos that aren't hidden or removed. App Review posts count only for their author. */
-export const profilePostsWhere = (userId: string, isSelf: boolean) =>
-  ({ userId, rating: { not: null }, hiddenAt: null, removedAt: null, ...(isSelf ? {} : { countable: true }) }) as const;
+/** Stamps on a profile: not hidden or removed. App Review stamps count only for their author. */
+export const profileStampsWhere = (userId: string, isSelf: boolean) =>
+  ({ userId, hiddenAt: null, removedAt: null, ...(isSelf ? {} : { countable: true }) }) as const;
 
 export async function getProfile(db: Db, handle: string, viewer: Actor | null, now = new Date()) {
   const user = await db.user.findUnique({
     where: { handle: handle.toLowerCase() },
     select: {
-      ...subjectSelect, role: true, createdAt: true, reputation: true, bio: true,
-      claims: { where: { status: "APPROVED" }, select: { venue: { select: { name: true, slug: true } } } },
+      ...subjectSelect, createdAt: true, reputation: true, bio: true,
     },
   });
   if (!user) throw notFound("User not found");
@@ -202,17 +198,12 @@ export async function getProfile(db: Db, handle: string, viewer: Actor | null, n
     return { access: "limited" as const, user: { handle: user.handle, verified, isPrivate: true as const }, relationship };
   }
 
-  const [followers, following, posts, goingTonight, regularAt, featured] = await Promise.all([
+  const [followers, following, stamps, places] = await Promise.all([
     // Same people the lists show (active accounts).
     db.follow.count({ where: { followeeId: user.id, follower: { deletedAt: null, suspendedAt: null } } }),
     db.follow.count({ where: { followerId: user.id, followee: { deletedAt: null, suspendedAt: null } } }),
-    db.photo.count({ where: profilePostsWhere(user.id, isSelf) }),
-    // Going-tonight plans: yourself and mutual follows only.
-    isSelf || relationship.mutual
-      ? db.rsvp.findMany({ where: { userId: user.id, night: nightKey(now) }, select: { venue: { select: { name: true, slug: true } } } })
-      : Promise.resolve(null),
-    regularVenuesOf(db, user.id, now),
-    featuredHistory(db, user.id),
+    db.photo.count({ where: profileStampsWhere(user.id, isSelf) }),
+    db.photo.findMany({ where: profileStampsWhere(user.id, isSelf), distinct: ["venueId"], select: { venueId: true } }).then((r) => r.length),
   ]);
   return {
     access: "full" as const,
@@ -223,20 +214,12 @@ export async function getProfile(db: Db, handle: string, viewer: Actor | null, n
       bio: user.bio,
       verified,
       isPrivate: user.isPrivate,
-      /** Venue accounts are labelled; staff roles (moderator/admin) are never revealed publicly. */
-      isVenueAccount: user.role === "VENUE_OWNER",
       memberSince: user.createdAt,
-      // Reputation is private: shown to the account itself and to moderators only.
+      // Reputation is private: shown to the account itself and to moderators only (rule 7).
       reputation: isSelf || isModerator(viewer) ? user.reputation : null,
-      counts: { posts, followers, following },
-      venues: user.role === "VENUE_OWNER" ? user.claims.map((c) => c.venue) : [],
+      counts: { stamps, places, followers, following },
     },
     relationship,
-    goingTonight: goingTonight?.map((r) => r.venue) ?? null,
-    /** "Regular at ___" badges (full access only, like everything else on the profile). */
-    regularAt,
-    /** "Featured at Lantern & Lark, October". */
-    featured,
   };
 }
 
@@ -299,31 +282,19 @@ export async function searchUsers(db: Db, viewer: Actor | null, q: string, now =
   return peopleView(db, viewer, users, now);
 }
 
-/** People you follow, with tonight's plans for mutual follows only (see social.ts on privacy). */
+/** People you follow (approved follows only, so you have full access to each). */
 export async function listFollowing(db: Db, viewer: Actor | null, now = new Date()) {
   const me = requireSignedIn(viewer);
   const rows = await db.follow.findMany({
     where: { followerId: me.userId, followee: { deletedAt: null, suspendedAt: null } },
     orderBy: { followee: { handle: "asc" } },
-    select: {
-      followee: {
-        select: {
-          ...subjectSelect,
-          following: { where: { followeeId: me.userId }, select: { followerId: true } },
-          rsvps: { where: { night: nightKey(now) }, select: { venue: { select: { name: true, slug: true } } } },
-        },
-      },
-    },
+    select: { followee: { select: { ...subjectSelect, following: { where: { followeeId: me.userId }, select: { followerId: true } } } } },
   });
   return Promise.all(
-    rows.map(async ({ followee: f }) => {
-      const mutual = f.following.length > 0;
-      // You follow them (approved), so you have full access.
-      return {
-        handle: f.handle, displayName: f.displayName, avatarUrl: await avatarUrl(f.avatarKey, now), verified: f.verifiedAt !== null,
-        mutual, goingTonight: mutual ? f.rsvps.map((x) => x.venue) : [],
-      };
-    }),
+    rows.map(async ({ followee: f }) => ({
+      handle: f.handle, displayName: f.displayName, avatarUrl: await avatarUrl(f.avatarKey, now), verified: f.verifiedAt !== null,
+      mutual: f.following.length > 0,
+    })),
   );
 }
 

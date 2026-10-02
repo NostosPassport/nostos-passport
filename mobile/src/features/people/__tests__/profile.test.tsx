@@ -1,20 +1,18 @@
-/** The profile screen, the author label and the follow button: what each viewer may see. */
+/** The passport screen and the follow button: what each viewer may see. */
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react-native";
 import { Alert } from "react-native";
 
-import type { AuthorView, ProfileResponse } from "@/api/contracts";
+import type { ProfileResponse } from "@/api/contracts";
 import { testQueryClient } from "@/test/query-client";
-import { authorHandle, authorLabel } from "../author";
-import { authorSpoken } from "../author-line";
-import { privacyNote, profileChanges, profileProblem, shouldOfferApproveAll } from "../edit-profile";
+import { profileChanges, profileProblem } from "../edit-profile";
 import { confirmApproveAll } from "../use-requests";
 import { placesRegion } from "../places";
 import { ProfileScreen } from "../profile-screen";
 import { followButton } from "../use-follow";
 
 let mockProfile: ProfileResponse;
-const mockPosts = { data: { pages: [{ posts: [], nextBefore: null }] }, isPending: false, hasNextPage: false, isFetchNextPageError: false, refetch: jest.fn() };
+const mockStamps = { data: { pages: [{ stamps: [], nextBefore: null }] }, isPending: false, hasNextPage: false, isFetchNextPageError: false, refetch: jest.fn() };
 
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() }, Stack: { Screen: () => null } }));
 jest.mock("react-native-maps", () => ({ __esModule: true, default: () => null, Marker: () => null }));
@@ -22,7 +20,7 @@ jest.mock("@/auth/auth-context", () => ({ useAuth: () => ({ status: "signedIn" }
 jest.mock("@/api/queries", () => ({
   qk: jest.requireActual("@/api/keys").qk,
   useUserProfile: () => ({ data: mockProfile, isError: false }),
-  useUserPosts: () => mockPosts,
+  useUserStamps: () => mockStamps,
   useUserPlaces: () => ({ data: { places: [] }, isPending: false }),
   useMe: () => ({ data: { social: { pendingFollowRequests: 3 } } }),
 }));
@@ -37,13 +35,10 @@ function full(over: Partial<Extract<ProfileResponse, { access: "full" }>["user"]
   return {
     access: "full",
     user: {
-      handle: "sam", displayName: "Sam Lee", avatarUrl: null, bio: "Mostly Lantern & Lark.", verified: true, isPrivate: false, isVenueAccount: false,
-      memberSince: "2026-01-01T00:00:00.000Z", reputation: null, counts: { posts: 12, followers: 40, following: 9 }, venues: [], ...over,
+      handle: "sam", displayName: "Sam Lee", avatarUrl: null, bio: "Mostly Lantern & Lark.", verified: true, isPrivate: false,
+      memberSince: "2026-01-01T00:00:00.000Z", reputation: null, counts: { stamps: 12, places: 5, followers: 40, following: 9 }, ...over,
     },
     relationship: rel,
-    goingTonight: null,
-    regularAt: [{ name: "Lantern & Lark", slug: "lantern-lark" }],
-    featured: [{ venue: { name: "Lantern & Lark", slug: "lantern-lark" }, month: "2026-08", count: 2 }],
   };
 }
 
@@ -62,9 +57,10 @@ describe("ProfileScreen", () => {
     expect(screen.getByText("This account is private")).toBeTruthy();
     expect(screen.getByLabelText("@sam, verified")).toBeTruthy();
     expect(screen.getByLabelText("Follow @sam")).toBeTruthy();
-    expect(screen.queryByText("Posts")).toBeNull();
-    expect(screen.queryByText(/Regular at/)).toBeNull();
-    expect(screen.queryByText(/Featured at/)).toBeNull();
+    expect(screen.queryByText("Stamps")).toBeNull();
+    expect(screen.queryByText("Places")).toBeNull();
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.queryByText("Anonymous")).toBeNull();
   });
 
   it("limited with a pending request shows Requested", async () => {
@@ -74,16 +70,17 @@ describe("ProfileScreen", () => {
     expect(screen.getByText("Your request is waiting for their approval.")).toBeTruthy();
   });
 
-  it("full: name, bio, counts, Regular badges, Featured entries and the tabs", async () => {
+  it("full: name, bio, counts and the Stamps and Places views", async () => {
     mockProfile = full({}, { ...relationship, follow: "following" });
     await renderProfile();
     expect(screen.getByLabelText("Sam Lee, @sam, verified")).toBeTruthy();
     expect(screen.getByText("Mostly Lantern & Lark.")).toBeTruthy();
     expect(screen.getByLabelText("40 followers")).toBeTruthy();
-    expect(screen.getByLabelText("Regular at Lantern & Lark")).toBeTruthy();
-    expect(screen.getByText(/Featured at Lantern & Lark, August/)).toBeTruthy();
+    expect(screen.getByLabelText("12 stamps")).toBeTruthy();
+    expect(screen.getByLabelText("5 places")).toBeTruthy();
     expect(screen.getByLabelText("Unfollow @sam")).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "Posts" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Stamps" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Places" })).toBeTruthy();
   });
 
   it("your own: Edit profile and requests with the waiting count, no Follow button", async () => {
@@ -93,21 +90,6 @@ describe("ProfileScreen", () => {
     expect(screen.getByLabelText("Follow requests, 3 waiting")).toBeTruthy();
     expect(screen.getByText("Private account")).toBeTruthy();
     expect(screen.queryByLabelText("Follow @sam")).toBeNull();
-  });
-});
-
-describe("author label", () => {
-  const user: AuthorView = { kind: "user", handle: "sam", verified: true, regular: true };
-  it("shows a handle, Anonymous or Deleted user, and only a handle links", () => {
-    expect(authorLabel(user)).toBe("@sam");
-    expect(authorHandle(user)).toBe("sam");
-    expect(authorLabel({ kind: "anonymous" })).toBe("Anonymous");
-    expect(authorHandle({ kind: "anonymous" })).toBeNull();
-    expect(authorLabel({ kind: "deleted" })).toBe("Deleted user");
-  });
-  it("speaks badges only for handles", () => {
-    expect(authorSpoken(user)).toBe("@sam, verified, Regular here");
-    expect(authorSpoken({ kind: "anonymous" })).toBe("Anonymous");
   });
 });
 
@@ -125,14 +107,7 @@ describe("edit profile", () => {
     expect(profileChanges(initial, { ...initial, displayName: " Sam " })).toEqual({});
     expect(profileChanges(initial, { displayName: "Sam Lee", bio: "Hi", isPrivate: false })).toEqual({ displayName: "Sam Lee", bio: "Hi", isPrivate: false });
   });
-  it("offers approve-all only after going public with requests waiting", () => {
-    expect(shouldOfferApproveAll({ isPrivate: false }, 4)).toBe(true);
-    expect(shouldOfferApproveAll({ isPrivate: false }, 0)).toBe(false);
-    expect(shouldOfferApproveAll({ bio: "x" }, 4)).toBe(false);
-  });
-  it("explains the toggle, including handles on past venue photos when public", () => {
-    expect(privacyNote(false)).toMatch(/past venue photos/);
-    expect(privacyNote(true)).toMatch(/Anonymous/);
+  it("checks the name and bio", () => {
     expect(profileProblem({ ...initial, displayName: " " })).toBe("Add a display name.");
     expect(profileProblem({ ...initial, bio: "x".repeat(151) })).toMatch(/150/);
   });
@@ -140,7 +115,7 @@ describe("edit profile", () => {
 
 describe("places map", () => {
   it("frames every place, with a minimum span", () => {
-    const at = (lat: number, lng: number) => ({ venue: { name: "", slug: `${lat}`, lat, lng, neighborhood: "" }, posts: 1, lastRating: 7, lastPostedAt: "2026-09-01T00:00:00.000Z" });
+    const at = (lat: number, lng: number) => ({ place: { id: `${lat}`, name: "", slug: `${lat}`, lat, lng, neighborhood: "" }, stamps: 1, latestStamp: { id: "s", createdAt: "2026-09-01T00:00:00.000Z", photoUrl: null, caption: "" } });
     expect(placesRegion([])).toBeNull();
     expect(placesRegion([at(40.72, -73.98)])).toMatchObject({ latitude: 40.72, longitude: -73.98, latitudeDelta: 0.01 });
     const r = placesRegion([at(40.7, -74), at(40.8, -73.9)])!;

@@ -28,50 +28,50 @@ Create at the repo root:
 
 ## 3. Strip (delete, in the new repo only)
 Delete the code, routes, tests, screens, seed data and docs for:
-- [ ] 3.1 live reports (vibe, line, cover)
-- [ ] 3.2 consensus
-- [ ] 3.3 the accuracy score
-- [ ] 3.4 venue owner dashboards and claims
-- [ ] 3.5 promos
-- [ ] 3.6 the crowd map colors and report bar
-- [ ] 3.7 RSVP and "going tonight" and presence counts
-- [ ] 3.8 comments and replies
-- [ ] 3.9 the monthly featured gallery and nightly featuring (and the cron job and its docs)
-- [ ] 3.10 Regular badges
-- [ ] 3.11 block-by-content for Anonymous authors. Nothing in Nostos is shown as "Anonymous": a stamp is only ever shown to people who may see the author's full profile.
+- [x] 3.1 live reports (vibe, line, cover)
+- [x] 3.2 consensus
+- [x] 3.3 the accuracy score
+- [x] 3.4 venue owner dashboards and claims
+- [x] 3.5 promos
+- [x] 3.6 the crowd map colors and report bar
+- [x] 3.7 RSVP and "going tonight" and presence counts
+- [x] 3.8 comments and replies
+- [x] 3.9 the monthly featured gallery and nightly featuring (and the cron job and its docs)
+- [x] 3.10 Regular badges
+- [x] 3.11 block-by-content for Anonymous authors. Nothing in Nostos is shown as "Anonymous": a stamp is only ever shown to people who may see the author's full profile.
 
 KEEP: auth and sessions (token auth for iOS), users, handle and bio and avatar, follows and follow requests, private and public accounts, blocks by handle, reporting and the moderation queue, account deletion, the privacy module, the geofence check, photo upload with EXIF stripping, likes (drop the featuring eligibility rules, keep it simple: one like per user per stamp, not your own, not on hidden or removed stamps), rate limits, content filter, verified badge with its append-only log, activity, storage, the append-only moderation log.
-- [ ] 3.12 Keep the venue table as "places" (name, location, geofence), with no live data. Keep the map, but as a map of stamps (a "Places" view on a passport), with no vibe colors.
-- [ ] 3.13 Handle DB cleanup with new forward migrations that drop the removed tables and columns, so the hand-written trigger history stays valid. Use `prisma migrate diff`, create the directory after generating, then `migrate deploy` and `prisma generate`. Never `migrate reset`.
-- [ ] 3.14 Remove dead code, dead contract entries and dead mobile query hooks. Run the gate after every removal batch. Commit per batch.
+- [x] 3.12 Keep the venue table as "places" (name, location, geofence), with no live data. Keep the map, but as a map of stamps (a "Places" view on a passport), with no vibe colors.
+- [x] 3.13 Handle DB cleanup with new forward migrations that drop the removed tables and columns, so the hand-written trigger history stays valid. Use `prisma migrate diff`, create the directory after generating, then `migrate deploy` and `prisma generate`. Never `migrate reset`.
+- [x] 3.14 Remove dead code, dead contract entries and dead mobile query hooks. Run the gate after every removal batch. Commit per batch.
 
 ## 4. Build
 
 ### Phase 1: privacy foundation (these are launch blockers)
-- [ ] 4.1.1 Stamps and places of a private account reach only people with full access, in every payload: profile, stamp detail, feed, search, activity, lists. Add tests for signed out, stranger, requester (pending is not enough), follower, self, staff, blocked.
-- [ ] 4.1.2 Blocking by handle hides the pair from each other everywhere (profile, search, lists, feed, activity, likes). Test that nothing leaks either direction.
-- [ ] 4.1.3 Per-stamp visibility = the account's privacy. No "share to venue page" toggle.
-- [ ] 4.1.4 Going public changes what strangers can see (all stamps and places). The mobile app must show a confirm alert listing exactly that before switching private to public.
+- [x] 4.1.1 Stamps and places of a private account reach only people with full access, in every payload: profile, stamp detail, feed, search, activity, lists. Add tests for signed out, stranger, requester (pending is not enough), follower, self, staff, blocked.
+- [x] 4.1.2 Blocking by handle hides the pair from each other everywhere (profile, search, lists, feed, activity, likes). Test that nothing leaks either direction.
+- [x] 4.1.3 Per-stamp visibility = the account's privacy. No "share to venue page" toggle.
+- [x] 4.1.4 Going public changes what strangers can see (all stamps and places). The mobile app must show a confirm alert listing exactly that before switching private to public.
 
 ### Phase 2: stamps (backend)
-- [ ] 4.2.1 Make `photo.storage_key` nullable. Add nullable song fields (title, artist, album art URL, source id). Add a CHECK that at least one of photo, caption (non-empty) or song exists. Caption max 280. Update the immutability triggers carefully: stamps stay immutable except caption, song, moderation state and removed_at (final). Rating becomes optional and is not shown in the UI for v1.
-- [ ] 4.2.2 POST /api/places/:id/stamps (multipart: optional photo, caption, song fields, lat, lng). Geofence check server-side, EXIF stripped, per-place cooldown, post rate limit, content filter on caption and song text. Geofence-exempt accounts (App Review) are visible only to themselves.
-- [ ] 4.2.3 GET /api/stamps/:id (visibility rules), PATCH (caption and song, frozen while a flag is open), POST /api/stamps/:id/remove ("delete from profile" = removed_at, final), PUT and DELETE like.
-- [ ] 4.2.4 GET /api/feed: stamps from people you follow, newest first, cursor paging, strictly chronological, no ranking, no personalization (this keeps us outside NY's SAFE for Kids Act).
-- [ ] 4.2.5 Profile passport endpoints: stamps grid (cursor), places visited (distinct places with stamp count and latest stamp), counts.
-- [ ] 4.2.6 Songs: v1 stores metadata only (title, artist, art URL), no audio playback. Search via Apple's public iTunes Search API, proxied through our backend with a short timeout, a rate limit and no user identifiers sent. Put the licensing and terms question in OPEN-QUESTIONS.md for the lawyer session, do not decide it.
+- [x] 4.2.1 Make `photo.storage_key` nullable. Add nullable song fields (title, artist, album art URL, source id). Add a CHECK that at least one of photo, caption (non-empty) or song exists. Caption max 280. Update the immutability triggers carefully: stamps stay immutable except caption, song, moderation state and removed_at (final). Rating becomes optional and is not shown in the UI for v1.
+- [x] 4.2.2 POST /api/places/:id/stamps (multipart: optional photo, caption, song fields, lat, lng). Geofence check server-side, EXIF stripped, per-place cooldown, post rate limit, content filter on caption and song text. Geofence-exempt accounts (App Review) are visible only to themselves.
+- [x] 4.2.3 GET /api/stamps/:id (visibility rules), PATCH (caption and song, frozen while a flag is open), POST /api/stamps/:id/remove ("delete from profile" = removed_at, final), PUT and DELETE like.
+- [x] 4.2.4 GET /api/feed: stamps from people you follow, newest first, cursor paging, strictly chronological, no ranking, no personalization (this keeps us outside NY's SAFE for Kids Act).
+- [x] 4.2.5 Profile passport endpoints: stamps grid (cursor), places visited (distinct places with stamp count and latest stamp), counts.
+- [x] 4.2.6 Songs: v1 stores metadata only (title, artist, art URL), no audio playback. Search via Apple's public iTunes Search API, proxied through our backend with a short timeout, a rate limit and no user identifiers sent. Put the licensing and terms question in OPEN-QUESTIONS.md for the lawyer session, do not decide it.
 - [ ] 4.2.7 Update the contract, API.md, tests for every rule, and the invariants suite.
 
 ### Phase 3: mobile passport
-- [ ] 4.3.1 Neutral components first (design comes in phase 5). Use theme tokens only, SF Symbols, no emoji, lint rules as already enforced.
-- [ ] 4.3.2 Home feed screen (followed people's stamps, chronological, pull to refresh, paging).
-- [ ] 4.3.3 Passport screen (own and others'): header, counts, a stamps grid, a Places view (map of places with stamp counts, plus a list), limited state for private accounts, Follow / Requested / Following.
-- [ ] 4.3.4 Stamp composer: choose a place near you (list of places inside or near the geofence, server confirms), in-app camera optional, caption, song picker (search), then Stamp. At least one of photo, caption, song. Show the server's message when outside the geofence.
-- [ ] 4.3.5 Stamp detail: photo, caption, song row, place, author, likes, Report and Block, Edit and Delete from profile for your own.
-- [ ] 4.3.6 Edit profile, follow requests, activity, followers and following, blocked users, settings, delete account: keep and adapt what exists.
-- [ ] 4.3.7 Fix known device bugs: distances over 1000 m show as "1.8 km" not "1815 m".
-- [ ] 4.3.8 Do not show "Sign in to post" while auth or /api/me is still loading or failed (add a "checking account" state).
-- [ ] 4.3.9 Make sure no sheet or screen can render blank.
+- [x] 4.3.1 Neutral components first (design comes in phase 5). Use theme tokens only, SF Symbols, no emoji, lint rules as already enforced.
+- [x] 4.3.2 Home feed screen (followed people's stamps, chronological, pull to refresh, paging).
+- [x] 4.3.3 Passport screen (own and others'): header, counts, a stamps grid, a Places view (map of places with stamp counts, plus a list), limited state for private accounts, Follow / Requested / Following.
+- [x] 4.3.4 Stamp composer: choose a place near you (list of places inside or near the geofence, server confirms), in-app camera optional, caption, song picker (search), then Stamp. At least one of photo, caption, song. Show the server's message when outside the geofence.
+- [x] 4.3.5 Stamp detail: photo, caption, song row, place, author, likes, Report and Block, Edit and Delete from profile for your own.
+- [x] 4.3.6 Edit profile, follow requests, activity, followers and following, blocked users, settings, delete account: keep and adapt what exists.
+- [x] 4.3.7 Fix known device bugs: distances over 1000 m show as "1.8 km" not "1815 m".
+- [x] 4.3.8 Do not show "Sign in to post" while auth or /api/me is still loading or failed (add a "checking account" state).
+- [x] 4.3.9 Make sure no sheet or screen can render blank.
 
 ### Phase 4: safety and compliance
 - [ ] 4.4.1 Birthdate age gate at signup and guest browsing: blocks under-21s and stores nothing about them (no DOB, no email, no record). Replace the "21+" checkbox. Legal specifics go to OPEN-QUESTIONS.md for the lawyer session.

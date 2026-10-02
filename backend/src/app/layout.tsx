@@ -1,11 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import "leaflet/dist/leaflet.css";
 import "./globals.css";
-import { LocationProvider } from "@/components/location/LocationProvider";
 
 export const metadata: Metadata = {
   title: "Nostos",
-  description: "Live nightlife map: venues own the facts, people own the reality.",
+  description: "A passport for New York: go somewhere, get a stamp.",
 };
 
 export const viewport: Viewport = {
@@ -19,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <LocationProvider>{children}</LocationProvider>
+        {children}
       </body>
     </html>
   );

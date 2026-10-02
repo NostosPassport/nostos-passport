@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 import { api, ApiError, errorText } from "@/api";
-import { useMe } from "@/api/queries";
 import { farewellNotice, useAuth } from "@/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { FormScreen } from "@/components/ui/form-screen";
@@ -16,8 +15,7 @@ import { colors, radius, size, space } from "@/theme";
 
 const WHAT_HAPPENS = [
   "Your name, handle, email and password are erased.",
-  "Your photos are removed, and so are your follows and plans.",
-  "Your reports and comments stay, shown as \u201CDeleted user\u201D, so tonight\u2019s counts stay honest.",
+  "Your stamps are removed from every passport, and so are your follows and likes.",
   "You\u2019re signed out on every device. This can\u2019t be undone.",
 ];
 
@@ -26,9 +24,7 @@ const FAREWELL = "Your account is deleted.";
 /** Guideline 5.1.1(v): delete the account from inside the app. Two taps from Profile to the button. */
 export default function DeleteAccount() {
   const { forget } = useAuth();
-  const me = useMe();
   const [password, setPassword] = useState("");
-  const owned = me.data?.ownedVenues ?? [];
 
   const del = useMutation({
     mutationFn: async () => {
@@ -71,7 +67,7 @@ export default function DeleteAccount() {
         <Text variant="title2" accessibilityRole="header">
           Delete your account
         </Text>
-        {[...WHAT_HAPPENS, ...(owned.length ? [`You\u2019ll lose access to ${owned.map((v) => v.name).join(", ")}.`] : [])].map((line) => (
+        {WHAT_HAPPENS.map((line) => (
           <View key={line} style={styles.bullet}>
             <View style={styles.dot} />
             <Text variant="callout" color="textSecondary" style={styles.flex}>

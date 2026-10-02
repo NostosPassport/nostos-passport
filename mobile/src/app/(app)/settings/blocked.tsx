@@ -29,22 +29,21 @@ export default function Blocked() {
             You haven&apos;t blocked anyone.
           </Text>
         ) : (
-          <ListGroup footer="Blocked people can't see your photos, comments or profile, and you can't see theirs.">
+          <ListGroup footer="Blocked people can't see your stamps or profile, and you can't see theirs.">
             {list.map((b) => (
               <ListRow
-                key={b.ref}
+                key={b.handle}
                 leading={<Avatar name={b.handle} />}
-                // Blocks made from a photo or comment may be of someone who was Anonymous to you: no handle.
-                title={b.handle ? `@${b.handle}` : `Someone you blocked from a ${b.source}`}
+                title={`@${b.handle}`}
                 trailing={
                   <Button
                     title="Unblock"
                     variant="secondary"
                     compact
                     block={false}
-                    loading={block.isPending && block.variables !== undefined && "ref" in block.variables && block.variables.ref === b.ref}
-                    onPress={() => block.mutate({ ref: b.ref, label: b.handle ? `@${b.handle}` : "them" })}
-                    accessibilityLabel={b.handle ? `Unblock @${b.handle}` : `Unblock someone you blocked from a ${b.source}`}
+                    loading={block.isPending && block.variables?.handle === b.handle}
+                    onPress={() => block.mutate({ handle: b.handle, block: false })}
+                    accessibilityLabel={`Unblock @${b.handle}`}
                   />
                 }
               />

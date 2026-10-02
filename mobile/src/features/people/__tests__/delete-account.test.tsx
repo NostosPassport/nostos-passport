@@ -15,7 +15,6 @@ jest.mock("@/auth/auth-context", () => {
   const actual = jest.requireActual("@/auth/auth-context");
   return { useAuth: () => ({ forget: mockForget }), farewellNotice: actual.farewellNotice };
 });
-jest.mock("@/api/queries", () => ({ useMe: () => ({ data: { ownedVenues: [{ id: "v1", slug: "velvet", name: "Velvet" }] } }) }));
 jest.mock("@/api", () => {
   const client = jest.requireActual("@/api/client");
   return { api: { me: { deleteAccount: (pw: string) => mockDelete(pw) } }, ApiError: client.ApiError, errorText: client.errorText };
@@ -45,7 +44,7 @@ describe("Delete account", () => {
 
   it("explains what happens and needs a password", async () => {
     await renderScreen();
-    expect(screen.getByText("Your photos are removed, and so are your follows and plans.")).toBeTruthy();
+    expect(screen.getByText("Your stamps are removed from every passport, and so are your follows and likes.")).toBeTruthy();
     expect(screen.getByLabelText("Delete account")).toBeDisabled();
   });
 
@@ -72,9 +71,10 @@ describe("Delete account", () => {
     expect(mockForget).toHaveBeenCalledTimes(1);
   });
 
-  it("tells owners they lose their venue", async () => {
+  it("says nothing about venues or plans (they no longer exist)", async () => {
     await renderScreen();
-    expect(screen.getByText("You\u2019ll lose access to Velvet.")).toBeTruthy();
+    expect(screen.queryByText(/venue/i)).toBeNull();
+    expect(screen.queryByText(/plans/i)).toBeNull();
   });
 
   it("shows a wrong password inline and stays signed in", async () => {

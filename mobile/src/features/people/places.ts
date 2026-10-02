@@ -10,8 +10,8 @@ const PAD = 0.4;
 /** A map region that frames every place (null when there are none). */
 export function placesRegion(places: UserPlacesResponse["places"]): Region | null {
   if (places.length === 0) return null;
-  const lats = places.map((p) => p.venue.lat);
-  const lngs = places.map((p) => p.venue.lng);
+  const lats = places.map((p) => p.place.lat);
+  const lngs = places.map((p) => p.place.lng);
   const [minLat, maxLat, minLng, maxLng] = [Math.min(...lats), Math.max(...lats), Math.min(...lngs), Math.max(...lngs)];
   return {
     latitude: (minLat + maxLat) / 2,

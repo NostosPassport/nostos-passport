@@ -3,11 +3,9 @@
  * deleting an account **anonymizes** it, in one transaction:
  *  - email, display name and password hash are scrubbed; handle becomes `deleted-<random>` (hyphens are not
  *    allowed in real handles, so it can never collide); `deleted_at` is set; role drops to USER;
- *  - all sessions are revoked; follows (both directions), RSVPs, presence, blocks (both directions) and venue
- *    claims (pending and approved) are removed;
- *  - the user's photos (personal images) are hidden for good, each with a system `ACCOUNT_DELETED` moderation
+ *  - all sessions are revoked; follows (both directions), likes and blocks (both directions) are removed;
+ *  - the user's stamps (personal images) are hidden for good, each with a system `ACCOUNT_DELETED` moderation
  *    event, and the image files are deleted from storage after the transaction commits;
- *  - reports and comments stay, shown as "Deleted user", so consensus history is intact;
  *  - social layer: their likes, follow requests (both directions) and rate-limit rows are removed; bio and
  *    profile photo are cleared (the file is deleted after commit); a verified badge is revoked with a system
  *    entry in the append-only verification log. Their posts are photos, so they're hidden with the rest.
@@ -42,7 +40,7 @@ export async function deleteAccount(db: Db, actor: Actor | null, raw: unknown, n
     // Every photo: visible ones are hidden now; already-hidden ones get the event too, so the record shows they
     // can never be restored (moderation refuses RESTORE for deleted authors).
     const photos = await tx.photo.findMany({ where: { userId: user.id }, select: { id: true, storageKey: true } });
-    photoKeys = photos.map((p) => p.storageKey);
+    photoKeys = photos.flatMap((p) => (p.storageKey ? [p.storageKey] : []));
     if (photos.length) {
       await tx.photo.updateMany({ where: { userId: user.id, hiddenAt: null }, data: { hiddenAt: now } });
       await tx.moderationEvent.createMany({
@@ -60,10 +58,7 @@ export async function deleteAccount(db: Db, actor: Actor | null, raw: unknown, n
     if (verifiedAt) {
       await tx.verificationEvent.create({ data: { userId: user.id, action: "REVOKE", note: "Account deleted", actorId: null, createdAt: now } });
     }
-    await tx.rsvp.deleteMany({ where: { userId: user.id } });
-    await tx.presence.deleteMany({ where: { userId: user.id } });
     await tx.block.deleteMany({ where: { OR: [{ blockerId: user.id }, { blockedId: user.id }] } });
-    await tx.venueClaim.deleteMany({ where: { userId: user.id } });
     await tx.loginAttempt.deleteMany({ where: { email: user.email } });
     await tx.user.update({
       where: { id: user.id },

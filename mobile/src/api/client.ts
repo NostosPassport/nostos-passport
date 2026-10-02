@@ -2,7 +2,7 @@
  * Typed HTTP client for the Nostos API (see backend/API.md).
  *
  * Every response is parsed with the zod schemas in ./contracts. The server decides every rule
- * (geofence, cooldowns, consensus, permissions); on failure the client surfaces the server's
+ * (geofence, cooldowns, permissions); on failure the client surfaces the server's
  * `message` unchanged through `ApiError` so screens can show it inline.
  */
 import type { z } from "zod";
@@ -16,6 +16,8 @@ export type ApiErrorCode =
   | "invalid_input"
   | "bad_request"
   | "objectionable_content"
+  | "private_account"
+  | "song_search_unavailable"
   | "forbidden"
   | "wrong_password"
   | "account_suspended"
@@ -201,8 +203,6 @@ export function createApi(config: ApiConfig) {
       acceptTerms: (version: string) => request("POST", "/api/me/terms", C.AcceptTermsResponse, { version }),
       deleteAccount: (password: string) => request("POST", "/api/me/delete", C.DeleteAccountResponse, { password }),
       blocks: () => request("GET", "/api/me/blocks", C.BlocksResponse),
-      /** Undo a block from the block list (works for blocks made from Anonymous content). */
-      unblock: (ref: string) => request("DELETE", `/api/me/blocks/${enc(ref)}`, C.BlockResponse),
       following: () => request("GET", "/api/me/following", C.FollowingResponse),
       profile: () => request("GET", "/api/me/profile", C.ProfileSettingsResponse),
       /** Send only changed fields. */
@@ -217,31 +217,28 @@ export function createApi(config: ApiConfig) {
       activity: () => request("GET", "/api/me/activity", C.ActivityResponse),
     },
 
-    venues: {
-      list: () => request("GET", "/api/venues", C.VenuesResponse),
-      get: (idOrSlug: string) => request("GET", `/api/venues/${enc(idOrSlug)}`, C.VenuePageResponse),
-      report: (venueId: string, body: C.ReportRequest) => request("POST", `/api/venues/${enc(venueId)}/reports`, C.ReportResponse, body),
-      presence: (venueId: string, coords: { lat: number; lng: number }) =>
-        request("POST", `/api/venues/${enc(venueId)}/presence`, C.PresenceResponse, coords),
-      rsvp: (venueId: string, going: boolean) => request(going ? "PUT" : "DELETE", `/api/venues/${enc(venueId)}/rsvp`, C.RsvpResponse),
-      comment: (venueId: string, body: string) => request("POST", `/api/venues/${enc(venueId)}/comments`, C.CommentCreatedResponse, { body }),
-      /** A month's featured gallery (`month` = YYYY-MM; the server defaults to this month). */
-      featured: (venueId: string, month?: string) =>
-        request("GET", `/api/venues/${enc(venueId)}/featured${month ? `?month=${enc(month)}` : ""}`, C.FeaturedMonthResponse),
+    places: {
+      list: () => request("GET", "/api/places", C.PlacesResponse),
+      get: (idOrSlug: string) => request("GET", `/api/places/${enc(idOrSlug)}`, C.PlaceResponse),
+      /** Places inside or near the geofence of a position, nearest first. The server never stores the position. */
+      nearby: (pos: { lat: number; lng: number }) => request("GET", `/api/places/nearby?lat=${pos.lat}&lng=${pos.lng}`, C.NearbyPlacesResponse),
+      /** Upload a stamp with `upload("/api/places/:id/stamps", CreateStampResponse, form)`. */
     },
 
-    posts: {
-      get: (id: string) => request("GET", `/api/posts/${enc(id)}`, C.PostResponse),
-      /** Send only changed fields. */
-      edit: (id: string, body: C.PostEditRequest) => request("PATCH", `/api/posts/${enc(id)}`, C.PostEditResponse, body),
-      /** "Delete from profile": hides the post for good (nothing is ever deleted). */
-      remove: (id: string) => request("POST", `/api/posts/${enc(id)}/remove`, C.RemovePostResponse),
-      like: (id: string, like: boolean) => request(like ? "PUT" : "DELETE", `/api/posts/${enc(id)}/like`, C.LikeResponse),
+    stamps: {
+      get: (id: string) => request("GET", `/api/stamps/${enc(id)}`, C.StampResponse),
+      /** Caption and song only; send only changed fields (`song: null` removes the song). */
+      edit: (id: string, body: C.StampEditRequest) => request("PATCH", `/api/stamps/${enc(id)}`, C.StampResponse, body),
+      /** "Delete from profile": hides the stamp for good (nothing is ever deleted). */
+      remove: (id: string) => request("POST", `/api/stamps/${enc(id)}/remove`, C.RemoveStampResponse),
+      like: (id: string, like: boolean) => request(like ? "PUT" : "DELETE", `/api/stamps/${enc(id)}/like`, C.LikeResponse),
     },
 
-    comments: {
-      edit: (id: string, body: string) => request("PATCH", `/api/comments/${enc(id)}`, C.CommentEditedResponse, { body }),
-      reply: (id: string, body: string) => request("POST", `/api/comments/${enc(id)}/reply`, C.ReplyCreatedResponse, { body }),
+    /** Home feed: people you follow, newest first. Pass the previous page's `nextBefore` for the next page. */
+    feed: (before?: string | null) => request("GET", `/api/feed${before ? `?before=${enc(before)}` : ""}`, C.FeedResponse),
+
+    songs: {
+      search: (q: string) => request("GET", `/api/songs/search?q=${enc(q)}`, C.SongSearchResponse),
     },
 
     users: {
@@ -249,17 +246,12 @@ export function createApi(config: ApiConfig) {
       get: (handle: string) => request("GET", `/api/users/${enc(handle)}`, C.ProfileResponse),
       follow: (handle: string, follow: boolean) => request(follow ? "PUT" : "DELETE", `/api/users/${enc(handle)}/follow`, C.FollowResponse),
       block: (handle: string, block: boolean) => request(block ? "POST" : "DELETE", `/api/users/${enc(handle)}/block`, C.BlockResponse),
-      /** Profile grid, newest first; pass the previous page's `nextBefore` for the next page. */
-      posts: (handle: string, before?: string | null) =>
-        request("GET", `/api/users/${enc(handle)}/posts${before ? `?before=${enc(before)}` : ""}`, C.UserPostsResponse),
+      /** Passport stamps grid, newest first; pass the previous page's `nextBefore` for the next page. */
+      stamps: (handle: string, before?: string | null) =>
+        request("GET", `/api/users/${enc(handle)}/stamps${before ? `?before=${enc(before)}` : ""}`, C.UserStampsResponse),
       places: (handle: string) => request("GET", `/api/users/${enc(handle)}/places`, C.UserPlacesResponse),
       /** 403 `private_account` without full access to the profile. */
       people: (handle: string, list: "followers" | "following") => request("GET", `/api/users/${enc(handle)}/${list}`, C.PeopleListResponse),
-    },
-
-    blocks: {
-      /** Block whoever wrote a photo or comment, without learning who (for "Anonymous" authors). */
-      authorOf: (body: z.infer<typeof C.BlockAuthorRequest>) => request("POST", "/api/blocks", C.BlockResponse, body),
     },
 
     flags: {
@@ -271,14 +263,6 @@ export function createApi(config: ApiConfig) {
       hidden: () => request("GET", "/api/mod/hidden", C.ModHiddenResponse),
       log: () => request("GET", "/api/mod/log", C.ModLogResponse),
       act: (body: z.infer<typeof C.ModActionRequest>) => request("POST", "/api/mod/actions", C.ModActionResponse, body),
-    },
-
-    owner: {
-      overview: () => request("GET", "/api/owner/venues", C.OwnerOverviewResponse),
-      dashboard: (venueId: string) => request("GET", `/api/owner/venues/${enc(venueId)}`, C.OwnerDashboardResponse),
-      updateInfo: (venueId: string, body: C.OfficialInfoRequest) => request("PATCH", `/api/owner/venues/${enc(venueId)}`, C.OfficialInfoResponse, body),
-      createPromo: (venueId: string, body: C.PromoRequest) => request("POST", `/api/owner/venues/${enc(venueId)}/promos`, C.PromoResponse, body),
-      endPromo: (promoId: string) => request("POST", `/api/owner/promos/${enc(promoId)}/end`, C.PromoResponse),
     },
 
     /**

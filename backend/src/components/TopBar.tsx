@@ -31,11 +31,6 @@ export function NavLinks({ actor }: { actor: Actor | null }) {
   }
   return (
     <nav className="flex items-center gap-1.5 whitespace-nowrap text-sm">
-      {actor.role === "VENUE_OWNER" && (
-        <Link href="/owner" className="rounded-full border border-line px-2.5 py-1 text-venue">
-          Venue
-        </Link>
-      )}
       {(actor.role === "MODERATOR" || actor.role === "ADMIN") && (
         <Link href="/mod" className="rounded-full border border-line px-2.5 py-1 text-warn">
           Mod
@@ -46,12 +41,7 @@ export function NavLinks({ actor }: { actor: Actor | null }) {
           Admin
         </Link>
       )}
-      <Link href="/people" className="rounded-full border border-line px-2.5 py-1" aria-label="People">
-        👥
-      </Link>
-      <Link href={`/u/${actor.handle}`} className="rounded-full bg-panel-2 px-2.5 py-1">
-        @{actor.handle}
-      </Link>
+      <span className="rounded-full bg-panel-2 px-2.5 py-1">@{actor.handle}</span>
       <LogoutButton />
     </nav>
   );

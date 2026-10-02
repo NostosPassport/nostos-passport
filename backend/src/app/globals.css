@@ -28,22 +28,3 @@ body {
 body {
   min-height: 100dvh;
 }
-
-.leaflet-container {
-  background: #10101a;
-  font: inherit;
-}
-
-/* Dark basemap from standard OSM tiles (no API key needed). */
-.leaflet-tile-pane {
-  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
-}
-
-/* Keep Leaflet's attribution readable on the dark theme. */
-.leaflet-control-attribution {
-  background: rgba(11, 11, 18, 0.75) !important;
-  color: #9a9ab0 !important;
-}
-.leaflet-control-attribution a {
-  color: #b388ff !important;
-}

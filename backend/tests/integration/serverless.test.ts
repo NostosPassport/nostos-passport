@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
 import { login, signup, pruneLoginAttempts } from "@/server/services/auth";
-import { GET as cronGet, POST as cronPost } from "@/app/api/cron/reputation/route";
+import { GET as cronGet, POST as cronPost } from "@/app/api/cron/maintenance/route";
 import { GET as health } from "@/app/api/health/route";
 import { GET as uploads } from "@/app/api/uploads/[...key]/route";
 import { installMemoryStorage } from "./mem-storage";
@@ -49,38 +49,15 @@ describe("login throttle (Postgres, email + IP)", () => {
 });
 
 describe("cron route", () => {
-  const withSecret = (h?: string) => new Request("http://x/api/cron/reputation", { headers: h ? { authorization: h } : {} });
+  const withSecret = (h?: string) => new Request("http://x/api/cron/maintenance", { headers: h ? { authorization: h } : {} });
   it("rejects missing or wrong secrets and runs with the right one (GET for Vercel Cron, POST manually)", async () => {
     process.env.CRON_SECRET = "test-cron-secret-123456";
     expect((await cronGet(withSecret())).status).toBe(401);
     expect((await cronGet(withSecret("Bearer wrong"))).status).toBe(401);
     const res = await cronGet(withSecret("Bearer test-cron-secret-123456"));
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ ok: true, judged: expect.any(Number), updated: expect.any(Number) });
+    expect(await res.json()).toMatchObject({ ok: true, prunedLoginAttempts: expect.any(Number), prunedRateEvents: expect.any(Number) });
     expect((await cronPost(withSecret("Bearer test-cron-secret-123456"))).status).toBe(200);
-  });
-
-  it("reports skipped: true when another run holds the lock", async () => {
-    process.env.CRON_SECRET = "test-cron-secret-123456";
-    await prisma.user.create({ data: { email: "z@x.dev", handle: "zzz", displayName: "z", passwordHash: "x" } });
-    // Give the job something to write so it reaches the locked write phase.
-    const venue = await prisma.venue.create({ data: { slug: "lk", name: "L", address: "a", neighborhood: "n", lat: 40.72, lng: -73.98, hours: [] } });
-    const [a, b, c] = await Promise.all(["l1", "l2", "l3"].map((h) => prisma.user.create({ data: { email: `${h}@x.dev`, handle: h, displayName: h, passwordHash: "x" } })));
-    const base = Date.now() - 2 * 86_400_000;
-    for (const [i, u] of [a!, b!, c!].entries()) {
-      await prisma.report.create({ data: { userId: u.id, venueId: venue.id, type: "VIBE", vibe: "PACKED", lat: 40.72, lng: -73.98, createdAt: new Date(base + i * 60_000) } });
-    }
-    let release!: () => void;
-    const held = new Promise<void>((r) => (release = r));
-    const holder = prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${815_2026})`;
-      await held;
-    }, { timeout: 20_000 });
-    await new Promise((r) => setTimeout(r, 200));
-    const res = await cronGet(withSecret("Bearer test-cron-secret-123456"));
-    release();
-    await holder;
-    expect(await res.json()).toMatchObject({ ok: true, skipped: true, updated: 0 });
   });
 });
 

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatAge } from "@/lib/time";
@@ -22,26 +21,26 @@ export default async function ModPage() {
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-5">
         <section>
           <h2 className="mb-1 font-semibold">Queue ({queue.length})</h2>
-          <p className="mb-3 text-xs text-muted">Moderators decide on flags, not venues. Hidden content is never deleted, and every action is logged permanently.</p>
+          <p className="mb-3 text-xs text-muted">Moderators decide on flags. Hidden content is never deleted, and every action is logged permanently.</p>
           {queue.length === 0 && <p className="rounded-2xl bg-panel p-6 text-center text-sm text-muted">All clear. Nothing flagged.</p>}
           <ul className="space-y-3">
             {queue.map((item) => (
               <li key={`${item.targetType}:${item.targetId}`} className={`rounded-2xl border bg-panel p-3 ${item.content?.hiddenAt ? "border-packed/50" : "border-line"}`}>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="rounded bg-panel-2 px-1.5 py-0.5 font-semibold uppercase">{item.targetType.toLowerCase()}</span>
-                  {item.venue ? <Link href={`/v/${item.venue.slug}`} className="text-accent">{item.venue.name}</Link> : <span className="text-muted">Account report</span>}
+                  {item.venue ? <span className="text-accent">{item.venue.name}</span> : <span className="text-muted">Account report</span>}
                   {item.content?.hiddenAt && <span className="rounded bg-packed/20 px-1.5 py-0.5 font-semibold text-packed">{item.targetType === "USER" ? "Suspended" : "Hidden pending review"}</span>}
                 </div>
                 {item.content ? (
                   <div className="mt-2 flex gap-3">
                     {item.content.url && (
                       // eslint-disable-next-line @next/next/no-img-element -- moderators can view hidden photos
-                      <img src={item.content.url} alt="Flagged photo" className="h-24 w-20 shrink-0 rounded-lg object-cover" />
+                      <img src={item.content.url} alt="Flagged stamp" className="h-24 w-20 shrink-0 rounded-lg object-cover" />
                     )}
                     <div className="min-w-0 text-sm">
                       <p className="break-words">{item.content.preview || <span className="text-muted">(no caption)</span>}</p>
                       <p className="mt-1 text-xs text-muted">
-                        by <Link href={`/u/${item.content.author}`} className="underline">@{item.content.author}</Link> (rep {item.content.authorRep.toFixed(2)}) · {formatAge(item.content.createdAt, now)}
+                        by @{item.content.author} (rep {item.content.authorRep.toFixed(2)}) · {formatAge(item.content.createdAt, now)}
                       </p>
                     </div>
                   </div>
@@ -52,8 +51,6 @@ export default async function ModPage() {
                   {item.flags.map((f) => (
                     <li key={f.id}>
                       <span className="text-warn">⚑</span> “{f.reason}” by @{f.by}
-                      {f.byVenueOwner && <span className="ml-1 rounded bg-venue/20 px-1 text-[10px] font-bold uppercase text-venue">this venue&apos;s owner</span>}
-                      {f.byOtherVenueOwner && <span className="ml-1 rounded bg-warn/20 px-1 text-[10px] font-bold uppercase text-warn">owner of another venue</span>}
                       <span className="text-muted"> · {formatAge(f.createdAt, now)}</span>
                     </li>
                   ))}

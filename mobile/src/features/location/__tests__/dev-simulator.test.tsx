@@ -20,7 +20,7 @@ function loadWithDev(dev: boolean) {
   let mods!: {
     sim: typeof import("../dev-simulator");
     store: typeof import("../location-store");
-    chip: typeof import("../../map/sim-chip");
+    chip: typeof import("../sim-chip");
     rtl: typeof import("@testing-library/react-native/pure");
     React: typeof import("react");
   };
@@ -28,7 +28,7 @@ function loadWithDev(dev: boolean) {
     mods = {
       sim: require("../dev-simulator"),
       store: require("../location-store"),
-      chip: require("../../map/sim-chip"),
+      chip: require("../sim-chip"),
       // Same module registry as the component, so there is one copy of React.
       rtl: require("@testing-library/react-native/pure"),
       React: require("react"),

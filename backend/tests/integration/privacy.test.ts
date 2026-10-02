@@ -1,179 +1,207 @@
+// Phase 1: privacy foundation. The same private author is read through every payload by every kind of viewer.
+// Stamps and places of a private account reach only people with full access (the author, an approved follower, staff).
 import { describe, expect, it } from "vitest";
-import sharp from "sharp";
 import { prisma } from "@/lib/db";
-import { getVenuePage } from "@/server/services/venues";
-import { ownerVenueDashboard, setOfficialPhoto } from "@/server/services/owner";
-import { submitPhoto, processImage, MAX_IMAGE_DIMENSION } from "@/server/services/photos";
-import { addComment, editComment, replyAsVenue } from "@/server/services/comments";
+import { createStamp, getStamp, listFeed, listUserPlaces, listUserStamps } from "@/server/services/stamps";
+import { decideFollowRequest, follow, getProfile, listConnections, searchUsers, updateProfile } from "@/server/services/people";
+import { blockUser } from "@/server/services/blocks";
+import { likeStamp } from "@/server/services/likes";
 import { flagContent } from "@/server/services/moderation";
-import { getProfile } from "@/server/services/people";
-import { GET as venuesRoute } from "@/app/api/venues/route";
+import { listActivity } from "@/server/services/activity";
+import type { Actor } from "@/server/actor";
 import { installMemoryStorage } from "./mem-storage";
-import { makeActor, makeOwner, makeUser, makeVenue, INSIDE } from "./factories";
+import { makeActor, makeStamp, makeVenue } from "./factories";
 
-const mem = installMemoryStorage();
+installMemoryStorage();
+const wire = (x: unknown) => JSON.stringify(JSON.parse(JSON.stringify(x)));
 
-/** Every key path in a JSON-serialized payload (what actually crosses the wire). */
-function keyPaths(value: unknown, path = "$", out: string[] = []): string[] {
-  if (Array.isArray(value)) value.forEach((v) => keyPaths(v, `${path}[]`, out));
-  else if (value && typeof value === "object") {
-    for (const [k, v] of Object.entries(value)) {
-      out.push(`${path}.${k}`);
-      keyPaths(v, `${path}.${k}`, out);
-    }
-  }
-  return out;
-}
-const wire = (x: unknown) => JSON.parse(JSON.stringify(x)) as unknown;
+type Kind = "signed out" | "stranger" | "requester" | "follower" | "self" | "staff" | "blocked by author" | "blocker of author";
+const FULL: Kind[] = ["follower", "self", "staff"];
 
-async function jpegWithGps() {
-  return sharp({ create: { width: 3000, height: 1000, channels: 3, background: "#ff3d6e" } })
-    .jpeg()
-    .withExif({ IFD0: { Make: "LeakyPhone", Model: "X1" }, IFD3: { GPSLatitudeRef: "N", GPSLatitude: "40/1 43/1 36/1" } })
-    .toBuffer();
-}
-
-async function populatedVenue() {
+async function scene(isPrivate: boolean) {
   const venue = await makeVenue();
-  const author = await makeUser();
-  await prisma.photo.create({ data: { userId: author.id, venueId: venue.id, storageKey: "photos/live.png", mimeType: "image/png", caption: "live", ...INSIDE } });
-  await prisma.photo.create({
-    data: { userId: author.id, venueId: venue.id, storageKey: "photos/old.png", mimeType: "image/png", caption: "old", ...INSIDE, createdAt: new Date(Date.now() - 5 * 3600_000) },
-  });
-  const c = await addComment(prisma, { userId: author.id, role: "USER", handle: author.handle, displayName: author.handle, ownedVenueIds: [], geofenceExempt: false }, venue.id, { body: "busy!" });
-  const owner = await makeOwner(venue.id);
-  await replyAsVenue(prisma, owner, c.id, { body: "thanks" });
-  await prisma.report.create({ data: { userId: author.id, venueId: venue.id, type: "VIBE", vibe: "BUSY", ...INSIDE } });
-  return { venue, author, owner };
+  const author = await makeActor({ isPrivate, handle: `author_${Math.random().toString(36).slice(2, 7)}` });
+  const stamp = await makeStamp(author, venue.id, { caption: "secret caption", meta: { songTitle: "Secret Song", songArtist: "Hidden Band" } });
+  const follower = await makeActor();
+  await follow(prisma, follower, author.handle);
+  if (isPrivate) await decideFollowRequest(prisma, author, follower.handle, { approve: true });
+  const requester = await makeActor();
+  if (isPrivate) await follow(prisma, requester, author.handle);
+  const blockedByAuthor = await makeActor();
+  await blockUser(prisma, author, blockedByAuthor.handle);
+  const blocker = await makeActor();
+  await blockUser(prisma, blocker, author.handle);
+  const viewers: Record<Kind, Actor | null> = {
+    "signed out": null,
+    stranger: await makeActor(),
+    requester,
+    follower,
+    self: author,
+    staff: await makeActor({ role: "MODERATOR" }),
+    "blocked by author": blockedByAuthor,
+    "blocker of author": blocker,
+  };
+  return { venue, author, stamp, viewers };
 }
 
-describe("venue page payload leaks no user-content coordinates, storage keys or user ids", () => {
-  it("only the venue's own coordinates appear; photos expose a URL, people expose a handle", async () => {
-    const { venue, author } = await populatedVenue();
-    const viewer = await makeActor();
-    const page = wire(await getVenuePage(prisma, venue.slug, viewer));
-    const paths = keyPaths(page);
-    expect(paths.filter((p) => /\.(lat|lng)$/.test(p))).toEqual(["$.official.lat", "$.official.lng"]);
-    expect(paths.filter((p) => /(storageKey|userId|user\.id|\.user$|createdById|changedById)/.test(p))).toEqual([]);
-    const json = JSON.stringify(page);
-    expect(json).not.toContain(author.id);
-    expect(json).not.toContain(INSIDE.lat.toString());
-    const p = (page as { live: { livePhotos: { url: string }[]; earlierPhotos: { url: string }[] } }).live;
-    expect(p.livePhotos[0]!.url).toMatch(/^\/api\/uploads\/photos\/live\.png\?exp=\d{10}&sig=[\w-]+$/);
-    expect(p.earlierPhotos[0]!.url).toMatch(/^\/api\/uploads\/photos\/old\.png\?exp=/);
-  });
+/** Whether a viewer is expected to see the stamps of this author. Public: everyone except the blocked pair (staff too). */
+const sees = (kind: Kind, isPrivate: boolean) => (isPrivate ? FULL.includes(kind) : kind !== "blocked by author" && kind !== "blocker of author");
 
-  it("the /api/venues response carries only whitelisted venue fields", async () => {
-    await populatedVenue();
-    const res = await venuesRoute(new Request("http://localhost/api/venues"), undefined as never);
-    const body = (await res.json()) as { venues: Record<string, unknown>[] };
-    const allowed = ["id", "slug", "name", "address", "neighborhood", "lat", "lng", "vibe", "vibeReports", "hereNow", "goingTonight", "friendsGoing", "activity", "promoted", "fromOsm"];
-    for (const v of body.venues) expect(Object.keys(v).sort()).toEqual([...allowed].sort());
-    expect(keyPaths(body).filter((p) => /\.(lat|lng)$/.test(p)).every((p) => /^\$\.venues\[\]\.(lat|lng)$/.test(p))).toBe(true);
-  });
-});
+for (const isPrivate of [true, false]) {
+  describe(`an ${isPrivate ? "private" : "public"} account's stamps and places, by viewer`, () => {
+    for (const kind of ["signed out", "stranger", "requester", "follower", "self", "staff", "blocked by author", "blocker of author"] as Kind[]) {
+      const allowed = sees(kind, isPrivate) || (kind.startsWith("blocked") || kind.startsWith("blocker") ? false : false);
+      const staffOverBlock = kind === "staff";
+      it(`${kind}: ${allowed || staffOverBlock ? "sees" : "does not see"} the stamp, the grid, the places and the counts`, async () => {
+        const { venue, author, stamp, viewers } = await scene(isPrivate);
+        const v = viewers[kind];
+        const secrets = [stamp.id, venue.slug, venue.name, "secret caption", "Secret Song", "Hidden Band"];
+        const leaks = (payload: unknown) => secrets.filter((s) => wire(payload).includes(s));
 
-describe("owner dashboard is anonymous about reporters", () => {
-  it("recent reports carry id, type, value and age only; no reporter handles or user ids anywhere", async () => {
-    const venue = await makeVenue();
-    const owner = await makeOwner(venue.id);
-    const reporters = [await makeUser(), await makeUser()];
-    for (const r of reporters) await prisma.report.create({ data: { userId: r.id, venueId: venue.id, type: "COVER", coverCents: 2000, ...INSIDE } });
-    const dash = wire(await ownerVenueDashboard(prisma, owner, venue.id)) as { recentReports: Record<string, unknown>[] };
-    expect(dash.recentReports).toHaveLength(2);
-    for (const r of dash.recentReports) expect(Object.keys(r).sort()).toEqual(["coverCents", "createdAt", "id", "line", "type", "vibe"]);
-    const json = JSON.stringify(dash);
-    for (const r of reporters) {
-      expect(json).not.toContain(r.id);
-      expect(json).not.toContain(r.handle);
+        // Profile: counts and everything else only with full access; the limited view has the handle and badge only.
+        const blockedPair = kind.startsWith("blocked") || kind.startsWith("blocker");
+        if (blockedPair) {
+          await expect(getProfile(prisma, author.handle, v)).rejects.toMatchObject({ status: 404 });
+        } else {
+          const profile = await getProfile(prisma, author.handle, v);
+          expect(profile.access).toBe(allowed ? "full" : "limited");
+          if (profile.access === "limited") expect(Object.keys(profile.user).sort()).toEqual(["handle", "isPrivate", "verified"]);
+          expect(leaks(profile)).toEqual([]);
+        }
+
+        // Stamp detail: 404 (never 403) so existence isn't revealed.
+        if (allowed || staffOverBlock) await expect(getStamp(prisma, v, stamp.id)).resolves.toBeTruthy();
+        else await expect(getStamp(prisma, v, stamp.id)).rejects.toMatchObject({ status: 404 });
+
+        // Lists: grid and places.
+        for (const list of [() => listUserStamps(prisma, v, author.handle), () => listUserPlaces(prisma, v, author.handle)]) {
+          if (allowed || staffOverBlock) await expect(list()).resolves.toBeTruthy();
+          else await expect(list()).rejects.toMatchObject({ status: blockedPair ? 404 : 403 });
+        }
+
+        // Likes and reports need to see the stamp.
+        if (v && !(allowed || staffOverBlock)) {
+          await expect(likeStamp(prisma, v, stamp.id)).rejects.toMatchObject({ status: 404 });
+          await expect(flagContent(prisma, v, { targetType: "STAMP", targetId: stamp.id, reason: "probing around" })).rejects.toMatchObject({ status: 404 });
+        }
+
+        // Search: the account may be found by handle, but only as the limited view unless the viewer has full access.
+        if (v) {
+          const found = await searchUsers(prisma, v, author.handle);
+          if (blockedPair) expect(found).toEqual([]);
+          expect(leaks(found)).toEqual([]);
+        }
+
+        // Followers and following lists need full access.
+        if (!blockedPair) {
+          for (const which of ["followers", "following"] as const) {
+            if (allowed) await expect(listConnections(prisma, v, author.handle, which)).resolves.toBeTruthy();
+            else await expect(listConnections(prisma, v, author.handle, which)).rejects.toMatchObject({ status: 403 });
+          }
+        }
+
+        // Feed: only people you follow with approved follows; a pending request shows nothing. Never a blocked pair.
+        if (v) {
+          const feed = await listFeed(prisma, v);
+          const expected = kind === "follower";
+          expect(feed.stamps.map((s) => s.id).includes(stamp.id)).toBe(expected);
+        }
+      });
     }
-    expect(keyPaths(dash).filter((p) => /(userId|createdById|changedById|storageKey|\.user$)/.test(p))).toEqual([]);
   });
-});
+}
 
-describe("auto-hide eligibility", () => {
-  it("only USER accounts >= 7 days old with reputation >= 0.5 count", async () => {
+describe("activity never carries a private account's stamps to people without access", () => {
+  it("a private person who likes your stamp shows as a handle only; their own stamps never appear", async () => {
     const venue = await makeVenue();
-    const author = await makeUser();
-    const photo = await prisma.photo.create({ data: { userId: author.id, venueId: venue.id, storageKey: "photos/x.png", mimeType: "image/png", caption: "", ...INSIDE } });
-    const flag = async (a: Awaited<ReturnType<typeof makeActor>>) => (await flagContent(prisma, a, { targetType: "PHOTO", targetId: photo.id, reason: "fake" })).autoHidden;
-    expect(await flag(await makeActor({ ageDays: 2 }))).toBe(false); // too new
-    expect(await flag(await makeActor({ ageDays: 60, reputation: 0.3 }))).toBe(false); // low reputation
-    expect(await flag(await makeActor({ ageDays: 8, reputation: 0.5 }))).toBe(false); // 1 eligible
-    expect(await flag(await makeActor({ ageDays: 400, reputation: 1.2 }))).toBe(false); // 2 eligible
-    expect((await prisma.photo.findUniqueOrThrow({ where: { id: photo.id } })).hiddenAt).toBeNull();
-    expect(await flag(await makeActor({ ageDays: 30, reputation: 0.9 }))).toBe(true); // 3 eligible
+    const me = await makeActor({ isPrivate: false });
+    const liker = await makeActor(); // private
+    await makeStamp(liker, venue.id, { caption: "liker's secret", meta: { songTitle: "Liker Song", songArtist: "Liker Band" } });
+    const mine = await makeStamp(me, (await makeVenue()).id);
+    await prisma.photo.update({ where: { id: mine.id }, data: {} }).catch(() => {});
+    await likeStamp(prisma, liker, mine.id);
+    await follow(prisma, liker, me.handle);
+    const activity = await listActivity(prisma, me);
+    const json = wire(activity);
+    expect(activity.find((a) => a.kind === "like")).toMatchObject({ person: { handle: liker.handle, displayName: null, avatarUrl: null } });
+    expect(json).not.toContain("liker's secret");
+    expect(json).not.toContain("Liker Song");
+    expect(json).not.toContain(venue.slug);
+  });
+
+  it("likes by or on a blocked person disappear from activity in both directions", async () => {
+    const me = await makeActor({ isPrivate: false });
+    const fan = await makeActor();
+    const mine = await makeStamp(me, (await makeVenue()).id);
+    await likeStamp(prisma, fan, mine.id);
+    expect((await listActivity(prisma, me)).filter((a) => a.kind === "like")).toHaveLength(1);
+    await blockUser(prisma, me, fan.handle);
+    expect((await listActivity(prisma, me)).filter((a) => a.kind === "like")).toHaveLength(0);
+    expect((await listActivity(prisma, fan)).filter((a) => a.kind === "like")).toHaveLength(0);
   });
 });
 
-describe("comment edits freeze once others have acted", () => {
-  it("409 after a venue reply", async () => {
+describe("blocking by handle hides the pair from each other everywhere", () => {
+  it("profile, search, lists, feed, activity and likes: nothing leaks in either direction", async () => {
+    const venue = await makeVenue();
+    const [a, b] = [await makeActor({ isPrivate: false }), await makeActor({ isPrivate: false })];
+    const sa = await makeStamp(a, venue.id, { caption: "a's stamp" });
+    const sb = await makeStamp(b, (await makeVenue()).id, { caption: "b's stamp" });
+    await follow(prisma, a, b.handle);
+    await follow(prisma, b, a.handle);
+    await likeStamp(prisma, a, sb.id);
+    await likeStamp(prisma, b, sa.id);
+    await blockUser(prisma, a, b.handle);
+    for (const [x, y, ys] of [[a, b, sb], [b, a, sa]] as const) {
+      await expect(getProfile(prisma, y.handle, x)).rejects.toMatchObject({ status: 404 });
+      await expect(getStamp(prisma, x, ys.id)).rejects.toMatchObject({ status: 404 });
+      await expect(listUserStamps(prisma, x, y.handle)).rejects.toMatchObject({ status: 404 });
+      await expect(listUserPlaces(prisma, x, y.handle)).rejects.toMatchObject({ status: 404 });
+      await expect(listConnections(prisma, x, y.handle, "followers")).rejects.toMatchObject({ status: 404 });
+      await expect(likeStamp(prisma, x, ys.id)).rejects.toMatchObject({ status: 404 });
+      await expect(follow(prisma, x, y.handle)).rejects.toMatchObject({ status: 403 });
+      expect(await searchUsers(prisma, x, y.handle)).toEqual([]);
+      expect((await listFeed(prisma, x)).stamps).toEqual([]);
+      expect(wire(await listActivity(prisma, x))).not.toContain(y.handle);
+    }
+    // Neither side's like counts on the other's stamp are shown to the blocked party; staff still see both.
+    const staff = await makeActor({ role: "MODERATOR" });
+    await expect(getStamp(prisma, staff, sa.id)).resolves.toBeTruthy();
+    await expect(getProfile(prisma, b.handle, staff)).resolves.toBeTruthy();
+  });
+
+  it("a third party sees neither person's block", async () => {
+    const [a, b, c] = [await makeActor({ isPrivate: false }), await makeActor({ isPrivate: false }), await makeActor()];
+    await blockUser(prisma, a, b.handle);
+    const profile = await getProfile(prisma, a.handle, c);
+    expect(wire(profile)).not.toContain(b.handle);
+  });
+});
+
+describe("going public changes what strangers can see", () => {
+  it("every stamp and place becomes visible to strangers and signed-out people; going private hides them again", async () => {
     const venue = await makeVenue();
     const author = await makeActor();
-    const c = await addComment(prisma, author, venue.id, { body: "cover $20" });
-    await replyAsVenue(prisma, await makeOwner(venue.id), c.id, { body: "it's $10" });
-    await expect(editComment(prisma, author, c.id, { body: "cover $10" })).rejects.toMatchObject({ status: 409, message: expect.stringMatching(/replied/) });
-  });
-
-  it("409 while a flag is open; editable again after review", async () => {
-    const venue = await makeVenue();
-    const author = await makeActor();
-    const c = await addComment(prisma, author, venue.id, { body: "meh" });
-    await flagContent(prisma, await makeActor(), { targetType: "COMMENT", targetId: c.id, reason: "rude!" });
-    await expect(editComment(prisma, author, c.id, { body: "nice" })).rejects.toMatchObject({ status: 409, message: expect.stringMatching(/review/) });
-    await prisma.flag.updateMany({ where: { targetId: c.id }, data: { status: "RESOLVED" } });
-    await expect(editComment(prisma, author, c.id, { body: "nice" })).resolves.toMatchObject({ body: "nice" });
+    const stamp = await makeStamp(author, venue.id);
+    const stranger = await makeActor();
+    await expect(listUserStamps(prisma, stranger, author.handle)).rejects.toMatchObject({ status: 403 });
+    await expect(listUserPlaces(prisma, null, author.handle)).rejects.toMatchObject({ status: 403 });
+    await updateProfile(prisma, author, { isPrivate: false });
+    expect((await listUserStamps(prisma, stranger, author.handle)).stamps.map((s) => s.id)).toEqual([stamp.id]);
+    expect((await listUserPlaces(prisma, null, author.handle)).places).toHaveLength(1);
+    await expect(getStamp(prisma, null, stamp.id)).resolves.toBeTruthy();
+    await updateProfile(prisma, author, { isPrivate: true });
+    await expect(getStamp(prisma, stranger, stamp.id)).rejects.toMatchObject({ status: 404 });
+    await expect(listUserStamps(prisma, null, author.handle)).rejects.toMatchObject({ status: 403 });
   });
 });
 
-describe("reputation is private", () => {
-  it("visible to self and moderators only", async () => {
-    const u = await makeActor({ reputation: 0.8, isPrivate: false });
-    const rep = async (viewer: Parameters<typeof getProfile>[2]) => {
-      const p = await getProfile(prisma, u.handle, viewer);
-      return p.access === "full" ? p.user.reputation : "limited";
-    };
-    expect(await rep(u)).toBe(0.8);
-    expect(await rep(await makeActor({ role: "MODERATOR" }))).toBe(0.8);
-    expect(await rep(await makeActor())).toBeNull();
-    expect(await rep(null)).toBeNull();
-  });
-});
-
-describe("uploads are re-encoded without metadata", () => {
-  it("processImage strips EXIF/GPS and caps dimensions at 2048px", async () => {
-    const input = await jpegWithGps();
-    expect((await sharp(input).metadata()).exif).toBeDefined();
-    const { bytes, kind } = await processImage(input);
-    const meta = await sharp(bytes).metadata();
-    expect(kind.ext).toBe("jpg");
-    expect(meta.exif).toBeUndefined();
-    expect(meta.xmp).toBeUndefined();
-    expect(meta.width).toBe(MAX_IMAGE_DIMENSION);
-    expect(meta.height).toBe(Math.round((1000 * MAX_IMAGE_DIMENSION) / 3000));
-    expect(bytes.includes(Buffer.from("LeakyPhone"))).toBe(false);
-  });
-
-  it("stored user photos and official photos have no EXIF", async () => {
-    const venue = await makeVenue();
-    const photo = await submitPhoto(prisma, await makeActor(), venue.id, { bytes: await jpegWithGps(), meta: { caption: "", ...INSIDE } });
-    expect((await sharp(mem.get(photo.storageKey)!).metadata()).exif).toBeUndefined();
-    const v = await setOfficialPhoto(prisma, await makeOwner(venue.id), venue.id, await jpegWithGps());
-    expect((await sharp(mem.get(v.officialPhotoKey!)!).metadata()).exif).toBeUndefined();
-  });
-
-  it("rejects bytes that sniff as an image but don't decode", async () => {
-    const fake = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.from("not really a jpeg")]);
-    await expect(processImage(fake)).rejects.toMatchObject({ status: 415 });
-  });
-});
-
-describe("comment burst limit under concurrency", () => {
-  it("parallel posts can't exceed 5 per user per venue per 10 minutes", async () => {
+describe("per-stamp visibility is the account's privacy: there is no sharing toggle", () => {
+  it("a stamp request that tries to set `shared` is refused, and the schema has no such column", async () => {
     const venue = await makeVenue();
     const me = await makeActor();
-    const results = await Promise.allSettled(Array.from({ length: 10 }, (_, i) => addComment(prisma, me, venue.id, { body: `c${i}` })));
-    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(5);
-    expect(await prisma.comment.count({ where: { userId: me.userId } })).toBe(5);
+    await expect(createStamp(prisma, me, venue.id, { meta: { caption: "x", lat: "40.7265", lng: "-73.9845", shared: "true" } })).rejects.toThrow();
+    const cols = await prisma.$queryRaw<{ column_name: string }[]>`SELECT column_name FROM information_schema.columns WHERE table_name = 'photo'`;
+    expect(cols.map((c) => c.column_name)).not.toContain("shared");
   });
 });

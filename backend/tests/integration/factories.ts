@@ -21,27 +21,15 @@ export async function makeUser(opts: { role?: Role; ageDays?: number; reputation
 
 export const VENUE_POS = { lat: 40.7265, lng: -73.9845 };
 
-export async function makeVenue(opts: { officialCoverCents?: number | null; slug?: string; lat?: number; lng?: number } = {}) {
+export async function makeVenue(opts: { slug?: string; lat?: number; lng?: number; geofenceMeters?: number } = {}) {
   n++;
   const slug = opts.slug ?? `venue-${n}-${Math.random().toString(36).slice(2, 6)}`;
-  const venue = await prisma.venue.create({
+  return prisma.venue.create({
     data: {
       slug, name: `Venue ${n}`, address: `${n} Test St`, neighborhood: "East Village",
-      lat: opts.lat ?? VENUE_POS.lat, lng: opts.lng ?? VENUE_POS.lng,
-      hours: [{ day: 5, open: "20:00", close: "04:00" }],
-      officialCoverCents: opts.officialCoverCents === undefined ? 1000 : opts.officialCoverCents,
+      lat: opts.lat ?? VENUE_POS.lat, lng: opts.lng ?? VENUE_POS.lng, ...(opts.geofenceMeters ? { geofenceMeters: opts.geofenceMeters } : {}),
     },
   });
-  await prisma.venueCoverHistory.create({
-    data: { venueId: venue.id, coverCents: venue.officialCoverCents, effectiveFrom: new Date(Date.now() - 60 * DAY_MS) },
-  });
-  return venue;
-}
-
-export async function makeOwner(venueId: string) {
-  const user = await makeUser({ role: "VENUE_OWNER" });
-  await prisma.venueClaim.create({ data: { venueId, userId: user.id, status: "APPROVED", reviewedAt: new Date() } });
-  return (await loadActor(prisma, user.id))!;
 }
 
 export async function actorFor(userId: string): Promise<Actor> {
@@ -64,4 +52,30 @@ export async function verify(userId: string, note = "Test verification") {
     await tx.verificationEvent.create({ data: { userId, action: "GRANT", note } });
     await tx.user.update({ where: { id: userId }, data: { verifiedAt: new Date() } });
   });
+}
+
+import { PNG } from "pngjs";
+import { createStamp } from "@/server/services/stamps";
+
+/** A tiny valid PNG (what a phone would send, minus the size). */
+export function pngBytes(fill = 120) {
+  const p = new PNG({ width: 4, height: 4 });
+  p.data.fill(fill);
+  return PNG.sync.write(p);
+}
+
+/** Stamps a place as `actor`, inside the geofence unless `at` says otherwise. Defaults to a photo and a caption. */
+export function makeStamp(
+  actor: Actor,
+  venueId: string,
+  opts: { at?: { lat: number; lng: number }; caption?: string; photo?: boolean; meta?: Record<string, unknown>; now?: Date } = {},
+) {
+  const at = opts.at ?? INSIDE;
+  return createStamp(
+    prisma,
+    actor,
+    venueId,
+    { bytes: opts.photo === false ? null : pngBytes(), meta: { caption: opts.caption ?? "hello", lat: String(at.lat), lng: String(at.lng), ...opts.meta } },
+    opts.now,
+  );
 }

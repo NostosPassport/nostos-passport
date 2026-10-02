@@ -8,7 +8,6 @@ The gate (scripts/check-deps.mjs) fails if a package.json dependency has no matc
 - @aws-sdk/client-s3@3.1139.0: R2/S3 photo storage
 - @aws-sdk/s3-request-presigner@3.1139.0: signed photo URLs
 - @prisma/client@6.19.3: database client
-- leaflet@1.9.4: web map
 - next@15.5.26: web app and API server
 - react@19.3.0: UI runtime
 - react-dom@19.3.0: UI runtime (web)
@@ -17,7 +16,6 @@ The gate (scripts/check-deps.mjs) fails if a package.json dependency has no matc
 - zod@3.25.76: request validation
 - @eslint/eslintrc@3.3.7: dev tooling (build, test or lint)
 - @tailwindcss/postcss@4.3.3: dev tooling (build, test or lint)
-- @types/leaflet@1.9.22: dev tooling (build, test or lint)
 - @types/node@22.20.4: dev tooling (build, test or lint)
 - @types/pngjs@6.0.5: dev tooling (build, test or lint)
 - @types/react@19.3.0: dev tooling (build, test or lint)
@@ -77,3 +75,7 @@ The gate (scripts/check-deps.mjs) fails if a package.json dependency has no matc
 - jest@~29.7.0: mobile test runner
 - jest-expo@~57.0.5: dev tooling (build, test or lint)
 - typescript@~6.0.3: typecheck
+
+## Removed
+
+- leaflet, @types/leaflet: the web map is gone (Nostos is an iPhone app; the web holds legal pages and moderation tools).

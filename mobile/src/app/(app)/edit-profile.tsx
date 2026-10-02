@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
 import { useState } from "react";
-import { ActionSheetIOS, Pressable, StyleSheet, Switch, View } from "react-native";
+import { ActionSheetIOS, Alert, Pressable, StyleSheet, Switch, View } from "react-native";
 
 import { api, errorText } from "@/api";
 import { AvatarResponse, type ProfileSettingsResponse } from "@/api/contracts";
-import { qk, useProfileSettings } from "@/api/queries";
+import { qk, useProfileSettings, useUserProfile } from "@/api/queries";
 import { Avatar } from "@/components/ui/avatar";
 import { FormScreen } from "@/components/ui/form-screen";
 import { HeaderButton } from "@/components/ui/header-button";
@@ -14,7 +14,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { Field, FieldGroup } from "@/components/ui/text-field";
 import { toast } from "@/components/ui/toast";
-import { BIO_MAX, NAME_MAX, privacyNote, profileChanges, profileProblem, shouldOfferApproveAll, type ProfileValues } from "@/features/people/edit-profile";
+import { BIO_MAX, goesPublic, goingPublicAlert, NAME_MAX, privacyNote, profileChanges, profileProblem, shouldOfferApproveAll, type ProfileValues } from "@/features/people/edit-profile";
 import { confirmApproveAll, useApproveAll } from "@/features/people/use-requests";
 import { pickFromLibrary } from "@/features/photos/pick";
 import { prepareImage } from "@/features/photos/prepare";
@@ -45,6 +45,7 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
   const [values, setValues] = useState(initial);
   const [saved, setSaved] = useState(false);
   const approveAll = useApproveAll();
+  const profile = useUserProfile(data.profile.handle);
   const change = profileChanges(initial, values);
   const dirty = Object.keys(change).length > 0;
   const problem = profileProblem(values);
@@ -105,6 +106,17 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
     );
   };
 
+  /** Switching private to public changes what strangers can see, so it needs an explicit yes first. */
+  const onSave = () => {
+    if (!goesPublic(initial, change)) return save.mutate();
+    const counts = profile.data?.access === "full" ? profile.data.user.counts : undefined;
+    const a = goingPublicAlert(counts);
+    Alert.alert(a.title, a.message, [
+      { text: "Keep private", style: "cancel" },
+      { text: a.confirm, style: "destructive", onPress: () => save.mutate() },
+    ]);
+  };
+
   const set = (k: "displayName" | "bio") => (t: string) => setValues((v) => ({ ...v, [k]: t }));
 
   return (
@@ -112,7 +124,7 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
       <Stack.Screen
         options={{
           headerLeft: () => <HeaderButton label="Cancel" onPress={() => router.back()} />,
-          headerRight: () => <HeaderButton label="Save" bold onPress={() => save.mutate()} disabled={!dirty || !!problem || save.isPending} />,
+          headerRight: () => <HeaderButton label="Save" bold onPress={onSave} disabled={!dirty || !!problem || save.isPending} />,
         }}
       />
       <Pressable

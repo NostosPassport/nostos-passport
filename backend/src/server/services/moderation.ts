@@ -1,20 +1,20 @@
 /**
  * Flags and moderation.
  *
- * - Anyone signed in (users and venue owners) can flag a photo, comment or report. Flagging never hides
- *   anything by itself; it queues the item for moderators and writes a FLAGGED event.
- * - Exception (spec): 3 open flags on a photo from 3 distinct *eligible* users auto-hide it pending review
+ * - Anyone signed in can flag a stamp they can see, or an account. Flagging never hides anything by itself; it queues
+ *   the item for moderators and writes a FLAGGED event.
+ * - Exception (spec): 3 open flags on a stamp from 3 distinct *eligible* users auto-hide it pending review
  *   (AUTO_HIDE event, actor = system). Eligible = role USER, account at least 7 days old, reputation >= 0.5.
- *   Venue accounts (any venue), staff, brand-new sock puppets and low-reputation accounts can still flag
- *   (it goes to the queue) but never count toward the auto-hide.
+ *   Staff, brand-new sock puppets and low-reputation accounts can still flag (it goes to the queue) but never count.
  * - One OPEN flag per user per item; once a moderator reviews it, the same user may flag it again.
  * - Only MODERATOR/ADMIN can HIDE, DISMISS (flags unfounded; undoes an *auto*-hide only) or RESTORE.
- *   Venue owners get 403 (invariant 1).
  * - Accounts can be reported too (targetType USER, e.g. from a profile). Moderators can SUSPEND an abusive account
  *   (can't sign in, all sessions revoked; its content stays until moderated) or UNSUSPEND it (Guideline 1.2).
- * - Photos of deleted accounts stay hidden for good: RESTORE is refused and DISMISS never un-hides them.
+ * - Stamps of deleted accounts stay hidden for good: RESTORE is refused and DISMISS never un-hides them.
  * - Nothing is ever deleted: hiding sets hidden_at. Every action writes an append-only moderation_event in the
- *   same transaction (invariant 5; the table rejects UPDATE/DELETE at the database level).
+ *   same transaction (rule 4; the table rejects UPDATE/DELETE at the database level).
+ *
+ * The API says STAMP; the database enum keeps its old name, PHOTO (a stamp is a row in the photo table).
  */
 import type { ContentType, Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -22,16 +22,22 @@ import type { Db } from "@/lib/db";
 import type { Actor } from "@/server/actor";
 import { badRequest, conflict, notFound, tooMany } from "@/server/errors";
 import { assertCanModerateContent, assertModerator, requireSignedIn } from "@/server/permissions";
-import { uploadUrl } from "@/server/services/venues";
+import { uploadUrl } from "@/server/media";
+import { subjectSelect } from "@/server/privacy";
+import { assertVisible } from "@/server/services/stamps";
 
 export const AUTO_HIDE_THRESHOLD = 3;
 export const AUTO_HIDE_MIN_ACCOUNT_AGE_MS = 7 * 24 * 3600_000;
 export const AUTO_HIDE_MIN_REPUTATION = 0.5;
 const FLAGS_PER_HOUR = 20;
 
+export type ApiTargetType = "STAMP" | "USER";
+const toDb = (t: ApiTargetType): ContentType => (t === "STAMP" ? "PHOTO" : "USER");
+const toApi = (t: ContentType): ApiTargetType => (t === "USER" ? "USER" : "STAMP");
+
 export const flagSchema = z
   .object({
-    targetType: z.enum(["PHOTO", "COMMENT", "REPORT", "USER"]),
+    targetType: z.enum(["STAMP", "USER"]),
     /** Content id; for USER targets, the account's id or handle. */
     targetId: z.string().min(1).max(64),
     reason: z.string().trim().min(3, "Say briefly what's wrong").max(300),
@@ -43,7 +49,7 @@ const USER_ACTIONS = ["SUSPEND", "UNSUSPEND", "DISMISS"] as const;
 
 export const moderateSchema = z
   .object({
-    targetType: z.enum(["PHOTO", "COMMENT", "REPORT", "USER"]),
+    targetType: z.enum(["STAMP", "USER"]),
     targetId: z.string().min(1).max(64),
     action: z.enum(["HIDE", "DISMISS", "RESTORE", "SUSPEND", "UNSUSPEND"]),
     note: z.string().trim().max(300).optional(),
@@ -65,20 +71,15 @@ async function loadTarget(db: Prisma.TransactionClient | Db, type: ContentType, 
     });
     return u && { id: u.id, userId: u.id, venueId: null, hiddenAt: u.suspendedAt, authorDeleted: false };
   }
-  const select = { id: true, userId: true, venueId: true, hiddenAt: true, user: { select: { deletedAt: true } } } as const;
-  const row =
-    type === "PHOTO"
-      ? await db.photo.findUnique({ where: { id: idOrHandle }, select })
-      : type === "COMMENT"
-        ? await db.comment.findUnique({ where: { id: idOrHandle }, select })
-        : await db.report.findUnique({ where: { id: idOrHandle }, select });
+  const row = await db.photo.findUnique({
+    where: { id: idOrHandle },
+    select: { id: true, userId: true, venueId: true, hiddenAt: true, user: { select: { deletedAt: true } } },
+  });
   return row && { id: row.id, userId: row.userId, venueId: row.venueId, hiddenAt: row.hiddenAt, authorDeleted: Boolean(row.user.deletedAt) };
 }
 
 async function setHidden(tx: Prisma.TransactionClient, type: ContentType, id: string, hiddenAt: Date | null) {
   if (type === "PHOTO") await tx.photo.update({ where: { id }, data: { hiddenAt } });
-  else if (type === "COMMENT") await tx.comment.update({ where: { id }, data: { hiddenAt } });
-  else if (type === "REPORT") await tx.report.update({ where: { id }, data: { hiddenAt } });
   else {
     await tx.user.update({ where: { id }, data: { suspendedAt: hiddenAt } });
     if (hiddenAt) await tx.session.deleteMany({ where: { userId: id } });
@@ -91,11 +92,18 @@ async function lockTarget(tx: Prisma.TransactionClient, type: ContentType, id: s
 
 export async function flagContent(db: Db, actor: Actor | null, raw: unknown, now = new Date()) {
   const me = requireSignedIn(actor);
-  const input = flagSchema.parse(raw);
+  const parsed = flagSchema.parse(raw);
+  const input = { ...parsed, targetType: toDb(parsed.targetType) };
   const pre = await loadTarget(db, input.targetType, input.targetId);
   if (!pre || pre.hiddenAt) throw notFound(input.targetType === "USER" ? "User not found" : "Content not found");
   if (pre.userId === me.userId) throw badRequest(input.targetType === "USER" ? "You can't report yourself" : "You can't flag your own content");
   const targetId = pre.id; // USER targets may be given by handle; always store the id
+  // You can only report a stamp you can see: a stranger can't probe a private account's stamps through the flag endpoint.
+  if (input.targetType === "PHOTO") {
+    const row = await db.photo.findUnique({ where: { id: pre.id }, select: { userId: true, hiddenAt: true, removedAt: true, countable: true, user: { select: subjectSelect } } });
+    if (!row) throw notFound("Content not found");
+    await assertVisible(db, me, row);
+  }
 
   return db.$transaction(async (tx) => {
     // Per-user lock makes the hourly limit exact under parallel requests; per-target lock orders flags on one item.
@@ -147,10 +155,11 @@ export async function flagContent(db: Db, actor: Actor | null, raw: unknown, now
   });
 }
 
-/** Moderator decision. Venue owners and regular users get 403. */
+/** Moderator decision. Everyone else gets 403. */
 export async function moderate(db: Db, actor: Actor | null, raw: unknown, now = new Date()) {
   const mod = assertCanModerateContent(actor);
-  const input = moderateSchema.parse(raw);
+  const parsed = moderateSchema.parse(raw);
+  const input = { ...parsed, targetType: toDb(parsed.targetType) };
   const pre = await loadTarget(db, input.targetType, input.targetId);
   if (!pre) throw notFound(input.targetType === "USER" ? "User not found" : "Content not found");
   const targetId = pre.id;
@@ -177,7 +186,7 @@ export async function moderate(db: Db, actor: Actor | null, raw: unknown, now = 
         await resolveFlags();
         await log("DISMISS");
       }
-      return loadTarget(tx, "USER", targetId);
+      return { ...(await loadTarget(tx, "USER", targetId)), targetType: "USER" as const };
     }
 
     if (input.action === "HIDE") {
@@ -202,13 +211,13 @@ export async function moderate(db: Db, actor: Actor | null, raw: unknown, now = 
     } else {
       if (!target.hiddenAt) throw badRequest("This content isn't hidden");
       if (target.authorDeleted && input.targetType === "PHOTO") {
-        throw conflict("The author deleted their account, so their photos stay hidden");
+        throw conflict("The author deleted their account, so their stamps stay hidden");
       }
       await setHidden(tx, input.targetType, target.id, null);
       await resolveFlags();
       await log("RESTORE");
     }
-    return loadTarget(tx, input.targetType, targetId);
+    return { ...(await loadTarget(tx, input.targetType, targetId)), targetType: toApi(input.targetType) };
   });
 }
 
@@ -220,7 +229,7 @@ export async function moderationQueue(db: Db, actor: Actor | null) {
   const flags = await db.flag.findMany({
     where: { status: "OPEN" },
     orderBy: { createdAt: "asc" },
-    include: { flagger: { select: { handle: true, role: true, claims: { where: { status: "APPROVED" }, select: { venueId: true } } } }, venue: { select: { name: true, slug: true } } },
+    include: { flagger: { select: { handle: true, role: true } }, venue: { select: { name: true, slug: true } } },
   });
   const groups = new Map<string, typeof flags>();
   for (const f of flags) {
@@ -231,10 +240,8 @@ export async function moderationQueue(db: Db, actor: Actor | null) {
   const ids = (t: ContentType) => [...groups.values()].filter((g) => g[0]!.targetType === t).map((g) => g[0]!.targetId);
   const user = { select: { handle: true, reputation: true, deletedAt: true } } as const;
   const authorOf = (u: { handle: string; deletedAt: Date | null }) => (u.deletedAt ? "Deleted user" : u.handle);
-  const [photos, comments, reports, users, events] = await Promise.all([
+  const [photos, users, events] = await Promise.all([
     db.photo.findMany({ where: { id: { in: ids("PHOTO") } }, include: { user } }),
-    db.comment.findMany({ where: { id: { in: ids("COMMENT") } }, include: { user } }),
-    db.report.findMany({ where: { id: { in: ids("REPORT") } }, include: { user } }),
     db.user.findMany({ where: { id: { in: ids("USER") } }, select: { id: true, handle: true, displayName: true, reputation: true, suspendedAt: true, createdAt: true, deletedAt: true } }),
     db.moderationEvent.findMany({
       where: { targetId: { in: [...groups.values()].map((g) => g[0]!.targetId) } },
@@ -242,15 +249,10 @@ export async function moderationQueue(db: Db, actor: Actor | null) {
       include: { actor: { select: { handle: true } } },
     }),
   ]);
-  const byId = new Map<string, { kind: ContentType; preview: string; url?: string; author: string; authorRep: number; hiddenAt: Date | null; createdAt: Date }>();
-  for (const p of photos) byId.set(p.id, { kind: "PHOTO", preview: p.caption, url: await uploadUrl(p.storageKey), author: authorOf(p.user), authorRep: p.user.reputation, hiddenAt: p.hiddenAt, createdAt: p.createdAt });
-  for (const c of comments) byId.set(c.id, { kind: "COMMENT", preview: c.body, author: authorOf(c.user), authorRep: c.user.reputation, hiddenAt: c.hiddenAt, createdAt: c.createdAt });
+  const byId = new Map<string, { kind: ApiTargetType; preview: string; url?: string; author: string; authorRep: number; hiddenAt: Date | null; createdAt: Date }>();
+  for (const p of photos) byId.set(p.id, { kind: "STAMP", preview: stampPreview(p), url: p.storageKey ? await uploadUrl(p.storageKey) : undefined, author: authorOf(p.user), authorRep: p.user.reputation, hiddenAt: p.hiddenAt, createdAt: p.createdAt });
   for (const u of users) {
     byId.set(u.id, { kind: "USER", preview: `Account: ${u.displayName}`, author: authorOf(u), authorRep: u.reputation, hiddenAt: u.suspendedAt, createdAt: u.createdAt });
-  }
-  for (const r of reports) {
-    const value = r.type === "VIBE" ? r.vibe : r.type === "LINE" ? r.line : `cover ${r.coverCents! / 100} USD`;
-    byId.set(r.id, { kind: "REPORT", preview: `${r.type.toLowerCase()}: ${value}`, author: authorOf(r.user), authorRep: r.user.reputation, hiddenAt: r.hiddenAt, createdAt: r.createdAt });
   }
 
   return [...groups.values()]
@@ -258,7 +260,7 @@ export async function moderationQueue(db: Db, actor: Actor | null) {
       const first = g[0]!;
       const content = byId.get(first.targetId);
       return {
-        targetType: first.targetType,
+        targetType: toApi(first.targetType),
         targetId: first.targetId,
         venue: first.venue,
         content: content ?? null,
@@ -268,8 +270,6 @@ export async function moderationQueue(db: Db, actor: Actor | null) {
           createdAt: f.createdAt,
           by: f.flagger.handle,
           byRole: f.flagger.role,
-          byVenueOwner: f.flagger.claims.some((c) => c.venueId === f.venueId),
-          byOtherVenueOwner: f.flagger.role === "VENUE_OWNER" && !f.flagger.claims.some((c) => c.venueId === f.venueId),
         })),
         history: events.filter((e) => e.targetId === first.targetId).map((e) => ({ action: e.action, by: e.actor?.handle ?? "system", note: e.note, at: e.createdAt })),
       };
@@ -284,32 +284,33 @@ export async function recentModerationLog(db: Db, actor: Actor | null, take = 30
 }
 
 /**
- * Recently hidden content and suspended accounts, newest first, so moderators can review and RESTORE /
- * UNSUSPEND (hidden items leave the queue once their flags are resolved). Photos of deleted accounts are
+ * Recently hidden stamps and suspended accounts, newest first, so moderators can review and RESTORE /
+ * UNSUSPEND (hidden items leave the queue once their flags are resolved). Stamps of deleted accounts are
  * excluded: they can never be restored.
  */
 export async function recentlyHidden(db: Db, actor: Actor | null, take = 50) {
   assertModerator(actor);
-  const user = { select: { handle: true, deletedAt: true } } as const;
-  const venue = { select: { name: true, slug: true } } as const;
-  const hidden = { hiddenAt: { not: null } } as const;
-  const [photos, comments, reports, users] = await Promise.all([
-    db.photo.findMany({ where: { ...hidden, user: { deletedAt: null } }, orderBy: { hiddenAt: "desc" }, take, include: { user, venue } }),
-    db.comment.findMany({ where: hidden, orderBy: { hiddenAt: "desc" }, take, include: { user, venue } }),
-    db.report.findMany({ where: hidden, orderBy: { hiddenAt: "desc" }, take, include: { user, venue } }),
+  const [photos, users] = await Promise.all([
+    db.photo.findMany({
+      where: { hiddenAt: { not: null }, user: { deletedAt: null } },
+      orderBy: { hiddenAt: "desc" },
+      take,
+      include: { user: { select: { handle: true, deletedAt: true } }, venue: { select: { name: true, slug: true } } },
+    }),
     db.user.findMany({ where: { suspendedAt: { not: null }, deletedAt: null }, orderBy: { suspendedAt: "desc" }, take, select: { id: true, handle: true, displayName: true, suspendedAt: true } }),
   ]);
-  const who = (u: { handle: string; deletedAt: Date | null }) => (u.deletedAt ? "Deleted user" : u.handle);
-  type Item = { targetType: ContentType; targetId: string; venue: { name: string; slug: string } | null; preview: string; url?: string; author: string; hiddenAt: Date };
+  type Item = { targetType: ApiTargetType; targetId: string; venue: { name: string; slug: string } | null; preview: string; url?: string; author: string; hiddenAt: Date };
   const items: Item[] = [
-    ...(await Promise.all(photos.map(async (p) => ({ targetType: "PHOTO" as const, targetId: p.id, venue: p.venue, preview: p.caption, url: await uploadUrl(p.storageKey), author: who(p.user), hiddenAt: p.hiddenAt! })))),
-    ...comments.map((c) => ({ targetType: "COMMENT" as const, targetId: c.id, venue: c.venue, preview: c.body, author: who(c.user), hiddenAt: c.hiddenAt! })),
-    ...reports.map((r) => ({
-      targetType: "REPORT" as const, targetId: r.id, venue: r.venue,
-      preview: `${r.type.toLowerCase()}: ${r.type === "VIBE" ? r.vibe : r.type === "LINE" ? r.line : `cover ${r.coverCents! / 100} USD`}`,
-      author: who(r.user), hiddenAt: r.hiddenAt!,
-    })),
+    ...(await Promise.all(
+      photos.map(async (p) => ({
+        targetType: "STAMP" as const, targetId: p.id, venue: p.venue, preview: stampPreview(p),
+        url: p.storageKey ? await uploadUrl(p.storageKey) : undefined, author: p.user.handle, hiddenAt: p.hiddenAt!,
+      })),
+    )),
     ...users.map((u) => ({ targetType: "USER" as const, targetId: u.id, venue: null, preview: `Account: ${u.displayName}`, author: u.handle, hiddenAt: u.suspendedAt! })),
   ];
   return items.sort((a, b) => b.hiddenAt.getTime() - a.hiddenAt.getTime()).slice(0, take);
 }
+
+/** What a moderator reads for a stamp: the caption, or a note when it has only a photo. */
+const stampPreview = (p: { caption: string }) => p.caption || "(photo only)";

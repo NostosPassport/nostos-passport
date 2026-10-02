@@ -5,7 +5,7 @@ import { requireSignedIn } from "@/server/permissions";
 import { CURRENT_TERMS_VERSION } from "@/server/services/auth";
 import { avatarUrl } from "@/server/services/people";
 
-/** The signed-in account as the app needs it at launch: identity, role, owned venues and settings. */
+/** The signed-in account as the app needs it at launch: identity, role and settings. */
 export async function getMe(db: Db, actor: Actor | null, now = new Date()) {
   const me = requireSignedIn(actor);
   const user = await db.user.findUnique({
@@ -17,9 +17,6 @@ export async function getMe(db: Db, actor: Actor | null, now = new Date()) {
   });
   if (!user) throw notFound("Account not found");
   const pendingFollowRequests = await db.followRequest.count({ where: { targetId: me.userId, requester: { deletedAt: null, suspendedAt: null } } });
-  const venues = me.ownedVenueIds.length
-    ? await db.venue.findMany({ where: { id: { in: me.ownedVenueIds } }, orderBy: { name: "asc" }, select: { id: true, slug: true, name: true } })
-    : [];
   return {
     user: {
       id: user.id, email: user.email, handle: user.handle, displayName: user.displayName, role: user.role,
@@ -32,12 +29,9 @@ export async function getMe(db: Db, actor: Actor | null, now = new Date()) {
       verified: user.verifiedAt !== null,
     },
     social: { pendingFollowRequests },
-    ownedVenues: venues,
     /** Read-only account settings the app displays. None are user-editable yet. */
     settings: {
-      /** Going-tonight plans are shared with mutual follows only (see DECISIONS.md). */
-      plansVisibleTo: "mutuals" as const,
-      /** App Review / QA account: can post anywhere, but posts don't count. Set by an admin only. */
+      /** App Review / QA account: can stamp anywhere, but its stamps are visible only to itself. Set by an admin only. */
       geofenceExempt: user.geofenceExempt,
     },
     terms: {

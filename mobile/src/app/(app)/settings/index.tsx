@@ -45,23 +45,13 @@ export default function Settings() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.textSecondary} />}
       >
-        {me.data && (me.data.ownedVenues.length > 0 || staff) && (
+        {staff && (
           <ListGroup>
-            {me.data.ownedVenues.map((v) => (
-              <ListRow
-                key={v.id}
-                icon="storefront.fill"
-                iconColor="accent"
-                title={`Manage ${v.name}`}
-                chevron
-                onPress={() => router.push({ pathname: "/owner/[venueId]", params: { venueId: v.id } })}
-              />
-            ))}
-            {staff && <ListRow icon="shield.lefthalf.filled" iconColor="accent" title="Moderation" chevron onPress={() => router.push("/moderation")} />}
+            <ListRow icon="shield.lefthalf.filled" iconColor="accent" title="Moderation" chevron onPress={() => router.push("/moderation")} />
           </ListGroup>
         )}
 
-        <ListGroup header="Following" footer="You see where people are going only when you follow each other.">
+        <ListGroup header="Following">
           {following.isPending ? (
             <View style={styles.pad}>
               <Skeleton width="60%" />
@@ -84,16 +74,8 @@ export default function Settings() {
                 leading={<Avatar name={f.displayName} uri={f.avatarUrl} />}
                 title={f.displayName}
                 titleAccessory={f.verified ? <VerifiedBadge accessible={false} /> : undefined}
-                accessibilityLabel={[f.displayName, `@${f.handle}`, f.verified ? "verified" : null, f.goingTonight.length > 0 ? `going to ${f.goingTonight.map((v) => v.name).join(", ")} tonight` : null]
-                  .filter(Boolean)
-                  .join(", ")}
-                subtitle={
-                  f.goingTonight.length > 0
-                    ? `Going to ${f.goingTonight.map((v) => v.name).join(", ")} tonight`
-                    : f.mutual
-                      ? `@${f.handle} · No plans yet`
-                      : `@${f.handle}`
-                }
+                accessibilityLabel={[f.displayName, `@${f.handle}`, f.verified ? "verified" : null].filter(Boolean).join(", ")}
+                subtitle={`@${f.handle}`}
                 chevron
                 onPress={() => router.push({ pathname: "/user/[handle]", params: { handle: f.handle } })}
               />

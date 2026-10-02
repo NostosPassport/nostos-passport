@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api-client";
 
-type Props = { targetType: "PHOTO" | "COMMENT" | "REPORT" | "USER"; targetId: string; hidden: boolean };
+type Props = { targetType: "STAMP" | "USER"; targetId: string; hidden: boolean };
 
 export function ModActions({ targetType, targetId, hidden }: Props) {
   const router = useRouter();

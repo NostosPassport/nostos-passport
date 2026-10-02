@@ -51,15 +51,15 @@ export default function Welcome() {
           </View>
         )}
         <Text variant="largeTitle" accessibilityRole="header">
-          Know before you go.
+          Go somewhere. Get a stamp.
         </Text>
         <Text variant="body" color="textSecondary">
-          Live vibe, line and cover at East Village and Lower East Side bars, from people who are there right now.
+          Your passport for New York: a photo, a few words or a song from every place you go. Only people you approve see it.
         </Text>
         <View style={styles.actions}>
           <Button title="Create account" onPress={() => router.push("/sign-up")} />
           <Button title="Sign in" variant="secondary" onPress={() => router.push("/sign-in")} />
-          <Button title="Look around first" variant="plain" onPress={browseAsGuest} accessibilityHint="Browse the map without an account" />
+          <Button title="Look around first" variant="plain" onPress={browseAsGuest} accessibilityHint="Browse without an account" />
         </View>
         <Text variant="footnote" color="textTertiary">
           For adults 21 and over.

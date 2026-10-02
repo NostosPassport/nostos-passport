@@ -2,11 +2,9 @@
  * Blocking (App Store Guideline 1.2). If A blocks B:
  *  - follows and pending follow requests between A and B are removed in both directions and can't be re-created
  *    by either side;
- *  - neither sees the other's photos, comments/replies or profile, and they don't find each other in search;
- *  - aggregates are untouched: consensus, here/going counts and reputation don't depend on who blocked whom.
+ *  - neither sees the other's stamps or profile, and they don't find each other in search, lists, feed, activity or likes.
  */
 import type { Prisma } from "@prisma/client";
-import { z } from "zod";
 import type { Db } from "@/lib/db";
 import type { Actor } from "@/server/actor";
 import { badRequest, notFound } from "@/server/errors";
@@ -42,13 +40,13 @@ export async function lockPair(tx: Prisma.TransactionClient, a: string, b: strin
   for (const key of [`follow:${a}:${b}`, `follow:${b}:${a}`].sort()) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
 }
 
-async function block(db: Db, blockerId: string, blockedId: string, source: "profile" | "photo" | "comment", now: Date) {
+async function block(db: Db, blockerId: string, blockedId: string, now: Date) {
   if (blockerId === blockedId) throw badRequest("You can't block yourself");
   await db.$transaction(async (tx) => {
     await lockPair(tx, blockerId, blockedId);
     await tx.block.upsert({
       where: { blockerId_blockedId: { blockerId, blockedId } },
-      create: { blockerId, blockedId, createdAt: now, source },
+      create: { blockerId, blockedId, createdAt: now },
       update: {},
     });
     await tx.follow.deleteMany({ where: { OR: [{ followerId: blockerId, followeeId: blockedId }, { followerId: blockedId, followeeId: blockerId }] } });
@@ -60,26 +58,7 @@ async function block(db: Db, blockerId: string, blockedId: string, source: "prof
 export async function blockUser(db: Db, actor: Actor | null, handle: string, now = new Date()) {
   const me = requireSignedIn(actor);
   const other = await target(db, handle);
-  return block(db, me.userId, other.id, "profile", now);
-}
-
-export const blockAuthorSchema = z.object({ targetType: z.enum(["PHOTO", "COMMENT"]), targetId: z.string().min(1).max(64) }).strict();
-
-/**
- * Block the author of a photo or comment without knowing who it is (Guideline 1.2: every author can be blocked,
- * including the ones who read "Anonymous"). The handle is never returned, and the block list shows these blocks
- * without one.
- */
-export async function blockAuthorOf(db: Db, actor: Actor | null, raw: unknown, now = new Date()) {
-  const me = requireSignedIn(actor);
-  const { targetType, targetId } = blockAuthorSchema.parse(raw);
-  const row =
-    targetType === "PHOTO"
-      ? await db.photo.findUnique({ where: { id: targetId }, select: { userId: true, user: { select: { deletedAt: true } } } })
-      : await db.comment.findUnique({ where: { id: targetId }, select: { userId: true, user: { select: { deletedAt: true } } } });
-  if (!row || row.user.deletedAt) throw notFound("Content not found");
-  if (row.userId === me.userId) throw badRequest("That's yours");
-  return block(db, me.userId, row.userId, targetType === "PHOTO" ? "photo" : "comment", now);
+  return block(db, me.userId, other.id, now);
 }
 
 export async function unblockUser(db: Db, actor: Actor | null, handle: string) {
@@ -89,29 +68,13 @@ export async function unblockUser(db: Db, actor: Actor | null, handle: string) {
   return { blocked: false };
 }
 
-/** Undo a block from the block list by its opaque ref (works for blocks made from Anonymous content). */
-export async function unblockByRef(db: Db, actor: Actor | null, ref: string) {
-  const me = requireSignedIn(actor);
-  const { count } = await db.block.deleteMany({ where: { ref, blockerId: me.userId } });
-  if (count === 0) throw notFound("Block not found");
-  return { blocked: false };
-}
-
-/**
- * Your blocks, newest first. No display names (a blocked pair always gets the limited view), and no handle for
- * blocks made from content, whose author may have been Anonymous to you.
- */
+/** Your blocks, newest first. Handles only: a blocked pair always gets the limited view. */
 export async function listBlocks(db: Db, actor: Actor | null) {
   const me = requireSignedIn(actor);
   const rows = await db.block.findMany({
     where: { blockerId: me.userId, blocked: { deletedAt: null } },
     orderBy: { createdAt: "desc" },
-    select: { ref: true, source: true, createdAt: true, blocked: { select: { handle: true } } },
+    select: { createdAt: true, blocked: { select: { handle: true } } },
   });
-  return rows.map((r) => ({
-    ref: r.ref,
-    source: r.source as "profile" | "photo" | "comment",
-    handle: r.source === "profile" ? r.blocked.handle : null,
-    blockedAt: r.createdAt,
-  }));
+  return rows.map((r) => ({ handle: r.blocked.handle, blockedAt: r.createdAt }));
 }
