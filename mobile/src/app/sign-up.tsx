@@ -5,6 +5,7 @@ import { StyleSheet, TextInput, View } from "react-native";
 
 import { api, errorText } from "@/api";
 import { useAuth } from "@/auth/auth-context";
+import { FormHeader } from "@/components/brand/form-header";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormScreen } from "@/components/ui/form-screen";
@@ -71,6 +72,7 @@ export default function SignUp() {
 
   return (
     <FormScreen>
+      <FormHeader title="Get your passport" line="For adults 21 and over. Only you can see it." />
       <FieldGroup errors={[errors.email, errors.password]} footer={`Passwords need at least ${MIN_PASSWORD} characters.`}>
         <Field
           ref={emailRef}

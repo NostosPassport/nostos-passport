@@ -1,29 +1,26 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { api, ApiError, errorText, mediaUrl } from "@/api";
+import { api, ApiError, errorText } from "@/api";
 import type { StampView } from "@/api/contracts";
-import { qk, useStamp } from "@/api/queries";
-import { Avatar } from "@/components/ui/avatar";
+import { qk, usePins, useStamp } from "@/api/queries";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { toast, ToastHost } from "@/components/ui/toast";
-import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { a11yActions, showActions, useStampActions, type ContentAction } from "@/features/moderation/content-actions";
 import { dropStamp } from "@/features/stamps/cache";
 import { LikeButton } from "@/features/stamps/like-button";
-import { SongRow } from "@/features/stamps/song-row";
-import { stampLabel } from "@/features/stamps/stamp-card";
 import { useLike } from "@/features/stamps/use-like";
 import { formatAge } from "@/lib/format";
 import { haptics } from "@/lib/haptics";
 import { SOCIAL_ENABLED } from "@/config";
-import { aspect, colors, screenPadding, size, space } from "@/theme";
+import { pinChange } from "@/features/book/pin-change";
+import { VisaSpread } from "@/features/book/VisaSpread";
+import { colors, screenPadding, size, space } from "@/theme";
 
 /** A stamp: photo, caption, song, place, author, likes. Yours: Edit and Delete from profile. Others': Report and Block. */
 export default function StampDetail() {
@@ -77,49 +74,22 @@ export default function StampDetail() {
 function Detail({ stamp, actions }: { stamp: StampView; actions: ContentAction[] }) {
   const like = useLike();
   return (
-    <>
-      {stamp.photoUrl && (
-        <View accessible accessibilityRole="image" accessibilityLabel={stampLabel(stamp)} {...a11yActions(actions)}>
-          <Image source={{ uri: mediaUrl(stamp.photoUrl), cacheKey: stamp.id }} style={styles.photo} contentFit="cover" transition={150} accessible={false} />
-        </View>
-      )}
+    <View {...a11yActions(actions)}>
+      <VisaSpread stamp={stamp} />
       <View style={styles.pad}>
-        <Pressable
-          onPress={() => router.push({ pathname: "/user/[handle]", params: { handle: stamp.author.handle } })}
-          accessibilityRole="button"
-          accessibilityLabel={`@${stamp.author.handle}${stamp.author.verified ? ", verified" : ""}`}
-          accessibilityHint="Opens their passport"
-          style={styles.who}
-        >
-          <Avatar name={stamp.author.displayName} uri={stamp.author.avatarUrl} />
-          <View style={styles.names}>
-            <View style={styles.handleRow}>
-              <Text variant="headline">{stamp.author.displayName}</Text>
-              {stamp.author.verified && <VerifiedBadge accessible={false} />}
-            </View>
-            <Text variant="subhead" color="textSecondary">
-              @{stamp.author.handle} · at {stamp.place.name}
-            </Text>
-          </View>
-        </Pressable>
-
-        {stamp.caption !== "" && <Text variant="body">{stamp.caption}</Text>}
-        {stamp.song && <SongRow song={stamp.song} />}
-
         <View style={styles.footer}>
           {SOCIAL_ENABLED && <LikeButton likes={stamp.likes} disabled={stamp.mine} onPress={() => like.toggle(stamp.id, stamp.likes)} />}
           <Text variant="footnote" color="textTertiary">
             {formatAge(stamp.createdAt)}
-            {stamp.editedAt ? " · Edited" : ""}
           </Text>
         </View>
         {stamp.mine && (
           <Text variant="footnote" color="textTertiary">
-            Only people who can see your passport can see this stamp.
+            Only you can see this stamp.
           </Text>
         )}
       </View>
-    </>
+    </View>
   );
 }
 
@@ -127,6 +97,19 @@ function Detail({ stamp, actions }: { stamp: StampView; actions: ContentAction[]
 function useActions(stamp: StampView | undefined): ContentAction[] {
   const build = useStampActions();
   const queryClient = useQueryClient();
+  const pins = usePins();
+  const setPins = useMutation({
+    mutationFn: (ids: string[]) => api.pins.set(ids),
+    onSuccess: (r) => {
+      haptics.success();
+      queryClient.setQueryData(qk.pins, r);
+      toast.show("Updated your pinned stamps.");
+    },
+    onError: (e) => {
+      haptics.warning();
+      toast.show(errorText(e, "Couldn't change that. Try again."), "neutral");
+    },
+  });
   const remove = useMutation({
     mutationFn: (id: string) => api.stamps.remove(id),
     onSuccess: (_r, id) => {
@@ -145,6 +128,14 @@ function useActions(stamp: StampView | undefined): ContentAction[] {
   if (!stamp) return [];
   const extra: ContentAction[] = stamp.mine
     ? [
+        {
+          label: pins.data?.stamps.some((p) => p.id === stamp.id) ? "Unpin from passport" : "Pin to passport",
+          onPress: () => {
+            const change = pinChange((pins.data?.stamps ?? []).map((p) => p.id), stamp.id);
+            if (change.kind === "full") Alert.alert("Four stamps are pinned", "Unpin one first, then pin this one.");
+            else setPins.mutate(change.ids);
+          },
+        },
         { label: "Edit", onPress: () => router.push({ pathname: "/stamp/edit", params: { id: stamp.id } }) },
         {
           label: "Delete from profile",
@@ -163,11 +154,7 @@ function useActions(stamp: StampView | undefined): ContentAction[] {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   content: { paddingBottom: space.xxxl },
-  photo: { width: "100%", aspectRatio: aspect.post, backgroundColor: colors.elevated },
   pad: { paddingHorizontal: screenPadding, paddingTop: space.md, gap: space.md },
-  who: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: size.hitTarget },
-  names: { flex: 1, gap: space.xxs },
-  handleRow: { flexDirection: "row", alignItems: "center", gap: space.xxs },
   footer: { flexDirection: "row", alignItems: "center", gap: space.md },
   headerButton: { minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "flex-end", justifyContent: "center" },
 });

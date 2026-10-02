@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react-native";
 import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
 import { State } from "react-native-gesture-handler";
 import { Text } from "react-native";
+import * as Reanimated from "react-native-reanimated";
 
 import { FlipBook } from "../FlipBook";
 import type { PageFace } from "../spreads";
@@ -18,13 +19,31 @@ async function setup(spread: number, total = 4) {
 }
 
 describe("FlipBook", () => {
+  afterEach(() => jest.restoreAllMocks());
   it("draws the page it is on, the page under each turn, and nothing past either end of the book", async () => {
     await setup(0);
-    // At the first spread: the bearer page (and what turns to show), but no page before the cover.
+    // At the first spread: inside cover and bearer page, with the next faces ready to turn.
     expect(screen.getByText("right:bearer")).toBeTruthy();
     expect(screen.getByText("left:page 1")).toBeTruthy();
     expect(screen.getByText("right:page 2")).toBeTruthy();
-    expect(screen.queryByText("left:inside-cover")).toBeNull();
+    expect(screen.getByText("left:inside-cover")).toBeVisible();
+  });
+
+  it.each([false, true])("renders both first-spread faces with Reduce Motion=%s", async (reduced) => {
+    jest.spyOn(Reanimated, "useReducedMotion").mockReturnValue(reduced);
+    await setup(0, 2);
+    expect(screen.getByText("left:inside-cover")).toBeVisible();
+    expect(screen.getByText("right:bearer")).toBeVisible();
+    expect(screen.queryByText("left:page 3")).toBeNull();
+    expect(screen.queryByText("right:page 4")).toBeNull();
+  });
+  it.each([false, true])("renders both final-spread faces with Reduce Motion=%s", async (reduced) => {
+    jest.spyOn(Reanimated, "useReducedMotion").mockReturnValue(reduced);
+    await setup(1, 2);
+    expect(screen.getByText("left:page 1")).toBeVisible();
+    expect(screen.getByText("right:page 2")).toBeVisible();
+    expect(screen.queryByText("left:page 3")).toBeNull();
+    expect(screen.queryByText("right:page 4")).toBeNull();
   });
   it("in the middle it holds the turning pages on both sides, so either way is ready", async () => {
     await setup(1);

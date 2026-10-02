@@ -5,11 +5,12 @@ import { StyleSheet, View } from "react-native";
 import { useAuth } from "@/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { FormScreen } from "@/components/ui/form-screen";
+import { EmblemMark } from "@/components/brand/emblem-mark";
 import { Text } from "@/components/ui/text";
 import { Field, FieldGroup } from "@/components/ui/text-field";
 import { checkBirthdate, formatBirthdateInput } from "@/lib/age";
 import { haptics } from "@/lib/haptics";
-import { space } from "@/theme";
+import { size, space } from "@/theme";
 
 /**
  * The age gate for looking around without an account. The birthdate is checked here and thrown away: it isn't sent
@@ -32,6 +33,21 @@ export default function AgeGate() {
     setMessage(check.message);
     setUnderage(check.reason === "underage");
   };
+
+  if (underage) {
+    // Calm, one sentence, no way forward. Nothing was sent and nothing is kept.
+    return (
+      <FormScreen>
+        <View style={styles.turnedAway}>
+          <EmblemMark size={size.avatarLarge} color="dimBrass" />
+          <Text variant="title2" align="center" accessibilityRole="header">
+            {message}
+          </Text>
+        </View>
+        <Button title="Close" variant="plain" onPress={() => router.back()} />
+      </FormScreen>
+    );
+  }
 
   return (
     <FormScreen>
@@ -62,10 +78,10 @@ export default function AgeGate() {
           testID="age-gate-birthdate"
         />
       </FieldGroup>
-      {!underage && <Button title="Continue" onPress={submit} disabled={birthdate.length < 10} />}
-      <Button title={underage ? "Close" : "Cancel"} variant="plain" onPress={() => router.back()} />
+      <Button title="Continue" onPress={submit} disabled={birthdate.length < 10} />
+      <Button title="Cancel" variant="plain" onPress={() => router.back()} />
     </FormScreen>
   );
 }
 
-const styles = StyleSheet.create({ intro: { gap: space.xs } });
+const styles = StyleSheet.create({ intro: { gap: space.xs }, turnedAway: { alignItems: "center", gap: space.lg, paddingVertical: space.xxxl } });

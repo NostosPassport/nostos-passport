@@ -82,6 +82,14 @@
           "microphonePermission": false
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Take photos for your stamp, inside the app.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
       "expo-font"
     ],
     "experiments": {

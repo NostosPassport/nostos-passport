@@ -52,6 +52,8 @@ function run(cmd) {
 const strip = (s) => s.replace(/\u001b\[[0-9;]*m/g, "");
 const commit = run("git rev-parse --short HEAD").trim();
 const log = run("git log --oneline -- .").trim();
+const branch = run("git branch --show-current").trim();
+const state = run("git status --porcelain").trim() ? "UNCOMMITTED WORKING TREE (HEAD is the base commit)" : "clean committed tree";
 const typecheck = strip(run("node_modules/.bin/tsc --noEmit")).trim() || "tsc --noEmit: no errors";
 const lint = strip(run("node_modules/.bin/eslint .")).trim() || "eslint: no problems";
 const tests = strip(run("node_modules/.bin/vitest run --reporter=verbose"))
@@ -60,7 +62,7 @@ const tests = strip(run("node_modules/.bin/vitest run --reporter=verbose"))
   .join("\n");
 
 const sep = (title) => `\n\n${"=".repeat(100)}\n== ${title}\n${"=".repeat(100)}\n\n`;
-let out = `NOSTOS BACKEND - REVIEW BUNDLE\nGenerated ${new Date().toISOString()} at commit ${commit}\n`;
+let out = `NOSTOS BACKEND - REVIEW BUNDLE\nGenerated ${new Date().toISOString()}\nHEAD: ${commit}\nBranch: ${branch}\nSnapshot: ${state}\n`;
 out += `\nContents:\n${["TEST SUMMARY", ...files].map((f) => `  - ${f}`).join("\n")}\n`;
 out += sep("TEST SUMMARY");
 out += `$ pnpm typecheck\n${typecheck}\n\n$ pnpm lint\n${lint}\n\n$ pnpm vitest run --reporter=verbose\n${tests}\n\nGit history:\n${log}\n`;

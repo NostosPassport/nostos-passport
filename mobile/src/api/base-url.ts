@@ -2,9 +2,9 @@
  * Resolves the API base URL.
  * - `EXPO_PUBLIC_API_URL` wins (set per EAS profile: preview deploy for TestFlight, production for release).
  * - In development without it, use the Mac running Metro: Expo Go already reaches it over the LAN,
- *   and the backend's `pnpm dev` listens on port 3000 on the same machine.
+ *   and the backend's `pnpm dev` listens on port 3001 on the same machine.
  */
-export const DEV_API_PORT = 3000;
+export const DEV_API_PORT = 3001;
 
 export function resolveBaseUrl(envUrl: string | undefined, hostUri: string | undefined, isDev: boolean): string {
   const fromEnv = envUrl?.trim();

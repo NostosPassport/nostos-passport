@@ -111,9 +111,9 @@ export function FlipBook({ pageWidth: pw, pageHeight: ph, total, spread, onSprea
     <GestureDetector gesture={Gesture.Exclusive(pan, tap)}>
       <View collapsable={false}>
         <Spread pageWidth={pw} pageHeight={ph} spreadIndex={s} spreadTotal={total}>
-          {/* The pages that lie underneath, revealed as the turning pages go over. */}
-          <View style={[styles.half, { width: pw, height: ph }]}>{under(s - 1, "left")}</View>
-          <View style={[styles.half, { left: pw, width: pw, height: ph }]}>{under(s + 1, "right")}</View>
+          {/* At either book boundary, no turning sheet carries the outer face: keep that current face underneath. */}
+          <View style={[styles.half, { width: pw, height: ph }]}>{under(s === 0 ? s : s - 1, "left")}</View>
+          <View style={[styles.half, { left: pw, width: pw, height: ph }]}>{under(s === total - 1 ? s : s + 1, "right")}</View>
           {/* Turn s-1 (lying on the left) then turn s (lying on the right): the later one is on top. */}
           {[s - 1, s].map((k) => (k >= 0 && k < total - 1 ? <TurningPage key={k} k={k} pos={pos} pw={pw} ph={ph} reduced={reduced} front={renderFace(spreadAt(k).right, "right")} back={renderFace(spreadAt(k + 1).left, "left")} /> : null))}
         </Spread>

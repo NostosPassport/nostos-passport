@@ -100,3 +100,12 @@ source id), so no made-up links exist. Seeded stamps use generated placeholder i
 - Summary photos are selected from live rows in layout order, including place, activity and moderation previews.
 - Tests and exact source references are in the Codex lane review. No mobile visual or device claim is made here.
 - A live song needs a non-whitespace title and artist even through direct SQL; removed historical metadata remains final.
+
+
+## 2026-10-02 combined Codex continuation
+
+The user authorized finishing both lanes in build-codex and requested all integration work remain uncommitted.
+Claude's incoming e639860 is combined with Codex HEAD 42a6c0d. Existing privacy and database fixes are reused; no new
+backend migration or reset is necessary. Backend configuration remains project nostos-codex, Postgres 5438 and dev port 3001.
+The mobile development API fallback now matches that port. The final combined gate passed 292 backend/407 mobile tests
+and the backend production build passed. Bundle headers explicitly distinguish dirty snapshots from committed HEAD.

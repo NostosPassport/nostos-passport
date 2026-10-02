@@ -1,6 +1,6 @@
 import { ageOn, checkBirthdate, formatBirthdateInput, parseBirthdate, toApiDate, UNDERAGE_NOTICE } from "../age";
 
-const NOW = new Date(2026, 9, 2, 12, 0, 0); // 2026-10-02 local
+const NOW = new Date("2026-10-02T16:00:00Z"); // 2026-10-02 in New York
 
 describe("formatBirthdateInput", () => {
   it.each([

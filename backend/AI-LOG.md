@@ -59,3 +59,20 @@ sections (logged in OPEN-QUESTIONS 4).
 ## Codex lane final review
 - Implementation through 74ea16e; final complete gate passed 292 backend / 292 mobile tests.
 - Report: ../reviews/2026-10-02T180902Z-codex-1.md. Only 2723315 changed the contract. Regenerate the generated mobile copy after merge; preserve both lane ledger append sets.
+
+
+## 2026-10-02 Codex continuation: combined working tree
+
+User authorized finishing mobile and importing Claude's committed build branch into build-codex, then explicitly requested leaving the merge and fixes uncommitted. HEAD remains 42a6c0d; imported source is e639860. Database configuration remains nostos-codex/5438, nostos_codex and nostos_codex_test; backend dev port remains 3001. Initial Codex baseline passed 292 backend/292 mobile tests; combined baseline passed 292 backend/397 mobile tests. Both lanes' LEDGER and OPEN-QUESTIONS additions were preserved. No lock was removed or bypassed.
+
+Final combined implementation gate: PASS 292 backend tests (34 files), 407 mobile tests (51 suites);
+contract sync, required invariants and dependency ledger passed. Final H.2 gate after bundle-tool changes also passed
+292/407. Backend production build and final iOS/Hermes export exited 0. Documentation and review bundles reflect an
+uncommitted snapshot (HEAD 42a6c0d, incoming e639860). No new implementation commits or migrations.
+
+
+## FlipBook terminal-face review fix
+
+Focused red tests reproduced first-cover/final-right omissions (7 failed, 13 passed). Boundary underlays now render the current outer face. Focused rendering/navigation/math/page tests passed 44/44. One full gate is running; results and remaining native gaps are recorded in `reviews/2026-10-02T191304Z-codex-3.md`. No unrelated change, contract or migration. Everything remains uncommitted.
+
+Book-face fix full gate: PASS, backend 292 / mobile 413. One full gate only; bundle refresh reuses its saved output and does not rerun tests. Physical iPhone checklist remains unchecked; no native runtime claim.

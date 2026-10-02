@@ -10,32 +10,31 @@ turns it on; if you do, use a development build, since its native part is not in
 
 You need: the Expo Go app on your iPhone (App Store), and the phone and this Mac on the same Wi-Fi.
 
-1. Start the backend (Postgres in Docker, then the Next.js dev server on port 3000):
+1. Start the backend (Postgres in Docker, then the Next.js dev server on port 3001):
 
    ```bash
-   cd ~/nostos/backend && colima start && docker compose up -d && pnpm dev
+   cd /Users/charlesjinn/nostos-codex/backend && colima start && docker compose up -d db && pnpm dev
    ```
 
 2. In another terminal, start the app:
 
    ```bash
-   cd ~/nostos/mobile && npx expo start
+   cd /Users/charlesjinn/nostos-codex/mobile && npx expo start --go --port 8082
    ```
 
 3. Scan the QR code with the iPhone Camera app. It opens in Expo Go.
 
-No config needed: in development the app talks to the Mac that serves it (Metro's LAN address, port 3000). To point
-at something else, set `EXPO_PUBLIC_API_URL`, for example `EXPO_PUBLIC_API_URL=http://192.168.1.20:3000 npx expo start`.
+No config needed: in development the app talks to the Mac that serves it (Metro's LAN address, port 3001). To point
+at something else, set `EXPO_PUBLIC_API_URL`, for example `EXPO_PUBLIC_API_URL=http://192.168.1.20:3001 npx expo start`.
 If the phone can't connect, try `npx expo start --tunnel` for the app, and make sure macOS's firewall allows
-incoming connections to Node for port 3000.
+incoming connections to Node for port 3001.
 
-**Demo accounts** (from the backend's dev seed, password `lastcall-dev`): `avaa@lastcall.dev` (private, four follow
-requests waiting), `maya_r@lastcall.dev` (public, verified, many stamps), `moth_hopeful@lastcall.dev` (follows no one),
-`appreview@lastcall.dev` (can stamp from anywhere; only it sees those stamps), `mod_morgan@lastcall.dev` (Moderation in
-Settings). Or tap **Look around first**, which asks your birthdate (21+) and then lets you look up public passports.
+**Demo accounts** (from the backend's dev seed, password `lastcall-dev`): `avaa@lastcall.dev`, `maya_r@lastcall.dev`,
+`moth_hopeful@lastcall.dev`, `appreview@lastcall.dev` and `mod_morgan@lastcall.dev`. Personal mode is the default:
+each account sees only its own passport, with no social or moderation tools. App Review may stamp from anywhere.
+**Look around first** asks your birthdate (21+) and allows guest place browsing; stamping requires an account.
 
-**Stamping away from the places:** in development, the new-stamp screen has a short "Development: pretend to be at" list
-that sets a simulated location (a "Simulated location" chip clears it). It does not exist in release builds. The server
+**Stamping away from the places:** in development, long-pressing the Map sets a simulated location (a "Simulated location" chip clears it). It does not exist in release builds. The server
 still checks the geofence against whatever location it receives.
 
 ## Run it against the preview backend
@@ -43,7 +42,7 @@ still checks the geofence against whatever location it receives.
 After the backend is deployed (see `../backend/DEPLOY.md`):
 
 ```bash
-cd ~/nostos/mobile && EXPO_PUBLIC_API_URL=https://preview.nostos.app npx expo start
+cd /Users/charlesjinn/nostos-codex/mobile && EXPO_PUBLIC_API_URL=https://preview.nostos.app npx expo start
 ```
 
 ## Build with EAS
@@ -53,7 +52,7 @@ EAS isn't logged in on this Mac, so no build has been made yet. To build and ins
 1. Log in (free Expo account) and link the project, once:
 
    ```bash
-   cd ~/nostos/mobile && npx eas-cli@latest login
+   cd /Users/charlesjinn/nostos-codex/mobile && npx eas-cli@latest login
    ```
 
    ```bash

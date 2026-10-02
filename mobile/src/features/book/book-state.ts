@@ -17,6 +17,7 @@ export const isOpenish = (phase: Phase) => phase === "opening" || phase === "ope
  * open, the whole spread is centered, scaled down to fit. `p` is 0 closed, 1 open.
  */
 export function stageTransform(p: number, pageWidth: number, openScale: number): { scale: number; translateX: number } {
+  "worklet";
   const t = Math.min(1, Math.max(0, p));
   const scale = 1 + (openScale - 1) * t;
   return { scale, translateX: -(pageWidth / 2) * scale * (1 - t) };

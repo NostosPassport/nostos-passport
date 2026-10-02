@@ -1,12 +1,16 @@
 NOSTOS BACKEND - REVIEW BUNDLE
-Generated 2026-10-02T18:20:44.959Z at commit 74ea16e
+Generated: 2026-10-02T19:14:48.821044+00:00
+HEAD: 42a6c0d
+Branch: build-codex
+Snapshot: UNCOMMITTED WORKING TREE (HEAD is the base commit)
+Verification: single full gate recorded below; checks were not rerun for packaging.
 
 Contents:
   - TEST SUMMARY
   - REVIEW.md
   - DECISIONS.md
   - ../OPEN-QUESTIONS.md
-  - ../reviews/2026-10-02T180902Z-codex-1.md
+  - ../reviews/2026-10-02T191304Z-codex-3.md
   - API.md
   - DEPLOY.md
   - src/contracts/api.ts
@@ -173,335 +177,42 @@ Contents:
   - tests/unit/privacy.test.ts
   - tests/unit/storage.test.ts
   - tests/unit/time.test.ts
+  - ../HANDOFF.md
+  - ../mobile/BOOK-PAGES-PHONE-CHECKLIST.md
 
 
 ====================================================================================================
 == TEST SUMMARY
 ====================================================================================================
 
-$ pnpm typecheck
-tsc --noEmit: no errors
+$ scripts/gate.sh
+== gate: disk (5 GB free)
+== gate: repo hygiene
+== gate: backend typecheck
+$ tsc --noEmit
+== gate: backend lint
+$ eslint .
+== gate: backend test (single process)
+ ✓ |unit| tests/unit/personal-staff-pages.test.ts (2 tests) 1ms
+ ✓ |unit| tests/unit/time.test.ts (5 tests) 1ms
 
-$ pnpm lint
-eslint: no problems
-
-$ pnpm vitest run --reporter=verbose
- ✓ |integration| tests/integration/seed.test.ts > the demo seed > is deterministic: the same anchor gives the same rows 5578ms
- ✓ |integration| tests/integration/seed.test.ts > the demo seed > is anchored to now: a later anchor moves every timestamp with it 5272ms
- ✓ |integration| tests/integration/seed.test.ts > the demo seed > has the cast: public and private accounts, one verified, one blocked pair, pending requests, staff and App Review 2640ms
- ✓ |integration| tests/integration/seed.test.ts > the demo seed > has stamps of every kind at several places, with likes that obey the rules 2667ms
- ✓ |integration| tests/integration/seed.test.ts > the demo seed > every stamp is inside its place's geofence, except App Review's, which only that account can see 2682ms
- ✓ |integration| tests/integration/seed.test.ts > the demo seed > privacy holds on the seeded data: a stranger sees nothing of a private passport, a follower sees it, a pending request is not enough 2801ms
- ✓ |integration| tests/integration/seed.test.ts > the demo seed > the blocked pair cannot see each other; a hidden and a removed stamp are gone for everyone but staff 2704ms
- ✓ |integration| tests/integration/seed.test.ts > the demo seed > gives the moderator a queue to try, and the demo accounts sign in with the dev password 3021ms
- ✓ |integration| tests/integration/seed.test.ts > the demo seed > refuses to run against production 66ms
- ✓ |integration| tests/integration/stamps.test.ts > creating a stamp > takes a photo, a caption, a song, or any mix, and refuses an empty one 137ms
- ✓ |integration| tests/integration/stamps.test.ts > creating a stamp > validates captions and songs 54ms
- ✓ |integration| tests/integration/stamps.test.ts > creating a stamp > is geofenced per place: the place's own radius decides, the message says how far away you are 46ms
- ✓ |integration| tests/integration/stamps.test.ts > creating a stamp > allows one stamp per place per 15 minutes, and 20 an hour across places 216ms
- ✓ |integration| tests/integration/stamps.test.ts > creating a stamp > strips EXIF and leaves no photo behind when the transaction fails 45ms
- ✓ |integration| tests/integration/stamps.test.ts > creating a stamp > rejects things that aren't images 36ms
- ✓ |integration| tests/integration/stamps.test.ts > creating a stamp > an account with no stamps has no places, and a stamp's response never carries coordinates or storage keys 52ms
- ✓ |integration| tests/integration/stamps.test.ts > editing and removing a stamp > the author edits the caption and the song; the photo, place and time never change 70ms
- ✓ |integration| tests/integration/stamps.test.ts > editing and removing a stamp > a stamp with no photo can't be edited into nothing 70ms
- ✓ |integration| tests/integration/stamps.test.ts > editing and removing a stamp > only the author edits or removes: everyone else, staff included, gets the same 404 as a missing stamp 56ms
- ✓ |integration| tests/integration/stamps.test.ts > editing and removing a stamp > editing freezes while a flag is open and after a moderator hides it 69ms
- ✓ |integration| tests/integration/stamps.test.ts > editing and removing a stamp > 'delete from profile' hides it everywhere for good, and never deletes the row 68ms
- ✓ |integration| tests/integration/stamps.test.ts > likes > one per person, not your own, counted once, undoable 72ms
- ✓ |integration| tests/integration/stamps.test.ts > likes > not on hidden or removed stamps, and not on stamps you can't see 82ms
- ✓ |integration| tests/integration/stamps.test.ts > likes > App Review likes and suspended people's likes don't count 98ms
- ✓ |integration| tests/integration/stamps.test.ts > likes > the hourly like limit holds 208ms
- ✓ |integration| tests/integration/stamps.test.ts > the feed and the passport > pages 30 at a time with a stable cursor, newest first, with no gaps or repeats 81ms
- ✓ |integration| tests/integration/stamps.test.ts > the feed and the passport > only shows people you follow: not yourself, not strangers, not people you unfollowed 71ms
- ✓ |integration| tests/integration/stamps.test.ts > the feed and the passport > the passport grid and places view count and group stamps by place 81ms
- ✓ |integration| tests/integration/stamps.test.ts > places > lists places near a position, nearest first, flagging the ones whose geofence you're inside 34ms
- ✓ |integration| tests/integration/stamps.test.ts > pages and slots > numbers stamps oldest first, three to a page, from one shared function 146ms
- ✓ |integration| tests/integration/stamps.test.ts > pages and slots > pages the passport oldest first with an after cursor and no gaps 64ms
- ✓ |integration| tests/integration/stamps.test.ts > my place page > stacks my stamps at a place by night, oldest first, and says whether I'm inside right now 80ms
- ✓ |integration| tests/integration/serverless.test.ts > login throttle (Postgres, email + IP) > locks one IP after 10 failures without locking the same account from another IP 694ms
- ✓ |integration| tests/integration/serverless.test.ts > login throttle (Postgres, email + IP) > expires after 15 minutes and clears on success 644ms
- ✓ |integration| tests/integration/serverless.test.ts > login throttle (Postgres, email + IP) > can't be raced: parallel wrong guesses stop at the limit 706ms
- ✓ |integration| tests/integration/serverless.test.ts > login throttle (Postgres, email + IP) > caps failures per IP across many emails 75ms
- ✓ |integration| tests/integration/serverless.test.ts > login throttle (Postgres, email + IP) > prunes day-old attempts 33ms
- ✓ |integration| tests/integration/serverless.test.ts > cron route > rejects missing or wrong secrets and runs with the right one (GET for Vercel Cron, POST manually) 34ms
- ✓ |integration| tests/integration/serverless.test.ts > health > reports the database as up 35ms
- ✓ |integration| tests/integration/serverless.test.ts > upload route requires a valid signature > serves signed URLs only 33ms
- ✓ |integration| tests/integration/privacy.test.ts > an private account's stamps and places, by viewer > signed out: does not see the stamp, the grid, the places and the counts 148ms
- ✓ |integration| tests/integration/privacy.test.ts > an private account's stamps and places, by viewer > stranger: does not see the stamp, the grid, the places and the counts 116ms
- ✓ |integration| tests/integration/privacy.test.ts > an private account's stamps and places, by viewer > requester: does not see the stamp, the grid, the places and the counts 91ms
- ✓ |integration| tests/integration/privacy.test.ts > an private account's stamps and places, by viewer > follower: sees the stamp, the grid, the places and the counts 109ms
- ✓ |integration| tests/integration/privacy.test.ts > an private account's stamps and places, by viewer > self: sees the stamp, the grid, the places and the counts 117ms
- ✓ |integration| tests/integration/privacy.test.ts > an private account's stamps and places, by viewer > staff: sees the stamp, the grid, the places and the counts 109ms
- ✓ |integration| tests/integration/privacy.test.ts > an private account's stamps and places, by viewer > blocked by author: does not see the stamp, the grid, the places and the counts 77ms
- ✓ |integration| tests/integration/privacy.test.ts > an private account's stamps and places, by viewer > blocker of author: does not see the stamp, the grid, the places and the counts 76ms
- ✓ |integration| tests/integration/privacy.test.ts > an public account's stamps and places, by viewer > signed out: sees the stamp, the grid, the places and the counts 76ms
- ✓ |integration| tests/integration/privacy.test.ts > an public account's stamps and places, by viewer > stranger: sees the stamp, the grid, the places and the counts 97ms
- ✓ |integration| tests/integration/privacy.test.ts > an public account's stamps and places, by viewer > requester: sees the stamp, the grid, the places and the counts 95ms
- ✓ |integration| tests/integration/privacy.test.ts > an public account's stamps and places, by viewer > follower: sees the stamp, the grid, the places and the counts 99ms
- ✓ |integration| tests/integration/privacy.test.ts > an public account's stamps and places, by viewer > self: sees the stamp, the grid, the places and the counts 79ms
- ✓ |integration| tests/integration/privacy.test.ts > an public account's stamps and places, by viewer > staff: sees the stamp, the grid, the places and the counts 80ms
- ✓ |integration| tests/integration/privacy.test.ts > an public account's stamps and places, by viewer > blocked by author: does not see the stamp, the grid, the places and the counts 76ms
- ✓ |integration| tests/integration/privacy.test.ts > an public account's stamps and places, by viewer > blocker of author: does not see the stamp, the grid, the places and the counts 73ms
- ✓ |integration| tests/integration/privacy.test.ts > activity never carries a private account's stamps to people without access > a private person who likes your stamp shows as a handle only; their own stamps never appear 69ms
- ✓ |integration| tests/integration/privacy.test.ts > activity never carries a private account's stamps to people without access > likes by or on a blocked person disappear from activity in both directions 63ms
- ✓ |integration| tests/integration/privacy.test.ts > blocking by handle hides the pair from each other everywhere > profile, search, lists, feed, activity and likes: nothing leaks in either direction 111ms
- ✓ |integration| tests/integration/privacy.test.ts > blocking by handle hides the pair from each other everywhere > a third party sees neither person's block 40ms
- ✓ |integration| tests/integration/privacy.test.ts > going public changes what strangers can see > every stamp and place becomes visible to strangers and signed-out people; going private hides them again 67ms
- ✓ |integration| tests/integration/privacy.test.ts > per-stamp visibility is the account's privacy: there is no sharing toggle > a stamp request that tries to set `shared` is refused, and the schema has no such column 37ms
- ✓ |integration| tests/integration/token-auth.test.ts > bearer tokens for iOS > login with X-Client: ios returns { token, user } and sets no cookie; the session is stored hashed as IOS 191ms
- ✓ |integration| tests/integration/token-auth.test.ts > bearer tokens for iOS > signup with X-Client: ios also returns a token; web signup is unchanged (cookie, no token) 142ms
- ✓ |integration| tests/integration/token-auth.test.ts > bearer tokens for iOS > GET /api/me works with a bearer token and returns role and settings 149ms
- ✓ |integration| tests/integration/token-auth.test.ts > bearer tokens for iOS > a bad bearer token is unauthenticated even when a valid cookie is also sent 116ms
- ✓ |integration| tests/integration/token-auth.test.ts > CSRF check applies to cookie auth only > bearer requests from any Origin are accepted; the same cookie request from a foreign Origin is rejected 135ms
- ✓ |integration| tests/integration/token-auth.test.ts > logout > revokes only the current session; logout-all revokes every session 236ms
- ✓ |integration| tests/integration/token-auth.test.ts > token hardening > an expired bearer token gets 401 invalid_token with WWW-Authenticate, and the row is deleted 63ms
- ✓ |integration| tests/integration/token-auth.test.ts > token hardening > a dead bearer token is rejected on public routes too (no silent anonymous fallback) 44ms
- ✓ |integration| tests/integration/token-auth.test.ts > token hardening > accepts the auth scheme case-insensitively 133ms
- ✓ |integration| tests/integration/token-auth.test.ts > token hardening > binds tokens to their channel: iOS tokens aren't cookies and web tokens aren't bearer tokens 176ms
- ✓ |integration| tests/integration/token-auth.test.ts > token hardening > X-Client matching tolerates case and whitespace 140ms
- ✓ |integration| tests/integration/token-auth.test.ts > token hardening > an invalid bearer with a foreign Origin gets 401, not a CSRF pass 50ms
- ✓ |integration| tests/integration/token-auth.test.ts > token hardening > logout: 401 for a dead bearer; cookie logout revokes the cookie session 128ms
- ✓ |integration| tests/integration/neighborhoods.test.ts > geometry > point in ring 77ms
- ✓ |integration| tests/integration/neighborhoods.test.ts > the real NYC boundaries > load, and the East Village's landmark parks fall where they should 732ms
- ✓ |integration| tests/integration/neighborhoods.test.ts > the real NYC boundaries > files places under the neighborhood that contains them 419ms
- ✓ |integration| tests/integration/neighborhoods.test.ts > the importer covers more than bars > keeps restaurants, cafes, parks, museums and bookstores, and drops what it doesn't know 42ms
- ✓ |integration| tests/integration/neighborhoods.test.ts > the importer covers more than bars > the import files each place under its neighborhood 39ms
- ✓ |integration| tests/integration/neighborhoods.test.ts > collections > counts visited places over total, earns a completion once, and never takes it back 121ms
- ✓ |integration| tests/integration/neighborhoods.test.ts > collections > a set needs at least 3 places, the index lists started neighborhoods first, and it is owner only 61ms
- ✓ |integration| tests/integration/neighborhoods.test.ts > collections > App Review stamps never count, and a place with no neighborhood has no progress 62ms
- ✓ |integration| tests/integration/compliance.test.ts > account deletion (5.1.1(v)): anonymize, never delete content > requires the current password 173ms
- ✓ |integration| tests/integration/compliance.test.ts > account deletion (5.1.1(v)): anonymize, never delete content > scrubs identity, revokes sessions, removes social ties, hides stamps and deletes their image files 334ms
- ✓ |integration| tests/integration/compliance.test.ts > account deletion (5.1.1(v)): anonymize, never delete content > a deleted account's stamps stay hidden for good: RESTORE is refused and DISMISS never un-hides 231ms
- ✓ |integration| tests/integration/compliance.test.ts > blocking (1.2) > removes follows both ways and prevents new follows either way 97ms
- ✓ |integration| tests/integration/compliance.test.ts > blocking (1.2) > lists and undoes blocks; can't block yourself 47ms
- ✓ |integration| tests/integration/compliance.test.ts > objectionable content filter at every entry point > rejects slurs and explicit terms in captions, song fields, handles and display names with a clear 400 86ms
- ✓ |integration| tests/integration/compliance.test.ts > terms acceptance > signup requires acceptTerms and a birthdate, and stores the version and time (never the birthdate) 73ms
- ✓ |integration| tests/integration/compliance.test.ts > terms acceptance > /api/me reports acceptance; accounts on an older version can accept the current one 31ms
- ✓ |integration| tests/integration/compliance.test.ts > geofence-exempt review accounts > can stamp from anywhere, but only they ever see it: not strangers, not followers, not the feed, not the profile 58ms
- ✓ |integration| tests/integration/compliance.test.ts > geofence-exempt review accounts > countable is a write-time snapshot: toggling the flag later changes neither past exempt nor past real stamps 63ms
- ✓ |integration| tests/integration/compliance.test.ts > geofence-exempt review accounts > only an admin can set the flag (service and HTTP) 35ms
- ✓ |integration| tests/integration/compliance.test.ts > reporting and suspending accounts > users report a profile by handle; a moderator suspends: signed out, can't sign in, profile gone; then unsuspend 204ms
- ✓ |integration| tests/integration/compliance.test.ts > reporting and suspending accounts > only moderators suspend; you can't report yourself 37ms
- ✓ |integration| tests/integration/auth.test.ts > auth > signs up as USER only and stores a scrypt hash, never the password 128ms
- ✓ |integration| tests/integration/auth.test.ts > auth > rejects role escalation in the signup payload 37ms
- ✓ |integration| tests/integration/auth.test.ts > auth > logs in with the right password and rejects the wrong one 170ms
- ✓ |integration| tests/integration/auth.test.ts > auth > throttles repeated failures 579ms
- ✓ |integration| tests/integration/auth.test.ts > auth > stores only the token hash and expires sessions 105ms
- ✓ |integration| tests/integration/auth.test.ts > auth > login route sets an httpOnly SameSite=Lax cookie 131ms
- ✓ |integration| tests/integration/auth.test.ts > auth > rejects cross-origin mutations 44ms
- ✓ |integration| tests/integration/auth.test.ts > same-origin check > allows requests without an Origin header (non-browser clients) 141ms
- ✓ |integration| tests/integration/auth.test.ts > same-origin check > allows same-origin requests, including behind a proxy host header 120ms
- ✓ |integration| tests/integration/auth.test.ts > same-origin check > rejects a malformed Origin 33ms
- ✓ |integration| tests/integration/moderation.test.ts > flags > three flags from distinct eligible users auto-hide a stamp pending review (logged as system) 163ms
- ✓ |integration| tests/integration/moderation.test.ts > flags > concurrent flags still auto-hide exactly once 104ms
- ✓ |integration| tests/integration/moderation.test.ts > flags > staff, new accounts and low-reputation accounts can flag but never count toward the auto-hide 77ms
- ✓ |integration| tests/integration/moderation.test.ts > flags > you can't flag your own stamp, and signed-out people can't flag 47ms
- ✓ |integration| tests/integration/moderation.test.ts > flags > you can only report a stamp you can see: a private account's stamp is a 404 to strangers and requesters 52ms
- ✓ |integration| tests/integration/moderation.test.ts > flags > reports carry a category (default OTHER): underage, stalking and not-at-this-place are first-class 63ms
- ✓ |integration| tests/integration/moderation.test.ts > flags > the queue puts underage and stalking reports first, whatever their age 67ms
- ✓ |integration| tests/integration/moderation.test.ts > flags > the old content types are not accepted 52ms
- ✓ |integration| tests/integration/moderation.test.ts > flags > the hourly flag limit holds under parallel requests 222ms
- ✓ |integration| tests/integration/moderation.test.ts > flags > flags over HTTP: a signed-in person can report a visible stamp 52ms
- ✓ |integration| tests/integration/moderation.test.ts > rule 4: hidden content is hidden, never deleted; the log is append-only > moderator hide keeps the row, resolves flags and logs; restore brings it back 69ms
- ✓ |integration| tests/integration/moderation.test.ts > rule 4: hidden content is hidden, never deleted; the log is append-only > dismissing flags on an auto-hidden stamp restores it, and the whole history is kept 72ms
- ✓ |integration| tests/integration/moderation.test.ts > rule 4: hidden content is hidden, never deleted; the log is append-only > DISMISS does not undo a moderator's own HIDE; RESTORE does 63ms
- ✓ |integration| tests/integration/moderation.test.ts > rule 4: hidden content is hidden, never deleted; the log is append-only > after a dismissal the same user can flag the stamp again 70ms
- ✓ |integration| tests/integration/moderation.test.ts > rule 4: hidden content is hidden, never deleted; the log is append-only > the moderation log can't be edited or deleted, even directly 74ms
- ✓ |integration| tests/integration/moderation.test.ts > rule 4: hidden content is hidden, never deleted; the log is append-only > only moderators can see the queue or act; over HTTP too 53ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 1: a stamp is created only inside the geofence; exempt accounts are the only exception and see only themselves 149ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 2: a private account's stamps and places reach nobody without full access, in any payload 107ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 3: a block in either direction hides everything, except from staff 63ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 4: hidden content is hidden, never deleted; the moderation log is append-only 64ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 5: EXIF and GPS are stripped from every upload 43ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 6: no user coordinates, storage keys or user ids reach a viewer who should not get them 81ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 7: reputation is visible only to the user and moderators 74ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 8: under-21s are blocked at signup and nothing about them is stored 112ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 9: the feed is chronological from people you follow, with no ranking or personalization 117ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 11: with social off, nothing of another person's passport reaches anyone but its owner 56ms
- ✓ |integration| tests/integration/invariants.test.ts > invariants > rule 10: likes and badges never affect anything else 59ms
- ✓ |integration| tests/integration/contracts.test.ts > API contract > every route's response matches src/contracts/api.ts 1108ms
- ✓ |integration| tests/integration/contracts.test.ts > API contract > error responses from real failure paths match ErrorResponse 42ms
- ✓ |integration| tests/integration/contracts.test.ts > API contract > exercised every registered route 28ms
- ✓ |integration| tests/integration/contracts.test.ts > API contract > error responses match ErrorResponse 28ms
- ✓ |integration| tests/integration/contracts.test.ts > API contract > every route handler in src/app/api is registered in the contract 34ms
- ✓ |integration| tests/integration/stamp-photos.test.ts > multi-photo stamps > holds up to 6 photos in the order they were taken, and refuses a 7th 142ms
- ✓ |integration| tests/integration/stamp-photos.test.ts > multi-photo stamps > refuses later additions and keeps the original order after a removal 65ms
- ✓ |integration| tests/integration/stamp-photos.test.ts > multi-photo stamps > strips EXIF and GPS from every photo 45ms
- ✓ |integration| tests/integration/stamp-photos.test.ts > multi-photo stamps > persists the scrapbook layout and the order, owner only, and never moves the files 55ms
- ✓ |integration| tests/integration/stamp-photos.test.ts > multi-photo stamps > is hidden, never deleted: removal is final, rows can't be deleted, and the last photo of a photo-only stamp stays 66ms
- ✓ |integration| tests/integration/stamp-photos.test.ts > multi-photo stamps > only the owner edits photos; hidden stamps freeze; photos follow the stamp's visibility 67ms
- ✓ |integration| tests/integration/stamp-photos.test.ts > multi-photo stamps > deleting the account deletes every photo file 158ms
- ✓ |integration| tests/integration/stamp-photos.test.ts > multi-photo stamps > a failed stamp leaves no files behind 44ms
- ✓ |integration| tests/integration/stamp-content.test.ts > live stamp content > removing all photos then clearing caption and song is rejected by the service and database 148ms
- ✓ |integration| tests/integration/stamp-content.test.ts > live stamp content > the database refuses last-photo removal and supports an atomic switch to a caption 62ms
- ✓ |integration| tests/integration/stamp-content.test.ts > live stamp content > concurrent caption clear and last-photo removal cannot commit an empty stamp 62ms
- ✓ |integration| tests/integration/stamp-content.test.ts > live stamp content > concurrent removal of the last two photos leaves one live photograph 49ms
- ✓ |integration| tests/integration/stamp-content.test.ts > live stamp content > concurrent direct SQL caption clear and photo removal cannot bypass the content constraint 39ms
- ✓ |integration| tests/integration/stamp-content.test.ts > live stamp content > repeatable-read edits cannot clear content using a snapshot from before photo removal 50ms
- ✓ |integration| tests/integration/stamp-content.test.ts > live stamp content > the database rejects whitespace-only song titles and artists on live stamps 36ms
- ✓ |integration| tests/integration/stamp-content.test.ts > live stamp content > creation with live photos succeeds, while a stale original storage key never counts as content 52ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > rejects UPDATE and DELETE on moderation_event 61ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > rejects DELETE of a stamp; allows hiding; refuses rewriting who, where, when or what 39ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > caption and song are the only editable content, and the caption is 280 characters at most 32ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > a removed stamp stays removed 33ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > a stamp needs a photo, a caption or a song 40ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > likes: never your own stamp, and refused on hidden, removed and App Review stamps 41ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > enforces value constraints 34ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > a follow clears the matching request; no following or requesting yourself; bios are 150 characters max 39ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > the verification log is append-only; the badge changes only with a matching log entry in the same transaction 45ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > new accounts are private by default 28ms
- ✓ |integration| tests/integration/db-guards.test.ts > database guards > places have a default 100 m geofence 28ms
- ✓ |integration| tests/integration/stamp-mutation-visibility.test.ts > stamp mutation visibility > social=0: every mutation has identical status, body and headers for foreign live, hidden, removed and missing stamps 284ms
- ✓ |integration| tests/integration/stamp-mutation-visibility.test.ts > stamp mutation visibility > social=1: every mutation has identical status, body and headers for foreign live, hidden, removed and missing stamps 252ms
- ✓ |integration| tests/integration/backend-audit.test.ts > backend visibility audit > personal-mode service callers cannot bypass disabled social HTTP routes 142ms
- ✓ |integration| tests/integration/backend-audit.test.ts > backend visibility audit > personal-mode admin endpoints cannot disclose handles, emails or legacy verification records 50ms
- ✓ |integration| tests/integration/backend-audit.test.ts > backend visibility audit > pin replacement already gives identical errors for foreign, hidden, removed and missing stamps 74ms
- ✓ |integration| tests/integration/backend-audit.test.ts > backend visibility audit > place summaries never return a URL for a removed original photo 51ms
- ✓ |integration| tests/integration/backend-audit.test.ts > backend visibility audit > activity and moderation previews never resurrect a removed photo 79ms
- ✓ |integration| tests/integration/backend-audit.test.ts > backend visibility audit > place summaries choose the first live photo in the current layout order 48ms
- ✓ |integration| tests/integration/age-gate.test.ts > the 21+ age gate at signup > turns away someone one day short of 21 with 403 underage, and stores nothing at all 60ms
- ✓ |integration| tests/integration/age-gate.test.ts > the 21+ age gate at signup > the refusal comes before the duplicate check, so it reveals nothing about existing accounts 79ms
- ✓ |integration| tests/integration/age-gate.test.ts > the 21+ age gate at signup > lets someone in on their 21st birthday, and keeps no birthdate or age anywhere 122ms
- ✓ |integration| tests/integration/age-gate.test.ts > the 21+ age gate at signup > requires a real birthdate in YYYY-MM-DD form 31ms
- ✓ |integration| tests/integration/age-gate.test.ts > the 21+ age gate at signup > over HTTP: an under-21 gets 403 underage and no session cookie or token 31ms
- ✓ |integration| tests/integration/pins.test.ts > pinned stamps > up to four of your own, in the order given, replaced as a set 198ms
- ✓ |integration| tests/integration/pins.test.ts > pinned stamps > only your own stamps, in the service and in the database 84ms
- ✓ |integration| tests/integration/pins.test.ts > pinned stamps > owner only: nobody else's view of you carries pins, and a removed stamp drops out of yours 77ms
- ✓ |integration| tests/integration/osm-import.test.ts > venues:import > creates places with the default geofence, and is idempotent 56ms
- ✓ |integration| tests/integration/osm-import.test.ts > venues:import > slugs don't change on re-import even if names change; coordinates and names follow OSM 35ms
- ✓ |integration| tests/integration/osm-import.test.ts > venues:import > adds ODbL attribution to the places API 34ms
- ✓ |integration| tests/integration/osm-import.test.ts > venues:import > recomputes the neighborhood when coordinates move, and rolls back on failure 39ms
- ✓ |integration| tests/integration/osm-import.test.ts > venues:import > no attribution when no place came from OSM 29ms
- ✓ |integration| tests/integration/personal-mode.test.ts > the flag > is off unless set 77ms
- ✓ |integration| tests/integration/personal-mode.test.ts > with social off > every social route is a 404 80ms
- ✓ |integration| tests/integration/personal-mode.test.ts > with social off > your own passport still works, and nobody else's stamp opens, not even for staff 110ms
- ✓ |integration| tests/integration/personal-mode.test.ts > with social off > services agree: another person's passport is a 404 without handles or stamps, for everyone 70ms
- ✓ |integration| tests/integration/stamp-photo-creation.test.ts > creation-only stamp photos > a remote later append is refused before processing or storage, including while flagged 117ms
- ✓ |integration| tests/integration/stamp-photo-creation.test.ts > creation-only stamp photos > direct database append is refused even after updating the parent in the same transaction 65ms
- ✓ |integration| tests/integration/stamp-photo-creation.test.ts > creation-only stamp photos > layout and final removal remain permitted without reopening the photo set 60ms
- ✓ |integration| tests/integration/songs.test.ts > song search (proxied iTunes Search API) > returns metadata only, with art upgraded to a larger rendition on Apple's CDN 83ms
- ✓ |integration| tests/integration/songs.test.ts > song search (proxied iTunes Search API) > sends nothing about the user upstream: only the term, a fixed country and limit, a short timeout, no credentials 40ms
- ✓ |integration| tests/integration/songs.test.ts > song search (proxied iTunes Search API) > drops results with objectionable text, non-Apple art, or oversized fields 33ms
- ✓ |integration| tests/integration/songs.test.ts > song search (proxied iTunes Search API) > needs a signed-in user and a sensible query, and counts against a per-user rate limit 86ms
- ✓ |integration| tests/integration/songs.test.ts > song search (proxied iTunes Search API) > answers a clear error when Apple is slow, down or returns junk 40ms
- ✓ |unit| tests/unit/password.test.ts > password hashing (scrypt) > round-trips and encodes parameters 123ms
- ✓ |unit| tests/unit/password.test.ts > password hashing (scrypt) > salts every hash 82ms
- ✓ |unit| tests/unit/password.test.ts > password hashing (scrypt) > rejects malformed stored hashes 0ms
- ✓ |integration| tests/integration/personal-moderation.test.ts > personal moderation boundary > MODERATOR HTTP and web services hide legacy flags, hidden and App Review content without changing records 170ms
- ✓ |integration| tests/integration/personal-moderation.test.ts > personal moderation boundary > ADMIN HTTP and web services hide legacy flags, hidden and App Review content without changing records 90ms
- ✓ |unit| tests/unit/storage.test.ts > local signed URLs > are valid for at least 15 minutes and at most 20 1ms
- ✓ |unit| tests/unit/storage.test.ts > local signed URLs > are stable within a 5-minute bucket (cacheable) and change across buckets 0ms
- ✓ |unit| tests/unit/storage.test.ts > local signed URLs > can't be reused for another key or a longer expiry 0ms
- ✓ |unit| tests/unit/storage.test.ts > R2 storage > presigns private GET URLs against the R2 endpoint with a 20-minute expiry 7ms
- ✓ |unit| tests/unit/storage.test.ts > R2 storage > uploads with the right bucket, key and content type 0ms
- ✓ |unit| tests/unit/storage.test.ts > R2 storage > rejects invalid keys 1ms
- ✓ |unit| tests/unit/storage.test.ts > storage driver selection > defaults to local, picks R2 when configured, and fails loudly when misconfigured 0ms
- ✓ |unit| tests/unit/contract-requests.test.ts > contract request schemas agree with server validation > signup 2ms
- ✓ |unit| tests/unit/contract-requests.test.ts > contract request schemas agree with server validation > flags, moderation, deletion 0ms
- ✓ |unit| tests/unit/contract-requests.test.ts > contract request schemas agree with server validation > stamp edits 0ms
- ✓ |unit| tests/unit/content-filter.test.ts > objectionable content filter > catches slurs and explicit terms 2ms
- ✓ |unit| tests/unit/content-filter.test.ts > objectionable content filter > sees through leetspeak, accents, spacing, punctuation and letter stretching 0ms
- ✓ |unit| tests/unit/content-filter.test.ts > objectionable content filter > catches unambiguous slurs inside run-together handles 0ms
- ✓ |unit| tests/unit/content-filter.test.ts > objectionable content filter > does not flag innocent words that contain a short term (Scunthorpe problem) 0ms
- ✓ |unit| tests/unit/content-filter.test.ts > objectionable content filter > handles empty input 0ms
- ✓ |unit| tests/unit/content-filter.test.ts > objectionable content filter > assertCleanText throws a clear 400 naming the field 0ms
- ✓ |unit| tests/unit/ops.test.ts > cron auth > requires the exact bearer secret 1ms
- ✓ |unit| tests/unit/ops.test.ts > cron auth > is closed when no (or a weak) secret is configured 0ms
- ✓ |unit| tests/unit/ops.test.ts > client IP > uses the first X-Forwarded-For hop, then X-Real-IP 0ms
- ✓ |unit| tests/unit/ops.test.ts > production seed guard > refuses production however it is signalled 0ms
- ✓ |unit| tests/unit/ops.test.ts > production seed guard > fails safe when APP_ENV is missing and the database is remote 0ms
- ✓ |unit| tests/unit/ops.test.ts > production seed guard > allows local development and explicit preview 0ms
- ✓ |unit| tests/unit/ops.test.ts > production seed guard > refuses a preview seed with the public dev password or no App Review password 0ms
- ✓ |unit| tests/unit/osm.test.ts > OSM parsing > queries bars, restaurants, cafes, parks, museums and bookstores in a box covering both neighborhoods 0ms
- ✓ |unit| tests/unit/osm.test.ts > OSM parsing > keeps named places (bars, restaurants...) inside EV/LES, uses way centers, blank address when unmapped 1ms
- ✓ |unit| tests/unit/osm.test.ts > OSM parsing > classifies real venues from a live Overpass pull (2026-09-24) 0ms
- ✓ |unit| tests/unit/osm.test.ts > OSM parsing > uses real neighborhood outlines: NoHo/Village and Chinatown are out, and Houston splits EV/LES 0ms
- ✓ |unit| tests/unit/osm.test.ts > OSM parsing > collapses the same venue mapped twice (node + building) deterministically 0ms
- ✓ |unit| tests/unit/osm.test.ts > OSM parsing > makes deterministic slugs from OSM data alone 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > anonymous sees a public account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > anonymous sees a private account limited 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > anonymous never sees a deleted account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > self sees a public account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > self sees a private account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > self never sees a deleted account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > follower sees a public account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > follower sees a private account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > follower never sees a deleted account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > requester sees a public account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > requester sees a private account limited 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > requester never sees a deleted account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > stranger sees a public account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > stranger sees a private account limited 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > stranger never sees a deleted account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > moderator sees a public account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > moderator sees a private account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > moderator never sees a deleted account in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > a block (either direction) means limited, even for a follower of a public account; staff and self are unaffected 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > a signed-out viewer can't be a follower even if the flag says so 0ms
- ✓ |unit| tests/unit/privacy.test.ts > profileAccess: every viewer x every account state > a suspended account is limited to everyone but staff and itself 0ms
- ✓ |unit| tests/unit/privacy.test.ts > personView: a limited view shows the handle and badge only > full shows everything, limited hides the name and photo 0ms
- ✓ |unit| tests/unit/privacy.test.ts > canSeeStamp: every viewer x every stamp state > anonymous sees a stamp exactly when they may see its author in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > canSeeStamp: every viewer x every stamp state > self sees a stamp exactly when they may see its author in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > canSeeStamp: every viewer x every stamp state > follower sees a stamp exactly when they may see its author in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > canSeeStamp: every viewer x every stamp state > requester sees a stamp exactly when they may see its author in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > canSeeStamp: every viewer x every stamp state > stranger sees a stamp exactly when they may see its author in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > canSeeStamp: every viewer x every stamp state > moderator sees a stamp exactly when they may see its author in full 0ms
- ✓ |unit| tests/unit/privacy.test.ts > canSeeStamp: every viewer x every stamp state > hidden and removed stamps are for staff only, not even the author 0ms
- ✓ |unit| tests/unit/privacy.test.ts > canSeeStamp: every viewer x every stamp state > a block hides the stamp from the other side; the author still sees it; staff always do 0ms
- ✓ |unit| tests/unit/privacy.test.ts > canSeeStamp: every viewer x every stamp state > App Review stamps open for their author and staff only 0ms
- ✓ |unit| tests/unit/privacy.test.ts > canSeeStamp: every viewer x every stamp state > signed-out viewers see a stamp only of a public author 0ms
- ✓ |unit| tests/unit/privacy.test.ts > viewerOf > staff are moderators and admins only 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > index 0 is page 1 slot 1 1ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > index 1 is page 1 slot 2 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > index 2 is page 1 slot 3 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > index 3 is page 2 slot 1 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > index 5 is page 2 slot 3 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > index 6 is page 3 slot 1 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > index 11 is page 4 slot 3 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > index 12 is page 5 slot 1 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > index 29 is page 10 slot 3 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > fills three slots a page, in order, never skipping 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > the first stamps stay on page 1 however many come later 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > two pages to a spread 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > the next stamp lands in the next empty slot 0ms
- ✓ |unit| tests/unit/layout.test.ts > passport layout > refuses nonsense 0ms
- ✓ |unit| tests/unit/age.test.ts > parseBirthdate > accepts real dates only 1ms
- ✓ |unit| tests/unit/age.test.ts > ageOn > counts a birthday from its own date 0ms
- ✓ |unit| tests/unit/age.test.ts > isOldEnough (21+, New York today) > is true on the 21st birthday and false the day before 0ms
- ✓ |unit| tests/unit/age.test.ts > isOldEnough (21+, New York today) > handles leap-day birthdays 0ms
- ✓ |unit| tests/unit/age.test.ts > isOldEnough (21+, New York today) > uses the New York date, not UTC: 11pm in New York is already the next day in UTC 0ms
- ✓ |unit| tests/unit/age.test.ts > isOldEnough (21+, New York today) > refuses future dates, nonsense and absurd ages 0ms
- ✓ |unit| tests/unit/time.test.ts > night rollover in America/New_York (5:00am) > assigns late-night hours to the previous evening's night 1ms
- ✓ |unit| tests/unit/time.test.ts > night rollover in America/New_York (5:00am) > uses local wall time, not UTC date 0ms
- ✓ |unit| tests/unit/time.test.ts > night rollover in America/New_York (5:00am) > rolls at 5am local across DST changes 0ms
- ✓ |unit| tests/unit/time.test.ts > night rollover in America/New_York (5:00am) > computes night bounds, including the 23h/25h DST nights 0ms
- ✓ |unit| tests/unit/time.test.ts > night rollover in America/New_York (5:00am) > zonedTimeToUtc handles EST and EDT 0ms
- ✓ |unit| tests/unit/personal-staff-pages.test.ts > personal-mode moderation page returns a native 404 before authentication or database access 1ms
- ✓ |unit| tests/unit/personal-staff-pages.test.ts > personal-mode admin page returns a native 404 before authentication or database access 0ms
  Test Files  34 passed (34)
       Tests  292 passed (292)
-   Duration  55.70s (transform 410ms, setup 316ms, collect 2.95s, tests 48.00s, environment 2ms, prepare 989ms)
+   Start at  15:11:59
+   Duration  56.86s (transform 421ms, setup 307ms, collect 3.22s, tests 47.73s, environment 2ms, prepare 1.04s)
 
-Git history:
-74ea16e phase 6: reject whitespace-only live song content
-4af3053 phase 5: close remaining backend visibility and content races
-fb3bd16 phase 4: prevent empty live stamps atomically
-2723315 phase 3: enforce creation-only stamp photos
-a8fd412 phase 2: conceal foreign stamp mutation ids
-4d5424d phase 1: close personal-mode moderation leaks
-04c2247 phase 0: isolate Codex backend lane
-4806e72 phase F.5: page flip (finger drag from the edge, tap, live shading, springs, crossfade for Reduce Motion) and the passport book wired into the Passport tab
-789725c phase D: collections (NYC neighborhoods, progress, completion marker, broader importer)
-33bc4dd phase D: place pages (own stamps by night, inside-geofence flag)
-e4d6039 phase D: pinned stamps (up to 4, owner only)
-70fecc8 phase D: oldest-first passport, page and slot from one shared layout function
-3d9a5b6 phase D: multi-photo stamps (up to 6, layout, strip, hidden never deleted)
-54d3fff phase C: SOCIAL_ENABLED flag (default off), personal mode tests, rule 11
-7f9ecb5 phase 6: seed, device checklist, docs, review, bundles
-1d32d68 phase 4: age gate, report categories, error reporting flag, dependency cleanup
-a8ec112 strip + phases 1-3: stamps, privacy foundation, mobile passport
-af27e4e infrastructure: prompt, CLAUDE.md, ENGINE.md, DESIGN.md, gate, ledgers, invariants, bundles
-0c04bc2 baseline: fork of Last Call social layer, renamed to Nostos
+== gate: mobile check
+PASS iOS eslint-rules/__tests__/rules.test.js (6.812 s)
+
+Test Suites: 51 passed, 51 total
+Tests:       413 passed, 413 total
+Snapshots:   0 total
+Time:        7.308 s, estimated 9 s
+== gate: contract sync
+== gate: invariants suite
+== gate: dependency ledger
+dependency ledger ok (69 lines)
+GATE OK: backend 292 tests, mobile 413 tests
 
 
 ====================================================================================================
@@ -526,13 +237,21 @@ How each rule from `../CLAUDE.md` is enforced, and the test that proves it. Veri
 | 9 | Feed is chronological from people you follow | `stamps.ts#listFeed` (order by `created_at desc, id desc`, no other input) | invariants "rule 9"; `stamps.test.ts` paging |
 | 10 | Likes and badges never affect anything else | no code reads likes or `verified_at` outside their own payloads | invariants "rule 10" |
 
+| 11 | With `SOCIAL_ENABLED` off, nothing of another person's passport reaches anyone but its owner | `privacy.ts` (`profileAccess`, `canSeeStamp`), `http.ts` (social routes 404) | invariants "rule 11"; `personal-mode.test.ts` |
+
 ## Other things worth checking
 
 - The contract test (`contracts.test.ts`) calls every route and fails if a route exists without a schema in
   `src/contracts/api.ts`, or a response drifts from it.
 - `seed.test.ts` runs the real seed and checks it: deterministic, anchored to now, geofence-valid, privacy and block rules
   hold on the seeded data.
-- Migrations in `prisma/migrations/2026100*`: read `strip_to_nostos` (drops), `stamps` (triggers, CHECKs), `flag_category`.
+- Migrations in `prisma/migrations/2026100*`: read `strip_to_nostos` (drops), `stamps` (triggers, CHECKs), `flag_category`,
+  `stamp_photos`, `pinned_stamps`, `neighborhoods`.
+- Session 2 data features: up to six photos per stamp (`stamp-photos.test.ts`), pinned stamps (`pins.test.ts`), neighborhoods and
+  collections (`neighborhoods.test.ts`), the place page (`stamps.test.ts` "my place page"), oldest-first page and slot
+  (`tests/unit/layout.test.ts`, `stamps.test.ts`).
+- The server saves the phone's coordinates with each stamp (`photo.lat`, `photo.lng`) as the record of the geofence check. They are in
+  no payload (invariant 6). Whether that is acceptable is OPEN-QUESTIONS L4 and L6.
 - Open questions that affect the backend: `../OPEN-QUESTIONS.md` (L1 songs terms, L2 age gate, L3 SAFE for Kids Act, L4
   geolocation disclosures).
 
@@ -545,11 +264,23 @@ Live songs must have non-whitespace titles and artists at the database boundary.
 
 Regression coverage: personal-moderation.test.ts, stamp-mutation-visibility.test.ts, stamp-photo-creation.test.ts,
 stamp-content.test.ts, backend-audit.test.ts and personal-staff-pages.test.ts. Invariant rule 11 is stronger.
-Final complete gate: backend 292 tests (34 files), mobile 292 tests (39 suites), contract sync and required invariants passed.
+Prior backend-lane gate: backend 292 tests (34 files), mobile 292 tests (39 suites), contract sync and required invariants passed.
 
 Current detailed report: ../reviews/2026-10-02T180902Z-codex-1.md
 Contract-changing commit: 2723315. Regenerate mobile/src/api/contracts.ts with npm run sync:contracts after merge;
-do not resolve generated-copy conflicts manually. No other mobile source was edited in this lane.
+do not resolve generated-copy conflicts manually. No other mobile source was edited in that prior backend-only session. The user subsequently authorized full mobile completion in this checkout.
+
+
+## Combined working-tree continuation
+
+HEAD remains 42a6c0d; Claude's incoming merge commit is e639860. The merge and new fixes are uncommitted by user request.
+Combined checks passed 292 backend tests and 407 mobile tests; backend production build and iOS/Hermes export passed.
+The final session report and regenerated bundles describe this working-tree snapshot, not a new commit.
+The prior backend guards and four forward migrations are reused; no new migration or database reset was performed.
+
+Current continuation report: ../reviews/2026-10-02T185815Z-codex-2.md
+
+Latest focused fix report: ../reviews/2026-10-02T191304Z-codex-3.md. Single full gate: backend 292 / mobile 413. First inside-cover and final right-page regressions pass with Reduce Motion on/off; four-stamp page-2 navigation is covered. Native results remain unverified.
 
 
 ====================================================================================================
@@ -660,6 +391,15 @@ source id), so no made-up links exist. Seeded stamps use generated placeholder i
 - A live song needs a non-whitespace title and artist even through direct SQL; removed historical metadata remains final.
 
 
+## 2026-10-02 combined Codex continuation
+
+The user authorized finishing both lanes in build-codex and requested all integration work remain uncommitted.
+Claude's incoming e639860 is combined with Codex HEAD 42a6c0d. Existing privacy and database fixes are reused; no new
+backend migration or reset is necessary. Backend configuration remains project nostos-codex, Postgres 5438 and dev port 3001.
+The mobile development API fallback now matches that port. The final combined gate passed 292 backend/407 mobile tests
+and the backend production build passed. Bundle headers explicitly distinguish dirty snapshots from committed HEAD.
+
+
 ====================================================================================================
 == ../OPEN-QUESTIONS.md
 ====================================================================================================
@@ -693,6 +433,9 @@ blocked. Legal questions are never decided by the builder.
 | L2b | **Age gate retries.** Nothing is stored about someone who fails the 21+ check, so they can try again with a different birthdate. Is that acceptable, or must we remember a refusal (for example a flag on the device)? The app stores nothing and never sends an under-21 birthdate to the server. | No memory of a refusal. |
 | L5 | **Sentry and privacy labels.** Error reporting is built but off (needs `EXPO_PUBLIC_SENTRY_ENABLED=1` and a DSN at build time). If you turn it on, does the App Store privacy label need "Diagnostics", is a data processing agreement needed, and where should the Sentry project live (EU or US)? Events carry no user, request or breadcrumbs. | Off. No DSN in the repo. |
 
+| L6 | **What the stamp screen says about your position.** The server saves the phone's coordinates with each stamp (columns `lat`, `lng` on the `photo` table) as the record of the geofence check; they are never in any payload. The screen says: "When you stamp, our server checks where your phone is. That position is saved with the stamp and is never shown in the app." Is that wording enough, how long may the coordinates be kept, and should they be dropped after the check instead? (Related to L4. The nearby-places and place-page endpoints do not store the position.) | Saved with the stamp, never shown. Text in `mobile/src/features/stamps/stamp-flow.ts` (`HONESTY`). |
+| L7 | **The privacy policy and terms still describe the social layer** (private and public accounts, follow requests, a feed, likes, blocking). Nostos is strictly personal for this version: with `SOCIAL_ENABLED` off none of that exists and only you can see your passport. The pages were only recolored to black and brass this session; the text is unchanged because it is a legal text. It needs a rewrite for personal mode, and the "Who can see what" section should say only you. | Text unchanged. Pages: `backend/src/app/privacy/page.tsx`, `terms/page.tsx`. |
+
 ## Codex lane
 
 - If a data-bearing environment contains existing empty live stamps or invalid song metadata, who should review their disposition before the
@@ -700,262 +443,76 @@ blocked. Legal questions are never decided by the builder.
   (`backend/prisma/migrations/20261003140000_live_stamp_content/migration.sql:42`). The isolated Codex databases migrated
   successfully; this is not a current implementation blocker. No legal decision is made here.
 
+- Combined working-tree fixes and merge remain uncommitted by explicit user request. A physical iPhone/Expo Go run is still required for native interaction and visual verification; no device evidence is available in this session.
+
 
 ====================================================================================================
-== ../reviews/2026-10-02T180902Z-codex-1.md
+== ../reviews/2026-10-02T191304Z-codex-3.md
 ====================================================================================================
 
-# Review: Codex backend isolation and reviewer fixes
-Commit range: e7d9c47..74ea16e (implementation); the report and backend documentation are committed separately.
-Lane: /Users/charlesjinn/nostos-codex, branch build-codex.
+# Review: FlipBook terminal faces
 
-## Verification at starting HEAD
+Commit state: uncommitted `build-codex` working tree in `/Users/charlesjinn/nostos-codex`. HEAD remains `42a6c0da577d0a95072ba00617208bfd0c1e338d`; pending incoming merge is `e639860138f2059ff26906145606074f02e14b3f`. No new commit was made.
 
-The supplied report reviewed f5f0601. At starting HEAD e7d9c47, `git diff --stat f5f0601 e7d9c47 -- backend` showed only a five-line change in neighborhoods.test.ts. The referenced moderation, permissions, stamp services and migrations were unchanged. All four requested backend defects were reproduced by failing regressions before implementation; none was skipped as already fixed.
-
-| Requested task | Reviewer references and reproduction | New red result | Commit |
-|---|---|---|---|
-| Personal moderation | moderation.ts:233,305; recentlyHidden leaked caption, handle, place and signed URL to staff | Two staff cases expected 404 but got 200 | 4d5424d |
-| Mutation existence | stamps.ts:241,349,377; permissions.ts:38; edit/remove/add-photo probes distinguished 403 from missing 404 | Both flag modes reproduced differing status and body | a8fd412 |
-| Creation-only photos | stamps.ts:247; later add-photo service accepted content without geofence or review freeze | Three append/removal-set regressions failed | 2723315 |
-| Empty live stamp | stamps.ts:360; migrations/20261002110000_stamps/migration.sql:32; remove all photos, then clear caption/song produced an empty stamp | Five content regressions failed | fb3bd16 |
-
-The initial baseline gate passed backend 269 and mobile 292. The mobile count reflects starting e7d9c47, not the reviewer's older 210 count. Each database test process in this lane ran serially against nostos_codex_test on 5438.
-
-## Gate output (last 15 lines, final implementation)
+## Gate output (last 15 lines)
 
 ```text
-   Start at  14:16:53
-   Duration  56.33s (transform 428ms, setup 347ms, collect 3.09s, tests 48.03s, environment 2ms, prepare 1.01s)
+   Start at  15:11:59
+   Duration  56.86s (transform 421ms, setup 307ms, collect 3.22s, tests 47.73s, environment 2ms, prepare 1.04s)
 
 == gate: mobile check
-PASS iOS eslint-rules/__tests__/rules.test.js (5.71 s)
+PASS iOS eslint-rules/__tests__/rules.test.js (6.812 s)
 
-Test Suites: 39 passed, 39 total
-Tests:       292 passed, 292 total
+Test Suites: 51 passed, 51 total
+Tests:       413 passed, 413 total
 Snapshots:   0 total
-Time:        6.219 s
+Time:        7.308 s, estimated 9 s
 == gate: contract sync
 == gate: invariants suite
 == gate: dependency ledger
 dependency ledger ok (69 lines)
-GATE OK: backend 292 tests, mobile 292 tests
+GATE OK: backend 292 tests, mobile 413 tests
 ```
+
+PASS: backend 292 tests (34 files), mobile 413 tests (51 suites), contract sync, required invariants and dependency ledger. Exactly one full gate was run for this fix.
 
 ## Done
-- Personal mode rejects queue, hidden content, logs, actions and direct flagging before reading legacy records, including App Review and staff-owned hidden stamps: `backend/src/server/services/moderation.ts:237`; `backend/tests/integration/personal-moderation.test.ts:16`; test "%s HTTP and web services hide legacy flags, hidden and App Review content without changing records".
-- The moderation web page returns a native 404 before authentication or database access: `backend/src/app/mod/page.tsx:15`; `backend/tests/unit/personal-staff-pages.test.ts:8`; test "personal-mode %s page returns a native 404 before authentication or database access".
-- Edit, removal, append, layout and photo-removal handlers return byte-identical body and identical status/headers for foreign live, hidden, removed and missing stamp IDs, for users, moderators and admins, in both flag modes: `backend/src/server/permissions.ts:35`; `backend/tests/integration/stamp-mutation-visibility.test.ts:15`; test "social=%s: every mutation has identical status, body and headers for foreign live, hidden, removed and missing stamps".
-- Later photo append rejects before image decoding or storage, including open-flag cases: `backend/src/server/services/stamps.ts:249`; `backend/tests/integration/stamp-photo-creation.test.ts:10`; test "a remote later append is refused before processing or storage, including while flagged".
-- The database forces an immutable creation transaction and refuses later child inserts, even after updating the parent: `backend/prisma/migrations/20261003130000_creation_only_photos/migration.sql:20`; `backend/tests/integration/stamp-photo-creation.test.ts:21`; test "direct database append is refused even after updating the parent in the same transaction".
-- Layout and final removal are preserved without reopening the photograph set: `backend/src/server/services/stamps.ts:301`; `backend/tests/integration/stamp-photo-creation.test.ts:34`; test "layout and final removal remain permitted without reopening the photo set".
-- Creation still strips EXIF and GPS from every photograph: `backend/src/server/services/stamps.ts:204`; `backend/tests/integration/stamp-photos.test.ts:45`; test "strips EXIF and GPS from every photo".
-- Creation and the database still reject a seventh photograph: `backend/prisma/migrations/20261003100000_stamp_photos/migration.sql:36`; `backend/tests/integration/stamp-photos.test.ts:17`; test "holds up to 6 photos in the order they were taken, and refuses a 7th".
-- Service edits use actual live photographs, never the immutable original storage key: `backend/src/server/services/stamps.ts:354`; `backend/tests/integration/stamp-content.test.ts:12`; test "removing all photos then clearing caption and song is rejected by the service and database".
-- Deferred cross-table constraints reject direct last-photo removal and allow an atomic replacement caption: `backend/prisma/migrations/20261003140000_live_stamp_content/migration.sql:36`; `backend/tests/integration/stamp-content.test.ts:23`; test "the database refuses last-photo removal and supports an atomic switch to a caption".
-- Concurrent caption clear and last-photo removal serialize at the parent: `backend/src/server/services/stamps.ts:259`; `backend/tests/integration/stamp-content.test.ts:34`; test "concurrent caption clear and last-photo removal cannot commit an empty stamp".
-- Concurrent removal of the final two photos leaves one live photo: `backend/src/server/services/stamps.ts:264`; `backend/tests/integration/stamp-content.test.ts:44`; test "concurrent removal of the last two photos leaves one live photograph".
-- Direct SQL races cannot bypass the final-content constraint: `backend/prisma/migrations/20261003140000_live_stamp_content/migration.sql:38`; `backend/tests/integration/stamp-content.test.ts:53`; test "concurrent direct SQL caption clear and photo removal cannot bypass the content constraint".
-- Stale original keys and whitespace-only captions do not count as live content: `backend/prisma/migrations/20261003140000_live_stamp_content/migration.sql:16`; `backend/tests/integration/stamp-content.test.ts:95`; test "creation with live photos succeeds, while a stale original storage key never counts as content".
-- The demo seed creates each parent and photograph set in one transaction: `backend/prisma/seed.ts:59`; `backend/tests/integration/seed.test.ts:22`; test "is deterministic: the same anchor gives the same rows".
 
-## Backend hunt
-- Direct social entry services cannot bypass their disabled HTTP routes; legacy follows/likes are preserved and like summaries are zero in personal mode: `backend/src/server/services/stamps.ts:445`; `backend/tests/integration/backend-audit.test.ts:27`; test "personal-mode service callers cannot bypass disabled social HTTP routes".
-- Admin account search, verification history and account mutations also reject personal mode without disclosing handles or emails: `backend/src/server/services/verification.ts:49`; `backend/tests/integration/backend-audit.test.ts:52`; test "personal-mode admin endpoints cannot disclose handles, emails or legacy verification records".
-- The admin page has the same native web 404 boundary: `backend/src/app/admin/page.tsx:11`; `backend/tests/unit/personal-staff-pages.test.ts:8`; test "personal-mode %s page returns a native 404 before authentication or database access".
-- Pin replacement was already indistinguishable for inaccessible and missing IDs; no pin behavior change was needed: `backend/src/server/services/pins.ts:33`; `backend/tests/integration/backend-audit.test.ts:72`; test "pin replacement already gives identical errors for foreign, hidden, removed and missing stamps".
-- Place summaries stop returning the removed original photo: `backend/src/server/services/stamps.ts:435`; `backend/tests/integration/backend-audit.test.ts:90`; test "place summaries never return a URL for a removed original photo".
-- Activity and moderation summaries also omit removed-photo URLs: `backend/src/server/media.ts:10`; `backend/tests/integration/backend-audit.test.ts:96`; test "activity and moderation previews never resurrect a removed photo".
-- Summaries use the first live photo in layout order: `backend/src/server/media.ts:13`; `backend/tests/integration/backend-audit.test.ts:111`; test "place summaries choose the first live photo in the current layout order".
-- A repeatable-read snapshot race was reproduced after phase 4, then fixed by advancing the parent row version; stale edits now fail with P2034: `backend/prisma/migrations/20261003150000_content_snapshot_guard/migration.sql:9`; `backend/tests/integration/stamp-content.test.ts:64`; test "repeatable-read edits cannot clear content using a snapshot from before photo removal".
-- Invariant rule 11 now rejects foreign handles and passports, as well as disabled feed service calls: `backend/tests/integration/invariants.test.ts:206`; `backend/tests/integration/invariants.test.ts:206`; test "rule 11: with social off, nothing of another person's passport reaches anyone but its owner".
+- Final right face restored at `mobile/src/features/book/FlipBook.tsx:116`: on the last spread, the underlying right face now comes from the current spread rather than an out-of-range next spread. The final turning-page exclusion remains correct: there is no following spread to turn into.
+- Initial inside-cover face restored at `mobile/src/features/book/FlipBook.tsx:115`: on spread zero, the underlying left face comes from the current spread rather than an out-of-range previous spread. Interior spreads retain their adjacent underlay faces and turning sheets.
+- Boundary regression tests at `mobile/src/features/book/__tests__/flipbook.test.tsx:32` and `:40`: **"renders both first-spread faces with Reduce Motion=%s"** and **"renders both final-spread faces with Reduce Motion=%s"** each run with Reduce Motion false and true. Assertions check both visible faces and no faces beyond the final spread.
+- The previous test that blessed the missing inside cover was corrected at `mobile/src/features/book/__tests__/flipbook.test.tsx:23`, **"draws the page it is on, the page under each turn, and nothing past either end of the book"**. It now requires the inside cover to be visible.
+- Four-stamp screen regression at `mobile/src/features/book/__tests__/passport-book.test.tsx:66`: **"four stamps: page 2 appears on the final spread and opens its stamp with Reduce Motion=%s"**, run with Reduce Motion false and true. It opens the actual PassportBook, checks inside cover/bearer, advances to the final spread, requires visible pages 1 and 2 and the fourth stamp, taps that stamp, and asserts navigation to `/stamp/s4`. Next remains disabled at the last spread.
 
-- Direct database writes cannot substitute a whitespace-only song title or artist for real stamp content: `backend/prisma/migrations/20261003160000_song_content_guard/migration.sql:5`; `backend/tests/integration/stamp-content.test.ts:87`; test "the database rejects whitespace-only song titles and artists on live stamps". The older song-shape CHECK trimmed ASCII spaces only; the new live-song CHECK uses JavaScript trim semantics and preserves already removed historical records. Commit 74ea16e.
+## Actual checks
 
-## Gates and failures
-
-All task commits followed a passing complete gate. The gate stamps the pre-commit HEAD in LEDGER.md because the implementation is tested in the working tree before its task commit. LEDGER.md was written only by the gate.
-
-| Run | Backend | Mobile | Outcome |
-|---|---:|---:|---|
-| Baseline | 269 | 292 | PASS |
-| Phase 1 | 271 | 292 | PASS |
-| Phase 2 | 273 | 292 | PASS |
-| Phase 3 first gate | 274 passed, 2 failed | not reached | Old contract test still expected append success; route registry coverage then failed because the scenario stopped early |
-| Phase 3 corrected gate | 276 | 292 | PASS |
-| Phase 4 | 282 | 292 | PASS |
-| Phase 5 first gate | 289 passed, 1 failed | not reached | An accidental edit changed the social-on private-profile expectation from 403 to 404; restored the original 403 assertion |
-| Phase 5 final gate | 291 | 292 | PASS |
-| Phase 6 song-content gate | 292 | 292 | PASS |
-
-The contract registry still exercises every registered route. POST photo append now validates ErrorResponse with an exact 400 body; layout and removal use a creation-time photo. The six-photo and EXIF tests retain their checks while dropping the unsafe later-append requirement. No test or gate was skipped, focused, removed or loosened. The ordinary social-on privacy assertion remains 403; personal-mode foreign passport services now require 404.
-
-Red runs: moderation 2 failed; mutation visibility 2 failed; creation-only 3 failed; live content 5 failed; expanded audit 6 failed/2 passed; repeatable-read regression 1 failed/6 passed; song-content regression 1 failed/7 passed. Focused corrected runs: creation-only 11 passed; content/database 16 passed before the additional concurrency tests; social/admin audit 12 passed; final content/audit 13 passed.
-
-## Earlier passing gate output (last 15 lines each)
-
-### Baseline
-
-```text
-   Start at  13:28:37
-   Duration  56.89s (transform 362ms, setup 259ms, collect 3.35s, tests 47.00s, environment 2ms, prepare 896ms)
-
-== gate: mobile check
-PASS iOS src/features/moderation/__tests__/reasons.test.ts (5.099 s)
-
-Test Suites: 39 passed, 39 total
-Tests:       292 passed, 292 total
-Snapshots:   0 total
-Time:        18.783 s
-== gate: contract sync
-== gate: invariants suite
-== gate: dependency ledger
-dependency ledger ok (69 lines)
-GATE OK: backend 269 tests, mobile 292 tests
-```
-
-### Phase 1
-
-```text
-   Start at  13:32:08
-   Duration  56.07s (transform 361ms, setup 258ms, collect 2.51s, tests 48.57s, environment 2ms, prepare 837ms)
-
-== gate: mobile check
-PASS iOS eslint-rules/__tests__/rules.test.js (6.001 s)
-
-Test Suites: 39 passed, 39 total
-Tests:       292 passed, 292 total
-Snapshots:   0 total
-Time:        6.484 s, estimated 14 s
-== gate: contract sync
-== gate: invariants suite
-== gate: dependency ledger
-dependency ledger ok (69 lines)
-GATE OK: backend 271 tests, mobile 292 tests
-```
-
-### Phase 2
-
-```text
-   Start at  13:35:35
-   Duration  56.40s (transform 389ms, setup 275ms, collect 2.70s, tests 48.11s, environment 2ms, prepare 902ms)
-
-== gate: mobile check
-PASS iOS eslint-rules/__tests__/rules.test.js (5.982 s)
-
-Test Suites: 39 passed, 39 total
-Tests:       292 passed, 292 total
-Snapshots:   0 total
-Time:        6.484 s, estimated 7 s
-== gate: contract sync
-== gate: invariants suite
-== gate: dependency ledger
-dependency ledger ok (69 lines)
-GATE OK: backend 273 tests, mobile 292 tests
-```
-
-### Phase 3
-
-```text
-   Start at  13:43:41
-   Duration  57.23s (transform 363ms, setup 281ms, collect 2.78s, tests 48.51s, environment 2ms, prepare 919ms)
-
-== gate: mobile check
-PASS iOS eslint-rules/__tests__/rules.test.js (6.02 s)
-
-Test Suites: 39 passed, 39 total
-Tests:       292 passed, 292 total
-Snapshots:   0 total
-Time:        6.547 s
-== gate: contract sync
-== gate: invariants suite
-== gate: dependency ledger
-dependency ledger ok (69 lines)
-GATE OK: backend 276 tests, mobile 292 tests
-```
-
-### Phase 4
-
-```text
-   Start at  13:48:12
-   Duration  56.54s (transform 375ms, setup 297ms, collect 2.89s, tests 47.85s, environment 2ms, prepare 966ms)
-
-== gate: mobile check
-PASS iOS eslint-rules/__tests__/rules.test.js (5.978 s)
-
-Test Suites: 39 passed, 39 total
-Tests:       292 passed, 292 total
-Snapshots:   0 total
-Time:        6.488 s, estimated 7 s
-== gate: contract sync
-== gate: invariants suite
-== gate: dependency ledger
-dependency ledger ok (69 lines)
-GATE OK: backend 282 tests, mobile 292 tests
-```
-
-### Phase 5
-
-```text
-   Start at  14:01:13
-   Duration  56.75s (transform 370ms, setup 313ms, collect 3.06s, tests 47.90s, environment 2ms, prepare 970ms)
-
-== gate: mobile check
-PASS iOS eslint-rules/__tests__/rules.test.js (5.589 s)
-
-Test Suites: 39 passed, 39 total
-Tests:       292 passed, 292 total
-Snapshots:   0 total
-Time:        6.037 s
-== gate: contract sync
-== gate: invariants suite
-== gate: dependency ledger
-dependency ledger ok (69 lines)
-GATE OK: backend 291 tests, mobile 292 tests
-```
-
-## Decisions and lane setup
-
-- Setup command output confirmed `/Users/charlesjinn/nostos-codex` and `build-codex`; the other worktrees were listed only as Git metadata. AGENTS.md was created and committed in 04c2247. Explicit user lane rules override the older build-only instructions in CLAUDE.md/ENGINE.md.
-- Before any database command, backend/docker-compose.yml and ignored backend/.env were changed to project nostos-codex, Postgres 5438, nostos_codex and nostos_codex_test. The test allowlist now checks exact database names, including nostos_codex_test. Final dev script uses port 3001; optional pooler configuration is 6439. No command connected to 5435, 5436 or 5437.
-- `/System/Volumes/Data` had 137 GiB available before locked backend installation and before the authorized `npm ci` for mobile. No Xcode installation.
-- The first gate attempt found the shared lock held by active gate/Vitest processes. Subsequent gate invocations waited for the directory to disappear naturally. No lock was deleted or bypassed, including between tasks.
-- Four forward migrations were generated with prisma migrate diff before their directories were created; PostgreSQL triggers were then appended. migrate deploy and prisma generate succeeded against the isolated databases. No migrate reset.
-- Personal mode disables moderation/admin/social tools at their service entry points. This prevents legacy flagger and history identities from leaking even through web callers. Original records remain available when social mode is explicitly enabled.
-- A creation transaction marker is forced on INSERT and immutable thereafter. Parent xmin or a caller-supplied created_at would not safely identify creation after later updates.
-- Content constraints are deferred to transaction commit so initial photos and replacement captions can be written atomically. Raw photo updates also advance the parent's MVCC version to protect repeatable-read snapshots without changing edited_at.
-- The supplied reviews/2026-10-02-reviewer-1.md was initially untracked and is left as supplied. No HANDOFF.md, other mobile source, archive or other builder checkout was edited. No push or checkout of build.
-
-## Contract merge instructions
-
-Only **2723315** changed backend/src/contracts/api.ts, at line 198 (creation-only photo endpoint documentation). Its generated mobile/src/api/contracts.ts copy was synchronized with `npm run sync:contracts` and committed in that same commit. `git log e7d9c47..74ea16e -- backend/src/contracts/api.ts` lists only 2723315; `git diff --name-only e7d9c47 74ea16e -- mobile` lists only mobile/src/api/contracts.ts.
-
-**Mobile must run `npm run sync:contracts` after merging. Regenerate the generated copy instead of resolving its conflicts by hand.** Later photo append now returns 400 for a live visible owner; foreign and nonexistent IDs return indistinguishable 404s. Initial photos, layout edits and final removal remain supported.
+- Red phase: focused FlipBook and PassportBook suites reproduced the defect, **7 failed / 13 passed** across two suites. The corrected old expectation plus the six new parameterized cases failed before the production fix.
+- Green phase: `npm test -- --runInBand src/features/book/__tests__/flipbook.test.tsx src/features/book/__tests__/passport-book.test.tsx src/features/book/__tests__/flip-math.test.ts src/features/book/__tests__/pages.test.tsx`, **44 passed / 4 suites**.
+- One full gate passed after the combined fix, with its actual output above. Bundle snapshots reuse that recorded check output rather than rerunning tests during packaging.
+- Canonical code, tests and documentation remain uncommitted. The delivery folder contains the handoff, this report, both refreshed review bundles and a short real-phone checklist.
 
 ## Claims not proven
 
-- No physical iPhone, Expo Go, deployed server, or visual/runtime effect was checked in this backend lane. The mobile gate is automated coverage only.
-- Optional PgBouncer configuration and the port-3001 dev server were configured but not started for runtime verification.
-- The historical-empty-data preflight at backend/prisma/migrations/20261003140000_live_stamp_content/migration.sql:42 was not exercised against a real populated database containing invalid live stamps. It intentionally stops rather than inventing content or changing an owner's records.
-- No claim of deployment readiness, legal compliance or legal decisions.
+- No physical iPhone or Expo Go run. Component visibility, navigation and Reduce Motion branches are covered under the existing React Native/Reanimated test mocks; native hit testing, actual page motion and rendering still require the phone checklist.
+- No new production build or iOS export was run for this fix. Earlier session packaging results are historical, not proof of this changed FlipBook on a device.
 
-## Open questions
+## Decisions
 
-See OPEN-QUESTIONS.md under "Codex lane" for handling historical empty live stamps if a data-bearing environment encounters the migration preflight. No implementation blocker exists in the isolated databases.
+Keep the existing turn model. At the first/last book boundary, render the current outer face underneath because no turning sheet supplies it. Avoid adding a nonexistent terminal turn or duplicating interior faces.
 
-## Gaps
+No contract, dependency, database schema or migration change. Database test configuration remains compose nostos-codex, Postgres 5438, nostos_codex/nostos_codex_test. No other checkout/database, archive, push, commit or branch checkout was touched. Existing gate locks are allowed to clear naturally; none is removed or bypassed.
 
-- Mobile source and device work remain owned by the other lane. Photo additions must occur during creation; this backend intentionally refuses later append.
-- The backend review bundle is refreshed for the final implementation, without altering mobile review files or HANDOFF.md.
+## Open questions / gaps
 
-## found but not fixed
+Physical phone results remain unverified. The short checklist is `mobile/BOOK-PAGES-PHONE-CHECKLIST.md`; broader native/visual gaps and existing legal questions remain unchanged. No unrelated audit or speculative investigation was started.
 
-- Unverified suspicion: previously issued signed photo URLs may remain usable until expiry after visibility changes. No URL revocation audit was performed; this is not a confirmed defect.
-- Historical invalid-data migration handling and optional pooler/dev-server runtime remain unverified as described above. No further confirmed backend defects are outstanding from this work.
+## Next task
 
-## Stopped
+Run the real-phone checklist and review this uncommitted snapshot. Commit only after explicit user authorization.
 
-The last fix is committed as 74ea16e. The final gate passed with 292 backend and 292 mobile tests. The bundle was regenerated once after that fix. No further audits or migrations will be started. Preserve both sets of gate-written LEDGER.md lines when merging. No push was performed.
+## Review bundle packaging
+
+Both bundles were regenerated from the current working-tree files using their existing indexed file lists, with this latest report and the short phone checklist included. The recorded single-gate output supplies verification; packaging does not run the generators' embedded test commands again. Bundle headers identify the uncommitted snapshot.
 
 
 ====================================================================================================
@@ -13438,3 +12995,112 @@ describe("night rollover in America/New_York (5:00am)", () => {
     expect(zonedTimeToUtc(2026, 7, 15, 22).toISOString()).toBe("2026-07-16T02:00:00.000Z");
   });
 });
+
+
+====================================================================================================
+== ../HANDOFF.md
+====================================================================================================
+
+# Handoff
+
+Nostos is an iPhone app (Expo, iOS only) for New York: you go to a place and get a stamp. Your profile is a passport book you open
+and flip through; stamps appear on its pages. This version is strictly personal: no feed, no likes, no follows, no sharing. Only you
+can see your passport. The look is black and brass.
+
+Read first: `CLAUDE.md`, `ENGINE.md`, `NOSTOS-BUILD-PROMPT.md`, `NOSTOS-BUILD-PROMPT-2.md`, `DESIGN.md`. The only definition of green is
+`scripts/gate.sh`. `LEDGER.md` is written by the gate only. Current combined checkout: `/Users/charlesjinn/nostos-codex`, branch `build-codex`; never push.
+Claude's committed `build` work at e639860 has been imported into this working tree alongside Codex HEAD 42a6c0d.
+The user requested an uncommitted merge and uncommitted fixes; do not commit without renewed authorization.
+
+## What exists
+- **Backend** (`backend/`: Next.js 15, Prisma, Postgres): accounts and sessions, the geofence check on every stamp, up to six photos
+  per stamp with EXIF and GPS stripped, songs as metadata (iTunes Search proxy), neighborhoods and completion, pinned stamps (up to
+  four), the place page, oldest-first page and slot numbering, moderation, the age gate, account deletion. The social layer is still
+  there behind `SOCIAL_ENABLED` (default off), and 404s when off.
+- **App** (`mobile/`): Passport (the book), Stamp (the stamp flow), Map, and Settings behind a gear. A development-only Design gallery.
+- **Rules that must never break:** `CLAUDE.md` lists eleven; each has a test in `backend/tests/integration/invariants.test.ts`.
+
+## Run it
+```
+cd /Users/charlesjinn/nostos-codex
+(cd backend && docker compose up -d db)    # nostos-codex, Postgres 5438 only
+(cd backend && pnpm db:seed && pnpm dev)   # nostos_codex, API on :3001
+(cd mobile && npx expo start --go --port 8082) # scan the QR code in Expo Go
+scripts/gate.sh                            # everything: typecheck, lint, tests, invariants, dependency ledger
+```
+Demo sign-in after the seed: `avaa@lastcall.dev` (or `maya_r@lastcall.dev`), password `lastcall-dev`. The phone and the Mac must be on
+the same network (or use `npx expo start --tunnel`). See `mobile/README.md`.
+
+## Try each thing on the phone
+- **The book:** Passport tab. Tap the cover: it swings open to the bearer page. Drag from the outer edge of a page, or tap the edge,
+  to turn it. "Index" under the book lists neighborhoods; tap one to jump to its first page.
+- **Stamp a place:** the large center button. The list says "Here" or "Nearby" with distances. Take photos with the in-app camera (up
+  to six), add a caption or a song, tap Stamp, and watch it land. To try it away from a place in a development build, long-press the
+  Map to pretend you are there (the server still checks the geofence).
+- **A stamp:** tap one on a page. The photos are on the right; drag them about (it saves), tap one for full screen and pinch.
+  The ellipsis menu pins it, edits it or deletes it from your profile.
+- **Map:** places you have stamped glow; tap a pin for its sheet and the place page.
+- **The Design gallery (development builds only):** on the Welcome screen tap "Design gallery (development)", or in Settings under
+  Development, or open the link `nostos://design` (in Expo Go: `exp://<your Mac's address>:8082/--/design`). Every piece of the design
+  is there on made-up data with no account and no server.
+
+## What needs your decision (`OPEN-QUESTIONS.md`)
+- **L6:** the server saves the phone's position with each stamp (to audit the geofence check) and never shows it. The stamp screen
+  says so. Is that wording right, and should the position be dropped after the check?
+- **L7:** the privacy policy and terms still describe the social layer. Only recolored this session; the text needs a lawyer.
+- L1 to L5 (songs terms, age gate, SAFE for Kids Act, geolocation disclosures, error reporting) are unchanged.
+- Product questions 1 to 8 (ratings, place catalog, stamp frequency and others) are unchanged.
+
+## What has not been run
+**Nothing in session 2 has run on a phone.** The app type-checks, lints, and passes Jest, which tests the math and that screens render,
+but the leather and foil shaders, the cover swing, the page flip, the stamp landing, the typewriter, the pinch zoom, the camera, haptics,
+Reduce Motion, VoiceOver and the map have never been seen. `mobile/DEVICE-CHECKLIST.md` lists every effect to check. Expect to fix
+things on first contact with a real device. Skia, `react-native-svg`, `expo-camera` and `expo-sensors` are claimed to work in Expo Go
+from the Expo SDK 57 docs, not from a run.
+
+## Where things are
+`backend/src/app/api` (routes), `backend/src/server/services` (logic), `backend/src/contracts/api.ts` (the API contract, copied to
+`mobile/src/api/contracts.ts` by `node scripts/sync-contracts.mjs`), `mobile/src/app` (screens), `mobile/src/features/book` (the
+book), `mobile/src/theme` (Midnight), `reviews/` (one file per session), `DEPENDENCIES.md` (one line per dependency).
+
+## Codex integration fixes
+
+Creation-only photo content, indistinguishable foreign/missing stamp mutation 404s, personal-mode service guards (including
+moderation/admin), and atomic live-content database guards remain present from the prior Codex session. Photo layout edits and
+final removal remain allowed. Contract documentation changed only in prior commit 2723315; its generated mobile copy is already
+synchronized. Run `npm run sync:contracts` after a future merge rather than resolving generated-file conflicts by hand.
+
+The remaining mobile fixes and final check results are recorded in the newest `reviews/*-codex-2.md` session report.
+No native rendering, camera, location permission, haptics, VoiceOver or animation performance claim is proven by automated tests.
+
+## Current automated evidence
+
+Final combined gate: 292 backend tests (34 files), 407 mobile tests (51 suites), plus required invariants, contract sync
+and dependency ledger, all passed. Backend production build and final iOS/Hermes export passed. Full details and gaps:
+`reviews/2026-10-02T185815Z-codex-2.md`. These changes remain uncommitted.
+
+## Verification workflow for future work
+
+Use targeted tests while fixing individual issues. Run the full gate once after combined changes and repeat only if a check fails or a later change affects the result. Do not start speculative audits. The user requested no commits. Both review bundles have been regenerated and their fresh summaries and complete test-file inclusion verified.
+
+## Latest fix: book boundary pages
+
+The first inside cover and final right page now render. Focused tests passed 44/44; one full gate passed backend 292 / mobile 413. Details: `reviews/2026-10-02T191304Z-codex-3.md`. Real-phone checklist: `mobile/BOOK-PAGES-PHONE-CHECKLIST.md`. The merge and changes remain uncommitted. Review bundles are regenerated from the working tree using the recorded gate results, without repeating checks.
+
+
+====================================================================================================
+== ../mobile/BOOK-PAGES-PHONE-CHECKLIST.md
+====================================================================================================
+
+# Real-phone checklist: book-page fix
+
+Use `/Users/charlesjinn/nostos-codex` only. Mac and iPhone should be on the same Wi-Fi. Start the isolated backend with `(cd backend && pnpm dev)` on port 3001, then `(cd mobile && npx expo start --go --port 8082)` and scan the QR code in Expo Go. If overriding the API URL, use the Mac's LAN address on port 3001, not the phone's localhost. Do not reset or reseed an existing database just for this checklist.
+
+- [ ] **Backend connection:** sign in, open your passport and load nearby places. Confirm there is no connection error and requests reach the backend on 3001.
+- [ ] **Camera:** open Stamp, take a photo inside the app, confirm the preview, remove one and take it again. Capture up to six; a seventh must be blocked. Return to the composer and confirm the photos remain.
+- [ ] **Stamp creation:** at a place marked Here, add a caption or song and submit with photos. Confirm the landing, then reopen the passport and confirm the new stamp persists.
+- [ ] **Every book page:** use an account with at least four visible stamps. Open the book: inside cover on the left, bearer page on the right. Turn through every spread forwards and backwards, using buttons and edge gestures; check both faces each time. On the final spread, page 2 (and later final right pages for a larger passport) must render. Next must stop at the end.
+- [ ] **Open stamps:** tap a stamp on the first stamp page and the fourth stamp on page 2. Each must open the correct stamp with its caption/song/photos; return and repeat from the final spread.
+- [ ] **Reduce Motion:** enable Settings > Accessibility > Motion > Reduce Motion on iPhone, relaunch Expo Go, and repeat the first/last-spread and stamp-opening checks. Both faces must remain visible and tappable during the reduced-motion transition.
+
+Record iPhone model, iOS/Expo Go versions, Reduce Motion setting, and pass/fail for each item. Screenshots or a short recording of the first and final spreads help review failures. No device result has been recorded yet.

@@ -34,17 +34,19 @@ Nostos is STRICTLY PERSONAL for this version. No feed, no likes, no follows, no 
 - [x] F.5 Page flip (drag from edge, tap edges, rotateY hinge with live shading, springs, hold halfway, reduced motion crossfade)
 - [x] F.6 Stamps (Skia/SVG brass ink, deterministic design from place id, border from neighborhood, pure function with tests, completed-neighborhood foil stamp)
 - [x] F.7 Stamp landing (slam, ink spread, glow, shake, haptic, photos pin, "Added to page N", progress)
-- [ ] F.8 Visa spread (stamp left, scrapbook right up to 6 photos, drag rearrange persisted, full screen pinch zoom, caption typewriter, date, place, song ticket stub, menu)
-- [ ] F.9 Index (neighborhood progress rings, jump to pages)
-- [ ] F.10 Stamp flow (where are you list, km at 1000 m+, honesty banner, calm disabled state, compose, landing)
-- [ ] F.11 Map (dark, glowing brass pins, dim pins, bottom sheet, custom markers)
-- [ ] F.12 Place page, settings, welcome, sign up (age gate), under-21 screen, first run, delete-account and legal restyled
-- [ ] F.13 Dev-only Design gallery
+- [x] F.8 Visa spread (stamp left, scrapbook right up to 6 photos, drag rearrange persisted, full screen pinch zoom, caption typewriter, date, place, song ticket stub, menu)
+- [x] F.9 Index (neighborhood progress rings, jump to pages)
+- [x] F.10 Stamp flow (where are you list, km at 1000 m+, honesty banner, calm disabled state, compose, landing)
+- [x] F.11 Map (dark, glowing brass pins, dim pins, bottom sheet, custom markers)
+- [x] F.12 Place page, settings, welcome, sign up (age gate), under-21 screen, first run, delete-account and legal restyled
+- [x] F.13 Dev-only Design gallery
 
 ## G. Tests and honesty
-- [ ] G.1 Unit-test logic: layout, deterministic stamp design, ordering and page numbers, photo slots, theme lint, geofence states, distance formatting, multi-photo rules.
-- [ ] G.2 Say visuals are untested in the review; list every effect; add each to DEVICE-CHECKLIST.md.
+- [x] G.1 Unit-test logic: layout, deterministic stamp design, ordering and page numbers, photo slots, theme lint, geofence states, distance formatting, multi-photo rules.
+- [x] G.2 Say visuals are untested in the review; list every effect; add each to DEVICE-CHECKLIST.md.
 
 ## H. Docs and handoff
-- [ ] H.1 DESIGN.md fully written incl. "Swappable screens".
-- [ ] H.2 HANDOFF.md, both REVIEW.md, DECISIONS.md, OPEN-QUESTIONS.md, gate, bundles, session review with file:line and test names; tell the user how to open the Design gallery.
+- [x] H.1 DESIGN.md fully written incl. "Swappable screens".
+- [x] H.2 HANDOFF.md, both REVIEW.md, DECISIONS.md, OPEN-QUESTIONS.md, gate, bundles, session review with file:line and test names; tell the user how to open the Design gallery.
+
+H.2 integration note (Codex continuation): documentation and bundles reflect the uncommitted combined build-codex working tree. Automated checks and packaging are recorded in the newest Codex session review; physical iPhone visual and native-runtime checks remain unverified. The user explicitly requested no commits.

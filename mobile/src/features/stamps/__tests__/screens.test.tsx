@@ -3,8 +3,11 @@
  * person can read or act on (a skeleton, a message, an error with Try again), never an empty view.
  */
 import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 
+import { router } from "expo-router";
+
+import { songDraft } from "@/features/stamps/song-draft";
 import { ApiError } from "@/api/client";
 import type { StampView } from "@/api/contracts";
 import { testQueryClient } from "@/test/query-client";
@@ -18,11 +21,16 @@ let mockFeed: Query;
 let mockStamp: Query;
 let mockSongs: Query;
 let mockLocalId = "s1";
+let mockSearchChange: ((event: { nativeEvent: { text: string } }) => void) | undefined;
+let mockSongQueries: string[] = [];
 
 jest.mock("@shopify/flash-list", () => ({ FlashList: jest.requireActual("react-native").FlatList }));
 jest.mock("expo-router", () => ({
   router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() },
-  Stack: { Screen: () => null },
+  Stack: { Screen: ({ options }: { options?: { headerSearchBarOptions?: { onChangeText?: typeof mockSearchChange } } }) => {
+    mockSearchChange = options?.headerSearchBarOptions?.onChangeText;
+    return null;
+  } },
   useLocalSearchParams: () => ({ id: mockLocalId }),
   useFocusEffect: jest.fn(),
 }));
@@ -32,7 +40,8 @@ jest.mock("@/api/queries", () => ({
   qk: jest.requireActual("@/api/keys").qk,
   useFeed: () => mockFeed,
   useStamp: () => mockStamp,
-  useSongSearch: () => mockSongs,
+  usePins: () => ({ data: { stamps: [] } }),
+  useSongSearch: (query: string) => { mockSongQueries.push(query); return mockSongs; },
   useMe: () => ({ data: { user: { handle: "me" } } }),
 }));
 jest.mock("@/api", () => {
@@ -134,14 +143,75 @@ describe("Stamp detail", () => {
 });
 
 describe("Song picker", () => {
-  beforeEach(() => quiet());
-  afterEach(() => jest.restoreAllMocks());
+  beforeEach(() => {
+    quiet();
+    jest.useFakeTimers();
+    mockSongQueries = [];
+    songDraft.clear();
+    jest.clearAllMocks();
+  });
+  afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
 
-  it("before typing, while searching, with results, with none, and when Apple is down", async () => {
+  const searchFor = async (text: string) => {
+    expect(mockSearchChange).toBeDefined();
+    await act(async () => mockSearchChange!({ nativeEvent: { text } }));
+    await act(async () => jest.advanceTimersByTime(350));
+  };
+
+  it("starts with a typing prompt and can clear the selected song", async () => {
     mockSongs = { isPending: true, fetchStatus: "idle" };
     const a = await wrap(<SongPicker />);
     expect(screen.getByText("Type a song or an artist.")).toBeTruthy();
     expect(screen.getByText("No song")).toBeTruthy();
+    await fireEvent.press(screen.getByText("No song"));
+    expect(songDraft.take()).toEqual({ song: null });
+    expect(router.back).toHaveBeenCalledTimes(1);
     await a.unmount();
   });
+  it("debounces typing and shows a searching state without results or an empty message", async () => {
+    mockSongs = { isPending: true, fetchStatus: "fetching" };
+    await wrap(<SongPicker />);
+    await act(async () => mockSearchChange?.({ nativeEvent: { text: "  Heroes  " } }));
+    await act(async () => jest.advanceTimersByTime(349));
+    expect(screen.getByText("Type a song or an artist.")).toBeTruthy();
+    await act(async () => jest.advanceTimersByTime(1));
+    expect(mockSongQueries.at(-1)).toBe("Heroes");
+    expect(screen.getByRole("progressbar", { name: "Loading" })).toBeTruthy();
+    expect(screen.queryByText(/Nothing found/)).toBeNull();
+  });
+
+  it("shows search results and hands the selected metadata back to the composer", async () => {
+    const song = { title: "Heroes", artist: "David Bowie", album: "Heroes", artUrl: null, sourceId: "1" };
+    mockSongs = { data: { songs: [song] } };
+    await wrap(<SongPicker />);
+    await searchFor("Heroes");
+    expect(screen.getByText("Song info from Apple Music. Nostos doesn't play music.")).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText("Heroes by David Bowie"));
+    expect(songDraft.take()).toEqual({ song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" } });
+    expect(router.back).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the searched text when there are no results", async () => {
+    mockSongs = { data: { songs: [] }, isPending: false };
+    await wrap(<SongPicker />);
+    await searchFor("zz");
+    expect(screen.getByText("Nothing found for “zz”.")).toBeTruthy();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByText("Try again")).toBeNull();
+  });
+
+  it("shows upstream failure, retries the search and displays recovered results", async () => {
+    const refetch = jest.fn();
+    mockSongs = { isError: true, error: new ApiError(503, "song_search_unavailable", "Song search is unavailable."), refetch };
+    const view = await wrap(<SongPicker />);
+    await searchFor("Heroes");
+    expect(screen.getByText("Couldn't search for songs right now.")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Try again"));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    mockSongs = { data: { songs: [{ title: "Heroes", artist: "David Bowie", album: null, artUrl: null, sourceId: "1" }] } };
+    await view.rerender(<QueryClientProvider client={testQueryClient()}><SongPicker /></QueryClientProvider>);
+    expect(screen.getByLabelText("Heroes by David Bowie")).toBeTruthy();
+    expect(screen.queryByText("Couldn't search for songs right now.")).toBeNull();
+  });
+
 });

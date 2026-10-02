@@ -27,11 +27,16 @@ const files = [
   ...latestReview(),
   "STORE.md",
   "DEVICE-CHECKLIST.md",
+  "babel.config.js",
+  "jest.setup.tsx",
+  "jest.live.config.js",
+  "src/config.ts",
   "../backend/prisma/schema.prisma",
   "src/api/contracts.ts",
   "src/auth/auth-context.tsx",
   ...walk("src/theme", code).sort(),
   ...walk("src/api", code).filter((p) => p !== "src/api/contracts.ts").sort(),
+  ...walk("src/lib", code).sort(),
   ...walk("src/auth", code).filter((p) => p !== "src/auth/auth-context.tsx").sort(),
   ...walk("src/app", code).sort(),
   ...walk("src/features", code).sort(),
@@ -55,8 +60,10 @@ const summary = jest
 const tsc = run("npx tsc --noEmit 2>&1").trim() || "tsc: no errors";
 const lint = run("npx expo lint --max-warnings 0 2>&1").trim().split("\n").slice(-3).join("\n") || "lint: clean";
 const commit = run("git rev-parse --short HEAD").trim();
+const branch = run("git branch --show-current").trim();
+const state = run("git status --porcelain").trim() ? "UNCOMMITTED WORKING TREE (HEAD is the base commit)" : "clean committed tree";
 
-let out = `NOSTOS iOS - REVIEW BUNDLE\nCommit: ${commit}\nGenerated: ${new Date().toISOString()}\n\n`;
+let out = `NOSTOS iOS - REVIEW BUNDLE\nHEAD: ${commit}\nBranch: ${branch}\nSnapshot: ${state}\nGenerated: ${new Date().toISOString()}\n\n`;
 out += `Contents:\n${files.map((f) => `  - ${f}`).join("\n")}\n\n`;
 out += `=== TEST SUMMARY ===\n${summary}\n\n${tsc}\n${lint}\n\n`;
 for (const f of files) {

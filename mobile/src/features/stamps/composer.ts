@@ -4,11 +4,11 @@ import type { Coords } from "@/lib/geo";
 
 export const CAPTION_MAX = 280;
 
-export type Draft = { photoUri: string | null; caption: string; song: Song | null };
+export type Draft = { photoUris: readonly string[]; caption: string; song: Song | null };
 
 /** A stamp needs at least one of a photo, a caption (not just spaces) or a song. */
 export function hasContent(d: Draft): boolean {
-  return d.photoUri !== null || d.caption.trim() !== "" || d.song !== null;
+  return d.photoUris.length > 0 || d.caption.trim() !== "" || d.song !== null;
 }
 
 /** Why the Stamp button is off, or null when it's ready. `placeId` is the chosen place. */

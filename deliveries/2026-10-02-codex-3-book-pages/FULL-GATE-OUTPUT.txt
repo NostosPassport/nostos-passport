@@ -1,0 +1,27 @@
+== gate: disk (5 GB free)
+== gate: repo hygiene
+== gate: backend typecheck
+$ tsc --noEmit
+== gate: backend lint
+$ eslint .
+== gate: backend test (single process)
+ ✓ |unit| tests/unit/personal-staff-pages.test.ts (2 tests) 1ms
+ ✓ |unit| tests/unit/time.test.ts (5 tests) 1ms
+
+ Test Files  34 passed (34)
+      Tests  292 passed (292)
+   Start at  15:11:59
+   Duration  56.86s (transform 421ms, setup 307ms, collect 3.22s, tests 47.73s, environment 2ms, prepare 1.04s)
+
+== gate: mobile check
+PASS iOS eslint-rules/__tests__/rules.test.js (6.812 s)
+
+Test Suites: 51 passed, 51 total
+Tests:       413 passed, 413 total
+Snapshots:   0 total
+Time:        7.308 s, estimated 9 s
+== gate: contract sync
+== gate: invariants suite
+== gate: dependency ledger
+dependency ledger ok (69 lines)
+GATE OK: backend 292 tests, mobile 413 tests

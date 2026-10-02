@@ -1,4 +1,5 @@
 /** Your passport as a book: the states, and opening it. */
+import * as Reanimated from "react-native-reanimated";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 
 import type { StampView } from "@/api/contracts";
@@ -23,6 +24,7 @@ const ready = (over: Partial<PassportData> = {}): PassportData => ({
 
 describe("PassportBook", () => {
   beforeEach(() => mockPush.mockClear());
+  afterEach(() => jest.restoreAllMocks());
 
   it("while loading, says it is opening, and shows no book", async () => {
     mockData = ready({ status: "pending" });
@@ -59,6 +61,26 @@ describe("PassportBook", () => {
     expect(screen.getByText("Pages 1 and 2")).toBeTruthy();
     await fireEvent.press(screen.getAllByRole("button", { name: "Stamp, Katz's, page 1, slot 1" })[0]!);
     expect(mockPush).toHaveBeenCalledWith({ pathname: "/stamp/[id]", params: { id: "s1" } });
+  });
+
+  it.each([false, true])("four stamps: page 2 appears on the final spread and opens its stamp with Reduce Motion=%s", async (reduced) => {
+    jest.spyOn(Reanimated, "useReducedMotion").mockReturnValue(reduced);
+    mockData = ready({
+      stamps: [stamp("s1", 1, 1, "First"), stamp("s2", 1, 2, "Second"), stamp("s3", 1, 3, "Third"), stamp("s4", 2, 1, "Fourth")],
+      counts: { stamps: 4, places: 4, neighborhoods: 1 },
+    });
+    await render(<PassportBook />);
+    await fireEvent.press(screen.getByRole("button", { name: /Open your passport/ }));
+    expect(screen.getByLabelText("Nostos. The longing to return home.")).toBeVisible();
+    expect(screen.getByText("NOSTOS PASSPORT")).toBeVisible();
+    await fireEvent.press(screen.getByLabelText("Next page"));
+    expect(screen.getByLabelText("Next page").props.accessibilityState?.disabled).toBe(true);
+    expect(screen.getByLabelText("Page 1")).toBeVisible();
+    expect(screen.getByLabelText("Page 2")).toBeVisible();
+    const fourth = screen.getByRole("button", { name: "Stamp, Fourth, page 2, slot 1" });
+    expect(fourth).toBeVisible();
+    await fireEvent.press(fourth);
+    expect(mockPush).toHaveBeenCalledWith({ pathname: "/stamp/[id]", params: { id: "s4" } });
   });
   it("closes the book from the first spread", async () => {
     mockData = ready();

@@ -22,7 +22,7 @@ export function Skeleton({ width = "100%", height = typeScale.body.lineHeight, r
 /** Skeleton for a list of rows. */
 export function SkeletonRows({ count = 6 }: { count?: number }) {
   return (
-    <View accessibilityLabel="Loading" accessibilityRole="progressbar">
+    <View accessible accessibilityLabel="Loading" accessibilityRole="progressbar">
       {Array.from({ length: count }, (_, i) => (
         <View key={i} style={styles.row}>
           <Skeleton width={size.vibeDot} height={size.vibeDot} round />

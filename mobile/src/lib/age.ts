@@ -2,6 +2,7 @@
  * The 21+ age gate on the phone. The birthdate is typed as MM/DD/YYYY, checked here and, for sign-up, sent to the server
  * once (which checks it again and never stores it). It is never kept on the device either: nothing about an
  * under-21 attempt is saved anywhere, and an under-21 birthdate is never sent to the server at all.
+ * The age boundary is the New York calendar date, matching the backend, regardless of the phone timezone.
  */
 export const MIN_AGE = 21;
 export const UNDERAGE_NOTICE = "Nostos is for people 21 and older.";
@@ -36,7 +37,15 @@ export function ageOn(birth: YMD, today: YMD): number {
   return today.y - birth.y - (had ? 0 : 1);
 }
 
-export const today = (now = new Date()): YMD => ({ y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() });
+const newYorkDate = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York", year: "numeric", month: "numeric", day: "numeric",
+});
+
+export function today(now = new Date()): YMD {
+  const parts = newYorkDate.formatToParts(now);
+  const value = (type: "year" | "month" | "day") => Number(parts.find((p) => p.type === type)!.value);
+  return { y: value("year"), m: value("month"), d: value("day") };
+}
 
 export type AgeCheck = { ok: true; apiDate: string } | { ok: false; reason: "format" | "underage"; message: string };
 

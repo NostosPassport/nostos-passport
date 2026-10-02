@@ -102,7 +102,7 @@ export function ListGroup({ header, footer, children }: { header?: string; foote
   return (
     <View style={styles.wrap}>
       {!!header && (
-        <Text variant="footnote" color="textSecondary" weight="semibold" style={styles.header} accessibilityRole="header">
+        <Text variant="typewriterSmall" color="dimBrass" style={styles.header} accessibilityRole="header">
           {header}
         </Text>
       )}

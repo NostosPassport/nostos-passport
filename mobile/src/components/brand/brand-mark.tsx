@@ -1,34 +1,19 @@
 import { StyleSheet, View } from "react-native";
 
 import { Text } from "@/components/ui/text";
-import { colors, size, space } from "@/theme";
+import { size, space } from "@/theme";
+import { EmblemMark } from "./emblem-mark";
 
-/** The mark: a single glowing dot, the same one as the app icon. */
+/** The mark: the emblem and the name in tracked serif capitals. */
 export function BrandMark() {
   return (
     <View style={styles.row} accessible accessibilityRole="header" accessibilityLabel="Nostos">
-      <View style={styles.glow}>
-        <View style={styles.dot} />
-      </View>
-      <Text variant="headline" weight="bold">
-        Nostos
+      <EmblemMark size={size.iconLarge} />
+      <Text variant="serifLabel" color="brass" accessibilityElementsHidden>
+        NOSTOS
       </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: space.xs },
-  glow: {
-    width: size.icon,
-    height: size.icon,
-    borderRadius: size.icon / 2,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.accent,
-    shadowOpacity: 0.9,
-    shadowRadius: space.xs,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  dot: { width: size.vibeDot + space.xxs, height: size.vibeDot + space.xxs, borderRadius: size.vibeDot, backgroundColor: colors.accent },
-});
+const styles = StyleSheet.create({ row: { flexDirection: "row", alignItems: "center", gap: space.xs } });
