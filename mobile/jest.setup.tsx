@@ -1,3 +1,5 @@
+// The social layer is tested with the flag on; flag-off tests load modules with it unset (see config.test.tsx).
+process.env.EXPO_PUBLIC_SOCIAL_ENABLED = "1";
 /* eslint-disable @typescript-eslint/no-require-imports */
 jest.mock("expo-haptics", () => ({
   impactAsync: jest.fn(() => Promise.resolve()),

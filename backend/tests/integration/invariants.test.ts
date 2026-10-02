@@ -1,7 +1,7 @@
 // The rules that must never break (CLAUDE.md section "Rules that must never break"). One test per rule, named
 // "rule N: ...". scripts/gate.sh fails if this file is missing, skipped, or if a required rule below has no passing test.
 // Required rules are listed in scripts/invariants-required.txt.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 import { prisma } from "@/lib/db";
 import { processImage } from "@/server/services/image";
@@ -201,6 +201,27 @@ describe("invariants", () => {
     // Paging is by time, newest first, with no gaps.
     const times = feed.stamps.map((s) => s.createdAt.getTime());
     expect([...times].sort((x, y) => y - x)).toEqual(times);
+  });
+
+  it("rule 11: with social off, nothing of another person's passport reaches anyone but its owner", async () => {
+    vi.stubEnv("SOCIAL_ENABLED", "0");
+    try {
+      const venue = await makeVenue();
+      const owner = await makeActor({ isPrivate: false, handle: "inv_owner11" });
+      const stamp = await makeStamp(owner, venue.id, { caption: "mine alone" });
+      const viewers = [null, await makeActor(), await makeActor({ role: "MODERATOR" }), await makeActor({ role: "ADMIN" })];
+      for (const v of viewers) {
+        await expect(getStamp(prisma, v, stamp.id)).rejects.toMatchObject({ status: 404 });
+        await expect(listUserStamps(prisma, v, owner.handle)).rejects.toMatchObject({ status: 403 });
+        await expect(listUserPlaces(prisma, v, owner.handle)).rejects.toMatchObject({ status: 403 });
+        const profile = JSON.stringify(wire(await getProfile(prisma, owner.handle, v)));
+        for (const secret of [stamp.id, venue.slug, "mine alone", '"counts"', '"displayName"', '"stamps"']) expect(profile).not.toContain(secret);
+      }
+      expect((await listFeed(prisma, viewers[1]!)).stamps).toEqual([]);
+      await expect(getStamp(prisma, owner, stamp.id)).resolves.toBeTruthy();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("rule 10: likes and badges never affect anything else", async () => {

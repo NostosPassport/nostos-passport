@@ -11,6 +11,7 @@ import { Text } from "@/components/ui/text";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { a11yActions, showActions, useStampActions } from "@/features/moderation/content-actions";
 import { formatAge } from "@/lib/format";
+import { SOCIAL_ENABLED } from "@/config";
 import { aspect, colors, pressedOpacity, screenPadding, size, space } from "@/theme";
 import { LikeButton } from "./like-button";
 import { SongRow, songLabel } from "./song-row";
@@ -78,7 +79,7 @@ export const StampCard = memo(function StampCard({ stamp }: { stamp: StampView }
       </Pressable>
 
       <View style={styles.footer}>
-        <LikeButton likes={stamp.likes} disabled={stamp.mine} onPress={() => like.toggle(stamp.id, stamp.likes)} />
+        {SOCIAL_ENABLED && <LikeButton likes={stamp.likes} disabled={stamp.mine} onPress={() => like.toggle(stamp.id, stamp.likes)} />}
       </View>
     </View>
   );

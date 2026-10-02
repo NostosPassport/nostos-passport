@@ -14,6 +14,7 @@ import { Text } from "@/components/ui/text";
 import { ToastHost } from "@/components/ui/toast";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { LEGAL, openWebPage } from "@/lib/links";
+import { SOCIAL_ENABLED } from "@/config";
 import { colors, screenPadding, space } from "@/theme";
 
 /** Settings: who I follow, the moderation entry for staff, blocked users, account and legal. */
@@ -51,6 +52,7 @@ export default function Settings() {
           </ListGroup>
         )}
 
+        {SOCIAL_ENABLED && (
         <ListGroup header="Following">
           {following.isPending ? (
             <View style={styles.pad}>
@@ -83,9 +85,10 @@ export default function Settings() {
           )}
           {list.length > 0 && <ListRow icon="person.badge.plus" iconColor="accent" title="Find people" titleColor="accent" onPress={() => router.push("/people")} />}
         </ListGroup>
+        )}
 
         <ListGroup header="Settings">
-          <ListRow icon="hand.raised.fill" title="Blocked users" chevron onPress={() => router.push("/settings/blocked")} />
+          {SOCIAL_ENABLED && <ListRow icon="hand.raised.fill" title="Blocked users" chevron onPress={() => router.push("/settings/blocked")} />}
           <ListRow icon="lock.fill" title="Privacy policy" external onPress={() => openWebPage(LEGAL.privacy)} />
           <ListRow icon="doc.text.fill" title="Terms" external onPress={() => openWebPage(LEGAL.terms)} />
           <ListRow icon="questionmark.circle.fill" title="Support" external onPress={() => openWebPage(LEGAL.support)} />

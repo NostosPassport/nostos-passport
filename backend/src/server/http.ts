@@ -3,7 +3,8 @@ import { ZodError, type ZodType } from "zod";
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE } from "@/lib/auth/session";
 import { actorFromToken, type Actor } from "@/server/actor";
-import { ServiceError, badRequest, forbidden, unauthorized } from "@/server/errors";
+import { ServiceError, badRequest, forbidden, notFound, unauthorized } from "@/server/errors";
+import { socialEnabled } from "@/server/social";
 
 /** Reads one cookie from a raw Request (works in route handlers and in tests without Next's request scope). */
 export function readCookie(req: Request, name: string): string | undefined {
@@ -105,6 +106,26 @@ export async function parseJson<T>(req: Request, schema: ZodType<T>): Promise<T>
 }
 
 type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
+
+/** A route that exists only when SOCIAL_ENABLED is on; otherwise it is a plain 404, as if it were never built. */
+export function socialRoute<C>(handler: Handler<C>): Handler<C> {
+  return route<C>(async (req, ctx) => {
+    if (!socialEnabled()) throw notFound();
+    return handler(req, ctx);
+  });
+}
+
+/** For `/api/users/:handle/...`: with social off, only your own handle exists. Anyone else's is a 404. */
+export function selfOrSocialRoute<C extends { params: Promise<{ handle: string }> }>(handler: Handler<C>): Handler<C> {
+  return route<C>(async (req, ctx) => {
+    if (!socialEnabled()) {
+      const actor = await getActor(req);
+      const handle = (await ctx.params).handle.toLowerCase();
+      if (!actor || actor.handle.toLowerCase() !== handle) throw notFound();
+    }
+    return handler(req, ctx);
+  });
+}
 
 /** Wraps a route handler: same-origin check for mutations and uniform error mapping. */
 export function route<C>(handler: Handler<C>): Handler<C> {

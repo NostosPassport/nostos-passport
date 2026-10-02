@@ -23,6 +23,7 @@
  */
 import type { Db } from "@/lib/db";
 import type { Actor } from "@/server/actor";
+import { socialEnabled } from "@/server/social";
 
 /** The viewer as the rules need it. null = signed out. */
 export type Viewer = { userId: string; staff: boolean } | null;
@@ -42,6 +43,8 @@ export function viewerOf(actor: Actor | null): Viewer {
  */
 export function profileAccess(viewer: Viewer, subject: Subject, viewerFollows: boolean, blocked = false): Access {
   if (subject.deleted) return "limited";
+  // Strictly personal mode (SOCIAL_ENABLED off): a passport is visible only to its owner, staff included.
+  if (!socialEnabled()) return viewer && viewer.userId === subject.id ? "full" : "limited";
   if (viewer && (viewer.userId === subject.id || viewer.staff)) return "full";
   if (blocked || subject.suspended) return "limited";
   if (!subject.isPrivate) return "full";
@@ -76,6 +79,7 @@ export type StampSubject = {
  * else needs the full profile of the author, no block in either direction, and a countable (non-exempt) stamp.
  */
 export function canSeeStamp(viewer: Viewer, stamp: StampSubject, authorAccess: Access, blocked = false): boolean {
+  if (!socialEnabled()) return viewer?.userId === stamp.authorId && !stamp.removed && !stamp.hidden;
   if (viewer?.staff) return true;
   if (stamp.removed || stamp.hidden) return false;
   if (viewer?.userId === stamp.authorId) return true;

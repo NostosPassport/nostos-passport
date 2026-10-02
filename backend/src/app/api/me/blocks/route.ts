@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
-import { getActor, ok, route } from "@/server/http";
+import { getActor, ok, socialRoute } from "@/server/http";
 import { listBlocks } from "@/server/services/blocks";
 
 export const dynamic = "force-dynamic";
 
-export const GET = route(async (req) => ok({ blocks: await listBlocks(prisma, await getActor(req)) }));
+export const GET = socialRoute(async (req) => ok({ blocks: await listBlocks(prisma, await getActor(req)) }));

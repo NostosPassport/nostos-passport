@@ -18,6 +18,7 @@ import { Text } from "@/components/ui/text";
 import { ToastHost } from "@/components/ui/toast";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { chooseReportReason, confirmBlock, useBlock, useFlag } from "@/features/moderation/content-actions";
+import { SOCIAL_ENABLED } from "@/config";
 import { colors, radius, screenPadding, size, space } from "@/theme";
 import { PlacesTab, StampsGrid } from "./profile-tabs";
 import { followButton, useFollow } from "./use-follow";
@@ -177,8 +178,8 @@ function Header({ p }: { p: ProfileResponse }) {
         <View style={styles.counts}>
           <Count value={full.user.counts.stamps} label="Stamps" />
           <Count value={full.user.counts.places} label="Places" />
-          <Count value={full.user.counts.followers} label="Followers" onPress={() => openList("followers")} />
-          <Count value={full.user.counts.following} label="Following" onPress={() => openList("following")} />
+          {SOCIAL_ENABLED && <Count value={full.user.counts.followers} label="Followers" onPress={() => openList("followers")} />}
+          {SOCIAL_ENABLED && <Count value={full.user.counts.following} label="Following" onPress={() => openList("following")} />}
         </View>
       )}
       {full && full.user.bio !== "" && <Text variant="body">{full.user.bio}</Text>}
@@ -242,7 +243,7 @@ function OwnActions() {
   return (
     <View style={styles.own}>
       <Button title="Edit profile" variant="secondary" onPress={() => router.push("/edit-profile")} />
-      <ListGroup>
+      {SOCIAL_ENABLED && <ListGroup>
         <ListRow
           icon="person.badge.plus"
           title="Follow requests"
@@ -251,7 +252,7 @@ function OwnActions() {
           chevron
           onPress={() => router.push("/follow-requests")}
         />
-      </ListGroup>
+      </ListGroup>}
     </View>
   );
 }

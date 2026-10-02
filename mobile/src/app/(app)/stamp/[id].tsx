@@ -22,6 +22,7 @@ import { stampLabel } from "@/features/stamps/stamp-card";
 import { useLike } from "@/features/stamps/use-like";
 import { formatAge } from "@/lib/format";
 import { haptics } from "@/lib/haptics";
+import { SOCIAL_ENABLED } from "@/config";
 import { aspect, colors, screenPadding, size, space } from "@/theme";
 
 /** A stamp: photo, caption, song, place, author, likes. Yours: Edit and Delete from profile. Others': Report and Block. */
@@ -106,7 +107,7 @@ function Detail({ stamp, actions }: { stamp: StampView; actions: ContentAction[]
         {stamp.song && <SongRow song={stamp.song} />}
 
         <View style={styles.footer}>
-          <LikeButton likes={stamp.likes} disabled={stamp.mine} onPress={() => like.toggle(stamp.id, stamp.likes)} />
+          {SOCIAL_ENABLED && <LikeButton likes={stamp.likes} disabled={stamp.mine} onPress={() => like.toggle(stamp.id, stamp.likes)} />}
           <Text variant="footnote" color="textTertiary">
             {formatAge(stamp.createdAt)}
             {stamp.editedAt ? " · Edited" : ""}
