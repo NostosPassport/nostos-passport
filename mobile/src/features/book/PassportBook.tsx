@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { bookMotion, size, space } from "@/theme";
 import { BearerPage } from "./BearerPage";
+import { FirstRunHint } from "./FirstRunHint";
+import { useFirstRun } from "./first-run";
 import { type Phase, type PhaseEvent, isOpenish, nextPhase, spreadLabel, stageTransform } from "./book-state";
 import { Counts, Cover } from "./Cover";
 import { bookSize, openScale } from "./dimensions";
@@ -32,6 +34,7 @@ export function PassportBook() {
   const [phase, send] = useReducer((p: Phase, e: PhaseEvent) => nextPhase(p, e), "closed" as Phase);
   const [spread, setSpread] = useState(0);
   const [showIndex, setShowIndex] = useState(false);
+  const firstRun = useFirstRun();
 
   const book = useMemo(() => bookSize(sw, sh), [sw, sh]);
   const fit = useMemo(() => openScale(sw, book, space.md), [sw, book]);
@@ -85,7 +88,10 @@ export function PassportBook() {
   };
 
   const cover = (
-    <Cover width={book.width} height={book.height} counts={data.counts} name={data.displayName} showCounts={false} onOpen={() => send("tapCover")} />
+    <Cover width={book.width} height={book.height} counts={data.counts} name={data.displayName} showCounts={false} onOpen={() => {
+      firstRun.dismiss();
+      send("tapCover");
+    }} />
   );
   const go = (to: number) => setSpread(Math.max(0, Math.min(spreads - 1, to)));
 
@@ -125,7 +131,10 @@ export function PassportBook() {
       </View>
       <View style={styles.footer}>
         {phase === "closed" ? (
-          <Counts counts={data.counts} />
+          <>
+            <Counts counts={data.counts} />
+            {firstRun.show ? <FirstRunHint onDismiss={firstRun.dismiss} /> : null}
+          </>
         ) : phase === "open" ? (
           <View style={styles.pager}>
             <Pressable onPress={() => (spread === 0 ? send("closeBook") : go(spread - 1))} accessibilityRole="button" accessibilityLabel={spread === 0 ? "Close the passport" : "Previous page"} hitSlop={space.sm} style={styles.pagerButton}>

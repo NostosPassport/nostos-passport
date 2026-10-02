@@ -1,7 +1,6 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
-import MapView from "react-native-maps";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { farewellNotice } from "@/auth/auth-context";
@@ -10,37 +9,28 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { useAnnounce } from "@/lib/a11y";
-import { HOME_REGION } from "@/lib/geo";
+import { bookSize } from "@/features/book/dimensions";
+import { Cover } from "@/features/book/Cover";
 import { colors, radius, screenPadding, size, space } from "@/theme";
 
 export default function Welcome() {
   const insets = useSafeAreaInsets();
-  const [panelHeight, setPanelHeight] = useState(0);
+  const { width, height } = useWindowDimensions();
+  const book = bookSize(width, height);
   // Shown once after deleting an account.
   const [farewell] = useState(() => farewellNotice.take());
   useAnnounce(farewell);
 
   return (
     <View style={styles.root}>
-      <MapView
-        style={StyleSheet.absoluteFill}
-        initialRegion={HOME_REGION}
-        userInterfaceStyle="dark"
-        showsPointsOfInterests={false}
-        showsCompass={false}
-        pitchEnabled={false}
-        scrollEnabled={false}
-        zoomEnabled={false}
-        rotateEnabled={false}
-        // Keep Apple's logo and Legal link visible above the panel.
-        legalLabelInsets={{ top: 0, left: space.md, right: 0, bottom: panelHeight + space.xs }}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      />
+      {/* The closed passport, for show: it shimmers and follows a finger like the real one, but there is nothing to open yet. */}
+      <View style={[styles.hero, { top: insets.top + space.xxxl + space.md }]} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Cover width={book.width * 0.7} height={book.height * 0.7} counts={{ stamps: 0, places: 0, neighborhoods: 0 }} showCounts={false} />
+      </View>
       <View style={[styles.top, { paddingTop: insets.top + space.xs }]}>
         <BrandMark />
       </View>
-      <View style={[styles.panel, { paddingBottom: insets.bottom + space.sm }]} onLayout={(e) => setPanelHeight(e.nativeEvent.layout.height)}>
+      <View style={[styles.panel, { paddingBottom: insets.bottom + space.sm }]}>
         {farewell && (
           <View style={styles.farewell}>
             <Icon name="checkmark.circle.fill" color="success" size={size.iconSmall} />
@@ -53,12 +43,12 @@ export default function Welcome() {
           Go somewhere. Get a stamp.
         </Text>
         <Text variant="body" color="textSecondary">
-          Your passport for New York: a photo, a few words or a song from every place you go. Only people you approve see it.
+          Your passport for New York: a photo, a few words or a song from every place you go. Only you can see it.
         </Text>
         <View style={styles.actions}>
           <Button title="Create account" onPress={() => router.push("/sign-up")} />
           <Button title="Sign in" variant="secondary" onPress={() => router.push("/sign-in")} />
-          <Button title="Look around first" variant="plain" onPress={() => router.push("/age-gate")} accessibilityHint="Asks your birthdate, then lets you browse without an account" />
+          <Button title="Look around first" variant="plain" onPress={() => router.push("/age-gate")} accessibilityHint="Asks your birthdate, then shows you the map without an account" />
         </View>
         <Text variant="footnote" color="textTertiary">
           For adults 21 and over.
@@ -71,6 +61,7 @@ export default function Welcome() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   top: { paddingHorizontal: screenPadding },
+  hero: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   panel: {
     marginTop: "auto",
     gap: space.sm,

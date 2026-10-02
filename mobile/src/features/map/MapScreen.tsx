@@ -83,6 +83,7 @@ export function MapScreen() {
           setSelectedId(null);
           router.push("/stamp/new");
         }}
+        onOpenPlace={selected ? () => router.push({ pathname: "/place/[id]", params: { id: selected.id } }) : undefined}
       />
     </View>
   );

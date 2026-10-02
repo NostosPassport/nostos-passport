@@ -17,7 +17,7 @@ import { LEGAL, openWebPage } from "@/lib/links";
 import { SOCIAL_ENABLED } from "@/config";
 import { colors, screenPadding, space } from "@/theme";
 
-/** Settings: who I follow, the moderation entry for staff, blocked users, account and legal. */
+/** Settings: edit your profile, the moderation entry for staff, account and legal. (With the social layer on: who I follow and blocked users too.) */
 export default function Settings() {
   const me = useMe();
   const following = useFollowing();
@@ -46,6 +46,11 @@ export default function Settings() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.textSecondary} />}
       >
+        <ListGroup header="Your passport">
+          <ListRow icon="person.crop.circle" title="Edit profile" subtitle={user ? `${user.displayName} · @${user.handle}` : undefined} chevron onPress={() => router.push("/edit-profile")} accessibilityHint="Change your name, bio or photo" />
+          {!SOCIAL_ENABLED && <ListRow icon="lock.fill" iconColor="dimBrass" title="Only you can see your passport" subtitle="Nothing is shared, and there is no feed." />}
+        </ListGroup>
+
         {staff && (
           <ListGroup>
             <ListRow icon="shield.lefthalf.filled" iconColor="accent" title="Moderation" chevron onPress={() => router.push("/moderation")} />

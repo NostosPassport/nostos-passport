@@ -7,6 +7,7 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={stackOptions}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="place/[id]" options={{ title: "Place" }} />
       <Stack.Screen name="stamp/[id]" options={{ title: "Stamp" }} />
       <Stack.Screen name="stamp/new" options={{ title: "New stamp", presentation: "modal" }} />
       <Stack.Screen name="stamp/camera" options={{ presentation: "fullScreenModal", headerShown: false }} />

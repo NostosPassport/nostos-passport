@@ -39,10 +39,10 @@ jest.mock("@/features/location/location-store", () => ({
 }));
 jest.mock("@/features/photos/prepare", () => ({ prepareImage: async (uri: string) => ({ uri: `prepared:${uri}`, width: 10, height: 10 }) }));
 jest.mock("expo-camera", () => {
-  const { forwardRef, useImperativeHandle } = jest.requireActual("react");
+  const { forwardRef, useEffect, useImperativeHandle } = jest.requireActual("react");
   const CameraView = forwardRef(function Cam(props: { onCameraReady?: () => void }, ref: unknown) {
     useImperativeHandle(ref, () => ({ takePictureAsync: mockTake }));
-    props.onCameraReady?.();
+    useEffect(() => props.onCameraReady?.(), []); // eslint-disable-line react-hooks/exhaustive-deps
     return null;
   });
   return { CameraView, useCameraPermissions: () => [mockPerm, jest.fn()] };

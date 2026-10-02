@@ -19,6 +19,7 @@ import { confirmApproveAll, useApproveAll } from "@/features/people/use-requests
 import { pickFromLibrary } from "@/features/photos/pick";
 import { prepareImage } from "@/features/photos/prepare";
 import { haptics } from "@/lib/haptics";
+import { SOCIAL_ENABLED } from "@/config";
 import { useConfirmDiscard } from "@/lib/use-confirm-discard";
 import { colors, radius, size, space } from "@/theme";
 
@@ -155,6 +156,7 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
         />
       </FieldGroup>
 
+      {SOCIAL_ENABLED && (
       <View style={styles.privateWrap}>
         <View style={styles.privateRow}>
           <Text variant="body" style={styles.flex}>
@@ -172,6 +174,7 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
           {privacyNote(values.isPrivate)}
         </Text>
       </View>
+      )}
 
       {save.error && <InlineError message={errorText(save.error, "Couldn't save. Check the fields and try again.")} />}
     </FormScreen>

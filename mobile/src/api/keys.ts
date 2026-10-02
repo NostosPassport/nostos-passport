@@ -7,6 +7,7 @@ export const qk = {
   following: ["me", "following"] as const,
   blocks: ["me", "blocks"] as const,
   profileSettings: ["me", "profile"] as const,
+  placePage: (id: string, lat: number | null, lng: number | null) => ["places", "mine", id, lat, lng] as const,
   pins: ["me", "pins"] as const,
   neighborhoods: ["me", "neighborhoods"] as const,
   followRequests: ["me", "follow-requests"] as const,

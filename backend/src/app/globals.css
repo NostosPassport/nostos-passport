@@ -1,21 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #0b0b12;
-  --color-panel: #151522;
-  --color-panel-2: #1d1d2d;
-  --color-line: #2a2a3d;
-  --color-muted: #9a9ab0;
-  --color-text: #f1f1f7;
-  --color-accent: #b388ff;
-  --color-packed: #ff3d6e;
-  --color-busy: #ff9f1c;
-  --color-chill: #2ec4b6;
-  --color-dead: #5c6b8a;
-  --color-nodata: #cfcfe0;
-  --color-venue: #7fb2ff;
-  --color-warn: #ffcc4d;
+  /* Midnight: black and brass, the same palette as the app (mobile/src/theme/midnight.ts). No other hue, not even for errors:
+     the old status names stay so existing pages keep working, and all of them resolve to brass, dim brass or bone. */
+  --color-ink: #000000;
+  --color-panel: #0b0b0d;
+  --color-panel-2: #141418;
+  --color-line: #241d0e;
+  --color-muted: #a09c94;
+  --color-text: #e8e4dc;
+  --color-accent: #c9a24b;
+  --color-packed: #c9a24b;
+  --color-busy: #8f7434;
+  --color-chill: #c9a24b;
+  --color-dead: #6b6862;
+  --color-nodata: #a09c94;
+  --color-venue: #c9a24b;
+  --color-warn: #c9a24b;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Cormorant Garamond", "Iowan Old Style", Palatino, Georgia, "Times New Roman", serif;
 }
 
 html,
@@ -27,4 +30,11 @@ body {
 
 body {
   min-height: 100dvh;
+}
+
+/* Titles are set in the serif, like the book. */
+h1,
+h2 {
+  font-family: var(--font-serif);
+  letter-spacing: 0.01em;
 }

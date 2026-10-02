@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 
 import { api, errorText } from "@/api";
 import type { StampView } from "@/api/contracts";
@@ -63,9 +64,11 @@ export function VisaSpread({ stamp }: { stamp: StampView }) {
         <Text variant="typewriterSmall" color="dimBrass" accessibilityLabel={visaLabel(stamp.place.name, stamp.place.neighborhood, stamp.createdAt, stamp.page)}>
           {[date, time].filter(Boolean).join("  ·  ")}
         </Text>
-        <Text variant="title2" color="brass" accessibilityRole="header">
-          {stamp.place.name}
-        </Text>
+        <Pressable onPress={() => router.push({ pathname: "/place/[id]", params: { id: stamp.place.id } })} accessibilityRole="button" accessibilityLabel={`${stamp.place.name}. Your stamps at this place`} accessibilityHint="Opens the place page" hitSlop={space.xs}>
+          <Text variant="title2" color="brass">
+            {stamp.place.name}
+          </Text>
+        </Pressable>
         <Text variant="typewriterSmall" color="textSecondary">
           {stamp.place.neighborhood}
           {stamp.page ? `  ·  page ${stamp.page}` : ""}

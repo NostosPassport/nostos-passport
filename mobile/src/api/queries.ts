@@ -64,6 +64,19 @@ export function usePeopleList(handle: string, list: "followers" | "following") {
   return useQuery({ queryKey: qk.people(handle, list), queryFn: () => api.users.people(handle, list) });
 }
 
+/** Your own page for a place: your stamps there by night, and whether you are inside its geofence now. The position is rounded so a few steps don't refetch. */
+export function usePlacePage(id: string, pos: { lat: number; lng: number } | null) {
+  const { status } = useAuth();
+  const lat = pos ? Math.round(pos.lat * 10_000) / 10_000 : null;
+  const lng = pos ? Math.round(pos.lng * 10_000) / 10_000 : null;
+  return useQuery({
+    queryKey: qk.placePage(id, lat, lng),
+    queryFn: () => api.places.mine(id, lat !== null && lng !== null ? { lat, lng } : undefined),
+    enabled: status === "signedIn" && id !== "",
+    staleTime: 30_000,
+  });
+}
+
 /** Your pinned stamps (up to 4). Owner only. */
 export function usePins() {
   const { status } = useAuth();
