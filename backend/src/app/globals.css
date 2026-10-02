@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0b0b12;
+  --color-panel: #151522;
+  --color-panel-2: #1d1d2d;
+  --color-line: #2a2a3d;
+  --color-muted: #9a9ab0;
+  --color-text: #f1f1f7;
+  --color-accent: #b388ff;
+  --color-packed: #ff3d6e;
+  --color-busy: #ff9f1c;
+  --color-chill: #2ec4b6;
+  --color-dead: #5c6b8a;
+  --color-nodata: #cfcfe0;
+  --color-venue: #7fb2ff;
+  --color-warn: #ffcc4d;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body {
+  background: var(--color-ink);
+  color: var(--color-text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+.leaflet-container {
+  background: #10101a;
+  font: inherit;
+}
+
+/* Dark basemap from standard OSM tiles (no API key needed). */
+.leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+}
+
+/* Keep Leaflet's attribution readable on the dark theme. */
+.leaflet-control-attribution {
+  background: rgba(11, 11, 18, 0.75) !important;
+  color: #9a9ab0 !important;
+}
+.leaflet-control-attribution a {
+  color: #b388ff !important;
+}

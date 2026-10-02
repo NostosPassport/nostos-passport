@@ -1,0 +1,39 @@
+# Fixed project name: keeps the existing "nostos_nostos_pg" volume (and its data) now that this file lives in backend/.
+name: nostos
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: nostos
+      POSTGRES_PASSWORD: nostos
+      POSTGRES_DB: nostos
+      TZ: UTC
+    ports:
+      - "5435:5432"
+    volumes:
+      - nostos_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nostos -d nostos"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  # Optional: PgBouncer in *transaction* pooling mode, the same mode as Neon's pooled endpoint.
+  # Used by `pnpm test:pooled` to prove the app (advisory xact locks, interactive transactions) works through it.
+  pooler:
+    image: edoburu/pgbouncer:v1.25.2-p0
+    profiles: ["pooler"]
+    depends_on: [db]
+    environment:
+      DB_HOST: db
+      DB_USER: nostos
+      DB_PASSWORD: nostos
+      POOL_MODE: transaction
+      AUTH_TYPE: scram-sha-256
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 10
+    ports:
+      - "6436:5432"
+
+volumes:
+  nostos_pg:

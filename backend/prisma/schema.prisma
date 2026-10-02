@@ -1,0 +1,522 @@
+// Nostos data model.
+// Conventions: snake_case tables/columns, integer cents for money, all timestamps stored in UTC (timestamptz).
+// Ownership split: venue_* tables hold venue-controlled facts; report/photo/comment/presence/rsvp hold user reality.
+// There is deliberately NO accuracy score column anywhere: it is always computed from data (invariant 4).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  /// Pooled connection for the app (Neon: the "-pooler" host with ?pgbouncer=true). Local: same as DIRECT_URL.
+  url       = env("DATABASE_URL")
+  /// Direct (unpooled) connection, used by `prisma migrate`.
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  VENUE_OWNER
+  MODERATOR
+  ADMIN
+}
+
+enum SessionClient {
+  WEB
+  IOS
+}
+
+enum ReportType {
+  VIBE
+  LINE
+  COVER
+}
+
+enum Vibe {
+  PACKED
+  BUSY
+  CHILL
+  DEAD
+}
+
+enum LineWait {
+  NONE
+  UNDER_10
+  TEN_TO_30
+  OVER_30
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ContentType {
+  PHOTO
+  COMMENT
+  REPORT
+  /// A user account (profile reports; suspension decisions).
+  USER
+}
+
+enum FlagStatus {
+  OPEN
+  RESOLVED
+}
+
+enum ModerationAction {
+  FLAGGED
+  AUTO_HIDE
+  HIDE
+  DISMISS
+  /// Moderator reviewed hidden content (e.g. auto-hidden after 3 flags) and restored it.
+  RESTORE
+  /// System: the author deleted their account, so their personal photos were hidden.
+  ACCOUNT_DELETED
+  /// Moderator removed an abusive account (can't sign in; sessions revoked).
+  SUSPEND
+  UNSUSPEND
+}
+
+enum VerificationAction {
+  GRANT
+  REVOKE
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  handle              String    @unique
+  displayName         String    @map("display_name")
+  passwordHash        String    @map("password_hash")
+  role                Role      @default(USER)
+  /// Reputation weight in [0.2, 1.5]; new accounts start at 0.5. Written only by the reputation job.
+  reputation          Float     @default(0.5)
+  reputationUpdatedAt DateTime? @map("reputation_updated_at") @db.Timestamptz(3)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Set when the account was deleted (anonymized). The row stays so reports/comments keep their history.
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
+  termsAcceptedAt     DateTime? @map("terms_accepted_at") @db.Timestamptz(3)
+  termsVersion        String?   @map("terms_version")
+  /// App Review / QA accounts: may post from anywhere, but their reports, photos, presence and RSVPs are
+  /// stored and excluded from consensus, counts, accuracy and reputation. Settable only by an admin or the seed.
+  geofenceExempt      Boolean   @default(false) @map("geofence_exempt")
+  /// Set by a moderator for abusive accounts: can't sign in, all sessions revoked. Content stays until moderated.
+  suspendedAt         DateTime? @map("suspended_at") @db.Timestamptz(3)
+  /// Private accounts (the default for every account): only approved followers see the profile, and on venue
+  /// pages their photos and comments read "Anonymous" to everyone else. See src/server/privacy.ts.
+  isPrivate           Boolean   @default(true) @map("is_private")
+  /// Max 150 characters, content-filtered.
+  bio                 String    @default("")
+  /// Profile photo (re-encoded square JPEG). Shown only to viewers allowed to see the full profile.
+  avatarKey           String?   @map("avatar_key")
+  /// Verified badge, handpicked by an admin. Every grant and revoke is in the append-only verification_event log.
+  /// Badge only: it never changes ranking, featuring, consensus or anything else.
+  verifiedAt          DateTime? @map("verified_at") @db.Timestamptz(3)
+
+  sessions               Session[]
+  claims                 VenueClaim[]        @relation("claimant")
+  reviewedClaims         VenueClaim[]        @relation("claimReviewer")
+  reports                Report[]
+  photos                 Photo[]
+  comments               Comment[]
+  presence               Presence[]
+  rsvps                  Rsvp[]
+  following              Follow[]            @relation("follower")
+  followers              Follow[]            @relation("followee")
+  flags                  Flag[]
+  moderationEvents       ModerationEvent[]
+  promosCreated          Promo[]
+  coverChanges           VenueCoverHistory[]
+  blocking               Block[]             @relation("blocker")
+  blockedBy              Block[]             @relation("blocked")
+  followRequestsSent     FollowRequest[]     @relation("requester")
+  followRequestsReceived FollowRequest[]     @relation("requestTarget")
+  likes                  PhotoLike[]
+  verificationEvents     VerificationEvent[] @relation("verifiedUser")
+  verificationActions    VerificationEvent[] @relation("verifier")
+  rateEvents             RateEvent[]
+
+  @@map("app_user")
+}
+
+model Session {
+  /// sha256 of the random token stored in the cookie; the raw token never touches the DB.
+  id        String        @id
+  userId    String        @map("user_id")
+  /// WEB sessions ride in an httpOnly cookie; IOS sessions are bearer tokens kept in the iOS keychain.
+  client    SessionClient @default(WEB)
+  expiresAt DateTime      @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Venue {
+  id                 String   @id @default(cuid())
+  slug               String   @unique
+  name               String
+  address            String
+  neighborhood       String
+  lat                Float
+  lng                Float
+  /// Weekly hours: [{ day: 0-6 (Sun-Sat), open: "HH:MM", close: "HH:MM" }] in America/New_York wall time.
+  hours              Json
+  /// Official cover in cents. null = venue has not stated a cover. 0 = free.
+  officialCoverCents Int?     @map("official_cover_cents")
+  dressCode          String?  @map("dress_code")
+  officialPhotoKey   String?  @map("official_photo_key")
+  /// OpenStreetMap element ("node/123", "way/456") for imported venues (ODbL: attribute "© OpenStreetMap contributors").
+  osmId              String?  @unique @map("osm_id")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  claims       VenueClaim[]
+  promos       Promo[]
+  coverHistory VenueCoverHistory[]
+  reports      Report[]
+  photos       Photo[]
+  comments     Comment[]
+  presence     Presence[]
+  rsvps        Rsvp[]
+  flags        Flag[]
+  featured     FeaturedPhoto[]
+
+  @@map("venue")
+}
+
+/// Append-only history of the official cover so the accuracy score can compare
+/// each past hour against what the venue was claiming at that time.
+model VenueCoverHistory {
+  id            String   @id @default(cuid())
+  venueId       String   @map("venue_id")
+  coverCents    Int?     @map("cover_cents")
+  effectiveFrom DateTime @map("effective_from") @db.Timestamptz(3)
+  changedById   String?  @map("changed_by_id")
+  venue         Venue    @relation(fields: [venueId], references: [id])
+  changedBy     User?    @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([venueId, effectiveFrom])
+  @@map("venue_cover_history")
+}
+
+/// Ownership link. A VENUE_OWNER owns exactly the venues with an APPROVED claim.
+model VenueClaim {
+  id           String      @id @default(cuid())
+  venueId      String      @map("venue_id")
+  userId       String      @map("user_id")
+  status       ClaimStatus @default(PENDING)
+  reviewedById String?     @map("reviewed_by_id")
+  reviewedAt   DateTime?   @map("reviewed_at") @db.Timestamptz(3)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  venue        Venue       @relation(fields: [venueId], references: [id])
+  user         User        @relation("claimant", fields: [userId], references: [id])
+  reviewedBy   User?       @relation("claimReviewer", fields: [reviewedById], references: [id])
+
+  @@unique([venueId, userId])
+  @@index([userId, status])
+  @@map("venue_claim")
+}
+
+model Promo {
+  id          String   @id @default(cuid())
+  venueId     String   @map("venue_id")
+  title       String
+  body        String
+  startsAt    DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt      DateTime @map("ends_at") @db.Timestamptz(3)
+  /// Set by ADMIN only. Paid promos are always labeled "Promoted" in the UI.
+  isPaid      Boolean  @default(false) @map("is_paid")
+  createdById String   @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  venue       Venue    @relation(fields: [venueId], references: [id])
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@index([venueId, endsAt])
+  @@map("promo")
+}
+
+model Report {
+  id         String     @id @default(cuid())
+  userId     String     @map("user_id")
+  venueId    String     @map("venue_id")
+  type       ReportType
+  vibe       Vibe?
+  line       LineWait?
+  coverCents Int?       @map("cover_cents")
+  /// Coordinates the client submitted; kept for auditing the geofence check.
+  lat        Float
+  lng        Float
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  hiddenAt   DateTime?  @map("hidden_at") @db.Timestamptz(3)
+  /// Snapshot at write time: false when posted by a geofence-exempt (App Review / QA) account. Aggregates
+  /// only use countable rows, so later changes to the author's flag (or deleting the account) can't
+  /// retroactively add or remove data.
+  countable  Boolean    @default(true)
+  user       User       @relation(fields: [userId], references: [id])
+  venue      Venue      @relation(fields: [venueId], references: [id])
+
+  @@index([venueId, type, createdAt])
+  @@index([userId, venueId, type, createdAt])
+  @@map("report")
+}
+
+/// A photo taken at a venue. A photo **with a rating is a post**: it also appears on the author's profile, can be
+/// liked (when shared) and featured. A photo without a rating is a live-only photo, as before.
+model Photo {
+  id         String         @id @default(cuid())
+  userId     String         @map("user_id")
+  venueId    String         @map("venue_id")
+  storageKey String         @unique @map("storage_key")
+  mimeType   String         @map("mime_type")
+  caption    String
+  lat        Float
+  lng        Float
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  hiddenAt   DateTime?      @map("hidden_at") @db.Timestamptz(3)
+  /// 1 to 10 (CHECK). null = live-only photo. Editable until the end of the night it was taken; never cleared once set.
+  rating     Int?           @db.SmallInt
+  /// Shown in the venue's photo feed (and eligible for likes and featuring). Unshared posts appear only on the profile. Defaults off (fails closed); the service sets it: on for public accounts and live-only photos, off for private accounts.
+  shared     Boolean        @default(false)
+  /// The America/New_York night (YYYY-MM-DD, 5am rollover) of created_at. Set by a database trigger on insert.
+  night      String         @default("")
+  editedAt   DateTime?      @map("edited_at") @db.Timestamptz(3)
+  /// The author removed it from their profile ("delete" means hide). Final: a trigger refuses to clear it.
+  removedAt  DateTime?      @map("removed_at") @db.Timestamptz(3)
+  /// Snapshot at write time: false when posted by a geofence-exempt (App Review / QA) account. Aggregates
+  /// only use countable rows, so later changes to the author's flag (or deleting the account) can't
+  /// retroactively add or remove data.
+  countable  Boolean        @default(true)
+  user       User           @relation(fields: [userId], references: [id])
+  venue      Venue          @relation(fields: [venueId], references: [id])
+  likes      PhotoLike[]
+  featured   FeaturedPhoto?
+
+  @@index([venueId, createdAt])
+  @@index([venueId, night])
+  @@index([userId, createdAt])
+  @@index([userId, venueId, night])
+  @@map("photo")
+}
+
+model Comment {
+  id           String    @id @default(cuid())
+  venueId      String    @map("venue_id")
+  userId       String    @map("user_id")
+  /// Set only for venue replies; replies are one level deep under a user comment.
+  parentId     String?   @map("parent_id")
+  isVenueReply Boolean   @default(false) @map("is_venue_reply")
+  body         String
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  editedAt     DateTime? @map("edited_at") @db.Timestamptz(3)
+  hiddenAt     DateTime? @map("hidden_at") @db.Timestamptz(3)
+  /// false when posted by a geofence-exempt account: then visible only to its author.
+  countable    Boolean   @default(true)
+  venue        Venue     @relation(fields: [venueId], references: [id])
+  user         User      @relation(fields: [userId], references: [id])
+  parent       Comment?  @relation("replies", fields: [parentId], references: [id])
+  replies      Comment[] @relation("replies")
+
+  @@index([venueId, createdAt])
+  @@map("comment")
+}
+
+/// "Here now". One row per user (you can only be in one place). Counts only if last_seen_at is within 45 minutes.
+model Presence {
+  userId     String   @id @map("user_id")
+  venueId    String   @map("venue_id")
+  lastSeenAt DateTime @map("last_seen_at") @db.Timestamptz(3)
+  countable  Boolean  @default(true)
+  user       User     @relation(fields: [userId], references: [id])
+  venue      Venue    @relation(fields: [venueId], references: [id])
+
+  @@index([venueId, lastSeenAt])
+  @@map("presence")
+}
+
+/// "Going tonight". Keyed by night (YYYY-MM-DD of the 5am-to-4:59am America/New_York night), so it resets each night.
+model Rsvp {
+  userId    String   @map("user_id")
+  venueId   String   @map("venue_id")
+  night     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  countable Boolean  @default(true)
+  user      User     @relation(fields: [userId], references: [id])
+  venue     Venue    @relation(fields: [venueId], references: [id])
+
+  @@id([userId, venueId, night])
+  @@index([venueId, night])
+  @@map("rsvp")
+}
+
+model Follow {
+  followerId String   @map("follower_id")
+  followeeId String   @map("followee_id")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  follower   User     @relation("follower", fields: [followerId], references: [id])
+  followee   User     @relation("followee", fields: [followeeId], references: [id])
+
+  @@id([followerId, followeeId])
+  @@index([followeeId])
+  @@map("follow")
+}
+
+/// A pending request to follow a private account. Approving it creates the follow row (every follow row is an
+/// approved follow), declining or cancelling deletes the request.
+model FollowRequest {
+  requesterId String   @map("requester_id")
+  targetId    String   @map("target_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  requester   User     @relation("requester", fields: [requesterId], references: [id])
+  target      User     @relation("requestTarget", fields: [targetId], references: [id])
+
+  @@id([requesterId, targetId])
+  @@index([targetId, createdAt])
+  @@map("follow_request")
+}
+
+/// One like per user per shared post. Likes are reactions, not content: unliking deletes the row.
+/// Likes never affect consensus, counts, accuracy or reputation; only eligible ones count toward featuring.
+model PhotoLike {
+  userId    String   @map("user_id")
+  photoId   String   @map("photo_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Write-time snapshot: false for geofence-exempt (App Review / QA) accounts, whose likes never count.
+  countable Boolean  @default(true)
+  user      User     @relation(fields: [userId], references: [id])
+  photo     Photo    @relation(fields: [photoId], references: [id])
+
+  @@id([userId, photoId])
+  @@index([photoId, createdAt])
+  @@map("photo_like")
+}
+
+/// Nightly featuring result: the top 20 shared posts of a venue's night by eligible likes (at least 3), with their
+/// rank. Append-only (trigger). The gallery shows the top 10 that are still visible.
+model FeaturedPhoto {
+  id            String      @id @default(cuid())
+  venueId       String      @map("venue_id")
+  night         String
+  photoId       String      @unique @map("photo_id")
+  rank          Int         @db.SmallInt
+  eligibleLikes Int         @map("eligible_likes")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  venue         Venue       @relation(fields: [venueId], references: [id])
+  photo         Photo       @relation(fields: [photoId], references: [id])
+  run           FeaturedRun @relation(fields: [night], references: [night])
+
+  @@unique([venueId, night, rank])
+  @@map("featured_photo")
+}
+
+/// One row per night the featuring job has processed, written in the same transaction as its featured_photo rows,
+/// so a rerun or a late run never features a night twice. Append-only (trigger).
+model FeaturedRun {
+  night    String          @id
+  ranAt    DateTime        @map("ran_at") @db.Timestamptz(3)
+  featured Int
+  photos   FeaturedPhoto[]
+
+  @@map("featured_run")
+}
+
+/// Append-only log of verified-badge grants and revokes (trigger rejects UPDATE and DELETE). A note is required.
+model VerificationEvent {
+  id        String             @id @default(cuid())
+  userId    String             @map("user_id")
+  action    VerificationAction
+  note      String
+  /// null = system (e.g. the account was deleted).
+  actorId   String?            @map("actor_id")
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User               @relation("verifiedUser", fields: [userId], references: [id])
+  actor     User?              @relation("verifier", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@map("verification_event")
+}
+
+/// Rate-limit ledger for social actions (follows and requests, likes, posts). Counted under a per-user advisory
+/// lock; rows older than a day are pruned by the cron job.
+model RateEvent {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  kind      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, kind, createdAt])
+  @@index([createdAt])
+  @@map("rate_event")
+}
+
+model Flag {
+  id         String      @id @default(cuid())
+  targetType ContentType @map("target_type")
+  targetId   String      @map("target_id")
+  /// null for USER targets (profile reports).
+  venueId    String?     @map("venue_id")
+  flaggerId  String      @map("flagger_id")
+  reason     String
+  status     FlagStatus  @default(OPEN)
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  flagger    User        @relation(fields: [flaggerId], references: [id])
+  venue      Venue?      @relation(fields: [venueId], references: [id])
+
+  /// One OPEN flag per user per item (partial unique index in migration 3); after a review you may flag again.
+  @@index([targetType, targetId, flaggerId])
+  @@index([status, createdAt])
+  @@map("flag")
+}
+
+/// Append-only audit log. UPDATE and DELETE are rejected by a database trigger (see migration).
+model ModerationEvent {
+  id         String           @id @default(cuid())
+  action     ModerationAction
+  targetType ContentType      @map("target_type")
+  targetId   String           @map("target_id")
+  /// null = system action (e.g. auto-hide after 3 distinct flags)
+  actorId    String?          @map("actor_id")
+  note       String?
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  actor      User?            @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([targetType, targetId])
+  @@map("moderation_event")
+}
+
+/// Failed login attempts, for the email+IP throttle. Rows older than a day are pruned by the cron job.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([email, ip, createdAt])
+  @@index([createdAt])
+  @@map("login_attempt")
+}
+
+/// A blocks B. Symmetric in effect: neither sees the other's photos, comments or profile, and neither can
+/// follow the other. Aggregates (consensus, counts, reputation) are unaffected.
+model Block {
+  blockerId String   @map("blocker_id")
+  blockedId String   @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Opaque id for the block list, so a block made from an "Anonymous" photo or comment can be undone without
+  /// ever revealing who it is.
+  ref       String   @unique @default(dbgenerated("(gen_random_uuid())::text"))
+  /// Where the block came from: "profile" (the blocker saw the handle), "photo" or "comment" (the author may have
+  /// been Anonymous to the blocker, so the block list never shows their handle).
+  source    String   @default("profile")
+  blocker   User     @relation("blocker", fields: [blockerId], references: [id])
+  blocked   User     @relation("blocked", fields: [blockedId], references: [id])
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("block")
+}

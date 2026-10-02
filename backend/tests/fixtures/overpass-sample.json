@@ -1,0 +1,13 @@
+{
+  "version": 0.6,
+  "generator": "synthetic test fixture shaped like Overpass API output",
+  "elements": [
+    { "type": "node", "id": 1001, "lat": 40.7265, "lon": -73.9845, "tags": { "amenity": "bar", "name": "Test Tavern", "addr:housenumber": "12", "addr:street": "Avenue A" } },
+    { "type": "node", "id": 1002, "lat": 40.7190, "lon": -73.9880, "tags": { "amenity": "nightclub", "name": "Basement Club" } },
+    { "type": "way", "id": 2001, "center": { "lat": 40.7210, "lon": -73.9860 }, "tags": { "amenity": "pub", "name": "Test Tavern" } },
+    { "type": "node", "id": 1003, "lat": 40.7300, "lon": -73.9850, "tags": { "amenity": "bar" } },
+    { "type": "node", "id": 1004, "lat": 40.7500, "lon": -73.9850, "tags": { "amenity": "bar", "name": "Midtown Place" } },
+    { "type": "node", "id": 1005, "lat": 40.7250, "lon": -73.9840, "tags": { "amenity": "restaurant", "name": "Noodle Bar" } },
+    { "type": "node", "id": 1006, "lat": 40.7255, "lon": -73.9855, "tags": { "amenity": "pub", "name": "Café Ñandú & Friends" } }
+  ]
+}
