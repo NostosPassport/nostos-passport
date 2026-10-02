@@ -1,3 +1,4 @@
+"worklet";
 /** Pure math for the cover swing. progress runs 0 (closed) to 1 (open); the cover turns on its left edge. */
 export const OPEN_DEGREES = 180;
 export const PERSPECTIVE = 1400;

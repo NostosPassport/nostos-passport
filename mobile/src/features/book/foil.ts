@@ -1,3 +1,4 @@
+"worklet";
 /** The foil highlight: where the bright band sits across the cover (0 = left edge, 1 = right edge), from a drag and from tilt. */
 export const SWEEP_REST = 0.5;
 export const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));

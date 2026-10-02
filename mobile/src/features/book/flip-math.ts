@@ -1,3 +1,4 @@
+"worklet";
 /**
  * Pure math for turning pages. The book keeps ONE number, `pos`, the position between spreads (2.37 is 37 percent of the way
  * from spread 2 to spread 3). Turn k (between spread k and k+1) has progress clamp(pos - k, 0, 1), so every page in flight
