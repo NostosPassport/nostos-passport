@@ -1,65 +1,45 @@
-// Builds REVIEW-BUNDLE-backend.txt for an external reviewer: REVIEW.md, DECISIONS.md, the Prisma schema and
-// migrations, the consensus/accuracy/reputation modules, the service-layer permission checks, and a
-// fresh test summary. Usage: pnpm bundle (needs the Docker database running).
+// Builds REVIEW-BUNDLE-backend.txt for an external reviewer: every API route handler, every test file, the contract,
+// the schema and migrations, the server and lib code, the decisions, open questions, the latest review file and a fresh
+// test summary. Files are discovered by walking the tree, so nothing silently drops out of the bundle.
+// Usage: pnpm bundle (needs the Docker database running).
 import { execSync } from "node:child_process";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const walk = (dir, keep) => {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
+    const p = join(dir, d.name);
+    return d.isDirectory() ? walk(p, keep) : keep(p) ? [p] : [];
+  });
+};
+const latestReview = () => {
+  const dir = "../reviews";
+  if (!existsSync(dir)) return [];
+  const names = readdirSync(dir).filter((n) => n.endsWith(".md")).sort();
+  return names.length ? [join(dir, names.at(-1))] : [];
+};
 
 const files = [
   "REVIEW.md",
   "DECISIONS.md",
   "../OPEN-QUESTIONS.md",
+  ...latestReview(),
   "API.md",
   "DEPLOY.md",
   "src/contracts/api.ts",
+  "../mobile/src/api/contracts.ts",
+  "../mobile/src/auth/auth-context.tsx",
   "vercel.json",
   "prisma/schema.prisma",
-  ...readdirSync("prisma/migrations", { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => `prisma/migrations/${d.name}/migration.sql`)
-    .sort(),
-  "src/lib/consensus/index.ts",
-  "src/lib/accuracy/index.ts",
-  "src/server/services/reputation.ts",
-  "src/lib/time.ts",
-  "src/lib/geo.ts",
-  // Service-layer permission checks and the services that call them.
-  "src/server/permissions.ts",
-  "src/server/actor.ts",
-  "src/server/http.ts",
-  "src/server/services/reports.ts",
-  "src/server/services/photos.ts",
-  "src/server/services/comments.ts",
-  "src/server/services/social.ts",
-  "src/server/services/owner.ts",
-  "src/server/services/admin.ts",
-  "src/server/services/moderation.ts",
-  "src/server/services/venues.ts",
-  "src/server/services/account.ts",
-  "src/server/services/blocks.ts",
-  "src/server/services/me.ts",
-  "src/server/privacy.ts",
-  "src/server/rate-limit.ts",
-  "src/server/services/people.ts",
-  "src/server/services/posts.ts",
-  "src/server/services/likes.ts",
-  "src/server/services/featuring.ts",
-  "src/server/services/gallery.ts",
-  "src/server/services/activity.ts",
-  "src/server/services/verification.ts",
-  "src/server/services/regulars.ts",
-  "src/lib/likes.ts",
-  "src/lib/regulars.ts",
-  "prisma/seed-social.ts",
-  "src/server/services/osm-import.ts",
-  "src/server/cron.ts",
-  "src/lib/storage/index.ts",
-  "src/lib/content-filter/index.ts",
-  "src/lib/content-filter/wordlist.ts",
-  "src/lib/osm.ts",
-  "src/lib/auth/session.ts",
-  "prisma/seed-guard.ts",
+  ...walk("prisma/migrations", (p) => p.endsWith(".sql")).sort(),
+  ...walk("src/app/api", (p) => /route\.tsx?$/.test(p)).sort(),
+  ...walk("src/server", (p) => p.endsWith(".ts")).sort(),
+  ...walk("src/lib", (p) => p.endsWith(".ts")).sort(),
   "src/middleware.ts",
-];
+  ...walk("prisma", (p) => p.endsWith(".ts") && !p.includes("migrations")).sort(),
+  ...walk("tests", (p) => /\.(ts|json)$/.test(p)).sort(),
+].filter((f) => existsSync(f) && statSync(f).isFile());
 
 function run(cmd) {
   try {
@@ -71,9 +51,7 @@ function run(cmd) {
 
 const strip = (s) => s.replace(/\u001b\[[0-9;]*m/g, "");
 const commit = run("git rev-parse --short HEAD").trim();
-// Only this folder's history (the repo also holds mobile/).
 const log = run("git log --oneline -- .").trim();
-// The local binaries, not `pnpm -s`: newer pnpm versions reject `-s`, which silently emptied the summary.
 const typecheck = strip(run("node_modules/.bin/tsc --noEmit")).trim() || "tsc --noEmit: no errors";
 const lint = strip(run("node_modules/.bin/eslint .")).trim() || "eslint: no problems";
 const tests = strip(run("node_modules/.bin/vitest run --reporter=verbose"))
@@ -82,7 +60,7 @@ const tests = strip(run("node_modules/.bin/vitest run --reporter=verbose"))
   .join("\n");
 
 const sep = (title) => `\n\n${"=".repeat(100)}\n== ${title}\n${"=".repeat(100)}\n\n`;
-let out = `NOSTOS — REVIEW BUNDLE\nGenerated ${new Date().toISOString()} at commit ${commit}\n`;
+let out = `NOSTOS BACKEND — REVIEW BUNDLE\nGenerated ${new Date().toISOString()} at commit ${commit}\n`;
 out += `\nContents:\n${["TEST SUMMARY", ...files].map((f) => `  - ${f}`).join("\n")}\n`;
 out += sep("TEST SUMMARY");
 out += `$ pnpm typecheck\n${typecheck}\n\n$ pnpm lint\n${lint}\n\n$ pnpm vitest run --reporter=verbose\n${tests}\n\nGit history:\n${log}\n`;

@@ -22,9 +22,9 @@ describe("RatingPicker", () => {
     expect(control.props.accessibilityLabel).toBe("Rating");
     expect(control.props.accessibilityValue).toMatchObject({ min: 1, max: 10, now: 7, text: "7 out of 10" });
     await fireEvent(control, "accessibilityAction", { nativeEvent: { actionName: "increment" } });
-    expect(onChange).toHaveBeenNostosedWith(8);
+    expect(onChange).toHaveBeenLastCalledWith(8);
     await fireEvent(control, "accessibilityAction", { nativeEvent: { actionName: "decrement" } });
-    expect(onChange).toHaveBeenNostosedWith(6);
+    expect(onChange).toHaveBeenLastCalledWith(6);
   });
 
   it("does nothing when disabled (a locked rating)", async () => {

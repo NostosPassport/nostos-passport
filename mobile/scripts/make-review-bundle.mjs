@@ -1,49 +1,43 @@
-// Builds REVIEW-BUNDLE-mobile.txt: the review docs, the design tokens, the API client, and the core screens, plus a
-// fresh test summary. Run: node scripts/make-review-bundle.mjs
+// Builds REVIEW-BUNDLE-mobile.txt: the review docs, the contract copy and auth context, every test file, the theme,
+// the API client and every screen and feature, plus a fresh test summary. Files are discovered by walking the tree.
+// Run: node scripts/make-review-bundle.mjs
 import { execSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const walk = (dir, keep) => {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
+    const p = join(dir, d.name);
+    return d.isDirectory() ? walk(p, keep) : keep(p) ? [p] : [];
+  });
+};
+const latestReview = () => {
+  const dir = "../reviews";
+  if (!existsSync(dir)) return [];
+  const names = readdirSync(dir).filter((n) => n.endsWith(".md")).sort();
+  return names.length ? [join(dir, names.at(-1))] : [];
+};
+const code = (p) => /\.(tsx?|jsx?|json)$/.test(p) && !/\.d\.ts$/.test(p);
 
 const files = [
   "REVIEW.md",
   "DECISIONS.md",
+  "../OPEN-QUESTIONS.md",
+  ...latestReview(),
   "STORE.md",
   "DEVICE-CHECKLIST.md",
-  "src/theme/colors.ts",
-  "src/theme/typography.ts",
-  "src/theme/layout.ts",
-  "src/theme/motion.ts",
-  "src/api/client.ts",
-  "src/api/base-url.ts",
-  "src/api/index.ts",
-  "src/api/queries.ts",
-  "src/app/(app)/venue/[id].tsx",
-  "src/features/venue/live-section.tsx",
-  "src/features/venue/official-section.tsx",
-  "src/features/venue/report-bar.tsx",
-  "src/features/venue/report-bar-state.ts",
-  "src/features/venue/presence.ts",
-  "src/app/(app)/venue/report.tsx",
-  "src/features/map/venue-marker.tsx",
-  "src/api/keys.ts",
-  "src/features/people/profile-screen.tsx",
-  "src/features/people/profile-tabs.tsx",
-  "src/features/people/author.ts",
-  "src/features/people/author-line.tsx",
-  "src/features/people/use-follow.ts",
-  "src/features/people/use-requests.ts",
-  "src/features/people/edit-profile.ts",
-  "src/app/(app)/edit-profile.tsx",
-  "src/app/(app)/venue/photo.tsx",
-  "src/features/posts/composer.ts",
-  "src/features/posts/use-like.ts",
-  "src/features/posts/like-button.tsx",
-  "src/components/ui/rating-picker.tsx",
-  "src/components/ui/verified-badge.tsx",
-  "src/app/(app)/post/[id].tsx",
-  "src/features/venue/featured-section.tsx",
-  "src/app/(app)/venue/photos.tsx",
-  "eslint-rules/index.js",
-];
+  "../backend/prisma/schema.prisma",
+  "src/api/contracts.ts",
+  "src/auth/auth-context.tsx",
+  ...walk("src/theme", code).sort(),
+  ...walk("src/api", code).filter((p) => p !== "src/api/contracts.ts").sort(),
+  ...walk("src/auth", code).filter((p) => p !== "src/auth/auth-context.tsx").sort(),
+  ...walk("src/app", code).sort(),
+  ...walk("src/features", code).sort(),
+  ...walk("src/components", code).sort(),
+  ...walk("eslint-rules", (p) => p.endsWith(".js")).sort(),
+].filter((f) => existsSync(f) && statSync(f).isFile());
 
 const run = (cmd) => {
   try {
@@ -63,6 +57,7 @@ const lint = run("npx expo lint --max-warnings 0 2>&1").trim().split("\n").slice
 const commit = run("git rev-parse --short HEAD").trim();
 
 let out = `NOSTOS iOS — REVIEW BUNDLE\nCommit: ${commit}\nGenerated: ${new Date().toISOString()}\n\n`;
+out += `Contents:\n${files.map((f) => `  - ${f}`).join("\n")}\n\n`;
 out += `=== TEST SUMMARY ===\n${summary}\n\n${tsc}\n${lint}\n\n`;
 for (const f of files) {
   out += `\n\n===== ${f} =====\n\n${readFileSync(f, "utf8")}`;
