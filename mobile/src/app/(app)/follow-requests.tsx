@@ -53,7 +53,7 @@ export default function FollowRequests() {
             No requests right now.
           </Text>
         ) : (
-          <ListGroup footer="Approved people see your posts, places and badges.">
+          <ListGroup footer="Approved people see your stamps and places.">
             {rows.map(({ person, requestedAt }) => {
               const approve = () => decide.mutate({ handle: person.handle, approve: true });
               const decline = () => decide.mutate({ handle: person.handle, approve: false });

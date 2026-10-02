@@ -29,12 +29,12 @@ export default function LocationPermission() {
           <Icon name="location.fill" color="accent" size={size.iconLarge} />
         </View>
         <Text variant="title2" accessibilityRole="header">
-          {denied ? "Location is off" : "See what's near you"}
+          {denied ? "Location is off" : "Find places near you"}
         </Text>
         <Text color="textSecondary">
           {denied
-            ? "Nostos can't see your location. Turn it on in Settings to sort by distance and post from a venue."
-            : "Nostos uses your location while you're using the app to sort bars by distance and to confirm you're at a venue when you post."}
+            ? "Nostos can't see your location. Turn it on in Settings to find the places near you and to stamp them."
+            : "Nostos uses your location while you're using the app to find the places near you and to confirm you're there when you stamp one. Your position isn't shown to anyone."}
         </Text>
       </View>
       <View style={styles.actions}>

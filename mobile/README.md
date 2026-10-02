@@ -1,9 +1,10 @@
 # Nostos (iOS)
 
-The native iPhone app for Nostos: a live map of East Village and Lower East Side bars. Expo SDK 57, Expo Router,
+The native iPhone app for Nostos, a passport for New York: go to a place, get a stamp. Expo SDK 57, Expo Router,
 TypeScript. The backend (Next.js + Postgres) is the sibling folder `../backend/`; see its `API.md` and `DEPLOY.md`.
 
-Dark mode only, iPhone only. Runs in **Expo Go** for development (every native package is one Expo Go includes).
+Dark mode only, iPhone only. Runs in **Expo Go** for development. (The error reporter, Sentry, is off unless a build
+turns it on; if you do, use a development build, since its native part is not in Expo Go.)
 
 ## Run it on your phone (Expo Go, local backend)
 
@@ -28,13 +29,14 @@ at something else, set `EXPO_PUBLIC_API_URL`, for example `EXPO_PUBLIC_API_URL=h
 If the phone can't connect, try `npx expo start --tunnel` for the app, and make sure macOS's firewall allows
 incoming connections to Node for port 3000.
 
-**Demo accounts** (from the backend's dev seed, password `lastcall-dev`): `appreview@lastcall.dev` (can post from
-anywhere), `owner_velvet@lastcall.dev` (owns Velvet: "Manage Velvet" on Profile), `mod_morgan@lastcall.dev`
-(Moderation on Profile). Or tap **Look around first** to browse without an account.
+**Demo accounts** (from the backend's dev seed, password `lastcall-dev`): `avaa@lastcall.dev` (private, four follow
+requests waiting), `maya_r@lastcall.dev` (public, verified, many stamps), `moth_hopeful@lastcall.dev` (follows no one),
+`appreview@lastcall.dev` (can stamp from anywhere; only it sees those stamps), `mod_morgan@lastcall.dev` (Moderation in
+Settings). Or tap **Look around first**, which asks your birthdate (21+) and then lets you look up public passports.
 
-**Posting away from the bars:** in development, long-press the map to set a simulated location (a "Simulated
-location" chip clears it). This doesn't exist in release builds. The server still checks the 100 m geofence against
-whatever location it receives.
+**Stamping away from the places:** in development, the new-stamp screen has a short "Development: pretend to be at" list
+that sets a simulated location (a "Simulated location" chip clears it). It does not exist in release builds. The server
+still checks the geofence against whatever location it receives.
 
 ## Run it against the preview backend
 
@@ -58,7 +60,7 @@ EAS isn't logged in on this Mac, so no build has been made yet. To build and ins
    npx eas-cli@latest init
    ```
 
-2. Preview build (uses `https://preview.nostos.app`; needs an Apple Developer account; EAS creates the
+2. Preview build (uses `https://preview.nostos.app`, a placeholder until a backend is deployed; needs an Apple Developer account; EAS creates the
    certificates and profiles for you):
 
    ```bash
@@ -117,11 +119,13 @@ npm run sync:contracts
 
 | Path | What |
 |---|---|
-| `src/app/` | Routes (Expo Router): welcome, sign in/up, map, venue sheet, report sheet, photo composer and viewer, profile, people, settings, owner, moderation |
+| `src/app/` | Routes (Expo Router): welcome, age check, sign in/up, the tabs (Home, Stamp, Activity, Passport), stamp detail, new stamp, edit stamp, song picker, people, settings, moderation |
 | `src/api/` | `contracts.ts` (verbatim copy of the backend's zod contract), typed client, React Query hooks |
 | `src/theme/` | Design tokens: colors, type, spacing, radius, sizes, motion. The only place raw values may appear |
-| `src/components/ui/` | Native-feeling building blocks (text, buttons, grouped fields and lists, sheets, toasts, skeletons) |
-| `src/features/` | Map, venue, photos, comments, moderation, people, owner, location |
+| `src/components/ui/` | Native-feeling building blocks (text, buttons, grouped fields and lists, toasts, skeletons) |
+| `src/features/` | stamps (cards, composer logic, likes), people (passport, follows), account (gate), moderation, location, photos |
+| `src/lib/` | formatting, the 21+ check (`age.ts`), the error reporter (`report-error.ts`) |
 | `eslint-rules/` | The design-token and no-emoji lint rules, with tests |
 
-See `DECISIONS.md` for every judgment call, `AI-LOG.md` for the build log, and `REVIEW.md` for the review summary.
+See `DECISIONS.md` for judgment calls, `AI-LOG.md` for the build log, `REVIEW.md` for the review summary, and
+`DEVICE-CHECKLIST.md` for what only a physical iPhone can prove.

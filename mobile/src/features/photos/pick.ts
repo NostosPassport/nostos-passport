@@ -24,7 +24,7 @@ export async function takePhoto(): Promise<CameraOutcome> {
   const perm = before.granted ? before : await ImagePicker.requestCameraPermissionsAsync();
   if (!perm.granted) {
     if (before.status === ImagePicker.PermissionStatus.DENIED && !before.canAskAgain) {
-      Alert.alert("Camera is off for Nostos", "Turn on camera access in Settings to take photos at a venue.", [
+      Alert.alert("Camera is off for Nostos", "Turn on camera access in Settings to take a photo for your stamp.", [
         { text: "Not now", style: "cancel" },
         { text: "Open Settings", onPress: () => void Linking.openSettings() },
       ]);
@@ -45,7 +45,7 @@ export async function pickFromLibrary(): Promise<PickedImage | null> {
 
 /** What to tell someone when the camera didn't open. */
 export const CAMERA_NOTE: Record<Exclude<CameraOutcome, PickedImage | "cancelled">, string> = {
-  denied: "Camera access is off. Turn it on in Settings to post from here.",
-  "no-camera": "Posting needs a camera. Photos are taken in the app, at the venue.",
+  denied: "Camera access is off. Turn it on in Settings to take a photo for your stamp.",
+  "no-camera": "This device has no camera. Choose a photo from your library instead.",
   failed: "Couldn't open the camera. Try again.",
 };

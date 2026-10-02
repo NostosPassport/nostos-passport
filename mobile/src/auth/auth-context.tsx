@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (res: TokenResponse) => {
-      // Load the account first, so the app (and a venue sheet a guest signed in from) stays mounted
+      // Load the account first, so the app stays mounted
       // instead of passing through the account gate. If it fails, the gate handles it.
       const me = await api.me.get(res.token).catch(() => null);
       queryClient.clear();

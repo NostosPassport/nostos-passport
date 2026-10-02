@@ -13,6 +13,8 @@ blocked. Legal questions are never decided by the builder.
 | 4 | **DESIGN.md section 8 was not in the build prompt** ("DESIGN.md: see section 8"). DESIGN.md was written from the prompt's other sections, with an empty "Chosen reference". Fill that section to enable phase 5. | Phase 5 skipped until filled. | `DESIGN.md` |
 | 5 | **Source repo location.** `~/Downloads/lastcall-feature-social` did not exist. The fork was made from `/Users/charlesjinn/lastcall` (branch main, clean, has backend/, mobile/, HANDOFF.md). Confirm that is the right source. | Forked from `/Users/charlesjinn/lastcall`. | n/a |
 | 6 | **Reputation.** The accuracy score and consensus are removed, so nothing recomputes reputation. The column stays (default 0.5), visible only to the user and moderators. Keep it for moderation use or drop it? | Kept, moderator-only, no job. | `backend/prisma/schema.prisma` |
+| 7 | **The place catalog.** `pnpm venues:import` still imports only bars, pubs and nightclubs from OpenStreetMap in the East Village and Lower East Side. Nostos is about any place in NYC (parks, cafes, landmarks, shops). Which categories and which area should the real catalog cover, and who may add a place? The seed includes six landmarks by hand. | Bars only through the importer; manual or seeded places otherwise. | `backend/src/lib/osm.ts` |
+| 8 | **Stamp frequency.** One stamp per person per place per 15 minutes, 20 an hour. For a passport you may want "once per place per day", or repeat visits shown differently. | The old 15 minute cooldown. | `backend/src/server/services/geofence.ts` |
 
 ## Legal (for the lawyer session; nothing here is decided by the builder)
 

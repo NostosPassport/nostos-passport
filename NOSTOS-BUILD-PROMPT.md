@@ -80,12 +80,12 @@ KEEP: auth and sessions (token auth for iOS), users, handle and bio and avatar, 
 - [x] 4.4.4 Hook Sentry into the existing reportError hook behind an env flag (off by default, no DSN committed). Dependency ledger line required.
 
 ### Phase 5: design layer
-- [ ] 4.5.1 Read DESIGN.md. If it has a filled "Chosen reference" section, do a design pass: rebuild the navigation, tab bar, feed and profile layouts to match that app's patterns (the interaction model, layout structure and gestures people already know), using Nostos's own colors, icon set, name and logo. If the section is empty, skip this phase, note that in the review, and finish everything else. Never copy a real app's logo, icons, exact palette, name or proprietary assets.
+- [x] 4.5.1 (skipped: DESIGN.md has no chosen reference, see the review) Read DESIGN.md. If it has a filled "Chosen reference" section, do a design pass: rebuild the navigation, tab bar, feed and profile layouts to match that app's patterns (the interaction model, layout structure and gestures people already know), using Nostos's own colors, icon set, name and logo. If the section is empty, skip this phase, note that in the review, and finish everything else. Never copy a real app's logo, icons, exact palette, name or proprietary assets.
 
 ### Phase 6: seed, checks, handoff
-- [ ] 4.6.1 Deterministic seed anchored to "now": public and private accounts, pending requests, follows, stamps with photos, captions and songs at several places, likes, one verified account, one blocked pair. Keep demo accounts (avaa@lastcall.dev style; owner and mod accounts can go, keep admin, mod_morgan and appreview), password DEV_SEED_PASSWORD or lastcall-dev.
-- [ ] 4.6.2 mobile/DEVICE-CHECKLIST.md for every screen and rule above (a physical iPhone is the only way to check it).
-- [ ] 4.6.3 Update both REVIEW.md files, regenerate both bundles, write the final review file, and finish with a plain-language summary for the user: what exists, how to try each feature on the phone, and what needs their decision.
+- [x] 4.6.1 Deterministic seed anchored to "now": public and private accounts, pending requests, follows, stamps with photos, captions and songs at several places, likes, one verified account, one blocked pair. Keep demo accounts (avaa@lastcall.dev style; owner and mod accounts can go, keep admin, mod_morgan and appreview), password DEV_SEED_PASSWORD or lastcall-dev.
+- [x] 4.6.2 mobile/DEVICE-CHECKLIST.md for every screen and rule above (a physical iPhone is the only way to check it).
+- [x] 4.6.3 Update both REVIEW.md files, regenerate both bundles, write the final review file, and finish with a plain-language summary for the user: what exists, how to try each feature on the phone, and what needs their decision.
 
 ## 5. Rules that must never break (each gets a test in the invariants suite)
 1. A stamp is created only inside the place's geofence, checked server-side. Exempt (App Review) accounts are the only exception and are visible only to themselves.

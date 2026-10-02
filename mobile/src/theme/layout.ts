@@ -49,27 +49,10 @@ export const size = {
   postPhotoSkeleton: 360,
   vibeDot: 10,
   marker: 28,
-  markerSelected: 36,
   markerRing: 2,
-  markerGlow: 52,
   markerBadge: 16,
-  /** Name + vibe label under a marker when zoomed in. */
-  markerLabel: 20,
-  markerLabelMaxWidth: 112,
-  sheetHandle: 36,
-  /** Home sheet peek: handle, summary line and segmented control (plus the bottom safe area). */
-  sheetPeek: 132,
   listRow: 68,
-  sheetHandleHeight: 5,
   heroHeight: 220,
-  photoTile: 108,
-  reportBarHeight: 64,
-  topBarHeight: 44,
-  focusRing: 2,
-  /** Left rule on nested venue replies. */
-  threadLine: 2,
-  /** Multiline composers grow to this, then scroll. */
-  composerMaxHeight: 120,
   borderEmphasis: 1.5,
 } as const;
 

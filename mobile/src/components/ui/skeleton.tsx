@@ -19,7 +19,7 @@ export function Skeleton({ width = "100%", height = typeScale.body.lineHeight, r
   return <Animated.View style={[styles.block, { width, height, borderRadius: round ? height / 2 : radius.chip }, style]} />;
 }
 
-/** Skeleton for a list of venue rows. */
+/** Skeleton for a list of rows. */
 export function SkeletonRows({ count = 6 }: { count?: number }) {
   return (
     <View accessibilityLabel="Loading" accessibilityRole="progressbar">

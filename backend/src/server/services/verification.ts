@@ -3,7 +3,7 @@
  * written to the append-only `verification_event` log (a trigger rejects UPDATE and DELETE) in the same transaction
  * as the change.
  *
- * Badge only: verification never changes ranking, featuring eligibility, consensus or anything else. Nothing reads
+ * Badge only: verification never changes visibility, order or anything else. Nothing reads
  * `verified_at` except the code that displays the badge.
  */
 import type { Prisma } from "@prisma/client";

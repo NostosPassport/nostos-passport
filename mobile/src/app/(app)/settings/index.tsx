@@ -16,7 +16,7 @@ import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { LEGAL, openWebPage } from "@/lib/links";
 import { colors, screenPadding, space } from "@/theme";
 
-/** Settings: who I follow and where they're going, venue and moderation entries, account and legal. */
+/** Settings: who I follow, the moderation entry for staff, blocked users, account and legal. */
 export default function Settings() {
   const me = useMe();
   const following = useFollowing();

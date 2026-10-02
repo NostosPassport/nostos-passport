@@ -13,16 +13,15 @@ export default async function DeleteAccountPage() {
   return (
     <LegalPage title="Delete your account" updated={POLICY_UPDATED}>
       <p>
-        In the iPhone app, go to <b>Profile, Settings, Delete account</b> and confirm with your password. You can also do it here.
+        In the iPhone app, go to <b>Passport, Settings, Delete account</b> and confirm with your password. You can also do it here.
       </p>
 
       <h2>What happens</h2>
       <ul>
-        <li>Your email, display name, and password are erased right away, and your handle is replaced.</li>
+        <li>Your email, display name, bio, profile photo and password are erased right away, and your handle is replaced.</li>
         <li>You are signed out on every device.</li>
-        <li>Your follows, blocks, &quot;going tonight&quot; plans, and check-ins are removed.</li>
-        <li>Your photos are hidden.</li>
-        <li>Your past reports and comments stay, shown as &quot;Deleted user&quot;, so venue history stays accurate.</li>
+        <li>Your follows, likes and blocks are removed.</li>
+        <li>Your stamps are hidden for good and their image files are deleted.</li>
         <li>This can&apos;t be undone.</li>
       </ul>
 

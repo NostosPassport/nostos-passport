@@ -1,69 +1,92 @@
-# Device checklist: social layer
+# Device checklist
 
-Things tests and bundling can't prove. Run them on a real iPhone in Expo Go against the local backend, freshly
-seeded (`cd backend && pnpm db:seed && pnpm dev`; `cd mobile && npx expo start`). Password for every seed account:
-`lastcall-dev` (or `DEV_SEED_PASSWORD` if you set it; the App Review account uses `APP_REVIEW_PASSWORD` if set).
+Things tests and bundling can't prove. Run them on a real iPhone in Expo Go against the local backend, freshly seeded
+(`cd backend && pnpm db:seed && pnpm dev`; `cd mobile && npx expo start`). Password for every seed account:
+`lastcall-dev` (or `DEV_SEED_PASSWORD`; the App Review account uses `APP_REVIEW_PASSWORD` if set).
 
-Useful seed accounts. The seed prints the social ones at the end (`[seed] social: ...`); the handles below are what a
-seed prints with the default data, so check that output if yours differ.
-- `avaa@lastcall.dev`: private, 4 follow requests waiting, a Regular at Lantern & Lark, featured last month, likes and
-  a recent featured photo in Activity.
-- The private author (@elik) has a shared photo at The Velvet Anchor tonight. The seed prints which account follows
-  them; `moth_hopeful@lastcall.dev` follows no one.
-- Verified and Regular accounts: see the seed output.
-- `mod_morgan@lastcall.dev` (moderator), `owner_velvet@lastcall.dev` (owner of The Velvet Anchor).
+Seed accounts: `avaa` (private, four requests waiting), `maya_r` (public, verified, most stamps), `theo_k`, `nia_s`,
+`kofi_b` (private), `moth_hopeful` (private, follows no one), `blocker_blake` and `blocked_bea` (a blocked pair),
+`mod_morgan` (moderator, one report in the queue), `admin`, `appreview` (stamps from anywhere, visible only to itself).
 
-## Profiles and privacy
-- [ ] Your profile (avatar on the map's top bar): photo, name, handle, bio, counts, "Private account", Edit profile,
-      Follow requests with the "4" pill, Activity. Gear opens Settings with plans, blocked users, legal, sign out.
-- [ ] Tap Followers and Following: lists open; on your own followers, Remove asks first and the row goes.
-- [ ] Posts tab: 3-column grid, rating in the corner, the slashed eye on unshared posts; scroll to the end loads more.
-- [ ] Places tab: small dark map framing every venue, not interactive; list rows open the venue.
-- [ ] Open a private account you don't follow: handle, badge (if verified), generic avatar, "This account is private",
-      Follow. Nothing else. Tap Follow: it becomes Requested, and a toast says "Request sent". Tap again to cancel.
-- [ ] A public account: Follow becomes Following at once, and your Following count goes up when you go back.
-- [ ] Verified badge: a small champagne diamond after the handle on profiles, search, lists, comments and the photo
-      viewer; never on "Anonymous". VoiceOver says "verified".
-- [ ] Regular chips ("Regular at Lantern & Lark") open the venue; "Featured at Copper Fox Tavern, <last month>" opens
-      that month's gallery.
+## First launch and the age gate
+- [ ] Welcome screen: "Go somewhere. Get a stamp." with Create account, Sign in, Look around first. No mention of bars,
+      vibes or venues.
+- [ ] Look around first: asks your birthdate. Typing digits adds the slashes. A birthdate under 21 shows "Nostos is for
+      people 21 and older." with no Continue button. Force-quit and reopen: it asks again (nothing was remembered).
+- [ ] A birthdate that is 21 today lets you in. A guest sees Home with "A passport for New York" and Find people; the
+      Stamp, Activity and Passport tabs ask to sign in.
+- [ ] Create account: a Birthdate field replaces the old "I'm 21" checkbox. An under-21 birthdate stops on the phone.
 
-## Edit profile
-- [ ] Change the photo (system picker, not the camera), then remove it: the profile and top bar update.
-- [ ] Name and bio (the counter stops at 150). Save is off until something changes; Cancel with changes asks first.
-- [ ] Toggle Private off: the explanation changes to mention your handle on past venue photos. Save: "Approve 4
-      pending requests?". "Not now" closes the screen and leaves them pending; do it again with "Approve" and the
-      requests list empties.
+## "Checking account" (known device bug)
+- [ ] Sign in, then turn on Airplane Mode and relaunch: Passport and the Stamp screen say "Couldn't check your account"
+      with Try again, never "Sign in". With the network back, Try again loads them.
+- [ ] While signing in on a slow connection, the screens say "Checking your account", not "Sign in".
 
-## Follow requests and Activity
-- [ ] Approve and Decline each remove the row at once; the pill on your profile updates.
-- [ ] "Approve all" appears with 2+ requests and asks first.
-- [ ] Activity shows requests, new followers, likes (with the post's thumbnail, opening it) and "You were featured at".
+## Home feed
+- [ ] As `maya_r`: stamps from people she follows, newest first. Pull to refresh. Scroll to the end: more load.
+- [ ] As `moth_hopeful`: "Nothing here yet" and Find people. No stamps from strangers, no suggestions.
+- [ ] Like a stamp: the heart fills at once and the count goes up; tap again to unlike. Your own stamps show the count
+      but you can't like them.
+- [ ] The "..." on someone else's stamp: Report stamp and Block @handle. On your own stamp there is no menu in the feed.
+- [ ] Nothing anywhere says "Anonymous".
 
-## Posting
-- [ ] At a venue (or as @appreview, which may post from anywhere), the camera opens straight away. The composer has
-      no Library button anywhere.
-- [ ] Rating row: 1-10 fit across the screen and are easy to hit with a thumb, with a light tap on each. With
-      VoiceOver it's one control: swipe up and down to change it.
-- [ ] Without a rating the button reads "Post live photo"; with one, "Post", and the Share to venue page toggle
-      appears: on for a public account, off for a private one.
-- [ ] Post from outside the venue (location simulator, not @appreview): the tile shows the server's distance message.
-- [ ] A rated, shared post shows in the venue's photos and on your profile; unshared only on your profile.
+## Passport
+- [ ] Your own: photo, name, handle, bio, Stamps / Places / Followers / Following counts, Edit profile, Follow requests
+      (with the waiting count), a gear for Settings.
+- [ ] Stamps view: a 3-column grid, newest first; photo tiles, and plain tiles with the caption or a note icon for
+      stamps without a photo. Each tile names its place. Scrolling to the end loads more.
+- [ ] Places view: a small dark map with a dot for every place, and a list with the stamp count; tapping a row opens the
+      latest stamp there. Distances anywhere over 1000 m read in km ("1.8 km", never "1815 m").
+- [ ] Another person's public passport: Follow becomes Following at once.
+- [ ] A private passport you don't follow: handle, badge if verified, generic avatar, "This account is private" and
+      Follow. Nothing else. Follow becomes Requested; tap again to cancel. A pending request still shows nothing.
+- [ ] Verified badge: a small champagne diamond after the handle on `maya_r` (passport, feed, search, lists).
+- [ ] The blocked pair: as `blocker_blake`, search for `blocked_bea`: no result; her passport is "not available".
 
-## Posts, likes and the venue page
-- [ ] Post detail: photo, author (tap opens profile), venue, big rating, caption, heart with count.
-- [ ] Double-tap the photo: it likes (never unlikes), with a haptic. Heart toggles. Your own posts show the count but
-      can't be liked.
-- [ ] Your post's menu: Edit (rating locked after 5am, with a note), Delete from profile (asks, then gone for good).
-- [ ] Someone else's post: Report and Block; for an Anonymous author, "Block this person".
-- [ ] Venue page: "This month's best" tiles with like counts, "See all N", Past months ("<last month>'s best"). The month
-      gallery opens above the venue sheet (not behind it) with Done, grouped by night.
-- [ ] Photo viewer: a single tap hides and shows the controls, and a double-tap likes without flickering them. The
-      author line shows the badge and "Regular". Tapping a handle opens the profile above the viewer.
-- [ ] As `moth_hopeful`, @elik's photo at The Velvet Anchor reads "Anonymous" with no link; as the follower the seed
-      printed, it reads "@elik" and opens the profile.
-- [ ] Comments show the verified badge and "Regular" next to handles.
+## Making a stamp
+- [ ] Tap Stamp (the middle tab). In Settings > Location make sure location is allowed. Near a place, it is listed with
+      "You're here"; with exactly one place around, it is chosen for you.
+- [ ] Add a photo (camera or library), a caption (the counter stops at 280), a song (search "bowie": results with art,
+      title, artist; pick one; it shows with a remove button). Any one of the three is enough; with none, Stamp is off and
+      the screen says what is missing.
+- [ ] Stamp: it opens the new stamp. It appears at the top of your Stamps view and in your followers' feeds.
+- [ ] Try a place that is not near you (in development, pick one from "pretend to be at" and then another):
+      the server's message appears as written: "You need to be within 100 m of this place to stamp it (you're 140 m away)".
+- [ ] Stamp the same place again within 15 minutes: a "try again in N min" message.
+- [ ] Song search with Airplane Mode on shows an error with Try again, not a blank list.
 
-## General
-- [ ] No console warnings in Expo Go while going through the above.
-- [ ] Dynamic Type at the largest size: profile header, rating row and lists don't clip.
-- [ ] Pull to refresh on profile, lists, requests, activity and the month gallery.
+## Stamp detail
+- [ ] Photo (if any), caption, a song row, who and where, likes, how long ago. Tapping the author opens their passport.
+- [ ] Yours: "..." has Edit and Delete from profile. Edit changes the caption and song only; Save is off until something
+      changes; Cancel asks first. Delete asks, then the stamp is gone from your passport and everyone's feed for good.
+- [ ] Someone else's: "..." has Report stamp (reasons include "Under 21 or looks underage", "Stalking or unwanted
+      contact" and "Not at this place") and Block.
+- [ ] A stamp that is not available (removed, hidden, a private account) says "This stamp isn't available" with Close.
+
+## Edit profile and privacy
+- [ ] Change the photo, name and bio (counter stops at 150). Save is off until something changes.
+- [ ] Switch Private off and Save: an alert "Make your passport public?" lists what changes (all stamps and every place,
+      to anyone, signed in or not; follows without asking). "Keep private" does nothing; "Make public" saves, then asks
+      "Approve N pending requests?" when requests are waiting.
+- [ ] Switch back to private: no alert is needed, and strangers lose access again.
+
+## Follow requests, Activity, lists
+- [ ] Approve and Decline remove the row at once; the count on the passport updates; "Approve all" asks first.
+- [ ] Activity (its own tab): requests, new followers, and likes with the stamp's thumbnail (opens the stamp). No
+      "featured" entries.
+- [ ] Followers and Following lists open; on your own followers, Remove asks first.
+- [ ] Settings: Following list, Blocked users (with Unblock), Privacy policy, Terms, Support, Sign out, Delete account.
+      Moderation appears only for `mod_morgan` and `admin`.
+
+## Moderation (as `mod_morgan`)
+- [ ] Moderation: the queue has one stamp report; Hide, Dismiss and Restore each ask for an optional note. The Hidden tab
+      lists the hidden stamp with Restore; the Log tab lists actions and says it is permanent. An underage or stalking
+      report shows "Urgent" and sits at the top.
+
+## Delete account
+- [ ] Settings > Delete account: the list says stamps are removed, follows and likes gone. Needs the password. After
+      deleting you land on the welcome screen with "Your account is deleted."
+
+## No blank screens
+- [ ] Open every screen above with a slow connection and with Airplane Mode: each shows a skeleton, a message or an error
+      with Try again, never an empty screen. Swipe down on each modal to dismiss.

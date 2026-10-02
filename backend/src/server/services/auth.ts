@@ -8,7 +8,7 @@ import { isOldEnough, MIN_AGE, parseBirthdate } from "@/lib/age";
 import { assertCleanText, conflict, ServiceError, tooMany } from "@/server/errors";
 
 /** Bump when the Terms or Privacy Policy change materially; users who accepted an older version can be re-prompted. */
-export const CURRENT_TERMS_VERSION = "2026-09-24";
+export const CURRENT_TERMS_VERSION = "2026-10-02";
 
 export const signupSchema = z
   .object({

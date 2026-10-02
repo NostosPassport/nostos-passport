@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { colors, hairlineWidth, radius, space } from "@/theme";
 import { Text } from "./text";
 
-/** Small neutral label ("From the venue", "Promoted"). Never the accent, never styled like user content. */
+/** Small neutral label ("Hidden", "Suspended"). Never the accent. */
 export function Badge({ label, onMedia }: { label: string; onMedia?: boolean }) {
   return (
     <View style={[styles.badge, onMedia && styles.onMedia]}>
