@@ -95,3 +95,4 @@ Seed accounts: `avaa` (private, four requests waiting), `maya_r` (public, verifi
 
 - [ ] Cover: foil highlight follows a finger drag, follows tilt, shimmers when idle, and stops with Reduce Motion on.
 - [ ] Open animation: the cover swings on its left edge, shades while turning, and the page under it is shadowed then clears. With Reduce Motion it crossfades.
+- [ ] Bearer page: your photo or initial, name, handle, passport number, issue date and the two machine lines sit inside the page rule without clipping, at the smallest and largest text sizes; a long bio stops at three lines.
