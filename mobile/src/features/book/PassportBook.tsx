@@ -17,6 +17,8 @@ import { InsideCover } from "./InsideCover";
 import { OpeningCover } from "./OpeningCover";
 import { PageView } from "./PageView";
 import { type PageFace, groupByPage, pageCountFor, spreadCountFor } from "./spreads";
+import { IndexList } from "./IndexList";
+import { indexRows, spreadForPage } from "./index-data";
 import { usePassport } from "./use-passport";
 
 /**
@@ -29,6 +31,7 @@ export function PassportBook() {
   const reduced = useReducedMotion();
   const [phase, send] = useReducer((p: Phase, e: PhaseEvent) => nextPhase(p, e), "closed" as Phase);
   const [spread, setSpread] = useState(0);
+  const [showIndex, setShowIndex] = useState(false);
 
   const book = useMemo(() => bookSize(sw, sh), [sw, sh]);
   const fit = useMemo(() => openScale(sw, book, space.md), [sw, book]);
@@ -43,6 +46,7 @@ export function PassportBook() {
   });
 
   const byPage = useMemo(() => groupByPage(data.stamps), [data.stamps]);
+  const rows = useMemo(() => indexRows(data.neighborhoods, data.stamps), [data.neighborhoods, data.stamps]);
   const pinnedIds = useMemo(() => data.pins.map((s) => s.id), [data.pins]);
   const pages = pageCountFor(data.counts.stamps);
   const spreads = spreadCountFor(data.counts.stamps);
@@ -85,6 +89,19 @@ export function PassportBook() {
   );
   const go = (to: number) => setSpread(Math.max(0, Math.min(spreads - 1, to)));
 
+  if (showIndex) {
+    return (
+      <IndexList
+        rows={rows}
+        onClose={() => setShowIndex(false)}
+        onJump={(page) => {
+          setSpread(Math.min(spreads - 1, spreadForPage(page)));
+          setShowIndex(false);
+        }}
+      />
+    );
+  }
+
   return (
     <View style={styles.root}>
       <View style={styles.stageWrap}>
@@ -114,9 +131,12 @@ export function PassportBook() {
             <Pressable onPress={() => (spread === 0 ? send("closeBook") : go(spread - 1))} accessibilityRole="button" accessibilityLabel={spread === 0 ? "Close the passport" : "Previous page"} hitSlop={space.sm} style={styles.pagerButton}>
               <Icon name={spread === 0 ? "xmark" : "chevron.left"} color="accent" size={size.icon} />
             </Pressable>
-            <Text variant="typewriterSmall" color="dimBrass" accessibilityLiveRegion="polite">
-              {spreadLabel(spread, pages)}
-            </Text>
+            <Pressable onPress={() => setShowIndex(true)} accessibilityRole="button" accessibilityLabel="Index" accessibilityHint="Lists your neighborhoods and jumps to their pages" hitSlop={space.sm} style={styles.indexButton}>
+              <Icon name="list.bullet" color="dimBrass" size={size.iconSmall} />
+              <Text variant="typewriterSmall" color="dimBrass" accessibilityLiveRegion="polite">
+                {spreadLabel(spread, pages)}
+              </Text>
+            </Pressable>
             <Pressable onPress={() => go(spread + 1)} disabled={spread >= spreads - 1} accessibilityRole="button" accessibilityLabel="Next page" accessibilityState={{ disabled: spread >= spreads - 1 }} hitSlop={space.sm} style={styles.pagerButton}>
               <Icon name="chevron.right" color={spread >= spreads - 1 ? "textTertiary" : "accent"} size={size.icon} />
             </Pressable>
@@ -139,5 +159,6 @@ const styles = StyleSheet.create({
   rightHalf: { position: "absolute", top: 0 },
   footer: { minHeight: size.hitTarget, alignItems: "center", gap: space.sm },
   pager: { flexDirection: "row", alignItems: "center", gap: space.xl },
+  indexButton: { flexDirection: "row", alignItems: "center", gap: space.xs, minHeight: size.hitTarget },
   pagerButton: { minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
 });

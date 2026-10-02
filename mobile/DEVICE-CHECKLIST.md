@@ -109,3 +109,4 @@ Seed accounts: `avaa` (private, four requests waiting), `maya_r` (public, verifi
 - [ ] Photo viewer: tap a photo for full screen; pinch to zoom up to 4x, drag when zoomed, double tap to zoom in and out, "n of m" and arrows when there are several, close button.
 - [ ] Caption typewriter: the caption types out at a steady pace without the text reflowing; with Reduce Motion it appears at once.
 - [ ] Menu (ellipsis): Pin to passport or Unpin, Edit, Delete from profile; a fifth pin is refused with a message.
+- [ ] Index: the "Index" row under the open book lists neighborhoods, each with a ring that fills with brass as you visit its places, "visited/total", and "COMPLETE" when finished; started ones are tappable and turn the book to that neighborhood's first page, the others are dimmed and say "Not started" to VoiceOver. An empty passport says what the index is for.
