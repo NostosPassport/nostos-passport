@@ -28,7 +28,7 @@ export default function Passport() {
           <Corner style={styles.topRight} flipX />
           <Corner style={styles.bottomLeft} flipY />
           <Corner style={styles.bottomRight} flipX flipY />
-          {data.status === "pending" ? <Skeleton width="100%" height="100%" /> : null}
+          {data.status === "pending" ? <Skeleton width="100%" height={230} /> : null}
           {data.status === "error" ? <InlineError message="Couldn't open your passport." onRetry={data.retry} /> : null}
         </View>
 
