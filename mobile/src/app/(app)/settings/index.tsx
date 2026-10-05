@@ -43,17 +43,17 @@ export default function Settings() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.textSecondary} />}
       >
-        <SettingsRow title="Edit profile" subtitle={user ? `${user.displayName} · @${user.handle}   ·   ›` : "›"} onPress={() => router.push("/edit-profile")} />
+        <SettingsRow title="Edit profile" subtitle={user ? `${user.displayName} · @${user.handle}` : undefined} trailing="chevron.right" onPress={() => router.push("/edit-profile")} />
         <View style={styles.privacyNote}>
           <Text variant="footnote" color="textSecondary">Only you can see your passport.</Text>
           <Text variant="footnote" color="textSecondary">Nothing is shared, and there is no feed.</Text>
         </View>
-        <SettingsRow title="Customize" subtitle="Coming soon   ·   ›" onPress={() => router.push("/customize")} />
-        <SettingsRow title="Privacy policy" subtitle="Opens in your browser   ·   ↗" onPress={() => openWebPage(LEGAL.privacy)} />
-        <SettingsRow title="Terms" subtitle="Opens in your browser   ·   ↗" onPress={() => openWebPage(LEGAL.terms)} />
-        <SettingsRow title="Support" subtitle="Get help   ·   ↗" onPress={() => openWebPage(LEGAL.support)} />
-        {staff ? <SettingsRow title="Moderation" subtitle="Staff tools   ·   ›" onPress={() => router.push("/moderation")} /> : null}
-        {__DEV__ ? <SettingsRow title="Design gallery" subtitle="Development   ·   ›" onPress={() => router.push("/design")} /> : null}
+        <SettingsRow title="Customize" subtitle="Coming soon" trailing="chevron.right" onPress={() => router.push("/customize")} />
+        <SettingsRow title="Privacy policy" subtitle="Opens in your browser" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.privacy)} />
+        <SettingsRow title="Terms" subtitle="Opens in your browser" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.terms)} />
+        <SettingsRow title="Support" subtitle="Get help" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.support)} />
+        {staff ? <SettingsRow title="Moderation" subtitle="Staff tools" trailing="chevron.right" onPress={() => router.push("/moderation")} /> : null}
+        {__DEV__ ? <SettingsRow title="Design gallery" subtitle="Development" trailing="chevron.right" onPress={() => router.push("/design")} /> : null}
         <View style={styles.actions}>
           <Button title="Sign out" variant="plain" onPress={confirmSignOut} />
           <Button title="Delete account" variant="secondary" onPress={() => router.push("/settings/delete-account")} />
@@ -64,11 +64,15 @@ export default function Settings() {
   );
 }
 
-function SettingsRow({ title, subtitle, onPress }: { title: string; subtitle: string; onPress: () => void }) {
+function SettingsRow({ title, subtitle, trailing, onPress }: { title: string; subtitle?: string; trailing?: "chevron.right" | "arrow.up.right"; onPress: () => void }) {
+  const label = [title, subtitle].filter(Boolean).join(", ");
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`${title}, ${subtitle}`}>
-      <NativeText style={styles.rowTitle}>{title}</NativeText>
-      <NativeText style={styles.rowSubtitle}>{subtitle}</NativeText>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
+      <View style={styles.rowCopy}>
+        <NativeText style={styles.rowTitle}>{title}</NativeText>
+        {subtitle ? <NativeText style={styles.rowSubtitle}>{subtitle}</NativeText> : null}
+      </View>
+      {trailing ? <Icon name={trailing} color="textTertiary" size={16} /> : null}
     </Pressable>
   );
 }
@@ -80,7 +84,8 @@ const styles = StyleSheet.create({
   title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 50, lineHeight: 52, letterSpacing: -0.7, paddingHorizontal: screenPadding, marginTop: 10, marginBottom: 42 },
   scroll: { flex: 1 },
   content: { paddingHorizontal: screenPadding, gap: 8 },
-  row: { minHeight: 64, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, gap: 7 },
+  row: { minHeight: 64, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, flexDirection: "row", alignItems: "center", gap: 12 },
+  rowCopy: { flex: 1, gap: 7 },
   rowTitle: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 27, lineHeight: 28, letterSpacing: -0.5 },
   rowSubtitle: { color: colors.textSecondary, fontSize: 12, lineHeight: 15 },
   privacyNote: { paddingVertical: 3 },
