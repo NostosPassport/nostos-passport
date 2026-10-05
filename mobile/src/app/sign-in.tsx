@@ -90,7 +90,7 @@ export default function SignIn() {
           {emailError ? <InlineError message={emailError} /> : null}
           {login.error ? <InlineError message={errorText(login.error, "Couldn't sign in. Check your email and password and try again.")} /> : null}
           <Pressable onPress={submit} disabled={!canSubmit || login.isPending} style={({ pressed }) => [styles.signIn, (!canSubmit || login.isPending) && styles.disabled, pressed && styles.pressed]} accessibilityRole="button">
-            <Text style={styles.signInText}>{login.isPending ? "Signing in…" : "Sign in  ↗"}</Text>
+            <Text style={styles.signInText}>{login.isPending ? "Signing in…" : "Sign in"}</Text>
           </Pressable>
         </View>
         <Pressable onPress={() => router.push("/sign-up")} style={styles.create} accessibilityRole="button">
