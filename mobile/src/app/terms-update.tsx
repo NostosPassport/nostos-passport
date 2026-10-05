@@ -9,9 +9,8 @@ import { Button } from "@/components/ui/button";
 import { InlineError } from "@/components/ui/inline-error";
 import { Text } from "@/components/ui/text";
 import { LEGAL, openWebPage } from "@/lib/links";
-import { colors, screenPadding, space } from "@/theme";
+import { colors, fonts, screenPadding, space } from "@/theme";
 
-/** Shown when the account accepted an older Terms version. */
 export default function TermsUpdate() {
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
@@ -25,21 +24,19 @@ export default function TermsUpdate() {
   });
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + space.xxxl, paddingBottom: insets.bottom + space.md }]}>
+    <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.md }]}>
       <View style={styles.body}>
-        <Text variant="title" accessibilityRole="header">
-          Updated terms
-        </Text>
+        <Text style={styles.title} accessibilityRole="header">Updated terms</Text>
         <Text color="textSecondary">We&apos;ve updated our Terms and Privacy policy. Review them to keep using Nostos.</Text>
         <View style={styles.links}>
-          <Button title="Read the Terms" variant="plain" block={false} compact onPress={() => openWebPage(LEGAL.terms)} />
-          <Button title="Read the Privacy policy" variant="plain" block={false} compact onPress={() => openWebPage(LEGAL.privacy)} />
+          <Button title="Read the Terms" variant="secondary" onPress={() => openWebPage(LEGAL.terms)} />
+          <Button title="Read the Privacy policy" variant="secondary" onPress={() => openWebPage(LEGAL.privacy)} />
         </View>
       </View>
       <View style={styles.actions}>
         {accept.error && <InlineError message={errorText(accept.error, "Couldn't save that. Try again.")} />}
         <Button title="Agree and continue" onPress={() => accept.mutate()} loading={accept.isPending} disabled={!version} />
-        <Button title="Sign out" variant="plain" onPress={() => void signOut()} />
+        <Button title="Sign out" variant="secondary" onPress={() => void signOut()} />
       </View>
     </View>
   );
@@ -47,7 +44,8 @@ export default function TermsUpdate() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background, paddingHorizontal: screenPadding, justifyContent: "space-between" },
-  body: { gap: space.sm },
-  links: { marginTop: space.xs, marginLeft: -space.md },
-  actions: { gap: space.xs },
+  body: { gap: space.md, paddingTop: space.xl },
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 48, lineHeight: 50, letterSpacing: -1.1 },
+  links: { gap: space.sm, marginTop: space.sm },
+  actions: { gap: space.sm },
 });
