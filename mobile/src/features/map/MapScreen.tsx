@@ -6,7 +6,6 @@ import MapView, { Marker } from "react-native-maps";
 import { useMe, usePlaces, useUserPlaces } from "@/api/queries";
 import { Body, DisplayTitle, EditorialHeader, EditorialSafeContent, EditorialScreen, GearButton, Kicker, Rule } from "@/components/editorial/editorial";
 import { Icon } from "@/components/ui/icon";
-import { Text } from "@/components/ui/text";
 import { useUserCoords } from "@/features/location/location-store";
 import { placesRegion } from "@/features/people/places";
 import { formatDistance } from "@/lib/format";
