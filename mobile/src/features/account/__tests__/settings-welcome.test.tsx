@@ -13,23 +13,23 @@ jest.mock("@/api/queries", () => ({
 describe("Settings in personal mode", () => {
   beforeEach(() => mockPush.mockClear());
 
-  it("opens profile editing and states that the passport is private", () => {
-    render(<Settings />);
-    fireEvent.press(screen.getByRole("button", { name: /^Edit profile/ }));
+  it("opens profile editing and states that the passport is private", async () => {
+    await render(<Settings />);
+    await fireEvent.press(screen.getByRole("button", { name: /^Edit profile/ }));
     expect(mockPush).toHaveBeenCalledWith("/edit-profile");
     expect(screen.getByText("Only you can see your passport.")).toBeTruthy();
     expect(screen.getByText("Nothing is shared, and there is no feed.")).toBeTruthy();
   });
 
-  it("has no following, find people, or blocked-user surfaces", () => {
-    render(<Settings />);
+  it("has no following, find people, or blocked-user surfaces", async () => {
+    await render(<Settings />);
     expect(screen.queryByText("Find people")).toBeNull();
     expect(screen.queryByText("Blocked users")).toBeNull();
     expect(screen.queryByText("Following")).toBeNull();
   });
 
-  it("keeps customization, legal links, sign out, and account deletion", () => {
-    render(<Settings />);
+  it("keeps customization, legal links, sign out, and account deletion", async () => {
+    await render(<Settings />);
     for (const title of ["Customize", "Privacy policy", "Terms", "Support", "Sign out", "Delete account"]) {
       expect(screen.getByText(title)).toBeTruthy();
     }
