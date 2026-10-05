@@ -1,16 +1,15 @@
 import { router } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { DisplayTitle, EditorialHeader, EditorialSafeContent, EditorialScreen, GearButton, Kicker, Rule } from "@/components/editorial/editorial";
 import { InlineError } from "@/components/ui/inline-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePassport } from "@/features/book/use-passport";
 import { colors, fonts } from "@/theme";
-import { Text } from "react-native";
 
 export default function Passport() {
   const data = usePassport();
-  const last = data.stamps[0];
+  const last = data.stamps.at(-1);
   const lastDate = last ? new Date(last.createdAt).toLocaleDateString("en-US", { day: "2-digit", month: "short" }).toUpperCase() : "";
 
   return (
