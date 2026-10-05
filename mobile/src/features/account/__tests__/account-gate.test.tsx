@@ -26,27 +26,27 @@ describe("accountState", () => {
 });
 
 describe("AccountGate", () => {
-  const renderGate = () => render(<AccountGate title="Stamp a place" message="Loading your passport."><></></AccountGate>);
+  const renderGate = async () => render(<AccountGate title="Stamp a place" message="Loading your passport."><></></AccountGate>);
 
-  it("checking: says so and offers no sign-in action", () => {
+  it("checking: says so and offers no sign-in action", async () => {
     mockState = { state: "checking", retry, retrying: false };
-    renderGate();
+    await renderGate();
     expect(screen.getByText("Checking your account")).toBeTruthy();
     expect(screen.queryByText("Sign in")).toBeNull();
   });
 
-  it("error: offers Try again", () => {
+  it("error: offers Try again", async () => {
     mockState = { state: "error", retry, retrying: false };
-    renderGate();
+    await renderGate();
     expect(screen.getByText(/Couldn't check your account/)).toBeTruthy();
-    fireEvent.press(screen.getByText("Try again"));
+    await fireEvent.press(screen.getByText("Try again"));
     expect(retry).toHaveBeenCalled();
     expect(screen.queryByText("Sign in")).toBeNull();
   });
 
-  it("ready: shows the protected screen", () => {
+  it("ready: shows the protected screen", async () => {
     mockState = { state: "ready", retry, retrying: false };
-    render(<AccountGate title="t" message="m"><></></AccountGate>);
+    await render(<AccountGate title="t" message="m"><></></AccountGate>);
     expect(screen.queryByText("Checking your account")).toBeNull();
     expect(screen.queryByText("Sign in")).toBeNull();
   });
