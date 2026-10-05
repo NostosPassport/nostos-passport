@@ -24,6 +24,7 @@ module.exports = defineConfig([
       "src/components/ui/list-row.tsx",
       "src/components/ui/text-field.tsx",
       "src/app/sign-in.tsx",
+      "src/app/sign-up.tsx",
       "src/app/terms-update.tsx",
       "src/app/(app)/location-permission.tsx",
       "src/app/(app)/(tabs)/_layout.tsx",
