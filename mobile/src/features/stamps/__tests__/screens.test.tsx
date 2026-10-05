@@ -34,6 +34,7 @@ jest.mock("expo-router", () => ({
   useLocalSearchParams: () => ({ id: mockLocalId }),
   useFocusEffect: jest.fn(),
 }));
+jest.mock("@/auth/auth-context", () => ({ useAuth: () => ({ status: mockAuth, signIn: jest.fn(), signOut: jest.fn(), forget: jest.fn() }) }));
 jest.mock("@/auth/account-state", () => ({ useAccountState: () => ({ state: mockAuth === "signedIn" ? "ready" : "checking", retry: jest.fn(), retrying: false }) }));
 jest.mock("@/api/queries", () => ({
   qk: jest.requireActual("@/api/keys").qk,
