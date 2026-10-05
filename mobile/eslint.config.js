@@ -30,8 +30,7 @@ module.exports = defineConfig([
       "src/app/(app)/settings/index.tsx",
       "src/app/(app)/(tabs)/_layout.tsx",
       "src/app/(app)/(tabs)/passport.tsx",
-      "src/app/(app)/stamp/new.tsx",
-      "src/app/(app)/stamp/[id].tsx",
+      "src/app/(app)/stamp/*.tsx",
       "src/features/map/MapScreen.tsx"
     ],
     rules: { "local/no-raw-design-values": "off" },
