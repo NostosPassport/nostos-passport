@@ -17,7 +17,7 @@ import { useAnnounce } from "@/lib/a11y";
 import { haptics } from "@/lib/haptics";
 import { LEGAL, openWebPage } from "@/lib/links";
 import { MIN_PASSWORD, validateSignup, type SignupErrors, type SignupFields } from "@/lib/validation";
-import { colors, fonts, screenPadding, space } from "@/theme";
+import { colors, fonts, screenPadding } from "@/theme";
 
 export default function SignUp() {
   const { signIn } = useAuth();
