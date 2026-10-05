@@ -27,6 +27,7 @@ module.exports = defineConfig([
       "src/app/sign-up.tsx",
       "src/app/terms-update.tsx",
       "src/app/(app)/location-permission.tsx",
+      "src/app/(app)/settings/index.tsx",
       "src/app/(app)/(tabs)/_layout.tsx",
       "src/app/(app)/(tabs)/passport.tsx",
       "src/app/(app)/stamp/new.tsx",
