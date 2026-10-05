@@ -75,8 +75,8 @@ describe("the composer", () => {
       near({ id: "p3", slug: "p3", name: "Far Bar", inside: false, distanceM: 1815 }),
     ];
     await wrap(<NewStamp />);
-    expect(screen.getByText("Here")).toBeTruthy();
-    expect(screen.getByText("Nearby")).toBeTruthy();
+    expect(screen.getByText("HERE")).toBeTruthy();
+    expect(screen.getByText("NEARBY")).toBeTruthy();
     expect(screen.getByText("East Village · 1.8 km away, need to be within 100 m")).toBeTruthy();
   });
 
