@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { Pressable, StyleSheet, Text, View, type TextStyle, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/ui/icon";
@@ -18,8 +18,8 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
   return <Text style={[styles.wordmark, compact && styles.wordmarkCompact]}>NOSTOS</Text>;
 }
 
-export function DisplayTitle({ children, size = 58, style }: PropsWithChildren<{ size?: number; style?: ViewStyle }>) {
-  return <Text style={[styles.display, { fontSize: size }, style]}>{children}</Text>;
+export function DisplayTitle({ children, size = 58, style }: PropsWithChildren<{ size?: number; style?: TextStyle }>) {
+  return <Text style={[styles.display, { fontSize: size, lineHeight: size * 0.9 }, style]}>{children}</Text>;
 }
 
 export function Kicker({ children, muted = false }: PropsWithChildren<{ muted?: boolean }>) {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   header: { height: 82, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   wordmark: { color: colors.accent, fontFamily: fonts.serifRegular, fontSize: 66, lineHeight: 68, letterSpacing: -2.5 },
   wordmarkCompact: { fontSize: 46, lineHeight: 48 },
-  display: { color: colors.textPrimary, fontFamily: fonts.serifRegular, lineHeight: 58, letterSpacing: -1.6 },
+  display: { color: colors.textPrimary, fontFamily: fonts.serifRegular, letterSpacing: -1.6 },
   kicker: { color: colors.textPrimary, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.35, textTransform: "uppercase" },
   body: { color: colors.textPrimary, fontFamily: fonts.sans, lineHeight: 18 },
   muted: { color: colors.textSecondary },
