@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput,
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
-import { useAuth } from "@/auth/auth-context";
+import { farewellNotice, useAuth } from "@/auth/auth-context";
 import { InlineError } from "@/components/ui/inline-error";
 import { haptics } from "@/lib/haptics";
 import { isEmail } from "@/lib/validation";
@@ -14,6 +14,7 @@ import { colors, fonts } from "@/theme";
 export default function SignIn() {
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
+  const [farewell] = useState(() => farewellNotice.take());
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export default function SignIn() {
         </View>
         <Text style={styles.headline}>Find your{`\n`}way back.</Text>
         <View style={styles.form}>
+          {farewell ? <Text style={styles.notice}>{farewell}</Text> : null}
           <View style={styles.field}>
             <Text style={styles.label}>EMAIL</Text>
             <TextInput
@@ -110,6 +112,7 @@ const styles = StyleSheet.create({
   collageAccentB: { position: "absolute", width: 156, height: 48, backgroundColor: colors.accent, right: -18, top: 46, transform: [{ rotate: "7deg" }] },
   headline: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 62, lineHeight: 54, letterSpacing: -1.5, paddingHorizontal: 24, paddingTop: 12 },
   form: { paddingHorizontal: 24, paddingTop: 18, gap: 16 },
+  notice: { color: colors.textSecondary, fontSize: 12, lineHeight: 16 },
   field: { gap: 4 },
   label: { color: colors.textPrimary, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.5 },
   input: { height: 42, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, color: colors.textPrimary, fontSize: 14, paddingHorizontal: 10, paddingVertical: 0 },
