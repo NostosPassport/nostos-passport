@@ -63,7 +63,8 @@ function Memory({ stamp, actions }: { stamp: StampView; actions: ContentAction[]
   const pinAction = actions.find((action) => action.label === "Pin to passport" || action.label === "Unpin from passport");
   const date = new Date(stamp.createdAt);
   const dateLabel = date.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
-  const number = String(stamp.page ?? 1).padStart(3, "0");
+  const memoryNumber = stamp.page !== null && stamp.slot !== null ? (stamp.page - 1) * 3 + stamp.slot : 1;
+  const number = String(memoryNumber).padStart(3, "0");
   const hero = stamp.photos[0];
 
   return (
