@@ -27,7 +27,7 @@ import { MAX_STAMP_PHOTOS, placeRowText, placeSections, stampReadiness } from "@
 import { SongRow } from "@/features/stamps/song-row";
 import { haptics } from "@/lib/haptics";
 import { useConfirmDiscard } from "@/lib/use-confirm-discard";
-import { colors, fonts, size, space } from "@/theme";
+import { colors, fonts } from "@/theme";
 
 type Nearby = NearbyPlacesResponse["places"][number];
 
@@ -165,7 +165,7 @@ function Composer() {
             ) : null}
             {readiness.hint && !stamp.isPending ? <Text variant="footnote" color="textTertiary">{readiness.hint}</Text> : null}
             {stamp.error ? <InlineError message={errorText(stamp.error, "Couldn't stamp that. Try again.")} onRetry={() => stamp.mutate()} retrying={stamp.isPending} /> : null}
-            <EditorialButton label={stamp.isPending ? `Stamping…${photoUris.length ? ` ${Math.round(progress * 100)}%` : ""}` : "Stamp this place  ↗"} disabled={!readiness.ready} onPress={() => stamp.mutate()} />
+            <EditorialButton label={stamp.isPending ? `Stamping…${photoUris.length ? ` ${Math.round(progress * 100)}%` : ""}` : "Stamp this place"} disabled={!readiness.ready} onPress={() => stamp.mutate()} />
             <NativeText style={styles.confirmed}>Location confirmed · {place.neighborhood}, New York</NativeText>
           </>
         ) : (
