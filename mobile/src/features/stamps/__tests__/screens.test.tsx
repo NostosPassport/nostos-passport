@@ -1,6 +1,6 @@
 /**
- * No screen renders blank: every state of the feed, a stamp, the song picker and the composer shows something a
- * person can read or act on (a skeleton, a message, an error with Try again), never an empty view.
+ * No screen renders blank: every state of the feed, a memory and the song picker shows something a person can read
+ * or act on (a skeleton, a message, an error with Try again), never an empty view.
  */
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
@@ -34,8 +34,7 @@ jest.mock("expo-router", () => ({
   useLocalSearchParams: () => ({ id: mockLocalId }),
   useFocusEffect: jest.fn(),
 }));
-jest.mock("@/auth/auth-context", () => ({ useAuth: () => ({ status: mockAuth }) }));
-jest.mock("@/auth/account-state", () => ({ useAccountState: () => ({ state: mockAuth === "signedIn" ? "ready" : "guest", retry: jest.fn(), retrying: false }) }));
+jest.mock("@/auth/account-state", () => ({ useAccountState: () => ({ state: mockAuth === "signedIn" ? "ready" : "checking", retry: jest.fn(), retrying: false }) }));
 jest.mock("@/api/queries", () => ({
   qk: jest.requireActual("@/api/keys").qk,
   useFeed: () => mockFeed,
@@ -72,11 +71,13 @@ describe("Home feed", () => {
     expect(screen.queryByText("Nothing here yet")).toBeNull();
   });
 
-  it("empty: says what the feed is and how to fill it", async () => {
+  it("empty: offers a direct path to stamp a place", async () => {
     mockFeed = { isPending: false, data: { pages: [{ stamps: [], nextBefore: null }] }, hasNextPage: false };
     await wrap(<Home />);
     expect(screen.getByText("Nothing here yet")).toBeTruthy();
-    expect(screen.getByText("Find people")).toBeTruthy();
+    expect(screen.getByText("There are no stamps to show here yet.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Stamp a place" })).toBeTruthy();
+    expect(screen.queryByText("Find people")).toBeNull();
   });
 
   it("failed: the server's reason and Try again", async () => {
@@ -86,7 +87,7 @@ describe("Home feed", () => {
     expect(screen.getByText("Try again")).toBeTruthy();
   });
 
-  it("with stamps: shows who, where, the caption and the song", async () => {
+  it("with stamps: shows where, the caption and the song", async () => {
     mockFeed = { isPending: false, data: { pages: [{ stamps: [stamp], nextBefore: null }] }, hasNextPage: false };
     await wrap(<Home />);
     expect(screen.getByText("hello there")).toBeTruthy();
@@ -95,12 +96,13 @@ describe("Home feed", () => {
     expect(screen.getByLabelText("Like, 2 likes")).toBeTruthy();
   });
 
-  it("guest: a way in, never a blank feed", async () => {
-    mockAuth = "guest";
+  it("signed-out state never exposes the removed preview experience", async () => {
+    mockAuth = "signedOut";
     mockFeed = { isPending: true };
     await wrap(<Home />);
-    expect(screen.getByText("A passport for New York")).toBeTruthy();
-    expect(screen.getByText("Find people")).toBeTruthy();
+    expect(screen.getByText("Checking your account")).toBeTruthy();
+    expect(screen.queryByText("A passport for New York")).toBeNull();
+    expect(screen.queryByText("Find people")).toBeNull();
   });
 });
 
@@ -118,7 +120,7 @@ describe("Stamp detail", () => {
 
     mockStamp = { isError: true, error: new ApiError(404, "not_found", "Stamp not found"), refetch: jest.fn() };
     const gone = await wrap(<StampDetail />);
-    expect(screen.getByText("This stamp isn't available")).toBeTruthy();
+    expect(screen.getByText("This memory isn't available")).toBeTruthy();
     await gone.unmount();
 
     mockStamp = { isError: true, error: new ApiError(0, "timeout", "Nostos isn't responding."), refetch: jest.fn() };
@@ -129,14 +131,16 @@ describe("Stamp detail", () => {
 
     mockStamp = { data: { stamp } };
     await wrap(<StampDetail />);
+    expect(screen.getByText("Velvet")).toBeTruthy();
     expect(screen.getByText("hello there")).toBeTruthy();
     expect(screen.getByText("David Bowie")).toBeTruthy();
-    expect(screen.getByText(/@sam · at Velvet/)).toBeTruthy();
+    expect(screen.getByText(/EAST VILLAGE, NEW YORK/)).toBeTruthy();
   });
 
-  it("a private account's stamp (404 to you) reads as unavailable, with no author, place or caption leaked", async () => {
+  it("a private account's memory reads as unavailable, with no author, place or caption leaked", async () => {
     mockStamp = { isError: true, error: new ApiError(404, "not_found", "Stamp not found"), refetch: jest.fn() };
     await wrap(<StampDetail />);
+    expect(screen.getByText("This memory isn't available")).toBeTruthy();
     expect(screen.queryByText(/Sam|sam|Velvet|hello there/)).toBeNull();
     expect(screen.queryByText("Anonymous")).toBeNull();
   });
@@ -213,5 +217,4 @@ describe("Song picker", () => {
     expect(screen.getByLabelText("Heroes by David Bowie")).toBeTruthy();
     expect(screen.queryByText("Couldn't search for songs right now.")).toBeNull();
   });
-
 });
