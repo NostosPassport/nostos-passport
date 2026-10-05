@@ -5,7 +5,6 @@ import { RefreshControl, StyleSheet, View } from "react-native";
 
 import { errorText } from "@/api";
 import { useFeed } from "@/api/queries";
-import { useAuth } from "@/auth/auth-context";
 import { AccountGate } from "@/features/account/account-gate";
 import { Button } from "@/components/ui/button";
 import { InlineError } from "@/components/ui/inline-error";
@@ -16,37 +15,13 @@ import { StampCard } from "@/features/stamps/stamp-card";
 import { useFlaggedIds } from "@/features/moderation/flagged-store";
 import { colors, hairlineWidth, screenPadding, space } from "@/theme";
 
-/**
- * Home: stamps from the people you follow, newest first, 30 at a time. Strictly chronological: no ranking, no
- * suggestions, nothing from people you don't follow. Pull to refresh; more loads near the end.
- */
 export default function Home() {
-  const { status } = useAuth();
   return (
     <View style={styles.root}>
-      {status === "guest" ? (
-        <GuestHome />
-      ) : (
-        <AccountGate title="Home" message="Sign in to see stamps from the people you follow.">
-          <Feed />
-        </AccountGate>
-      )}
+      <AccountGate title="Home" message="Loading your passport.">
+        <Feed />
+      </AccountGate>
       <ToastHost bottom={space.xxl} />
-    </View>
-  );
-}
-
-function GuestHome() {
-  return (
-    <View style={styles.guest}>
-      <Text variant="title2" accessibilityRole="header">
-        A passport for New York
-      </Text>
-      <Text variant="callout" color="textSecondary" style={styles.center}>
-        Go somewhere, get a stamp. Sign in to see stamps from the people you follow, or look up a public passport.
-      </Text>
-      <Button title="Find people" variant="secondary" block={false} onPress={() => router.push("/people")} />
-      <Button title="Sign in" block={false} onPress={() => router.push("/sign-in")} />
     </View>
   );
 }
@@ -87,9 +62,9 @@ function Feed() {
             Nothing here yet
           </Text>
           <Text variant="callout" color="textSecondary" style={styles.center}>
-            Stamps from the people you follow show up here, newest first. Follow some people, or go stamp a place yourself.
+            There are no stamps to show here yet.
           </Text>
-          <Button title="Find people" block={false} onPress={() => router.push("/people")} />
+          <Button title="Stamp a place" block={false} onPress={() => router.push("/stamp/new")} />
         </View>
       }
       ListFooterComponent={
@@ -116,6 +91,5 @@ const styles = StyleSheet.create({
   separator: { height: hairlineWidth, backgroundColor: colors.hairline, marginHorizontal: screenPadding },
   pad: { padding: screenPadding },
   empty: { alignItems: "center", gap: space.sm, padding: screenPadding, paddingTop: space.xxxl },
-  guest: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.sm, padding: screenPadding },
   center: { textAlign: "center" },
 });
