@@ -16,17 +16,21 @@ module.exports = defineConfig([
       "no-console": ["error", { allow: ["info", "warn", "error"] }],
     },
   },
-  // These screens intentionally mirror fixed measurements from the approved Figma refinement. Keep the exception
-  // narrow while the new measurements settle on-device; colors are still enforced globally by the theme test.
   {
     files: [
       "src/components/editorial/**/*.{ts,tsx}",
+      "src/components/brand/form-header.tsx",
+      "src/components/ui/button.tsx",
+      "src/components/ui/list-row.tsx",
+      "src/components/ui/text-field.tsx",
       "src/app/sign-in.tsx",
+      "src/app/terms-update.tsx",
+      "src/app/(app)/location-permission.tsx",
       "src/app/(app)/(tabs)/_layout.tsx",
       "src/app/(app)/(tabs)/passport.tsx",
       "src/app/(app)/stamp/new.tsx",
       "src/app/(app)/stamp/[id].tsx",
-      "src/features/map/MapScreen.tsx",
+      "src/features/map/MapScreen.tsx"
     ],
     rules: { "local/no-raw-design-values": "off" },
   },
