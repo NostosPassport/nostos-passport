@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 
@@ -10,8 +10,9 @@ import { useUserCoords } from "@/features/location/location-store";
 import { placesRegion } from "@/features/people/places";
 import { formatDistance } from "@/lib/format";
 import { HOME_REGION } from "@/lib/geo";
-import { colors, selectedMarkerScale, size } from "@/theme";
+import { colors } from "@/theme";
 import { type MapRegion, pinKind, sheetModel, statsByPlace, visiblePlaces } from "./map-model";
+import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
 import { PlaceSheet } from "./PlaceSheet";
 
@@ -24,10 +25,29 @@ export function MapScreen() {
   const here = useUserCoords();
   const stats = useMemo(() => statsByPlace(mine.data?.places ?? []), [mine.data]);
   const start = useMemo(() => placesRegion(mine.data?.places ?? []) ?? HOME_REGION, [mine.data]);
+  const mapRef = useRef<MapView>(null);
+  const regionRef = useRef<MapRegion>(HOME_REGION);
+  const centeredOnce = useRef(false);
   const [region, setRegion] = useState<MapRegion>(HOME_REGION);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("nearby");
+
+  const recenter = useCallback(() => {
+    if (!here) return;
+    const current = regionRef.current;
+    mapRef.current?.animateToRegion(
+      { latitude: here.lat, longitude: here.lng, latitudeDelta: current.latitudeDelta, longitudeDelta: current.longitudeDelta },
+      300,
+    );
+  }, [here]);
+
+  useEffect(() => mapRecenter.subscribe(recenter), [recenter]);
+  useEffect(() => {
+    if (!here || centeredOnce.current) return;
+    centeredOnce.current = true;
+    recenter();
+  }, [here, recenter]);
 
   const all = useMemo(() => places.data?.places ?? [], [places.data]);
   const filtered = useMemo(() => {
@@ -66,13 +86,19 @@ export function MapScreen() {
         </View>
         <View style={styles.mapFrame}>
           <MapView
+            ref={mapRef}
             style={StyleSheet.absoluteFill}
             initialRegion={start}
             userInterfaceStyle="light"
             showsPointsOfInterests={false}
             showsCompass={false}
+            showsUserLocation={!!here}
+            showsMyLocationButton={false}
             pitchEnabled={false}
-            onRegionChangeComplete={setRegion}
+            onRegionChangeComplete={(next) => {
+              regionRef.current = next;
+              setRegion(next);
+            }}
             onPress={() => setSelectedId(null)}
             accessibilityLabel="Map of your places"
           >
@@ -93,11 +119,6 @@ export function MapScreen() {
                 </Marker>
               );
             })}
-            {here ? (
-              <Marker coordinate={{ latitude: here.lat, longitude: here.lng }} tracksViewChanges={false} anchor={{ x: 0.5, y: 0.5 }} zIndex={4} accessibilityLabel="You are here" pointerEvents="none">
-                <View style={styles.you} />
-              </Marker>
-            ) : null}
           </MapView>
           {places.data?.attribution ? (
             <View style={styles.attribution} pointerEvents="none">
@@ -127,7 +148,6 @@ function FilterButton({ label, active, onPress }: { label: string; active: boole
   );
 }
 
-const YOU = size.marker / 2;
 const styles = StyleSheet.create({
   title: { marginTop: 8, marginBottom: 8 },
   search: { height: 44, flexDirection: "row", alignItems: "center", gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
@@ -136,6 +156,5 @@ const styles = StyleSheet.create({
   filter: { width: "47.5%", alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
   filterActive: { borderBottomColor: colors.accent },
   mapFrame: { flex: 1, minHeight: 330, overflow: "hidden" },
-  you: { width: YOU, height: YOU, borderRadius: YOU / 2, borderWidth: size.markerRing, borderColor: colors.background, backgroundColor: colors.accent, transform: [{ scale: selectedMarkerScale }] },
   attribution: { position: "absolute", left: 6, top: 6, paddingHorizontal: 4, paddingVertical: 2, backgroundColor: colors.background, opacity: 0.85 },
 });
