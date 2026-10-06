@@ -16,7 +16,7 @@ import { checkBirthdate, formatBirthdateInput } from "@/lib/age";
 import { useAnnounce } from "@/lib/a11y";
 import { haptics } from "@/lib/haptics";
 import { LEGAL, openWebPage } from "@/lib/links";
-import { MIN_PASSWORD, validateSignup, type SignupErrors, type SignupFields } from "@/lib/validation";
+import { HANDLE_MAX, MIN_PASSWORD, validateSignup, type SignupErrors, type SignupFields } from "@/lib/validation";
 import { colors, fonts, screenPadding } from "@/theme";
 
 export default function SignUp() {
@@ -73,7 +73,7 @@ export default function SignUp() {
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.topbar, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.topbar, { paddingTop: insets.top, height: insets.top + 44 }]}>
         <Pressable onPress={() => router.back()} style={styles.hitTarget} accessibilityRole="button" accessibilityLabel="Back">
           <Icon name="chevron.left" color="textPrimary" size={22} />
         </Pressable>
@@ -93,11 +93,12 @@ export default function SignUp() {
         automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
+        showsVerticalScrollIndicator={false}
       >
         <FieldGroup errors={[errors.email, errors.password, errors.handle, errors.displayName, errors.birthdate]}>
           <Field ref={emailRef} label="Email" placeholder="name@example.com" value={fields.email} onChangeText={set("email")} invalid={!!errors.email} autoCapitalize="none" autoComplete="email" textContentType="username" keyboardType="email-address" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} />
-          <Field ref={passwordRef} label="Password" placeholder={`At least ${MIN_PASSWORD} characters`} value={fields.password} onChangeText={set("password")} invalid={!!errors.password} secureTextEntry autoComplete="new-password" textContentType="newPassword" returnKeyType="next" onSubmitEditing={() => handleRef.current?.focus()} />
-          <Field ref={handleRef} label="Handle" placeholder="lowercase_name" value={fields.handle} onChangeText={set("handle")} invalid={!!errors.handle} autoCapitalize="none" autoCorrect={false} textContentType="none" autoComplete="off" returnKeyType="next" onSubmitEditing={() => displayNameRef.current?.focus()} />
+          <Field ref={passwordRef} label="Password" placeholder={`${MIN_PASSWORD}+ characters, with a letter and number`} value={fields.password} onChangeText={set("password")} invalid={!!errors.password} secureTextEntry autoComplete="new-password" textContentType="newPassword" returnKeyType="next" onSubmitEditing={() => handleRef.current?.focus()} />
+          <Field ref={handleRef} label="Handle" placeholder="lowercase_name" value={fields.handle} onChangeText={set("handle")} invalid={!!errors.handle} maxLength={HANDLE_MAX} autoCapitalize="none" autoCorrect={false} textContentType="none" autoComplete="off" returnKeyType="next" onSubmitEditing={() => displayNameRef.current?.focus()} />
           <Field ref={displayNameRef} label="Name" placeholder="Your name" value={fields.displayName} onChangeText={set("displayName")} invalid={!!errors.displayName} autoComplete="name" textContentType="name" returnKeyType="next" onSubmitEditing={() => birthdateRef.current?.focus()} />
           <Field ref={birthdateRef} label="Birthdate" placeholder="MM/DD/YYYY" value={fields.birthdate} onChangeText={set("birthdate")} invalid={!!errors.birthdate} keyboardType="number-pad" autoComplete="birthdate-full" textContentType="none" maxLength={10} returnKeyType="done" testID="signup-birthdate" />
         </FieldGroup>
@@ -128,11 +129,11 @@ export default function SignUp() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  topbar: { minHeight: 92, paddingHorizontal: screenPadding, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", paddingBottom: 4 },
+  topbar: { paddingHorizontal: screenPadding, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
   hitTarget: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginLeft: -11 },
   signInLink: { width: 64, height: 44, alignItems: "center", justifyContent: "center" },
   navLabel: { color: colors.textPrimary, fontFamily: fonts.monoBold, fontSize: 11, letterSpacing: 1.35 },
-  heading: { paddingHorizontal: screenPadding, gap: 4, paddingTop: 10, paddingBottom: 18 },
+  heading: { paddingHorizontal: screenPadding, gap: 4, paddingTop: 16, paddingBottom: 18 },
   title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 50, lineHeight: 52, letterSpacing: -0.7 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: screenPadding, paddingBottom: 24, gap: 10 },
