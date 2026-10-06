@@ -22,4 +22,4 @@ export function LegalPage({ title, updated, children }: { title: string; updated
 }
 
 export const SUPPORT_EMAIL = "support@REPLACE-ME";
-export const POLICY_UPDATED = "October 2, 2026";
+export const POLICY_UPDATED = "October 5, 2026";
