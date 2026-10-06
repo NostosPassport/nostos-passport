@@ -4,7 +4,7 @@ import { login, signup, UNDERAGE_MESSAGE } from "@/server/services/auth";
 import { POST as signupRoute } from "@/app/api/auth/signup/route";
 
 const NOW = new Date("2026-10-02T16:00:00Z");
-const base = { email: "kid@x.dev", password: "long enough pw", displayName: "Kid", handle: "kid_user", acceptTerms: true };
+const base = { email: "kid@x.dev", password: "long enough pw1", displayName: "Kid", handle: "kid_user", acceptTerms: true };
 
 /** Row counts of every table in the public schema. */
 async function rowCounts() {
