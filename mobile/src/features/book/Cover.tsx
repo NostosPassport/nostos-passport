@@ -64,41 +64,49 @@ export function Cover({ width, height, counts, onOpen, name, showCounts = true }
   return (
     <View style={styles.wrap}>
       <GestureDetector gesture={gesture}>
-        <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={label} accessibilityHint="Opens the book" style={[{ width, height, borderRadius: coverRadius }, styles.book]}>
-          <Canvas style={{ width, height }}>
-            <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
-              {LEATHER ? <Shader source={LEATHER} uniforms={{ dark: Skia.Color(colors.elevated), light: Skia.Color(colors.background) }} /> : null}
-            </RoundedRect>
-            <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
-              <LinearGradient start={vec(0, 0)} end={vec(width, height)} colors={[colors.leatherSheen, colors.transparent, colors.bookShade]} />
-            </RoundedRect>
-            <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
-              <RadialGradient c={vec(cx, height * 0.45)} r={height * 0.85} colors={[colors.transparent, colors.bookShade]} />
-            </RoundedRect>
-            <RoundedRect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} r={width * 0.038} style="stroke" strokeWidth={bookStyle.borderThick}>
-              <LinearGradient start={start} end={end} colors={[colors.dimBrass, colors.brass, colors.foilHighlight, colors.brass, colors.dimBrass]} positions={[0, 0.3, 0.5, 0.7, 1]} />
-            </RoundedRect>
-            <RoundedRect x={inset * 1.5} y={inset * 1.5} width={width - inset * 3} height={height - inset * 3} r={width * 0.03} style="stroke" strokeWidth={bookStyle.borderHair} color={colors.dimBrass} />
-            <Group transform={[{ translateX: cx }, { translateY: emblemY }, { scale: emblemR }]}>
-              {paths.rings.map((p, i) => (p ? <Path key={i} path={p} style="stroke" strokeWidth={i === 0 ? bookStyle.emblemRing : bookStyle.emblemInner}><FoilGradient start={start} end={end} width={width} /></Path> : null))}
-              {paths.ticks ? <Path path={paths.ticks} style="stroke" strokeWidth={bookStyle.emblemTick}><FoilGradient start={start} end={end} width={width} /></Path> : null}
-              {paths.star ? <Path path={paths.star} style="fill"><FoilGradient start={start} end={end} width={width} /></Path> : null}
-              {paths.door ? <Path path={paths.door} style="fill" color={colors.background} /> : null}
-            </Group>
-            {titleFont && letters
-              ? WORDMARK.split("").map((ch, i) => (
-                  <SkiaText key={i} x={cx - letters.total / 2 + letters.xs[i]!} y={height * 0.74} text={ch} font={titleFont}>
-                    <FoilGradient start={start} end={end} width={width} />
-                  </SkiaText>
-                ))
-              : null}
-            {subFont && sub
-              ? SUBTITLE.split("").map((ch, i) => (
-                  <SkiaText key={i} x={cx - sub.total / 2 + sub.xs[i]!} y={height * 0.81} text={ch} font={subFont} color={colors.dimBrass} />
-                ))
-              : null}
-          </Canvas>
-        </Pressable>
+        <View style={[styles.shadowShell, { width, height, borderRadius: coverRadius }]}>
+          <Pressable
+            onPress={onOpen}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            accessibilityHint="Opens the book"
+            style={[styles.bookClip, { width, height, borderRadius: coverRadius }]}
+          >
+            <Canvas style={{ width, height }}>
+              <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
+                {LEATHER ? <Shader source={LEATHER} uniforms={{ dark: Skia.Color(colors.elevated), light: Skia.Color(colors.background) }} /> : null}
+              </RoundedRect>
+              <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
+                <LinearGradient start={vec(0, 0)} end={vec(width, height)} colors={[colors.leatherSheen, colors.transparent, colors.bookShade]} />
+              </RoundedRect>
+              <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
+                <RadialGradient c={vec(cx, height * 0.45)} r={height * 0.85} colors={[colors.transparent, colors.bookShade]} />
+              </RoundedRect>
+              <RoundedRect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} r={width * 0.038} style="stroke" strokeWidth={bookStyle.borderThick}>
+                <FoilGradient start={start} end={end} width={width} />
+              </RoundedRect>
+              <RoundedRect x={inset * 1.5} y={inset * 1.5} width={width - inset * 3} height={height - inset * 3} r={width * 0.03} style="stroke" strokeWidth={bookStyle.borderHair} color={colors.dimBrass} />
+              <Group transform={[{ translateX: cx }, { translateY: emblemY }, { scale: emblemR }]}>
+                {paths.rings.map((p, i) => (p ? <Path key={i} path={p} style="stroke" strokeWidth={i === 0 ? bookStyle.emblemRing : bookStyle.emblemInner}><FoilGradient start={start} end={end} width={width} /></Path> : null))}
+                {paths.ticks ? <Path path={paths.ticks} style="stroke" strokeWidth={bookStyle.emblemTick}><FoilGradient start={start} end={end} width={width} /></Path> : null}
+                {paths.star ? <Path path={paths.star} style="fill"><FoilGradient start={start} end={end} width={width} /></Path> : null}
+                {paths.door ? <Path path={paths.door} style="fill" color={colors.background} /> : null}
+              </Group>
+              {titleFont && letters
+                ? WORDMARK.split("").map((ch, i) => (
+                    <SkiaText key={i} x={cx - letters.total / 2 + letters.xs[i]!} y={height * 0.74} text={ch} font={titleFont}>
+                      <FoilGradient start={start} end={end} width={width} />
+                    </SkiaText>
+                  ))
+                : null}
+              {subFont && sub
+                ? SUBTITLE.split("").map((ch, i) => (
+                    <SkiaText key={i} x={cx - sub.total / 2 + sub.xs[i]!} y={height * 0.81} text={ch} font={subFont} color={colors.dimBrass} />
+                  ))
+                : null}
+            </Canvas>
+          </Pressable>
+        </View>
       </GestureDetector>
       {showCounts ? <Counts counts={counts} /> : null}
     </View>
@@ -106,7 +114,7 @@ export function Cover({ width, height, counts, onOpen, name, showCounts = true }
 }
 
 function FoilGradient({ start, end }: { start: ReturnType<typeof useDerivedValue<ReturnType<typeof vec>>>; end: ReturnType<typeof useDerivedValue<ReturnType<typeof vec>>>; width: number }) {
-  return <LinearGradient start={start} end={end} colors={[colors.dimBrass, colors.brass, colors.foilHighlight, colors.brass, colors.dimBrass]} positions={[0, 0.3, 0.5, 0.7, 1]} />;
+  return <LinearGradient start={start} end={end} colors={[colors.dimBrass, colors.bookAccentSoft, colors.bookAccent, colors.bookAccentSoft, colors.dimBrass]} positions={[0, 0.28, 0.5, 0.72, 1]} />;
 }
 
 export function Counts({ counts }: { counts: CoverCounts }) {
@@ -115,7 +123,7 @@ export function Counts({ counts }: { counts: CoverCounts }) {
     <View style={styles.counts} accessible accessibilityLabel={`${counts.stamps} stamps, ${counts.places} places, ${counts.neighborhoods} neighborhoods`}>
       {items.map(([label, n]) => (
         <View key={label} style={styles.count}>
-          <Text variant="title" color="brass" tabular accessibilityElementsHidden>
+          <Text variant="title" color="bookAccent" tabular accessibilityElementsHidden>
             {n}
           </Text>
           <Text variant="typewriterSmall" color="dimBrass" accessibilityElementsHidden>
@@ -129,7 +137,8 @@ export function Counts({ counts }: { counts: CoverCounts }) {
 
 const styles = StyleSheet.create({
   wrap: { alignItems: "center", gap: space.xl },
-  book: { ...shadows.book },
+  shadowShell: { backgroundColor: colors.surface, ...shadows.book },
+  bookClip: { overflow: "hidden", backgroundColor: colors.surface },
   counts: { flexDirection: "row", gap: space.xl },
   count: { alignItems: "center", gap: space.xxs },
 });
