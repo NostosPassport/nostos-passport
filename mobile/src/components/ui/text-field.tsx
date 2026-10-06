@@ -1,56 +1,56 @@
 import { Children, forwardRef, Fragment, isValidElement, type ReactNode } from "react";
-import { StyleSheet, TextInput, useWindowDimensions, View, type TextInputProps } from "react-native";
+import { StyleSheet, TextInput, View, type TextInputProps } from "react-native";
 
 import { useAnnounce } from "@/lib/a11y";
-import { colors, hairlineWidth, maxFontSizeMultiplier, radius, size, space, type as typeScale } from "@/theme";
+import { colors, fonts, hairlineWidth, maxFontSizeMultiplier, space, type as typeScale } from "@/theme";
 import { Text } from "./text";
 
 type FieldProps = TextInputProps & {
   label: string;
-  /** Marks the row invalid; the message itself is shown in the group footer. */
   invalid?: boolean;
+  error?: string | null;
 };
 
-/** One row of an inset grouped form: label on the left, input on the right (stacked at large text sizes). */
-export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, invalid, style, accessibilityHint, ...rest }, ref) {
-  const { fontScale } = useWindowDimensions();
-  const stacked = fontScale > 1.3;
+export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, invalid, error, style, accessibilityHint, ...rest }, ref) {
+  const hasError = !!invalid || !!error;
+  useAnnounce(error ?? null);
   return (
-    <View style={[styles.row, stacked && styles.rowStacked]}>
+    <View style={styles.row}>
       <Text
-        variant="body"
-        color={invalid ? "danger" : "textPrimary"}
-        style={stacked ? undefined : styles.label}
-        numberOfLines={stacked ? undefined : 1}
+        variant="footnote"
+        color={hasError ? "danger" : "textPrimary"}
+        style={styles.label}
         accessibilityElementsHidden
         importantForAccessibility="no"
       >
-        {label}
+        {label.toUpperCase()}
       </Text>
       <TextInput
         ref={ref}
-        accessibilityLabel={invalid ? `${label}, needs attention` : label}
+        accessibilityLabel={hasError ? `${label}, needs attention` : label}
         accessibilityHint={accessibilityHint}
-        placeholderTextColor={colors.textTertiary}
+        placeholderTextColor={colors.textSecondary}
         selectionColor={colors.accent}
-        keyboardAppearance="dark"
+        keyboardAppearance="light"
         maxFontSizeMultiplier={maxFontSizeMultiplier}
         {...rest}
-        style={[styles.input, style]}
+        style={[styles.input, hasError && styles.inputInvalid, style]}
       />
+      {error ? (
+        <Text variant="footnote" color="danger" style={styles.fieldError}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 });
 
 type GroupProps = {
   children: ReactNode;
-  /** Help text under the group. */
   footer?: string;
-  /** Validation messages; replaces the footer while present and is announced to VoiceOver. */
   errors?: (string | null | undefined)[];
 };
 
-/** Inset grouped card of fields separated by hairlines, like iOS Settings. */
 export function FieldGroup({ children, footer, errors }: GroupProps) {
   const messages = (errors ?? []).filter((e): e is string => !!e);
   useAnnounce(messages.join(" "));
@@ -59,10 +59,7 @@ export function FieldGroup({ children, footer, errors }: GroupProps) {
     <View style={styles.groupWrap}>
       <View style={styles.group}>
         {rows.map((child, i) => (
-          <Fragment key={child.key ?? i}>
-            {i > 0 && <View style={styles.separator} />}
-            {child}
-          </Fragment>
+          <Fragment key={child.key ?? i}>{child}</Fragment>
         ))}
       </View>
       {messages.length > 0
@@ -82,11 +79,19 @@ export function FieldGroup({ children, footer, errors }: GroupProps) {
 
 const styles = StyleSheet.create({
   groupWrap: { gap: space.xs },
-  group: { backgroundColor: colors.surface, borderRadius: radius.card, overflow: "hidden" },
-  row: { flexDirection: "row", alignItems: "center", minHeight: size.fieldHeight, paddingHorizontal: space.md, gap: space.sm },
-  rowStacked: { flexDirection: "column", alignItems: "stretch", paddingVertical: space.sm, gap: space.xxs },
-  label: { width: size.fieldLabel },
-  input: { flex: 1, ...typeScale.body, color: colors.textPrimary, paddingVertical: space.sm },
-  separator: { height: hairlineWidth, backgroundColor: colors.hairline, marginLeft: space.md },
-  footer: { paddingHorizontal: space.md },
+  group: { gap: space.sm },
+  row: { minHeight: 66, gap: 7 },
+  label: { fontFamily: fonts.monoBold, letterSpacing: 1.35 },
+  input: {
+    minHeight: 44,
+    borderBottomWidth: hairlineWidth,
+    borderBottomColor: colors.hairline,
+    color: colors.textPrimary,
+    paddingHorizontal: 10,
+    paddingVertical: space.xs,
+    ...typeScale.body,
+  },
+  inputInvalid: { borderBottomColor: colors.danger },
+  fieldError: { marginTop: -2 },
+  footer: { paddingHorizontal: 0 },
 });

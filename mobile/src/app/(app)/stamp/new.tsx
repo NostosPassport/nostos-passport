@@ -2,22 +2,20 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, Stack, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
 import { CreateStampResponse, type NearbyPlacesResponse, type Song } from "@/api/contracts";
 import { qk } from "@/api/keys";
 import { useNearbyPlaces, usePlaces } from "@/api/queries";
-import { AccountGate } from "@/features/account/account-gate";
+import { EditorialButton, Kicker, Rule } from "@/components/editorial/editorial";
 import { Button } from "@/components/ui/button";
-import { FormScreen } from "@/components/ui/form-screen";
-import { HeaderButton } from "@/components/ui/header-button";
 import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
 import { ListGroup, ListRow } from "@/components/ui/list-row";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { Field, FieldGroup } from "@/components/ui/text-field";
 import { devSimulator } from "@/features/location/dev-simulator";
 import { locationStore, usePermissionRefresh, useLocationState, useUserCoords } from "@/features/location/location-store";
 import { SimulatedLocationChip } from "@/features/location/sim-chip";
@@ -25,36 +23,28 @@ import { autoPlace, CAPTION_MAX, orderPlaces, stampFields, stampProblem } from "
 import { landingDraft } from "@/features/stamps/landing-draft";
 import { photoDraft, usePhotoDraft } from "@/features/stamps/photo-draft";
 import { songDraft } from "@/features/stamps/song-draft";
-import { HONESTY, MAX_STAMP_PHOTOS, photoCount, placeRowText, placeSections, stampReadiness } from "@/features/stamps/stamp-flow";
+import { MAX_STAMP_PHOTOS, placeRowText, placeSections, stampReadiness } from "@/features/stamps/stamp-flow";
 import { SongRow } from "@/features/stamps/song-row";
 import { haptics } from "@/lib/haptics";
 import { useConfirmDiscard } from "@/lib/use-confirm-discard";
-import { colors, hairlineWidth, radius, size, space } from "@/theme";
+import { colors, fonts } from "@/theme";
 
 type Nearby = NearbyPlacesResponse["places"][number];
 
-/**
- * The stamp composer. Pick the place you're at (the list comes from where your phone is; the server checks the
- * geofence again), add a photo, a caption, a song, any mix, then Stamp. If you're outside the geofence the server's
- * message, with how far away you are, is shown as it is.
- */
 export default function NewStamp() {
-  return (
-    <AccountGate title="Stamp a place" message="Sign in to stamp the places you go.">
-      <Composer />
-    </AccountGate>
-  );
+  return <Composer />;
 }
 
 function Composer() {
   usePermissionRefresh();
-  // Leaving the composer any way at all drops the photos taken for it.
   useEffect(() => () => photoDraft.clear(), []);
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { permission } = useLocationState();
   const coords = useUserCoords();
   const nearby = useNearbyPlaces(coords);
   const [chosenId, setChosenId] = useState<string | null>(null);
+  const [choosingPlace, setChoosingPlace] = useState(false);
   const photoUris = usePhotoDraft();
   const [caption, setCaption] = useState("");
   const [song, setSong] = useState<Song | null>(null);
@@ -66,10 +56,9 @@ function Composer() {
   useConfirmDiscard(dirty);
 
   const places = orderPlaces(nearby.data?.places ?? []);
-  // The place you picked, or (when exactly one geofence has you inside) that one without asking.
-  const place: Nearby | null = places.find((p) => p.id === chosenId) ?? autoPlace(places);
+  const selectedPlace = places.find((p) => p.id === chosenId) ?? null;
+  const place: Nearby | null = choosingPlace ? null : selectedPlace ?? autoPlace(places);
 
-  // A song picked on the song screen comes back here when this screen regains focus.
   useFocusEffect(
     useCallback(() => {
       const picked = songDraft.take();
@@ -80,192 +69,199 @@ function Composer() {
   const stamp = useMutation({
     mutationFn: async () => {
       if (!place) throw new Error("no place");
-      // A fresh fix right now: the server checks these coordinates, not the ones the place list was built from.
       const here = (await locationStore.currentForPosting()) ?? coords;
       if (!here) throw new Error("no location");
       const form = new FormData();
-      // React Native's FormData takes a file descriptor object for local files.
       for (const [i, uri] of photoUris.entries()) form.append("photos", { uri, name: `photo-${i + 1}.jpg`, type: "image/jpeg" } as unknown as Blob);
       for (const [k, v] of stampFields(draft, here)) form.append(k, v);
       return api.upload(`/api/places/${encodeURIComponent(place.id)}/stamps`, CreateStampResponse, form, { onProgress: setProgress });
     },
     onSuccess: (res) => {
+      haptics.success();
       setDone(true);
       photoDraft.clear();
       landingDraft.set(res.stamp, res.progress);
       for (const key of [["feed"], ["user"], qk.neighborhoods, qk.pins]) void queryClient.invalidateQueries({ queryKey: key });
-      // The landing says "Stamped" itself, with the haptic knock at the moment of impact.
       requestAnimationFrame(() => router.replace("/stamp/landed"));
     },
     onError: () => haptics.warning(),
   });
 
   const problem = stampProblem(draft, place?.id ?? null);
-
   const readiness = stampReadiness({ place, problem, busy: stamp.isPending });
-  const sections = placeSections(places);
+  const cancel = () => {
+    photoDraft.clear();
+    router.back();
+  };
 
   return (
-    <FormScreen>
-      <Stack.Screen
-        options={{
-          title: "New stamp",
-          headerLeft: () => <HeaderButton label="Cancel" onPress={() => { photoDraft.clear(); router.back(); }} />,
-        }}
-      />
-
-      <View style={styles.honesty} accessible accessibilityLabel={`${HONESTY.title}. ${HONESTY.body}`}>
-        <Icon name="location.fill" color="dimBrass" size={size.iconSmall} />
-        <View style={styles.honestyText}>
-          <Text variant="serifLabel" color="brass">
-            {HONESTY.title}
-          </Text>
-          <Text variant="typewriterSmall" color="textSecondary">
-            {HONESTY.body}
-          </Text>
+    <View style={styles.root}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 18 }]}>
+        <View style={[styles.topbar, place && styles.topbarWithBack]}>
+          {place ? (
+            <Pressable onPress={() => setChoosingPlace(true)} accessibilityRole="button" accessibilityLabel="Back to places" style={styles.backTarget}>
+              <Icon name="chevron.left" color="textPrimary" size={22} />
+            </Pressable>
+          ) : null}
+          <Pressable onPress={cancel} accessibilityRole="button" accessibilityLabel="Cancel" style={styles.cancelTarget}>
+            <Kicker>CANCEL</Kicker>
+          </Pressable>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text variant="serifLabel" color="dimBrass" style={styles.heading} accessibilityRole="header">
-          WHERE ARE YOU?
-        </Text>
-        <SimulatedLocationChip />
-        {permission !== "granted" && !coords ? (
-          <View style={styles.notice}>
-            <Icon name="location.fill" color="accent" size={size.iconLarge} />
-            <Text variant="callout" color="textSecondary">
-              {permission === "denied" ? "Location is off. Turn it on in Settings to stamp the places you're at." : "Nostos checks that you're at a place before it gives you a stamp."}
-            </Text>
-            <Button title={permission === "denied" ? "Open settings" : "Use my location"} variant="secondary" block={false} onPress={() => router.push("/location-permission")} />
-          </View>
-        ) : nearby.isPending || !coords ? (
-          <SkeletonRows count={2} />
-        ) : nearby.isError ? (
-          <InlineError message={errorText(nearby.error, "Couldn't find places near you.")} onRetry={() => void nearby.refetch()} retrying={nearby.isFetching} />
-        ) : places.length === 0 ? (
-          <Text variant="callout" color="textSecondary">
-            No places near you yet. Nostos stamps places in New York.
-          </Text>
-        ) : (
-          sections.map((group) => (
-            <ListGroup key={group.title} header={group.title}>
-              {group.places.map((p) => {
-                const row = placeRowText(p);
-                const selected = p.id === place?.id;
-                return (
-                  <ListRow
-                    key={p.id}
-                    icon={selected ? "checkmark.circle.fill" : "circle"}
-                    iconColor={selected ? "accent" : "textTertiary"}
-                    title={row.title}
-                    subtitle={row.subtitle}
-                    accessibilityLabel={`${row.spoken}${selected ? ", selected" : ""}`}
-                    onPress={() => setChosenId(p.id)}
-                  />
-                );
-              })}
-            </ListGroup>
-          ))
-        )}
-        {__DEV__ && devSimulator && <DevPlaces />}
-      </View>
+        {place ? (
+          <>
+            <NativeText style={styles.title}>Make it{`\n`}a memory.</NativeText>
+            <NativeText style={styles.placeKicker}>{place.name.toUpperCase()} · YOU&apos;RE HERE</NativeText>
 
-      <View style={styles.section}>
-        <Text variant="serifLabel" color="dimBrass" style={styles.heading} accessibilityRole="header">
-          PHOTOS, CAPTION OR SONG
-        </Text>
-        <View style={styles.photos}>
-          {photoUris.map((uri, i) => (
-            <View key={`${uri}-${i}`} style={styles.thumb}>
-              <Image source={{ uri }} style={styles.fill} contentFit="cover" accessibilityLabel={`Photo ${i + 1}`} />
-              <Pressable onPress={() => photoDraft.remove(i)} accessibilityRole="button" accessibilityLabel={`Remove photo ${i + 1}`} hitSlop={space.xs} style={styles.removePhoto}>
-                <Icon name="xmark" color="textPrimary" size={size.iconTiny} />
-              </Pressable>
+            <View style={styles.photoStage}>
+              {photoUris[0] ? (
+                <Image source={{ uri: photoUris[0] }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel="First stamp photo" />
+              ) : (
+                <Pressable style={styles.emptyPhoto} onPress={() => router.push("/stamp/camera")} accessibilityRole="button" accessibilityLabel="Take a photo">
+                  <Icon name="camera.fill" color="accent" size={30} />
+                  <Text variant="callout" color="textSecondary">Take a photo</Text>
+                </Pressable>
+              )}
+              {photoUris.length > 0 ? (
+                <>
+                  <View style={styles.photoCount}><Kicker>{photoUris.length} / {MAX_STAMP_PHOTOS}</Kicker></View>
+                  <Pressable onPress={() => photoDraft.remove(0)} accessibilityRole="button" accessibilityLabel="Remove first photo" style={styles.removePhoto}>
+                    <Icon name="xmark" color="textPrimary" size={20} />
+                  </Pressable>
+                </>
+              ) : null}
             </View>
-          ))}
-        </View>
-        {photoUris.length < MAX_STAMP_PHOTOS ? (
-          <Button title={photoUris.length === 0 ? "Take a photo" : `Take another photo (${photoCount(photoUris.length)})`} icon="camera.fill" variant="secondary" onPress={() => router.push("/stamp/camera")} />
-        ) : (
-          <Text variant="footnote" color="textTertiary">
-            Six photos is the most a stamp holds.
-          </Text>
-        )}
 
-        <FieldGroup footer={`${caption.length}/${CAPTION_MAX}`}>
-          <Field label="Caption" value={caption} onChangeText={setCaption} maxLength={CAPTION_MAX} placeholder="What's it like?" multiline accessibilityHint={`Up to ${CAPTION_MAX} characters`} />
-        </FieldGroup>
+            {photoUris.length < MAX_STAMP_PHOTOS ? <EditorialButton label={photoUris.length === 0 ? "+  Take a photo" : "+  Take another photo"} outline onPress={() => router.push("/stamp/camera")} /> : null}
 
-        {song ? (
-          <SongRow
-            song={song}
-            trailing={
-              <Pressable onPress={() => setSong(null)} accessibilityRole="button" accessibilityLabel="Remove song" hitSlop={space.xs} style={styles.removeSong}>
-                <Icon name="xmark.circle.fill" color="textTertiary" size={size.icon} />
+            <View style={styles.captionBlock}>
+              <Kicker>A FEW WORDS</Kicker>
+              <TextInput
+                value={caption}
+                onChangeText={setCaption}
+                maxLength={CAPTION_MAX}
+                placeholder="An afternoon worth keeping."
+                placeholderTextColor={colors.textSecondary}
+                multiline
+                style={styles.captionInput}
+                accessibilityLabel="A few words"
+              />
+              <NativeText style={styles.counter}>{caption.length} / {CAPTION_MAX}</NativeText>
+            </View>
+
+            <Rule />
+            {song ? (
+              <View style={styles.songWrap}>
+                <SongRow song={song} trailing={<Pressable onPress={() => setSong(null)} accessibilityRole="button" accessibilityLabel="Remove song" style={styles.hitTarget}><Icon name="xmark" color="textSecondary" size={18} /></Pressable>} />
+              </View>
+            ) : (
+              <Pressable style={styles.songAction} onPress={() => router.push("/stamp/song")} accessibilityRole="button">
+                <Icon name="music.note" color="textPrimary" size={23} />
+                <NativeText style={styles.songLabel}>Add a song</NativeText>
               </Pressable>
-            }
-          />
+            )}
+            <Rule />
+
+            {readiness.calm ? (
+              <View style={styles.notice}>
+                <Text variant="callout" color="textSecondary">{readiness.calm.title}. {readiness.calm.body}</Text>
+              </View>
+            ) : null}
+            {readiness.hint && !stamp.isPending ? <Text variant="footnote" color="textTertiary">{readiness.hint}</Text> : null}
+            {stamp.error ? <InlineError message={errorText(stamp.error, "Couldn't stamp that. Try again.")} onRetry={() => stamp.mutate()} retrying={stamp.isPending} /> : null}
+            <EditorialButton
+              label={stamp.isPending ? `Stamping…${photoUris.length ? ` ${Math.round(progress * 100)}%` : ""}` : "Stamp this place"}
+              disabled={!readiness.ready}
+              onPress={() => {
+                haptics.select();
+                stamp.mutate();
+              }}
+            />
+            <NativeText style={styles.confirmed}>Location confirmed · {place.neighborhood}, New York</NativeText>
+          </>
         ) : (
-          <Button title="Add a song" icon="music.note" variant="secondary" onPress={() => router.push("/stamp/song")} />
+          <PlacePicker
+            permission={permission}
+            coordsReady={!!coords}
+            nearbyPending={nearby.isPending}
+            nearbyError={nearby.isError}
+            retry={() => void nearby.refetch()}
+            places={places}
+            onChoose={(id) => {
+              setChosenId(id);
+              setChoosingPlace(false);
+            }}
+          />
         )}
-      </View>
-
-      {readiness.calm ? (
-        <View style={styles.calm} accessible accessibilityLiveRegion="polite" accessibilityLabel={`${readiness.calm.title}. ${readiness.calm.body}`}>
-          <Icon name="figure.walk" color="dimBrass" size={size.iconLarge} />
-          <View style={styles.honestyText}>
-            <Text variant="title2" color="brass">
-              {readiness.calm.title}
-            </Text>
-            <Text variant="typewriter" color="textSecondary">
-              {readiness.calm.body}
-            </Text>
-          </View>
-        </View>
-      ) : null}
-      {readiness.hint && !stamp.isPending ? (
-        <Text variant="footnote" color="textTertiary" accessibilityLiveRegion="polite">
-          {readiness.hint}
-        </Text>
-      ) : null}
-      {stamp.isPending ? (
-        <Text variant="footnote" color="textSecondary" accessibilityLiveRegion="polite">
-          {photoUris.length > 0 ? `Stamping… ${Math.round(progress * 100)}%` : "Stamping…"}
-        </Text>
-      ) : null}
-      {/* The server's own sentence, e.g. "You need to be within 100 m of this place to stamp it (you're 140 m away)". */}
-      {stamp.error && <InlineError message={errorText(stamp.error, "Couldn't stamp that. Try again.")} onRetry={() => stamp.mutate()} retrying={stamp.isPending} />}
-
-      <Button title="Stamp" icon="seal.fill" loading={stamp.isPending} disabled={!readiness.ready} onPress={() => stamp.mutate()} accessibilityHint={readiness.ready ? "Stamps this place" : undefined} />
-    </FormScreen>
+      </ScrollView>
+    </View>
   );
 }
 
-/** Development only: pretend to be at a place, to try the geofence without going there. */
+function PlacePicker({ permission, coordsReady, nearbyPending, nearbyError, retry, places, onChoose }: { permission: string; coordsReady: boolean; nearbyPending: boolean; nearbyError: boolean; retry: () => void; places: Nearby[]; onChoose: (id: string) => void }) {
+  const sections = placeSections(places);
+  return (
+    <View style={styles.picker}>
+      <NativeText style={styles.title}>Where are{`\n`}you?</NativeText>
+      <SimulatedLocationChip />
+      {permission !== "granted" && !coordsReady ? (
+        <View style={styles.notice}>
+          <Text variant="callout" color="textSecondary">Nostos checks that you&apos;re at a place before it gives you a stamp.</Text>
+          <Button title={permission === "denied" ? "Open settings" : "Use my location"} variant="secondary" onPress={() => router.push("/location-permission")} />
+        </View>
+      ) : nearbyPending || !coordsReady ? (
+        <SkeletonRows count={3} />
+      ) : nearbyError ? (
+        <InlineError message="Couldn't find places near you." onRetry={retry} />
+      ) : places.length === 0 ? (
+        <Text variant="callout" color="textSecondary">No places near you yet. Nostos stamps places in New York.</Text>
+      ) : (
+        sections.map((group) => (
+          <ListGroup key={group.title} header={group.title}>
+            {group.places.map((p) => {
+              const row = placeRowText(p);
+              return <ListRow key={p.id} icon="location" iconColor="accent" title={row.title} subtitle={row.subtitle} accessibilityLabel={row.spoken} onPress={() => onChoose(p.id)} />;
+            })}
+          </ListGroup>
+        ))
+      )}
+      {__DEV__ && devSimulator ? <DevPlaces /> : null}
+    </View>
+  );
+}
+
 function DevPlaces() {
   const places = usePlaces();
   if (!devSimulator) return null;
-  const list = (places.data?.places ?? []).slice(0, 6);
   return (
     <ListGroup header="Development: pretend to be at">
-      {list.map((p) => (
-        <ListRow key={p.id} icon="location.slash" title={p.name} subtitle={p.neighborhood} onPress={() => devSimulator?.set({ lat: p.lat, lng: p.lng })} />
-      ))}
+      {(places.data?.places ?? []).slice(0, 6).map((p) => <ListRow key={p.id} icon="location.slash" title={p.name} subtitle={p.neighborhood} onPress={() => devSimulator?.set({ lat: p.lat, lng: p.lng })} />)}
     </ListGroup>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { gap: space.sm },
-  heading: { paddingHorizontal: space.md },
-  honesty: { flexDirection: "row", gap: space.sm, padding: space.md, borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: hairlineWidth, borderColor: colors.hairline },
-  honestyText: { flex: 1, gap: space.xxs },
-  notice: { gap: space.sm, alignItems: "flex-start", padding: space.md, borderRadius: radius.card, backgroundColor: colors.surface },
-  photos: { flexDirection: "row", flexWrap: "wrap", gap: space.xs },
-  thumb: { width: size.avatarLarge + space.md, height: size.avatarLarge + space.md, borderRadius: radius.chip, overflow: "hidden", backgroundColor: colors.elevated },
-  fill: { width: "100%", height: "100%" },
-  removePhoto: { position: "absolute", top: space.xxs, right: space.xxs, width: size.iconSmall + space.xs, height: size.iconSmall + space.xs, borderRadius: radius.pill, backgroundColor: colors.scrim, alignItems: "center", justifyContent: "center" },
-  removeSong: { minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
-  calm: { flexDirection: "row", gap: space.md, alignItems: "center", padding: space.md, borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: hairlineWidth, borderColor: colors.dimBrass },
+  root: { flex: 1, backgroundColor: colors.background },
+  content: { paddingHorizontal: 24, paddingTop: 4, gap: 12 },
+  topbar: { height: 44, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginHorizontal: -7 },
+  topbarWithBack: { justifyContent: "space-between" },
+  backTarget: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  hitTarget: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  cancelTarget: { minWidth: 64, height: 44, alignItems: "center", justifyContent: "center" },
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 68, lineHeight: 68, letterSpacing: -1.5, marginTop: 0, paddingTop: 2 },
+  placeKicker: { color: colors.accent, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.35, marginTop: 2 },
+  photoStage: { height: 259, backgroundColor: colors.elevated, overflow: "hidden", position: "relative" },
+  emptyPhoto: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
+  photoCount: { position: "absolute", right: 62, top: 8, height: 28, minWidth: 50, paddingHorizontal: 10, borderRadius: 14, backgroundColor: colors.scrim, alignItems: "center", justifyContent: "center" },
+  removePhoto: { position: "absolute", right: 8, top: 8, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" },
+  captionBlock: { gap: 5, marginTop: 2 },
+  captionInput: { minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, color: colors.textPrimary, fontSize: 14, paddingHorizontal: 0, paddingVertical: 10 },
+  counter: { color: colors.textSecondary, fontSize: 11, alignSelf: "flex-end" },
+  songAction: { height: 46, flexDirection: "row", alignItems: "center", gap: 12 },
+  songLabel: { color: colors.textPrimary, fontSize: 14 },
+  songWrap: { minHeight: 54, justifyContent: "center" },
+  notice: { paddingVertical: 8, gap: 8 },
+  confirmed: { color: colors.textSecondary, fontSize: 11, lineHeight: 14 },
+  picker: { gap: 14 },
 });

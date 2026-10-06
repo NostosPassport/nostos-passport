@@ -4,12 +4,10 @@ import { Linking, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { locationStore, useLocationState } from "@/features/location/location-store";
-import { colors, radius, screenPadding, size, space } from "@/theme";
+import { colors, fonts, screenPadding, space } from "@/theme";
 
-/** Pre-permission screen: one line on why, then the system prompt. Denied gets a path to Settings. */
 export default function LocationPermission() {
   const insets = useSafeAreaInsets();
   const { permission } = useLocationState();
@@ -23,18 +21,15 @@ export default function LocationPermission() {
   };
 
   return (
-    <View style={[styles.root, { paddingBottom: insets.bottom + space.md }]}>
+    <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.md }]}>
       <View style={styles.body}>
-        <View style={styles.badge}>
-          <Icon name="location.fill" color="accent" size={size.iconLarge} />
-        </View>
-        <Text variant="title2" accessibilityRole="header">
-          {denied ? "Location is off" : "Find places near you"}
+        <Text style={styles.title} accessibilityRole="header">
+          {denied ? "Location is off" : "Find your way"}
         </Text>
         <Text color="textSecondary">
           {denied
-            ? "Nostos can't see your location. Turn it on in Settings to find the places near you and to stamp them."
-            : "Nostos uses your location while you're using the app to find the places near you and to confirm you're there when you stamp one. Your position isn't shown to anyone."}
+            ? "Nostos can't see your location. Turn it on in Settings to find nearby places and confirm you're there when you stamp one."
+            : "Nostos uses location while you're using the app to find nearby places and confirm you're there when you stamp one. Your position isn't shown to anyone."}
         </Text>
       </View>
       <View style={styles.actions}>
@@ -43,23 +38,15 @@ export default function LocationPermission() {
         ) : (
           <Button title="Continue" onPress={() => void ask()} loading={asking} />
         )}
-        <Button title="Not now" variant="plain" onPress={() => router.back()} />
+        <Button title="Not now" variant="secondary" onPress={() => router.back()} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surface, paddingHorizontal: screenPadding, paddingTop: space.xxxl, justifyContent: "space-between" },
-  body: { gap: space.sm },
-  badge: {
-    width: size.avatarLarge,
-    height: size.avatarLarge,
-    borderRadius: radius.largeCard,
-    backgroundColor: colors.elevated,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: space.xs,
-  },
-  actions: { gap: space.xs },
+  root: { flex: 1, backgroundColor: colors.background, paddingHorizontal: screenPadding, justifyContent: "space-between" },
+  body: { gap: space.md, paddingTop: space.xl },
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 48, lineHeight: 50, letterSpacing: -1.1 },
+  actions: { gap: space.sm },
 });

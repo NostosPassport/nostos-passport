@@ -6,7 +6,6 @@ import { bookStyle, colors, space } from "@/theme";
 import { type Bearer, bearerFields, machineZone } from "./bearer";
 import { PageStock } from "./PageStock";
 
-/** The first page: the holder's photo and details, and the machine-readable zone along the bottom. Yours alone to see. */
 export function BearerPage({ width, height, bearer, avatarUrl }: { width: number; height: number; bearer: Bearer; avatarUrl: string | null }) {
   const fields = bearerFields(bearer);
   const zone = machineZone(bearer);
@@ -15,7 +14,7 @@ export function BearerPage({ width, height, bearer, avatarUrl }: { width: number
   return (
     <PageStock width={width} height={height} spine="left">
       <View style={[styles.body, { padding: pad }]} accessible accessibilityLabel={`Passport of ${bearer.displayName}, at ${bearer.handle}. ${fields.map((f) => `${f.label.toLowerCase()}: ${f.value}`).join(". ")}`}>
-        <Text variant="serifLabel" color="brass" align="center">
+        <Text variant="serifLabel" color="bookAccent" align="center">
           NOSTOS PASSPORT
         </Text>
         <View style={styles.row}>

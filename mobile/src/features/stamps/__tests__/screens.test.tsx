@@ -1,6 +1,6 @@
 /**
- * No screen renders blank: every state of the feed, a stamp, the song picker and the composer shows something a
- * person can read or act on (a skeleton, a message, an error with Try again), never an empty view.
+ * No screen renders blank: every state of the feed, a memory and the song picker shows something a person can read
+ * or act on (a skeleton, a message, an error with Try again), never an empty view.
  */
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
@@ -21,21 +21,17 @@ let mockFeed: Query;
 let mockStamp: Query;
 let mockSongs: Query;
 let mockLocalId = "s1";
-let mockSearchChange: ((event: { nativeEvent: { text: string } }) => void) | undefined;
 let mockSongQueries: string[] = [];
 
 jest.mock("@shopify/flash-list", () => ({ FlashList: jest.requireActual("react-native").FlatList }));
 jest.mock("expo-router", () => ({
   router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() },
-  Stack: { Screen: ({ options }: { options?: { headerSearchBarOptions?: { onChangeText?: typeof mockSearchChange } } }) => {
-    mockSearchChange = options?.headerSearchBarOptions?.onChangeText;
-    return null;
-  } },
+  Stack: { Screen: () => null },
   useLocalSearchParams: () => ({ id: mockLocalId }),
   useFocusEffect: jest.fn(),
 }));
-jest.mock("@/auth/auth-context", () => ({ useAuth: () => ({ status: mockAuth }) }));
-jest.mock("@/auth/account-state", () => ({ useAccountState: () => ({ state: mockAuth === "signedIn" ? "ready" : "guest", retry: jest.fn(), retrying: false }) }));
+jest.mock("@/auth/auth-context", () => ({ useAuth: () => ({ status: mockAuth, signIn: jest.fn(), signOut: jest.fn(), forget: jest.fn() }) }));
+jest.mock("@/auth/account-state", () => ({ useAccountState: () => ({ state: mockAuth === "signedIn" ? "ready" : "checking", retry: jest.fn(), retrying: false }) }));
 jest.mock("@/api/queries", () => ({
   qk: jest.requireActual("@/api/keys").qk,
   useFeed: () => mockFeed,
@@ -72,11 +68,13 @@ describe("Home feed", () => {
     expect(screen.queryByText("Nothing here yet")).toBeNull();
   });
 
-  it("empty: says what the feed is and how to fill it", async () => {
+  it("empty: offers a direct path to stamp a place", async () => {
     mockFeed = { isPending: false, data: { pages: [{ stamps: [], nextBefore: null }] }, hasNextPage: false };
     await wrap(<Home />);
     expect(screen.getByText("Nothing here yet")).toBeTruthy();
-    expect(screen.getByText("Find people")).toBeTruthy();
+    expect(screen.getByText("There are no stamps to show here yet.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Stamp a place" })).toBeTruthy();
+    expect(screen.queryByText("Find people")).toBeNull();
   });
 
   it("failed: the server's reason and Try again", async () => {
@@ -86,7 +84,7 @@ describe("Home feed", () => {
     expect(screen.getByText("Try again")).toBeTruthy();
   });
 
-  it("with stamps: shows who, where, the caption and the song", async () => {
+  it("with stamps: shows where, the caption and the song", async () => {
     mockFeed = { isPending: false, data: { pages: [{ stamps: [stamp], nextBefore: null }] }, hasNextPage: false };
     await wrap(<Home />);
     expect(screen.getByText("hello there")).toBeTruthy();
@@ -95,12 +93,13 @@ describe("Home feed", () => {
     expect(screen.getByLabelText("Like, 2 likes")).toBeTruthy();
   });
 
-  it("guest: a way in, never a blank feed", async () => {
-    mockAuth = "guest";
+  it("signed-out state never exposes the removed preview experience", async () => {
+    mockAuth = "signedOut";
     mockFeed = { isPending: true };
     await wrap(<Home />);
-    expect(screen.getByText("A passport for New York")).toBeTruthy();
-    expect(screen.getByText("Find people")).toBeTruthy();
+    expect(screen.getByText("Checking your account")).toBeTruthy();
+    expect(screen.queryByText("A passport for New York")).toBeNull();
+    expect(screen.queryByText("Find people")).toBeNull();
   });
 });
 
@@ -118,7 +117,7 @@ describe("Stamp detail", () => {
 
     mockStamp = { isError: true, error: new ApiError(404, "not_found", "Stamp not found"), refetch: jest.fn() };
     const gone = await wrap(<StampDetail />);
-    expect(screen.getByText("This stamp isn't available")).toBeTruthy();
+    expect(screen.getByText("This memory isn't available")).toBeTruthy();
     await gone.unmount();
 
     mockStamp = { isError: true, error: new ApiError(0, "timeout", "Nostos isn't responding."), refetch: jest.fn() };
@@ -129,14 +128,16 @@ describe("Stamp detail", () => {
 
     mockStamp = { data: { stamp } };
     await wrap(<StampDetail />);
+    expect(screen.getByText("Velvet")).toBeTruthy();
     expect(screen.getByText("hello there")).toBeTruthy();
     expect(screen.getByText("David Bowie")).toBeTruthy();
-    expect(screen.getByText(/@sam · at Velvet/)).toBeTruthy();
+    expect(screen.getByText(/East Village, NEW YORK/)).toBeTruthy();
   });
 
-  it("a private account's stamp (404 to you) reads as unavailable, with no author, place or caption leaked", async () => {
+  it("a private account's memory reads as unavailable, with no author, place or caption leaked", async () => {
     mockStamp = { isError: true, error: new ApiError(404, "not_found", "Stamp not found"), refetch: jest.fn() };
     await wrap(<StampDetail />);
+    expect(screen.getByText("This memory isn't available")).toBeTruthy();
     expect(screen.queryByText(/Sam|sam|Velvet|hello there/)).toBeNull();
     expect(screen.queryByText("Anonymous")).toBeNull();
   });
@@ -153,27 +154,28 @@ describe("Song picker", () => {
   afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
 
   const searchFor = async (text: string) => {
-    expect(mockSearchChange).toBeDefined();
-    await act(async () => mockSearchChange!({ nativeEvent: { text } }));
+    await fireEvent.changeText(screen.getByLabelText("Song or artist"), text);
     await act(async () => jest.advanceTimersByTime(350));
   };
 
-  it("starts with a typing prompt and can clear the selected song", async () => {
+  it("starts with an in-content search field and can clear the selected song", async () => {
     mockSongs = { isPending: true, fetchStatus: "idle" };
     const a = await wrap(<SongPicker />);
-    expect(screen.getByText("Type a song or an artist.")).toBeTruthy();
+    expect(screen.getByText("SONG OR ARTIST")).toBeTruthy();
+    expect(screen.getByLabelText("Song or artist")).toBeTruthy();
     expect(screen.getByText("No song")).toBeTruthy();
     await fireEvent.press(screen.getByText("No song"));
     expect(songDraft.take()).toEqual({ song: null });
     expect(router.back).toHaveBeenCalledTimes(1);
     await a.unmount();
   });
+
   it("debounces typing and shows a searching state without results or an empty message", async () => {
     mockSongs = { isPending: true, fetchStatus: "fetching" };
     await wrap(<SongPicker />);
-    await act(async () => mockSearchChange?.({ nativeEvent: { text: "  Heroes  " } }));
+    await fireEvent.changeText(screen.getByLabelText("Song or artist"), "  Heroes  ");
     await act(async () => jest.advanceTimersByTime(349));
-    expect(screen.getByText("Type a song or an artist.")).toBeTruthy();
+    expect(screen.getByText("Start typing to search Apple Music.")).toBeTruthy();
     await act(async () => jest.advanceTimersByTime(1));
     expect(mockSongQueries.at(-1)).toBe("Heroes");
     expect(screen.getByRole("progressbar", { name: "Loading" })).toBeTruthy();
@@ -213,5 +215,4 @@ describe("Song picker", () => {
     expect(screen.getByLabelText("Heroes by David Bowie")).toBeTruthy();
     expect(screen.queryByText("Couldn't search for songs right now.")).toBeNull();
   });
-
 });

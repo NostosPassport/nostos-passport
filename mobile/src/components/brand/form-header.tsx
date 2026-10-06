@@ -1,19 +1,16 @@
 import { StyleSheet, View } from "react-native";
 
 import { Text } from "@/components/ui/text";
-import { size, space } from "@/theme";
-import { EmblemMark } from "./emblem-mark";
+import { colors, fonts, space } from "@/theme";
 
-/** The head of a sign-in or sign-up form: the emblem, a serif title, and one quiet line. */
 export function FormHeader({ title, line }: { title: string; line?: string }) {
   return (
     <View style={styles.head}>
-      <EmblemMark size={size.avatarLarge} />
-      <Text variant="title" color="brass" align="center" accessibilityRole="header">
+      <Text style={styles.title} accessibilityRole="header">
         {title}
       </Text>
       {line ? (
-        <Text variant="callout" color="textSecondary" align="center">
+        <Text variant="callout" color="textSecondary">
           {line}
         </Text>
       ) : null}
@@ -21,4 +18,7 @@ export function FormHeader({ title, line }: { title: string; line?: string }) {
   );
 }
 
-const styles = StyleSheet.create({ head: { alignItems: "center", gap: space.xs, paddingVertical: space.md } });
+const styles = StyleSheet.create({
+  head: { alignItems: "stretch", gap: space.xs, paddingTop: space.md, paddingBottom: space.sm },
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 48, lineHeight: 50, letterSpacing: -1.1 },
+});

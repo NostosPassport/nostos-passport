@@ -10,20 +10,16 @@ type Props = {
   width: number;
   height: number;
   open: boolean;
-  /** The cover, seen from outside. */
   outside: ReactNode;
-  /** The first page, lying under the cover. */
   page: ReactNode;
-  /** Start already open (to close a book that is open). Only read when the component mounts. */
   initialOpen?: boolean;
-  /** Called when a swing has finished. */
   onSettled?: () => void;
 };
 
-/** Swings a cover open on its left edge. With reduced motion it crossfades instead. */
 export function OpeningCover({ width, height, open, outside, page, initialOpen, onSettled }: Props) {
   const reduced = useReducedMotion();
   const progress = useSharedValue((initialOpen ?? open) ? 1 : 0);
+  const radius = width * 0.065;
 
   useEffect(() => {
     const done = (finished?: boolean) => {
@@ -32,7 +28,6 @@ export function OpeningCover({ width, height, open, outside, page, initialOpen, 
     };
     const target = open ? 1 : 0;
     progress.value = reduced ? withTiming(target, { duration: bookMotion.durations.crossfade }, done) : withSpring(target, bookMotion.coverOpen, done);
-    // The callback is read once per swing; a new one is not a reason to start another.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, reduced, progress]);
 
@@ -51,20 +46,18 @@ export function OpeningCover({ width, height, open, outside, page, initialOpen, 
     <View style={{ width, height }} pointerEvents={open ? "none" : "auto"}>
       <View style={[StyleSheet.absoluteFill, shadows.book]}>{page}</View>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.cast, cast]} />
-      <Animated.View style={[StyleSheet.absoluteFill, styles.face, { transformOrigin: "left center" }, swing]}>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.face, { borderRadius: radius, transformOrigin: "left center" }, swing]}>
         {outside}
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.shade, shade]} />
-        <View pointerEvents="none" style={styles.hingeShade} />
       </Animated.View>
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.inside, { transformOrigin: "left center" }, inside]} />
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.inside, { borderRadius: radius, transformOrigin: "left center" }, inside]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  face: { backfaceVisibility: "hidden" },
-  shade: { backgroundColor: colors.black },
-  hingeShade: { position: "absolute", left: 0, top: 0, bottom: 0, width: "6%", backgroundColor: colors.shadow },
-  cast: { backgroundColor: colors.black },
-  inside: { backgroundColor: colors.leather, backfaceVisibility: "hidden" },
+  face: { backfaceVisibility: "hidden", overflow: "hidden" },
+  shade: { backgroundColor: colors.bookShade },
+  cast: { backgroundColor: colors.bookShade },
+  inside: { backgroundColor: colors.leather, backfaceVisibility: "hidden", overflow: "hidden" },
 });

@@ -57,7 +57,7 @@ export function machineZone(b: Bearer): [string, string] {
 /** The labeled fields of the bearer page, in reading order. Nothing here is private: no email, no id. */
 export function bearerFields(b: Bearer): { label: string; value: string }[] {
   const fields = [
-    { label: "SURNAME AND GIVEN NAMES", value: b.displayName },
+    { label: "NAME", value: b.displayName },
     { label: "HANDLE", value: `@${b.handle}` },
     { label: "PASSPORT NO.", value: documentNumber(b.handle) },
     { label: "ISSUED", value: bookDate(b.memberSince) },

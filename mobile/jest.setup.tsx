@@ -18,6 +18,20 @@ jest.mock("expo-secure-store", () => {
   };
 });
 
+jest.mock("react-native-safe-area-context", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+  const insets = { top: 0, right: 0, bottom: 0, left: 0 };
+  const frame = { x: 0, y: 0, width: 393, height: 852 };
+  return {
+    SafeAreaProvider: ({ children }: { children?: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+    SafeAreaView: ({ children, ...props }: { children?: React.ReactNode }) => React.createElement(View, props, children),
+    useSafeAreaInsets: () => insets,
+    useSafeAreaFrame: () => frame,
+    initialWindowMetrics: { insets, frame },
+  };
+});
+
 jest.mock("expo-symbols", () => {
   const { View } = require("react-native");
   return { SymbolView: (props: object) => <View {...props} /> };

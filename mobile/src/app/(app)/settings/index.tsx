@@ -1,26 +1,19 @@
-import { router } from "expo-router";
-import { Alert, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { router, Stack, type Href } from "expo-router";
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View } from "react-native";
 import { useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { errorText } from "@/api";
-import { useFollowing, useMe } from "@/api/queries";
+import { useMe } from "@/api/queries";
 import { useAuth } from "@/auth/auth-context";
-import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { InlineError } from "@/components/ui/inline-error";
-import { ListGroup, ListRow } from "@/components/ui/list-row";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-import { ToastHost } from "@/components/ui/toast";
-import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { LEGAL, openWebPage } from "@/lib/links";
-import { SOCIAL_ENABLED } from "@/config";
-import { colors, screenPadding, space } from "@/theme";
+import { colors, fonts, screenPadding, space } from "@/theme";
 
-/** Settings: edit your profile, the moderation entry for staff, account and legal. (With the social layer on: who I follow and blocked users too.) */
 export default function Settings() {
+  const insets = useSafeAreaInsets();
   const me = useMe();
-  const following = useFollowing();
   const { signOut } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const user = me.data?.user;
@@ -28,114 +21,75 @@ export default function Settings() {
 
   const refresh = async () => {
     setRefreshing(true);
-    await Promise.all([me.refetch(), following.refetch()]).finally(() => setRefreshing(false));
+    await me.refetch().finally(() => setRefreshing(false));
   };
 
-  const confirmSignOut = () =>
-    Alert.alert("Sign out?", undefined, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Sign out", style: "destructive", onPress: () => void signOut() },
-    ]);
-
-  const list = following.data?.following ?? [];
+  const confirmSignOut = () => Alert.alert("Sign out?", undefined, [
+    { text: "Cancel", style: "cancel" },
+    { text: "Sign out", style: "destructive", onPress: () => void signOut() },
+  ]);
 
   return (
     <View style={styles.root}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.nav, { paddingTop: insets.top + 4 }]}>
+        <Pressable onPress={() => router.back()} style={styles.hitTarget} accessibilityRole="button" accessibilityLabel="Back">
+          <Icon name="chevron.left" color="textPrimary" size={22} />
+        </Pressable>
+      </View>
+      <NativeText style={styles.title}>Settings</NativeText>
       <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.content}
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.textSecondary} />}
       >
-        <ListGroup header="Your passport">
-          <ListRow icon="person.crop.circle" title="Edit profile" subtitle={user ? `${user.displayName} · @${user.handle}` : undefined} chevron onPress={() => router.push("/edit-profile")} accessibilityHint="Change your name, bio or photo" />
-          {!SOCIAL_ENABLED && <ListRow icon="lock.fill" iconColor="dimBrass" title="Only you can see your passport" subtitle="Nothing is shared, and there is no feed." />}
-        </ListGroup>
-
-        {staff && (
-          <ListGroup>
-            <ListRow icon="shield.lefthalf.filled" iconColor="accent" title="Moderation" chevron onPress={() => router.push("/moderation")} />
-          </ListGroup>
-        )}
-
-        {SOCIAL_ENABLED && (
-        <ListGroup header="Following">
-          {following.isPending ? (
-            <View style={styles.pad}>
-              <Skeleton width="60%" />
-            </View>
-          ) : following.isError ? (
-            <View style={styles.pad}>
-              <InlineError message={errorText(following.error, "Couldn't load who you follow.")} onRetry={() => void following.refetch()} />
-            </View>
-          ) : list.length === 0 ? (
-            <View style={styles.empty}>
-              <Text variant="callout" color="textSecondary">
-                You&apos;re not following anyone yet.
-              </Text>
-              <Button title="Find people" variant="plain" compact block={false} onPress={() => router.push("/people")} />
-            </View>
-          ) : (
-            list.map((f) => (
-              <ListRow
-                key={f.handle}
-                leading={<Avatar name={f.displayName} uri={f.avatarUrl} />}
-                title={f.displayName}
-                titleAccessory={f.verified ? <VerifiedBadge accessible={false} /> : undefined}
-                accessibilityLabel={[f.displayName, `@${f.handle}`, f.verified ? "verified" : null].filter(Boolean).join(", ")}
-                subtitle={`@${f.handle}`}
-                chevron
-                onPress={() => router.push({ pathname: "/user/[handle]", params: { handle: f.handle } })}
-              />
-            ))
-          )}
-          {list.length > 0 && <ListRow icon="person.badge.plus" iconColor="accent" title="Find people" titleColor="accent" onPress={() => router.push("/people")} />}
-        </ListGroup>
-        )}
-
-        <ListGroup>
-          <ListRow icon="lock.fill" iconColor="dimBrass" title="Customize, coming soon" titleColor="textSecondary" chevron onPress={() => router.push("/customize")} accessibilityHint="Opens a note about what is coming" />
-        </ListGroup>
-
-        <ListGroup header="Settings">
-          {SOCIAL_ENABLED && <ListRow icon="hand.raised.fill" title="Blocked users" chevron onPress={() => router.push("/settings/blocked")} />}
-          <ListRow icon="lock.fill" title="Privacy policy" external onPress={() => openWebPage(LEGAL.privacy)} />
-          <ListRow icon="doc.text.fill" title="Terms" external onPress={() => openWebPage(LEGAL.terms)} />
-          <ListRow icon="questionmark.circle.fill" title="Support" external onPress={() => openWebPage(LEGAL.support)} />
-        </ListGroup>
-
-        {__DEV__ ? (
-          <ListGroup header="Development">
-            <ListRow icon="paintpalette.fill" title="Design gallery" chevron onPress={() => router.push("/design")} accessibilityHint="Every visual piece on made-up data" />
-          </ListGroup>
-        ) : null}
-
-        <ListGroup>
-          <ListRow icon="rectangle.portrait.and.arrow.right" title="Sign out" onPress={confirmSignOut} />
-          <ListRow
-            icon="trash.fill"
-            iconColor="danger"
-            title="Delete account"
-            titleColor="danger"
-            onPress={() => router.push("/settings/delete-account")}
-            accessibilityHint="Opens the account deletion screen"
-          />
-        </ListGroup>
-
-        {user && (
-          <Text variant="footnote" color="textTertiary" style={styles.since}>
-            Member since {new Date(user.memberSince).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-          </Text>
-        )}
+        <SettingsRow title="Edit profile" subtitle={user ? `${user.displayName} · @${user.handle}` : undefined} trailing="chevron.right" onPress={() => router.push("/edit-profile")} />
+        <SettingsRow title="Email" subtitle={user?.email} trailing="chevron.right" onPress={() => router.push("/settings/email" as Href)} />
+        <View style={styles.privacyNote}>
+          <Text variant="footnote" color="textSecondary">Only you can see your passport.</Text>
+          <Text variant="footnote" color="textSecondary">Nothing is shared, and there is no feed.</Text>
+        </View>
+        <SettingsRow title="Customize" subtitle="Coming soon" trailing="chevron.right" onPress={() => router.push("/customize")} />
+        <SettingsRow title="Privacy policy" subtitle="Opens in your browser" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.privacy)} />
+        <SettingsRow title="Terms" subtitle="Opens in your browser" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.terms)} />
+        <SettingsRow title="Support" subtitle="Get help" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.support)} />
+        {staff ? <SettingsRow title="Moderation" subtitle="Staff tools" trailing="chevron.right" onPress={() => router.push("/moderation")} /> : null}
+        {__DEV__ ? <SettingsRow title="Design gallery" subtitle="Development" trailing="chevron.right" onPress={() => router.push("/design")} /> : null}
+        <View style={styles.actions}>
+          <Button title="Sign out" variant="plain" onPress={confirmSignOut} />
+          <Button title="Delete account" variant="secondary" onPress={() => router.push("/settings/delete-account")} />
+        </View>
+        {user ? <Text variant="footnote" color="textTertiary">Member since {new Date(user.memberSince).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</Text> : null}
       </ScrollView>
-      <ToastHost bottom={space.xxl} />
     </View>
+  );
+}
+
+function SettingsRow({ title, subtitle, trailing, onPress }: { title: string; subtitle?: string; trailing?: "chevron.right" | "arrow.up.right"; onPress: () => void }) {
+  const label = [title, subtitle].filter(Boolean).join(", ");
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
+      <View style={styles.rowCopy}>
+        <NativeText style={styles.rowTitle}>{title}</NativeText>
+        {subtitle ? <NativeText style={styles.rowSubtitle}>{subtitle}</NativeText> : null}
+      </View>
+      {trailing ? <Icon name={trailing} color="textTertiary" size={16} /> : null}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { paddingHorizontal: screenPadding, paddingTop: space.md, paddingBottom: space.xxxl, gap: space.xl },
-  pad: { padding: space.md },
-  empty: { padding: space.md, gap: space.xs, alignItems: "flex-start" },
-  since: { paddingHorizontal: space.md },
+  nav: { height: 92, paddingHorizontal: screenPadding, justifyContent: "flex-end" },
+  hitTarget: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginLeft: -11 },
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 50, lineHeight: 52, letterSpacing: -0.7, paddingHorizontal: screenPadding, marginTop: 10, marginBottom: 42 },
+  scroll: { flex: 1 },
+  content: { paddingHorizontal: screenPadding, gap: 8 },
+  row: { minHeight: 64, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, flexDirection: "row", alignItems: "center", gap: 12 },
+  rowCopy: { flex: 1, gap: 7 },
+  rowTitle: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 27, lineHeight: 28, letterSpacing: -0.5 },
+  rowSubtitle: { color: colors.textSecondary, fontSize: 12, lineHeight: 15 },
+  privacyNote: { paddingVertical: 3 },
+  actions: { gap: space.sm, paddingTop: space.sm },
+  pressed: { opacity: 0.65 },
 });
