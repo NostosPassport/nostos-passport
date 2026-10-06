@@ -60,9 +60,11 @@ export const colors = {
   shadow: palette.bone,
   grain: `rgba(${INK_RGB},0.035)`,
   leather: palette.ink,
-  leatherSheen: `rgba(${ACCENT_RGB},0.045)`,
-  bookShade: `rgba(${INK_RGB},0.11)`,
-  bookFold: `rgba(${INK_RGB},0.16)`,
+  leatherSheen: `rgba(${ACCENT_RGB},0.035)`,
+  bookAccent: `rgba(${ACCENT_RGB},0.68)`,
+  bookAccentSoft: `rgba(${ACCENT_RGB},0.30)`,
+  bookShade: `rgba(${INK_RGB},0.075)`,
+  bookFold: `rgba(${INK_RGB},0.08)`,
 } as const;
 
 export type ColorToken = keyof typeof colors;
@@ -79,8 +81,8 @@ export const fonts = {
 export const shadows = {
   contact: { shadowColor: colors.shadow, shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } },
   soft: { shadowColor: colors.shadow, shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: 10 } },
-  book: { shadowColor: colors.shadow, shadowOpacity: 0.13, shadowRadius: 28, shadowOffset: { width: 0, height: 18 } },
-  page: { shadowColor: colors.shadow, shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  book: { shadowColor: colors.shadow, shadowOpacity: 0.1, shadowRadius: 24, shadowOffset: { width: 0, height: 16 } },
+  page: { shadowColor: colors.shadow, shadowOpacity: 0.08, shadowRadius: 7, shadowOffset: { width: 0, height: 3 } },
   glow: { shadowColor: colors.brass, shadowOpacity: 0.22, shadowRadius: 14, shadowOffset: { width: 0, height: 0 } },
 } as const;
 
@@ -112,7 +114,7 @@ export const bookStyle = {
   emblemTick: 0.01,
   pageLine: 0.6,
   pageRule: 1,
-  gutterShare: 0.075,
+  gutterShare: 0.032,
   edgeLine: 1,
   edgeGap: 2,
   maxEdgeLines: 6,
