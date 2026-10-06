@@ -421,7 +421,7 @@ export const AdminUserSearchResponse = z
   .strict();
 /** POST /api/admin/users/:handle/verification. The note is required and goes into the append-only log. */
 export const VerificationRequest = z.object({ verified: z.boolean(), note: z.string().trim().min(3).max(300) }).strict();
-export const VerificationResponse = z.object({ user: z.object({ handle: z.string(), verified: z.boolean(), verifiedAt: IsoDate.nullable() }).strict();
+export const VerificationResponse = z.object({ user: z.object({ handle: z.string(), verified: z.boolean(), verifiedAt: IsoDate.nullable() }).strict() }).strict();
 export const VerificationLogResponse = z
   .object({ events: z.array(z.object({ id: z.string(), handle: z.string(), action: z.enum(["GRANT", "REVOKE"]), note: z.string(), by: z.string(), at: IsoDate }).strict()) })
   .strict();
