@@ -19,7 +19,7 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
 }
 
 export function DisplayTitle({ children, size = 58, style }: PropsWithChildren<{ size?: number; style?: TextStyle }>) {
-  return <Text style={[styles.display, { fontSize: size, lineHeight: size * 0.9 }, style]}>{children}</Text>;
+  return <Text style={[styles.display, { fontSize: size, lineHeight: size * 1.02 }, style]}>{children}</Text>;
 }
 
 export function Kicker({ children, muted = false }: PropsWithChildren<{ muted?: boolean }>) {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   header: { height: 82, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   wordmark: { color: colors.accent, fontFamily: fonts.serifRegular, fontSize: 66, lineHeight: 68, letterSpacing: -2.5 },
   wordmarkCompact: { fontSize: 46, lineHeight: 48 },
-  display: { color: colors.textPrimary, fontFamily: fonts.serifRegular, letterSpacing: -1.6 },
+  display: { color: colors.textPrimary, fontFamily: fonts.serifRegular, letterSpacing: -1.6, paddingTop: 2 },
   kicker: { color: colors.textPrimary, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.35, textTransform: "uppercase" },
   body: { color: colors.textPrimary, fontFamily: fonts.sans, lineHeight: 18 },
   muted: { color: colors.textSecondary },
