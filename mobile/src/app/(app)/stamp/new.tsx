@@ -94,12 +94,9 @@ function Composer() {
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 18 }]}>
+      <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 18 }]}>
         <View style={styles.topbar}>
-          <Pressable onPress={cancel} accessibilityRole="button" accessibilityLabel="Back" style={styles.hitTarget}>
-            <Icon name="chevron.left" color="textPrimary" size={22} />
-          </Pressable>
-          <Pressable onPress={cancel} accessibilityRole="button" style={styles.cancelTarget}>
+          <Pressable onPress={cancel} accessibilityRole="button" accessibilityLabel="Cancel" style={styles.cancelTarget}>
             <Kicker>CANCEL</Kicker>
           </Pressable>
         </View>
@@ -220,11 +217,11 @@ function DevPlaces() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { paddingHorizontal: 24, gap: 12 },
-  topbar: { height: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginHorizontal: -7 },
+  content: { paddingHorizontal: 24, paddingTop: 4, gap: 12 },
+  topbar: { height: 44, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginHorizontal: -7 },
   hitTarget: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   cancelTarget: { minWidth: 64, height: 44, alignItems: "center", justifyContent: "center" },
-  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 68, lineHeight: 60, letterSpacing: -1.5, marginTop: 2 },
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 68, lineHeight: 60, letterSpacing: -1.5, marginTop: 0 },
   placeKicker: { color: colors.accent, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.35, marginTop: 2 },
   photoStage: { height: 259, backgroundColor: colors.elevated, overflow: "hidden", position: "relative" },
   emptyPhoto: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
