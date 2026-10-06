@@ -143,6 +143,6 @@ describe("same-origin check", () => {
     expect((await call({ origin: "https://app.example", host: "internal:3000", "x-forwarded-host": "app.example" })).status).toBe(401);
   });
   it("rejects a malformed Origin", async () => {
-    expect((await call({ origin: "not a url", host: "localhost" })).status.toBe(403);
+    expect((await call({ origin: "not a url", host: "localhost" })).status).toBe(403);
   });
 });
