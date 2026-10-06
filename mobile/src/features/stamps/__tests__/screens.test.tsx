@@ -21,16 +21,12 @@ let mockFeed: Query;
 let mockStamp: Query;
 let mockSongs: Query;
 let mockLocalId = "s1";
-let mockSearchChange: ((event: { nativeEvent: { text: string } }) => void) | undefined;
 let mockSongQueries: string[] = [];
 
 jest.mock("@shopify/flash-list", () => ({ FlashList: jest.requireActual("react-native").FlatList }));
 jest.mock("expo-router", () => ({
   router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() },
-  Stack: { Screen: ({ options }: { options?: { headerSearchBarOptions?: { onChangeText?: typeof mockSearchChange } } }) => {
-    mockSearchChange = options?.headerSearchBarOptions?.onChangeText;
-    return null;
-  } },
+  Stack: { Screen: () => null },
   useLocalSearchParams: () => ({ id: mockLocalId }),
   useFocusEffect: jest.fn(),
 }));
@@ -135,7 +131,7 @@ describe("Stamp detail", () => {
     expect(screen.getByText("Velvet")).toBeTruthy();
     expect(screen.getByText("hello there")).toBeTruthy();
     expect(screen.getByText("David Bowie")).toBeTruthy();
-    expect(screen.getByText(/EAST VILLAGE, NEW YORK/)).toBeTruthy();
+    expect(screen.getByText(/East Village, NEW YORK/)).toBeTruthy();
   });
 
   it("a private account's memory reads as unavailable, with no author, place or caption leaked", async () => {
@@ -158,27 +154,28 @@ describe("Song picker", () => {
   afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
 
   const searchFor = async (text: string) => {
-    expect(mockSearchChange).toBeDefined();
-    await act(async () => mockSearchChange!({ nativeEvent: { text } }));
+    await fireEvent.changeText(screen.getByLabelText("Song or artist"), text);
     await act(async () => jest.advanceTimersByTime(350));
   };
 
-  it("starts with a typing prompt and can clear the selected song", async () => {
+  it("starts with an in-content search field and can clear the selected song", async () => {
     mockSongs = { isPending: true, fetchStatus: "idle" };
     const a = await wrap(<SongPicker />);
-    expect(screen.getByText("Type a song or an artist.")).toBeTruthy();
+    expect(screen.getByText("SONG OR ARTIST")).toBeTruthy();
+    expect(screen.getByLabelText("Song or artist")).toBeTruthy();
     expect(screen.getByText("No song")).toBeTruthy();
     await fireEvent.press(screen.getByText("No song"));
     expect(songDraft.take()).toEqual({ song: null });
     expect(router.back).toHaveBeenCalledTimes(1);
     await a.unmount();
   });
+
   it("debounces typing and shows a searching state without results or an empty message", async () => {
     mockSongs = { isPending: true, fetchStatus: "fetching" };
     await wrap(<SongPicker />);
-    await act(async () => mockSearchChange?.({ nativeEvent: { text: "  Heroes  " } }));
+    await fireEvent.changeText(screen.getByLabelText("Song or artist"), "  Heroes  ");
     await act(async () => jest.advanceTimersByTime(349));
-    expect(screen.getByText("Type a song or an artist.")).toBeTruthy();
+    expect(screen.getByText("Start typing to search Apple Music.")).toBeTruthy();
     await act(async () => jest.advanceTimersByTime(1));
     expect(mockSongQueries.at(-1)).toBe("Heroes");
     expect(screen.getByRole("progressbar", { name: "Loading" })).toBeTruthy();
