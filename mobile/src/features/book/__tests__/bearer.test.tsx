@@ -17,7 +17,7 @@ describe("bearer page logic", () => {
     expect(documentNumber("avaa")).not.toBe(documentNumber("morgan"));
   });
   it("computes the standard 7-3-1 check digit", () => {
-    expect(checkDigit("520727")).toBe(3); // the ICAO 9303 worked example
+    expect(checkDigit("520727")).toBe(3);
     expect(checkDigit("L898902C3")).toBe(6);
     expect(checkDigit("<<<")).toBe(0);
   });
@@ -36,7 +36,7 @@ describe("bearer page logic", () => {
     expect(machineZone({ ...bearer, memberSince: "x" })[1]).toHaveLength(44);
   });
   it("lists fields in reading order and leaves out remarks when there is no bio; never the email or an id", () => {
-    expect(bearerFields(bearer).map((f) => f.label)).toEqual(["SURNAME AND GIVEN NAMES", "HANDLE", "PASSPORT NO.", "ISSUED", "REMARKS"]);
+    expect(bearerFields(bearer).map((f) => f.label)).toEqual(["NAME", "HANDLE", "PASSPORT NO.", "ISSUED", "REMARKS"]);
     expect(bearerFields({ ...bearer, bio: "  " }).map((f) => f.label)).not.toContain("REMARKS");
     expect(JSON.stringify(bearerFields(bearer))).not.toMatch(/\S+@\S+\.\S+/);
   });
@@ -47,6 +47,7 @@ describe("BearerPage", () => {
     await render(<BearerPage width={300} height={426} bearer={bearer} avatarUrl={null} />);
     expect(screen.getByLabelText(/Passport of Ava Álvarez, at avaa.*issued: 03 OCT 2026/)).toBeTruthy();
     expect(screen.getByText("NOSTOS PASSPORT")).toBeTruthy();
+    expect(screen.getByText("NAME")).toBeTruthy();
     expect(screen.getByText("@avaa")).toBeTruthy();
   });
 });
