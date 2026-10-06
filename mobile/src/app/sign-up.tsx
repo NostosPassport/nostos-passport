@@ -23,11 +23,14 @@ export default function SignUp() {
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
   const [fields, setFields] = useState<SignupFields>({ email: "", password: "", handle: "", displayName: "", birthdate: "" });
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [terms, setTerms] = useState(false);
   const [errors, setErrors] = useState<SignupErrors>({});
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
   const handleRef = useRef<TextInput>(null);
   const displayNameRef = useRef<TextInput>(null);
   const birthdateRef = useRef<TextInput>(null);
@@ -36,6 +39,7 @@ export default function SignUp() {
   const set = (key: keyof SignupFields) => (value: string) => {
     setFields((current) => ({ ...current, [key]: key === "handle" ? value.toLowerCase() : key === "birthdate" ? formatBirthdateInput(value) : value }));
     if (errors[key]) setErrors((current) => ({ ...current, [key]: undefined }));
+    if (key === "password" && confirmError) setConfirmError(null);
   };
 
   const signup = useMutation({
@@ -55,15 +59,18 @@ export default function SignUp() {
   const submit = () => {
     if (signup.isPending) return;
     const nextErrors = validateSignup(fields);
-    setErrors(nextErrors);
+    const nextConfirmError = !confirmPassword ? "Confirm your password." : fields.password !== confirmPassword ? "Passwords do not match." : null;
     const nextConsentError = !terms ? "Agree to the Terms and Privacy policy to continue." : null;
+    setErrors(nextErrors);
+    setConfirmError(nextConfirmError);
     setConsentError(nextConsentError);
     if (nextErrors.email) emailRef.current?.focus();
     else if (nextErrors.password) passwordRef.current?.focus();
+    else if (nextConfirmError) confirmPasswordRef.current?.focus();
     else if (nextErrors.handle) handleRef.current?.focus();
     else if (nextErrors.displayName) displayNameRef.current?.focus();
     else if (nextErrors.birthdate) birthdateRef.current?.focus();
-    if (Object.keys(nextErrors).length || nextConsentError) {
+    if (Object.keys(nextErrors).length || nextConfirmError || nextConsentError) {
       haptics.warning();
       return;
     }
@@ -95,17 +102,34 @@ export default function SignUp() {
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
       >
-        <FieldGroup errors={[errors.email, errors.password, errors.handle, errors.displayName, errors.birthdate]}>
-          <Field ref={emailRef} label="Email" placeholder="name@example.com" value={fields.email} onChangeText={set("email")} invalid={!!errors.email} autoCapitalize="none" autoComplete="email" textContentType="username" keyboardType="email-address" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} />
-          <Field ref={passwordRef} label="Password" placeholder={`${MIN_PASSWORD}+ characters, with a letter and number`} value={fields.password} onChangeText={set("password")} invalid={!!errors.password} secureTextEntry autoComplete="new-password" textContentType="newPassword" returnKeyType="next" onSubmitEditing={() => handleRef.current?.focus()} />
-          <Field ref={handleRef} label="Handle" placeholder="lowercase_name" value={fields.handle} onChangeText={set("handle")} invalid={!!errors.handle} maxLength={HANDLE_MAX} autoCapitalize="none" autoCorrect={false} textContentType="none" autoComplete="off" returnKeyType="next" onSubmitEditing={() => displayNameRef.current?.focus()} />
-          <Field ref={displayNameRef} label="Name" placeholder="Your name" value={fields.displayName} onChangeText={set("displayName")} invalid={!!errors.displayName} autoComplete="name" textContentType="name" returnKeyType="next" onSubmitEditing={() => birthdateRef.current?.focus()} />
-          <Field ref={birthdateRef} label="Birthdate" placeholder="MM/DD/YYYY" value={fields.birthdate} onChangeText={set("birthdate")} invalid={!!errors.birthdate} keyboardType="number-pad" autoComplete="birthdate-full" textContentType="none" maxLength={10} returnKeyType="done" testID="signup-birthdate" />
+        <FieldGroup>
+          <Field ref={emailRef} label="Email" placeholder="name@example.com" value={fields.email} onChangeText={set("email")} error={errors.email} autoCapitalize="none" autoComplete="email" textContentType="username" keyboardType="email-address" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} />
+          <Field ref={passwordRef} label="Password" placeholder={`${MIN_PASSWORD}+ characters, with a letter and number`} value={fields.password} onChangeText={set("password")} error={errors.password} secureTextEntry autoComplete="new-password" textContentType="newPassword" returnKeyType="next" onSubmitEditing={() => confirmPasswordRef.current?.focus()} />
+          <Field
+            ref={confirmPasswordRef}
+            label="Confirm password"
+            placeholder="Re-enter your password"
+            value={confirmPassword}
+            onChangeText={(value) => {
+              setConfirmPassword(value);
+              if (confirmError) setConfirmError(null);
+            }}
+            error={confirmError}
+            secureTextEntry
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="next"
+            onSubmitEditing={() => handleRef.current?.focus()}
+          />
+          <Field ref={handleRef} label="Handle" placeholder="lowercase_name" value={fields.handle} onChangeText={set("handle")} error={errors.handle} maxLength={HANDLE_MAX} autoCapitalize="none" autoCorrect={false} textContentType="none" autoComplete="off" returnKeyType="next" onSubmitEditing={() => displayNameRef.current?.focus()} />
+          <Field ref={displayNameRef} label="Name" placeholder="Your name" value={fields.displayName} onChangeText={set("displayName")} error={errors.displayName} autoComplete="name" textContentType="name" returnKeyType="next" onSubmitEditing={() => birthdateRef.current?.focus()} />
+          <Field ref={birthdateRef} label="Birthdate" placeholder="MM/DD/YYYY" value={fields.birthdate} onChangeText={set("birthdate")} error={errors.birthdate} keyboardType="number-pad" autoComplete="birthdate-full" textContentType="none" maxLength={10} returnKeyType="done" testID="signup-birthdate" />
         </FieldGroup>
 
-        <Checkbox checked={terms} onChange={setTerms} invalid={!!consentError && !terms} accessibilityLabel="I agree to the Terms and Privacy policy">
+        <Checkbox checked={terms} onChange={(checked) => { setTerms(checked); if (checked) setConsentError(null); }} invalid={!!consentError && !terms} accessibilityLabel="I agree to the Terms and Privacy policy">
           <Text variant="callout">I agree to the Terms and Privacy policy.</Text>
         </Checkbox>
+        {consentError ? <InlineError message={consentError} /> : null}
 
         <View style={styles.legalLinks}>
           <Button title="Terms" variant="plain" onPress={() => openWebPage(LEGAL.terms)} accessibilityRole="link" />
@@ -116,7 +140,6 @@ export default function SignUp() {
           <Text variant="footnote" color="textSecondary">21+ · Birthdate checked once, not kept.</Text>
           <Text variant="footnote" color="textSecondary">No tolerance for abusive content or users.</Text>
         </View>
-        {consentError ? <InlineError message={consentError} /> : null}
         {signup.error ? <InlineError message={errorText(signup.error, "Couldn't create your account. Check the details and try again.")} /> : null}
       </ScrollView>
 
