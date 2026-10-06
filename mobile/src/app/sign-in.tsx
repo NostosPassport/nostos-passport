@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
@@ -34,20 +34,30 @@ export default function SignIn() {
       setEmailError("Enter a valid email address.");
       return;
     }
+    Keyboard.dismiss();
     login.mutate();
   };
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <View style={[styles.content, { paddingTop: insets.top + 4, paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Text style={styles.wordmark}>NOSTOS</Text>
-        <View style={styles.collagePlaceholder} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <View style={styles.collageInk} />
-          <Text style={styles.collageGlyph}>N</Text>
-          <View style={styles.collageAccentA} />
-          <View style={styles.collageAccentB} />
-        </View>
-        <Text style={styles.headline}>Find your{`\n`}way back.</Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 4, paddingBottom: Math.max(insets.bottom, 12) }]}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        showsVerticalScrollIndicator={false}
+      >
+        <Pressable onPress={Keyboard.dismiss} accessible={false} style={styles.dismissArea}>
+          <Text style={styles.wordmark}>NOSTOS</Text>
+          <View style={styles.collagePlaceholder} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <View style={styles.collageInk} />
+            <Text style={styles.collageGlyph}>N</Text>
+            <View style={styles.collageAccentA} />
+            <View style={styles.collageAccentB} />
+          </View>
+          <Text style={styles.headline}>Find your{`\n`}way back.</Text>
+        </Pressable>
         <View style={styles.form}>
           {farewell ? <Text style={styles.notice}>{farewell}</Text> : null}
           <View style={styles.field}>
@@ -96,14 +106,16 @@ export default function SignIn() {
         <Pressable onPress={() => router.push("/sign-up")} style={styles.create} accessibilityRole="button">
           <Text style={styles.createText}>New here? Create a passport</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { flex: 1 },
+  scroll: { flex: 1 },
+  content: { flexGrow: 1 },
+  dismissArea: { flexShrink: 0 },
   wordmark: { color: colors.accent, fontFamily: fonts.serifRegular, fontSize: 64, lineHeight: 68, letterSpacing: -2.5, paddingHorizontal: 24 },
   collagePlaceholder: { height: 299, overflow: "hidden", backgroundColor: colors.elevated, position: "relative" },
   collageInk: { position: "absolute", width: 270, height: 270, borderRadius: 135, backgroundColor: colors.textPrimary, opacity: 0.9, left: 58, top: 18 },
@@ -120,6 +132,6 @@ const styles = StyleSheet.create({
   signInText: { color: colors.onAccent, fontSize: 14, fontWeight: "500" },
   disabled: { opacity: 0.42 },
   pressed: { opacity: 0.78 },
-  create: { marginTop: "auto", minHeight: 44, alignItems: "center", justifyContent: "center" },
+  create: { marginTop: "auto", minHeight: 52, alignItems: "center", justifyContent: "center" },
   createText: { color: colors.accent, fontSize: 13 },
 });
