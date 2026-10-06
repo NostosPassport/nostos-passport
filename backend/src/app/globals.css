@@ -1,40 +1,47 @@
 @import "tailwindcss";
 
 @theme {
-  /* Midnight: black and brass, the same palette as the app (mobile/src/theme/midnight.ts). No other hue, not even for errors:
-     the old status names stay so existing pages keep working, and all of them resolve to brass, dim brass or bone. */
-  --color-ink: #000000;
-  --color-panel: #0b0b0d;
-  --color-panel-2: #141418;
-  --color-line: #241d0e;
-  --color-muted: #a09c94;
-  --color-text: #e8e4dc;
-  --color-accent: #c9a24b;
-  --color-packed: #c9a24b;
-  --color-busy: #8f7434;
-  --color-chill: #c9a24b;
-  --color-dead: #6b6862;
-  --color-nodata: #a09c94;
-  --color-venue: #c9a24b;
-  --color-warn: #c9a24b;
+  /* Editorial paper and ultramarine, matching the current iOS refinement. Historical token names stay in place so
+     the legal, support and staff pages can migrate without carrying two palettes. */
+  --color-ink: #f7f4ee;
+  --color-panel: #f3efe5;
+  --color-panel-2: #eee9dd;
+  --color-line: #aaa79f;
+  --color-muted: #5a5a55;
+  --color-text: #171714;
+  --color-accent: #123bff;
+  --color-packed: #123bff;
+  --color-busy: #5a5a55;
+  --color-chill: #123bff;
+  --color-dead: #74746e;
+  --color-nodata: #5a5a55;
+  --color-venue: #123bff;
+  --color-warn: #123bff;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-serif: "Cormorant Garamond", "Iowan Old Style", Palatino, Georgia, "Times New Roman", serif;
+  --font-serif: "Iowan Old Style", "Baskerville", Georgia, "Times New Roman", serif;
 }
 
 html,
 body {
-  background: var(--color-ink);
+  background: #f7f4ee;
   color: var(--color-text);
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
   min-height: 100dvh;
+  background-image: linear-gradient(to bottom, #f7f4ee, #f3efe5);
+  background-attachment: fixed;
 }
 
-/* Titles are set in the serif, like the book. */
 h1,
 h2 {
   font-family: var(--font-serif);
-  letter-spacing: 0.01em;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: #123bff;
+  color: #f7f4ee;
 }
