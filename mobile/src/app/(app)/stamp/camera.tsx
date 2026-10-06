@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   thumb: { width: THUMB, height: THUMB, borderRadius: radius.chip, overflow: "hidden", backgroundColor: colors.elevated },
   remove: { position: "absolute", top: space.xxs, right: space.xxs, width: size.iconSmall + space.xs, height: size.iconSmall + space.xs, borderRadius: radius.pill, backgroundColor: colors.scrim, alignItems: "center", justifyContent: "center" },
   controls: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: screenPadding },
-  side: { width: size.avatarLarge, alignItems: "flex-end" },
+  side: { width: 88, alignItems: "flex-end" },
   shutter: { width: size.avatarLarge + space.xs, height: size.avatarLarge + space.xs, borderRadius: radius.pill, borderWidth: size.focusRingWidth, borderColor: colors.brass, alignItems: "center", justifyContent: "center" },
   shutterOff: { opacity: 0.45 },
   shutterInner: { width: size.avatarLarge - space.md, height: size.avatarLarge - space.md, borderRadius: radius.pill, backgroundColor: colors.brass },
