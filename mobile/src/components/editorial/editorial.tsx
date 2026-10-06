@@ -51,9 +51,9 @@ export function GearButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-export function EditorialButton({ label, onPress, disabled = false, outline = false }: { label: string; onPress: () => void; disabled?: boolean; outline?: boolean }) {
+export function EditorialButton({ label, onPress, disabled = false, outline = false, style }: { label: string; onPress: () => void; disabled?: boolean; outline?: boolean; style?: ViewStyle }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled }} style={({ pressed }) => [styles.button, outline && styles.buttonOutline, disabled && styles.disabled, pressed && !disabled && styles.pressed]}>
+    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled }} style={({ pressed }) => [styles.button, outline && styles.buttonOutline, style, disabled && styles.disabled, pressed && !disabled && styles.pressed]}>
       <Text style={[styles.buttonText, outline && styles.buttonOutlineText]}>{label}</Text>
     </Pressable>
   );
