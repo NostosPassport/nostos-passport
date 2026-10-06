@@ -30,7 +30,7 @@ describe("auth", () => {
 
   it("rejects role escalation in the signup payload", async () => {
     await expect(
-      signup(prisma, { email: "b@x.dev", password: VALID_PASSWORD, displayName: "B", handle: "bbb", role: "MODERATOR" } as never),
+      signup(prisma, { email: "b@x.dev", password: VALID_PASSWORD, displayName: "B", handle: "bbb", acceptTerms: true, birthdate: "1990-05-05", role: "MODERATOR" } as never),
     ).rejects.toThrow();
   });
 
@@ -143,6 +143,6 @@ describe("same-origin check", () => {
     expect((await call({ origin: "https://app.example", host: "internal:3000", "x-forwarded-host": "app.example" })).status).toBe(401);
   });
   it("rejects a malformed Origin", async () => {
-    expect((await call({ origin: "not a url", host: "localhost" })).status).toBe(403);
+    expect((await call({ origin: "not a url", host: "localhost" })).status.toBe(403);
   });
 });
