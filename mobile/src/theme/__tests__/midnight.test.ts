@@ -20,7 +20,7 @@ function walk(dir: string): string[] {
 const toRgb = (hex: string): [number, number, number] => {
   const h = hex.replace("#", "");
   const full = h.length === 3 || h.length === 4 ? h.split("").map((c) => c + c).join("") : h;
-  return [parseInt(full.slice(0, 2), 16), parseInt(full.slice(2, 4), 16)];
+  return [parseInt(full.slice(0, 2), 16), parseInt(full.slice(2, 4), 16), parseInt(full.slice(4, 6), 16)];
 };
 const key = (rgb: readonly number[]) => rgb.join(",");
 const isPureWhite = (rgb: readonly number[]) => rgb.every((channel) => channel === 255);
