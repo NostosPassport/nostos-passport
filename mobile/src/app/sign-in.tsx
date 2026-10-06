@@ -1,15 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
 import { farewellNotice, useAuth } from "@/auth/auth-context";
 import { InlineError } from "@/components/ui/inline-error";
 import { haptics } from "@/lib/haptics";
-import { isEmail } from "@/lib/validation";
 import { colors, fonts } from "@/theme";
 import { SIGN_IN_ART_URI } from "../assets/sign-in-art";
 
@@ -17,25 +15,19 @@ export default function SignIn() {
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
   const [farewell] = useState(() => farewellNotice.take());
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [emailError, setEmailError] = useState<string | null>(null);
   const passwordRef = useRef<TextInput>(null);
 
   const login = useMutation({
-    mutationFn: () => api.auth.login({ email: email.trim(), password }),
+    mutationFn: () => api.auth.login({ email: identifier.trim(), password }),
     onSuccess: (res) => signIn(res),
     onError: () => haptics.warning(),
   });
 
-  const canSubmit = email.trim().length > 0 && password.length > 0;
+  const canSubmit = identifier.trim().length > 0 && password.length > 0;
   const submit = () => {
     if (!canSubmit || login.isPending) return;
-    if (!isEmail(email)) {
-      haptics.warning();
-      setEmailError("Enter a valid email address.");
-      return;
-    }
     Keyboard.dismiss();
     login.mutate();
   };
@@ -51,36 +43,35 @@ export default function SignIn() {
         showsVerticalScrollIndicator={false}
       >
         <Pressable onPress={Keyboard.dismiss} accessible={false} style={styles.dismissArea}>
-          <Text style={styles.wordmark}>Nostos</Text>
+          <Text style={styles.wordmark}>NOSTOS</Text>
           <Image
             source={{ uri: SIGN_IN_ART_URI }}
             style={styles.collage}
-            contentFit="cover"
-            transition={0}
+            resizeMode="cover"
             accessibilityLabel="Original Greek engraved-eye newspaper collage"
+            accessibilityIgnoresInvertColors
           />
           <Text style={styles.headline}>Your city,{`\n`}remembered.</Text>
         </Pressable>
         <View style={styles.form}>
           {farewell ? <Text style={styles.notice}>{farewell}</Text> : null}
           <View style={styles.field}>
-            <Text style={styles.label}>EMAIL</Text>
+            <Text style={styles.label}>EMAIL OR USERNAME</Text>
             <TextInput
               style={styles.input}
-              placeholder="you@domain.com"
+              placeholder="Email or username"
               placeholderTextColor={colors.textSecondary}
-              value={email}
-              onChangeText={(value) => {
-                setEmail(value);
-                setEmailError(null);
-              }}
+              value={identifier}
+              onChangeText={setIdentifier}
               autoCapitalize="none"
-              autoComplete="email"
+              autoCorrect={false}
+              spellCheck={false}
+              autoComplete="username"
               textContentType="username"
               keyboardType="email-address"
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
-              accessibilityLabel="Email"
+              accessibilityLabel="Email or username"
             />
           </View>
           <View style={styles.field}>
@@ -100,8 +91,7 @@ export default function SignIn() {
               accessibilityLabel="Password"
             />
           </View>
-          {emailError ? <InlineError message={emailError} /> : null}
-          {login.error ? <InlineError message={errorText(login.error, "Couldn't sign in. Check your email and password and try again.")} /> : null}
+          {login.error ? <InlineError message={errorText(login.error, "Couldn't sign in. Check your email or username and password and try again.")} /> : null}
           <Pressable onPress={submit} disabled={!canSubmit || login.isPending} style={({ pressed }) => [styles.signIn, (!canSubmit || login.isPending) && styles.disabled, pressed && styles.pressed]} accessibilityRole="button">
             <Text style={styles.signInText}>{login.isPending ? "Signing in…" : "Sign in"}</Text>
           </Pressable>
@@ -119,9 +109,9 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { flexGrow: 1 },
   dismissArea: { flexShrink: 0 },
-  wordmark: { color: colors.accent, fontFamily: fonts.serifRegular, fontSize: 72, lineHeight: 72, letterSpacing: -2.8, paddingHorizontal: 24, paddingBottom: 4 },
+  wordmark: { color: colors.accent, fontFamily: fonts.serifRegular, fontSize: 72, lineHeight: 76, letterSpacing: -2.8, paddingHorizontal: 24, paddingBottom: 4 },
   collage: { width: "100%", height: 299, backgroundColor: colors.elevated },
-  headline: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 67, lineHeight: 59, letterSpacing: -1.7, paddingHorizontal: 24, paddingTop: 12 },
+  headline: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 67, lineHeight: 64, letterSpacing: -1.7, paddingHorizontal: 24, paddingTop: 12 },
   form: { paddingHorizontal: 24, paddingTop: 18, gap: 16 },
   notice: { color: colors.textSecondary, fontSize: 12, lineHeight: 16 },
   field: { gap: 4 },
