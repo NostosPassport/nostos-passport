@@ -6,12 +6,12 @@ import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleS
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
-import { SIGN_IN_ART_URI } from "@/assets/sign-in-art";
 import { farewellNotice, useAuth } from "@/auth/auth-context";
 import { InlineError } from "@/components/ui/inline-error";
 import { haptics } from "@/lib/haptics";
 import { isEmail } from "@/lib/validation";
 import { colors, fonts } from "@/theme";
+import { SIGN_IN_ART_URI } from "../assets/sign-in-art";
 
 export default function SignIn() {
   const { signIn } = useAuth();
