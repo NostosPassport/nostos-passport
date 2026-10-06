@@ -8,14 +8,17 @@ import { Text } from "./text";
 type FieldProps = TextInputProps & {
   label: string;
   invalid?: boolean;
+  error?: string | null;
 };
 
-export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, invalid, style, accessibilityHint, ...rest }, ref) {
+export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, invalid, error, style, accessibilityHint, ...rest }, ref) {
+  const hasError = !!invalid || !!error;
+  useAnnounce(error ?? null);
   return (
     <View style={styles.row}>
       <Text
         variant="footnote"
-        color={invalid ? "danger" : "textPrimary"}
+        color={hasError ? "danger" : "textPrimary"}
         style={styles.label}
         accessibilityElementsHidden
         importantForAccessibility="no"
@@ -24,15 +27,20 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, i
       </Text>
       <TextInput
         ref={ref}
-        accessibilityLabel={invalid ? `${label}, needs attention` : label}
+        accessibilityLabel={hasError ? `${label}, needs attention` : label}
         accessibilityHint={accessibilityHint}
         placeholderTextColor={colors.textSecondary}
         selectionColor={colors.accent}
         keyboardAppearance="light"
         maxFontSizeMultiplier={maxFontSizeMultiplier}
         {...rest}
-        style={[styles.input, invalid && styles.inputInvalid, style]}
+        style={[styles.input, hasError && styles.inputInvalid, style]}
       />
+      {error ? (
+        <Text variant="footnote" color="danger" style={styles.fieldError}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 });
@@ -83,6 +91,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.xs,
     ...typeScale.body,
   },
-  inputInvalid: { borderBottomColor: colors.accent },
+  inputInvalid: { borderBottomColor: colors.danger },
+  fieldError: { marginTop: -2 },
   footer: { paddingHorizontal: 0 },
 });
