@@ -32,7 +32,7 @@ describe("sign-up age gate", () => {
   async function fill(birthdate: string) {
     await wrap(<SignUp />);
     await fireEvent.changeText(screen.getByLabelText("Email"), "sam@example.com");
-    await fireEvent.changeText(screen.getByLabelText("Password"), "long enough pw");
+    await fireEvent.changeText(screen.getByLabelText("Password"), "long enough pw1");
     await fireEvent.changeText(screen.getByLabelText("Handle"), "sam_s");
     await fireEvent.changeText(screen.getByLabelText("Name"), "Sam");
     await fireEvent.changeText(screen.getByTestId("signup-birthdate"), birthdate);
