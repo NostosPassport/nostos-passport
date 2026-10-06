@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "@/components/ui/icon";
 import { SOCIAL_ENABLED } from "@/config";
+import { mapRecenter } from "@/features/map/recenter";
 import { colors } from "@/theme";
 
 export default function TabsLayout() {
@@ -37,7 +38,11 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="map" options={{ title: "Map", tabBarAccessibilityLabel: "Map", tabBarIcon: ({ color }) => <SymbolView name="map" tintColor={color} size={23} /> }} />
+      <Tabs.Screen
+        name="map"
+        listeners={{ tabPress: () => mapRecenter.request() }}
+        options={{ title: "Map", tabBarAccessibilityLabel: "Map", tabBarIcon: ({ color }) => <SymbolView name="map" tintColor={color} size={23} /> }}
+      />
       <Tabs.Screen name="activity" options={{ href: social, title: "Activity", tabBarIcon: ({ color }) => <SymbolView name="bell" tintColor={color} size={22} /> }} />
     </Tabs>
   );
