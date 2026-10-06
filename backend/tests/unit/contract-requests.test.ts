@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ZodTypeAny } from "zod";
 import * as C from "@/contracts/api";
-import { signupSchema } from "@/server/services/auth";
+import { loginSchema, signupSchema } from "@/server/services/auth";
 import { flagSchema, moderateSchema } from "@/server/services/moderation";
 import { deleteAccountSchema } from "@/server/services/account";
 import { stampEditSchema } from "@/server/services/stamps";
@@ -14,13 +14,28 @@ function agree(contract: ZodTypeAny, server: ZodTypeAny, samples: unknown[]) {
 describe("contract request schemas agree with server validation", () => {
   it("signup", () =>
     agree(C.SignupRequest, signupSchema, [
-      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "short", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "a", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "ABC_ok", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: false, birthdate: "1990-05-05" },
-      { email: "nope", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05", extra: 1 },
+      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "abc.def_123", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "short1", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "abcdefghij", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "1234567890", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "a", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "a".repeat(31), acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "bad-handle", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "ABC_ok", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "abc", acceptTerms: false, birthdate: "1990-05-05" },
+      { email: "nope", password: "long enough pw1", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
+      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05", extra: 1 },
+    ]));
+  it("login", () =>
+    agree(C.LoginRequest, loginSchema, [
+      { email: "a@b.co", password: "anything" },
+      { email: "abc.def_123", password: "anything" },
+      { email: "ABCD", password: "anything" },
+      { email: "ab", password: "anything" },
+      { email: "a".repeat(201), password: "anything" },
+      { email: "abc", password: "x".repeat(201) },
+      { email: "abc", password: "anything", extra: true },
     ]));
   it("flags, moderation, deletion", () => {
     agree(C.FlagRequest, flagSchema, [
