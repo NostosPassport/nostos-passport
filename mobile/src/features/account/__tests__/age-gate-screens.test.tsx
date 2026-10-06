@@ -33,6 +33,7 @@ describe("sign-up age gate", () => {
     await wrap(<SignUp />);
     await fireEvent.changeText(screen.getByLabelText("Email"), "sam@example.com");
     await fireEvent.changeText(screen.getByLabelText("Password"), "long enough pw1");
+    await fireEvent.changeText(screen.getByLabelText("Confirm password"), "long enough pw1");
     await fireEvent.changeText(screen.getByLabelText("Handle"), "sam_s");
     await fireEvent.changeText(screen.getByLabelText("Name"), "Sam");
     await fireEvent.changeText(screen.getByTestId("signup-birthdate"), birthdate);
@@ -42,7 +43,18 @@ describe("sign-up age gate", () => {
   it("requires a birthdate", async () => {
     await wrap(<SignUp />);
     expect(screen.getByTestId("signup-birthdate")).toBeTruthy();
+    expect(screen.getByLabelText("Confirm password")).toBeTruthy();
     expect(screen.queryByLabelText("I'm 21 or older")).toBeNull();
+  });
+
+  it("requires matching passwords before signup", async () => {
+    await wrap(<SignUp />);
+    await fireEvent.changeText(screen.getByLabelText("Email"), "sam@example.com");
+    await fireEvent.changeText(screen.getByLabelText("Password"), "long enough pw1");
+    await fireEvent.changeText(screen.getByLabelText("Confirm password"), "different pw2");
+    await fireEvent.press(screen.getByText("Create account"));
+    expect(mockSignup).not.toHaveBeenCalled();
+    expect(screen.getByText("Passwords do not match.")).toBeTruthy();
   });
 
   it("sends an eligible birthdate to the server once as YYYY-MM-DD", async () => {
@@ -51,6 +63,7 @@ describe("sign-up age gate", () => {
     await fireEvent.press(screen.getByText("Create account"));
     expect(mockSignup).toHaveBeenCalledTimes(1);
     expect(mockSignup.mock.calls[0][0]).toMatchObject({ email: "sam@example.com", birthdate: "1990-05-05", acceptTerms: true });
+    expect(mockSignup.mock.calls[0][0]).not.toHaveProperty("confirmPassword");
     expect(mockSignup.mock.calls[0][0]).not.toHaveProperty("confirm21");
   });
 
