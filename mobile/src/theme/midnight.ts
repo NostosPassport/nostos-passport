@@ -14,6 +14,7 @@ export const palette = {
   bone: "#171714",
   boneDim: "#5A5A55",
   boneFaint: "#74746E",
+  danger: "#B3261E",
 } as const;
 
 const ACCENT_RGB = "18,59,255";
@@ -39,7 +40,7 @@ export const colors = {
 
   success: palette.brass,
   warning: palette.brass,
-  danger: palette.brass,
+  danger: palette.danger,
 
   scrim: `rgba(${INK_RGB},0.6)`,
   pressedOverlay: `rgba(${ACCENT_RGB},0.08)`,
@@ -59,7 +60,9 @@ export const colors = {
   shadow: palette.bone,
   grain: `rgba(${INK_RGB},0.035)`,
   leather: palette.ink,
-  leatherSheen: `rgba(${ACCENT_RGB},0.07)`,
+  leatherSheen: `rgba(${ACCENT_RGB},0.045)`,
+  bookShade: `rgba(${INK_RGB},0.11)`,
+  bookFold: `rgba(${INK_RGB},0.16)`,
 } as const;
 
 export type ColorToken = keyof typeof colors;
@@ -76,8 +79,8 @@ export const fonts = {
 export const shadows = {
   contact: { shadowColor: colors.shadow, shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } },
   soft: { shadowColor: colors.shadow, shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: 10 } },
-  book: { shadowColor: colors.shadow, shadowOpacity: 0.16, shadowRadius: 34, shadowOffset: { width: 0, height: 22 } },
-  page: { shadowColor: colors.shadow, shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  book: { shadowColor: colors.shadow, shadowOpacity: 0.13, shadowRadius: 28, shadowOffset: { width: 0, height: 18 } },
+  page: { shadowColor: colors.shadow, shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   glow: { shadowColor: colors.brass, shadowOpacity: 0.22, shadowRadius: 14, shadowOffset: { width: 0, height: 0 } },
 } as const;
 
@@ -109,7 +112,7 @@ export const bookStyle = {
   emblemTick: 0.01,
   pageLine: 0.6,
   pageRule: 1,
-  gutterShare: 0.09,
+  gutterShare: 0.075,
   edgeLine: 1,
   edgeGap: 2,
   maxEdgeLines: 6,
