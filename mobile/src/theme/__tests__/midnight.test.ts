@@ -20,7 +20,7 @@ function walk(dir: string): string[] {
 const toRgb = (hex: string): [number, number, number] => {
   const h = hex.replace("#", "");
   const full = h.length === 3 || h.length === 4 ? h.split("").map((c) => c + c).join("") : h;
-  return [parseInt(full.slice(0, 2), 16), parseInt(full.slice(2, 4), 16), parseInt(full.slice(4, 6), 16)];
+  return [parseInt(full.slice(0, 2), 16), parseInt(full.slice(2, 4), 16)];
 };
 const key = (rgb: readonly number[]) => rgb.join(",");
 const isPureWhite = (rgb: readonly number[]) => rgb.every((channel) => channel === 255);
@@ -28,8 +28,8 @@ const isPureWhite = (rgb: readonly number[]) => rgb.every((channel) => channel =
 describe("the Editorial palette", () => {
   const allowed = new Set(Object.values(palette).map((h) => key(toRgb(h))));
 
-  it("matches the refined paper, ink and blue Figma direction", () => {
-    expect(Object.values(palette).map((h) => h.toUpperCase())).toEqual(["#F7F4EE", "#F3EFE5", "#EEE9DD", "#123BFF", "#5A5A55", "#171714", "#5A5A55", "#74746E"]);
+  it("matches the refined paper, ink and blue Figma direction with a semantic error red", () => {
+    expect(Object.values(palette).map((h) => h.toUpperCase())).toEqual(["#F7F4EE", "#F3EFE5", "#EEE9DD", "#123BFF", "#5A5A55", "#171714", "#5A5A55", "#74746E", "#B3261E"]);
     expect(midnight.name).toBe("Editorial");
   });
 
@@ -43,8 +43,8 @@ describe("the Editorial palette", () => {
     }
   });
 
-  it("uses semantic state colors from the same accent system", () => {
-    expect([colors.success, colors.warning, colors.danger]).toEqual([palette.brass, palette.brass, palette.brass]);
+  it("keeps success and warning on accent while errors use semantic red", () => {
+    expect([colors.success, colors.warning, colors.danger]).toEqual([palette.brass, palette.brass, palette.danger]);
   });
 
   it("contains no pure white token", () => {
