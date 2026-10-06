@@ -1,4 +1,4 @@
-import { router, Stack } from "expo-router";
+import { router, Stack, type Href } from "expo-router";
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -44,7 +44,7 @@ export default function Settings() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.textSecondary} />}
       >
         <SettingsRow title="Edit profile" subtitle={user ? `${user.displayName} · @${user.handle}` : undefined} trailing="chevron.right" onPress={() => router.push("/edit-profile")} />
-        <SettingsRow title="Email" subtitle={user?.email} trailing="chevron.right" onPress={() => router.push("/settings/email")} />
+        <SettingsRow title="Email" subtitle={user?.email} trailing="chevron.right" onPress={() => router.push("/settings/email" as Href)} />
         <View style={styles.privacyNote}>
           <Text variant="footnote" color="textSecondary">Only you can see your passport.</Text>
           <Text variant="footnote" color="textSecondary">Nothing is shared, and there is no feed.</Text>
