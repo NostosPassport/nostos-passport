@@ -1,5 +1,5 @@
 /**
- * COPIED VERBATIM from backend/src/contracts/api.ts (this repo, commit a8fd412).
+ * COPIED VERBATIM from backend/src/contracts/api.ts (this repo, commit 1646b870).
  * Do not edit here: change the backend contract, then re-copy with `npm run sync:contracts`.
  */
 /**
@@ -58,16 +58,27 @@ export const PlaceRef = z.object({ id: z.string(), slug: z.string(), name: z.str
 
 export const SignupRequest = z
   .object({
-    email: z.string().trim().email().max(200),
-    password: z.string().min(10).max(200),
+    email: z.string().trim().toLowerCase().email().max(200),
+    password: z
+      .string()
+      .min(10, "Password must be at least 10 characters")
+      .max(200)
+      .refine((value) => /[A-Za-z]/.test(value) && /\d/.test(value), "Password must include at least one letter and one number"),
     displayName: z.string().trim().min(1).max(60),
-    handle: z.string().trim().toLowerCase().regex(/^[a-z0-9_]{3,24}$/),
+    handle: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(3, "Handle must be at least 3 characters")
+      .max(30, "Handle must be 30 characters or fewer")
+      .regex(/^[a-z0-9._]+$/, "Handle can use lowercase letters, numbers, periods and underscores"),
     acceptTerms: z.literal(true),
     /** YYYY-MM-DD. Checked once for 21+ (403 `underage` if not) and never stored. */
     birthdate: z.string().refine((v) => /^\d{4}-\d{2}-\d{2}$/.test(v), "Enter your birthdate as YYYY-MM-DD"),
   })
   .strict();
-export const LoginRequest = z.object({ email: z.string().trim().email().max(200), password: z.string().max(200) }).strict();
+/** Legacy field name `email` carries either an email address or handle. */
+export const LoginRequest = z.object({ email: z.string().trim().toLowerCase().min(3).max(200), password: z.string().max(200) }).strict();
 /** POST /api/auth/login and /api/auth/signup with header `X-Client: ios`. */
 export const TokenResponse = z.object({ token: z.string(), expiresAt: IsoDate, user: PublicUser }).strict();
 /** Same endpoints without X-Client (web): the session is set as an httpOnly cookie. */
@@ -410,7 +421,7 @@ export const AdminUserSearchResponse = z
   .strict();
 /** POST /api/admin/users/:handle/verification. The note is required and goes into the append-only log. */
 export const VerificationRequest = z.object({ verified: z.boolean(), note: z.string().trim().min(3).max(300) }).strict();
-export const VerificationResponse = z.object({ user: z.object({ handle: z.string(), verified: z.boolean(), verifiedAt: IsoDate.nullable() }).strict() }).strict();
+export const VerificationResponse = z.object({ user: z.object({ handle: z.string(), verified: z.boolean(), verifiedAt: IsoDate.nullable() }).strict();
 export const VerificationLogResponse = z
   .object({ events: z.array(z.object({ id: z.string(), handle: z.string(), action: z.enum(["GRANT", "REVOKE"]), note: z.string(), by: z.string(), at: IsoDate }).strict()) })
   .strict();
