@@ -1,10 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
+import { SIGN_IN_ART_URI } from "@/assets/sign-in-art";
 import { farewellNotice, useAuth } from "@/auth/auth-context";
 import { InlineError } from "@/components/ui/inline-error";
 import { haptics } from "@/lib/haptics";
@@ -49,14 +51,15 @@ export default function SignIn() {
         showsVerticalScrollIndicator={false}
       >
         <Pressable onPress={Keyboard.dismiss} accessible={false} style={styles.dismissArea}>
-          <Text style={styles.wordmark}>NOSTOS</Text>
-          <View style={styles.collagePlaceholder} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            <View style={styles.collageInk} />
-            <Text style={styles.collageGlyph}>N</Text>
-            <View style={styles.collageAccentA} />
-            <View style={styles.collageAccentB} />
-          </View>
-          <Text style={styles.headline}>Find your{`\n`}way back.</Text>
+          <Text style={styles.wordmark}>Nostos</Text>
+          <Image
+            source={{ uri: SIGN_IN_ART_URI }}
+            style={styles.collage}
+            contentFit="cover"
+            transition={0}
+            accessibilityLabel="Original Greek engraved-eye newspaper collage"
+          />
+          <Text style={styles.headline}>Your city,{`\n`}remembered.</Text>
         </Pressable>
         <View style={styles.form}>
           {farewell ? <Text style={styles.notice}>{farewell}</Text> : null}
@@ -116,18 +119,14 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { flexGrow: 1 },
   dismissArea: { flexShrink: 0 },
-  wordmark: { color: colors.accent, fontFamily: fonts.serifRegular, fontSize: 64, lineHeight: 68, letterSpacing: -2.5, paddingHorizontal: 24 },
-  collagePlaceholder: { height: 299, overflow: "hidden", backgroundColor: colors.elevated, position: "relative" },
-  collageInk: { position: "absolute", width: 270, height: 270, borderRadius: 135, backgroundColor: colors.textPrimary, opacity: 0.9, left: 58, top: 18 },
-  collageGlyph: { position: "absolute", color: colors.background, fontFamily: fonts.serifRegular, fontSize: 238, lineHeight: 250, left: 110, top: 12 },
-  collageAccentA: { position: "absolute", width: 176, height: 54, backgroundColor: colors.accent, left: -12, bottom: 22, transform: [{ rotate: "-8deg" }] },
-  collageAccentB: { position: "absolute", width: 156, height: 48, backgroundColor: colors.accent, right: -18, top: 46, transform: [{ rotate: "7deg" }] },
-  headline: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 62, lineHeight: 54, letterSpacing: -1.5, paddingHorizontal: 24, paddingTop: 12 },
+  wordmark: { color: colors.accent, fontFamily: fonts.serifRegular, fontSize: 72, lineHeight: 72, letterSpacing: -2.8, paddingHorizontal: 24, paddingBottom: 4 },
+  collage: { width: "100%", height: 299, backgroundColor: colors.elevated },
+  headline: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 67, lineHeight: 59, letterSpacing: -1.7, paddingHorizontal: 24, paddingTop: 12 },
   form: { paddingHorizontal: 24, paddingTop: 18, gap: 16 },
   notice: { color: colors.textSecondary, fontSize: 12, lineHeight: 16 },
   field: { gap: 4 },
   label: { color: colors.textPrimary, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.5 },
-  input: { height: 42, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, color: colors.textPrimary, fontSize: 14, paddingHorizontal: 10, paddingVertical: 0 },
+  input: { height: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, color: colors.textPrimary, fontSize: 14, paddingHorizontal: 10, paddingVertical: 0 },
   signIn: { height: 48, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent },
   signInText: { color: colors.onAccent, fontSize: 14, fontWeight: "500" },
   disabled: { opacity: 0.42 },
