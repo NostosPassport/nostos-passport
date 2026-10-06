@@ -44,6 +44,7 @@ function Composer() {
   const coords = useUserCoords();
   const nearby = useNearbyPlaces(coords);
   const [chosenId, setChosenId] = useState<string | null>(null);
+  const [choosingPlace, setChoosingPlace] = useState(false);
   const photoUris = usePhotoDraft();
   const [caption, setCaption] = useState("");
   const [song, setSong] = useState<Song | null>(null);
@@ -55,7 +56,8 @@ function Composer() {
   useConfirmDiscard(dirty);
 
   const places = orderPlaces(nearby.data?.places ?? []);
-  const place: Nearby | null = places.find((p) => p.id === chosenId) ?? autoPlace(places);
+  const selectedPlace = places.find((p) => p.id === chosenId) ?? null;
+  const place: Nearby | null = choosingPlace ? null : selectedPlace ?? autoPlace(places);
 
   useFocusEffect(
     useCallback(() => {
@@ -75,6 +77,7 @@ function Composer() {
       return api.upload(`/api/places/${encodeURIComponent(place.id)}/stamps`, CreateStampResponse, form, { onProgress: setProgress });
     },
     onSuccess: (res) => {
+      haptics.success();
       setDone(true);
       photoDraft.clear();
       landingDraft.set(res.stamp, res.progress);
@@ -95,7 +98,12 @@ function Composer() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 18 }]}>
-        <View style={styles.topbar}>
+        <View style={[styles.topbar, place && styles.topbarWithBack]}>
+          {place ? (
+            <Pressable onPress={() => setChoosingPlace(true)} accessibilityRole="button" accessibilityLabel="Back to places" style={styles.backTarget}>
+              <Icon name="chevron.left" color="textPrimary" size={22} />
+            </Pressable>
+          ) : null}
           <Pressable onPress={cancel} accessibilityRole="button" accessibilityLabel="Cancel" style={styles.cancelTarget}>
             <Kicker>CANCEL</Kicker>
           </Pressable>
@@ -162,11 +170,29 @@ function Composer() {
             ) : null}
             {readiness.hint && !stamp.isPending ? <Text variant="footnote" color="textTertiary">{readiness.hint}</Text> : null}
             {stamp.error ? <InlineError message={errorText(stamp.error, "Couldn't stamp that. Try again.")} onRetry={() => stamp.mutate()} retrying={stamp.isPending} /> : null}
-            <EditorialButton label={stamp.isPending ? `Stamping…${photoUris.length ? ` ${Math.round(progress * 100)}%` : ""}` : "Stamp this place"} disabled={!readiness.ready} onPress={() => stamp.mutate()} />
+            <EditorialButton
+              label={stamp.isPending ? `Stamping…${photoUris.length ? ` ${Math.round(progress * 100)}%` : ""}` : "Stamp this place"}
+              disabled={!readiness.ready}
+              onPress={() => {
+                haptics.select();
+                stamp.mutate();
+              }}
+            />
             <NativeText style={styles.confirmed}>Location confirmed · {place.neighborhood}, New York</NativeText>
           </>
         ) : (
-          <PlacePicker permission={permission} coordsReady={!!coords} nearbyPending={nearby.isPending} nearbyError={nearby.isError} retry={() => void nearby.refetch()} places={places} onChoose={setChosenId} />
+          <PlacePicker
+            permission={permission}
+            coordsReady={!!coords}
+            nearbyPending={nearby.isPending}
+            nearbyError={nearby.isError}
+            retry={() => void nearby.refetch()}
+            places={places}
+            onChoose={(id) => {
+              setChosenId(id);
+              setChoosingPlace(false);
+            }}
+          />
         )}
       </ScrollView>
     </View>
@@ -219,9 +245,11 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 24, paddingTop: 4, gap: 12 },
   topbar: { height: 44, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginHorizontal: -7 },
+  topbarWithBack: { justifyContent: "space-between" },
+  backTarget: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   hitTarget: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   cancelTarget: { minWidth: 64, height: 44, alignItems: "center", justifyContent: "center" },
-  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 68, lineHeight: 60, letterSpacing: -1.5, marginTop: 0 },
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 68, lineHeight: 68, letterSpacing: -1.5, marginTop: 0, paddingTop: 2 },
   placeKicker: { color: colors.accent, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.35, marginTop: 2 },
   photoStage: { height: 259, backgroundColor: colors.elevated, overflow: "hidden", position: "relative" },
   emptyPhoto: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
