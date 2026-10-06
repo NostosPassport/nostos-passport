@@ -13,10 +13,6 @@ import { prepareImage } from "@/features/photos/prepare";
 import { haptics } from "@/lib/haptics";
 import { colors, radius, screenPadding, size, space } from "@/theme";
 
-/**
- * The in-app camera for a stamp's photos, up to six. Photos are taken here and nowhere else: they are proof you were at the place.
- * Each shot goes straight into the stamp being made; Done goes back to it.
- */
 export default function StampCamera() {
   const [permission, request] = useCameraPermissions();
   const ref = useRef<CameraView>(null);
@@ -44,27 +40,19 @@ export default function StampCamera() {
   if (!permission) {
     return (
       <View style={styles.center} accessibilityRole="progressbar" accessibilityLabel="Opening the camera">
-        <Text variant="callout" color="textSecondary">
-          Opening the camera…
-        </Text>
+        <Text variant="callout" color="textSecondary">Opening the camera…</Text>
       </View>
     );
   }
   if (!permission.granted) {
     return (
       <View style={styles.center}>
-        <Icon name="camera.fill" color="dimBrass" size={size.iconLarge} />
-        <Text variant="title2" align="center">
-          Camera access
-        </Text>
+        <Icon name="camera.fill" color="textPrimary" size={size.iconLarge} />
+        <Text variant="title2" align="center">Camera access</Text>
         <Text variant="callout" color="textSecondary" align="center">
           Nostos takes your stamp photos here, inside the app, so they show where you really are.
         </Text>
-        <Button
-          title={permission.canAskAgain ? "Allow the camera" : "Open Settings"}
-          block={false}
-          onPress={() => (permission.canAskAgain ? void request() : void Linking.openSettings())}
-        />
+        <Button title={permission.canAskAgain ? "Allow the camera" : "Open Settings"} block={false} onPress={() => (permission.canAskAgain ? void request() : void Linking.openSettings())} />
         <Button title="Not now" variant="plain" block={false} onPress={() => router.back()} />
       </View>
     );
@@ -74,9 +62,7 @@ export default function StampCamera() {
     <View style={styles.root}>
       <CameraView ref={ref} style={styles.preview} facing="back" onCameraReady={() => setReady(true)} accessibilityLabel="Camera" />
       <View style={styles.top}>
-        <Text variant="typewriterSmall" color="brass" accessibilityLiveRegion="polite">
-          {photoCount(photos.length)}
-        </Text>
+        <Text variant="typewriterSmall" color="onAccent" accessibilityLiveRegion="polite">{photoCount(photos.length)}</Text>
       </View>
       <View style={styles.bottom}>
         {photos.length > 0 ? (
@@ -85,17 +71,13 @@ export default function StampCamera() {
               <View key={`${uri}-${i}`} style={styles.thumb}>
                 <Image source={{ uri }} style={styles.fill} contentFit="cover" accessibilityLabel={`Photo ${i + 1}`} />
                 <Pressable onPress={() => photoDraft.remove(i)} accessibilityRole="button" accessibilityLabel={`Remove photo ${i + 1}`} hitSlop={space.xs} style={styles.remove}>
-                  <Icon name="xmark" color="textPrimary" size={size.iconTiny} />
+                  <Icon name="xmark" color="onAccent" size={size.iconTiny} />
                 </Pressable>
               </View>
             ))}
           </ScrollView>
         ) : null}
-        {note ? (
-          <Text variant="footnote" color="textSecondary" align="center" accessibilityLiveRegion="polite">
-            {note}
-          </Text>
-        ) : null}
+        {note ? <Text variant="footnote" color="onAccent" align="center" accessibilityLiveRegion="polite">{note}</Text> : null}
         <View style={styles.controls}>
           <View style={styles.side} />
           <Pressable
@@ -109,7 +91,9 @@ export default function StampCamera() {
             <View style={styles.shutterInner} />
           </Pressable>
           <View style={styles.side}>
-            <Button title="Done" variant="plain" block={false} onPress={() => router.back()} />
+            <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Done" style={styles.done}>
+              <Text variant="callout" color="onAccent" weight="semibold">Done</Text>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -119,7 +103,7 @@ export default function StampCamera() {
 
 const THUMB = size.listRow;
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.black },
+  root: { flex: 1, backgroundColor: colors.textPrimary },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.md, padding: screenPadding, backgroundColor: colors.background },
   preview: { flex: 1 },
   fill: { width: "100%", height: "100%" },
@@ -130,7 +114,8 @@ const styles = StyleSheet.create({
   remove: { position: "absolute", top: space.xxs, right: space.xxs, width: size.iconSmall + space.xs, height: size.iconSmall + space.xs, borderRadius: radius.pill, backgroundColor: colors.scrim, alignItems: "center", justifyContent: "center" },
   controls: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: screenPadding },
   side: { width: 88, alignItems: "flex-end" },
-  shutter: { width: size.avatarLarge + space.xs, height: size.avatarLarge + space.xs, borderRadius: radius.pill, borderWidth: size.focusRingWidth, borderColor: colors.brass, alignItems: "center", justifyContent: "center" },
+  done: { minWidth: 64, minHeight: 44, alignItems: "flex-end", justifyContent: "center" },
+  shutter: { width: size.avatarLarge + space.xs, height: size.avatarLarge + space.xs, borderRadius: radius.pill, borderWidth: size.focusRingWidth, borderColor: colors.background, alignItems: "center", justifyContent: "center" },
   shutterOff: { opacity: 0.45 },
-  shutterInner: { width: size.avatarLarge - space.md, height: size.avatarLarge - space.md, borderRadius: radius.pill, backgroundColor: colors.brass },
+  shutterInner: { width: size.avatarLarge - space.md, height: size.avatarLarge - space.md, borderRadius: radius.pill, backgroundColor: colors.background },
 });
