@@ -44,6 +44,7 @@ export default function Settings() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.textSecondary} />}
       >
         <SettingsRow title="Edit profile" subtitle={user ? `${user.displayName} · @${user.handle}` : undefined} trailing="chevron.right" onPress={() => router.push("/edit-profile")} />
+        <SettingsRow title="Email" subtitle={user?.email} trailing="chevron.right" onPress={() => router.push("/settings/email")} />
         <View style={styles.privacyNote}>
           <Text variant="footnote" color="textSecondary">Only you can see your passport.</Text>
           <Text variant="footnote" color="textSecondary">Nothing is shared, and there is no feed.</Text>
