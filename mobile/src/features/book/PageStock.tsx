@@ -4,10 +4,6 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 import { bookStyle, colors } from "@/theme";
 
-/**
- * The paper of one page: near-black stock with a fine inset rule. `spine` is the side the page is bound on; that edge is
- * shaded dark, like the fold of an open book. The shading belongs to the page, so a page in the middle of a turn carries it.
- */
 export function PageStock({ width, height, spine, children }: { width: number; height: number; spine?: "left" | "right"; children?: ReactNode }) {
   const gutter = Math.round(width * bookStyle.gutterShare);
   return (
@@ -18,8 +14,8 @@ export function PageStock({ width, height, spine, children }: { width: number; h
         <Svg width={gutter} height={height} style={[styles.fold, spine === "left" ? { left: 0 } : { right: 0 }]} pointerEvents="none">
           <Defs>
             <LinearGradient id={`fold-${spine}`} x1={spine === "left" ? "0" : "1"} y1="0" x2={spine === "left" ? "1" : "0"} y2="0">
-              <Stop offset="0" stopColor={colors.shadow} stopOpacity={0.85} />
-              <Stop offset="1" stopColor={colors.shadow} stopOpacity={0} />
+              <Stop offset="0" stopColor={colors.bookFold} stopOpacity={1} />
+              <Stop offset="1" stopColor={colors.bookFold} stopOpacity={0} />
             </LinearGradient>
           </Defs>
           <Rect x={0} y={0} width={gutter} height={height} fill={`url(#fold-${spine})`} />
