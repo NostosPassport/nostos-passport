@@ -13,13 +13,19 @@ export const CURRENT_TERMS_VERSION = "2026-10-02";
 export const signupSchema = z
   .object({
     email: z.string().trim().toLowerCase().email().max(200),
-    password: z.string().min(10, "Password must be at least 10 characters").max(200),
+    password: z
+      .string()
+      .min(10, "Password must be at least 10 characters")
+      .max(200)
+      .refine((value) => /[A-Za-z]/.test(value) && /\d/.test(value), "Password must include at least one letter and one number"),
     displayName: z.string().trim().min(1).max(60),
     handle: z
       .string()
       .trim()
       .toLowerCase()
-      .regex(/^[a-z0-9_]{3,24}$/, "Handle: 3-24 letters, numbers, underscore"),
+      .min(3, "Handle must be at least 3 characters")
+      .max(30, "Handle must be 30 characters or fewer")
+      .regex(/^[a-z0-9._]+$/, "Handle can use lowercase letters, numbers, periods and underscores"),
     acceptTerms: z.literal(true, { errorMap: () => ({ message: "You need to accept the Terms and Privacy Policy" }) }),
     /** YYYY-MM-DD. Read once for the 21+ check and never stored. */
     birthdate: z.string().refine((v) => parseBirthdate(v) !== null, "Enter your birthdate as YYYY-MM-DD"),
