@@ -14,7 +14,6 @@ import { useFoilSweep } from "./use-foil-sweep";
 
 export type CoverCounts = { stamps: number; places: number; neighborhoods: number };
 
-/** Leather: pebbled grain from a small shader. The two colors come from the theme, so the grain is black and ink, nothing else. */
 const LEATHER = Skia.RuntimeEffect.Make(`
 uniform half4 dark;
 uniform half4 light;
@@ -30,10 +29,6 @@ half4 main(float2 xy) {
 const WORDMARK = "NOSTOS";
 const SUBTITLE = "PASSPORT";
 
-/**
- * The cover: black leather with brass foil. The wordmark and the emblem are one foil layer whose highlight sweeps with a
- * drag, with device tilt where the phone has it, and in a slow idle shimmer. Tapping opens the book.
- */
 export function Cover({ width, height, counts, onOpen, name, showCounts = true }: { width: number; height: number; counts: CoverCounts; onOpen?: () => void; name?: string; showCounts?: boolean }) {
   const { sweep, gesture } = useFoilSweep(width);
   const titleFont = useFont(CormorantGaramond_600SemiBold, Math.round(width * 0.135));
@@ -50,8 +45,8 @@ export function Cover({ width, height, counts, onOpen, name, showCounts = true }
   const emblemR = width * 0.25;
   const emblemY = height * 0.4;
   const inset = width * 0.05;
+  const coverRadius = width * 0.065;
 
-  // Wordmark letters, tracked.
   const letters = useMemo(() => {
     if (!titleFont) return null;
     const widths = WORDMARK.split("").map((ch) => titleFont.measureText(ch).width);
@@ -69,30 +64,26 @@ export function Cover({ width, height, counts, onOpen, name, showCounts = true }
   return (
     <View style={styles.wrap}>
       <GestureDetector gesture={gesture}>
-        <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={label} accessibilityHint="Opens the book" style={[{ width, height }, styles.book]}>
+        <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={label} accessibilityHint="Opens the book" style={[{ width, height, borderRadius: coverRadius }, styles.book]}>
           <Canvas style={{ width, height }}>
-            {/* Leather */}
-            <RoundedRect x={0} y={0} width={width} height={height} r={width * 0.045}>
-              {LEATHER ? <Shader source={LEATHER} uniforms={{ dark: Skia.Color(colors.black), light: Skia.Color(colors.inkRaised) }} /> : null}
+            <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
+              {LEATHER ? <Shader source={LEATHER} uniforms={{ dark: Skia.Color(colors.elevated), light: Skia.Color(colors.background) }} /> : null}
             </RoundedRect>
-            <RoundedRect x={0} y={0} width={width} height={height} r={width * 0.045}>
-              <LinearGradient start={vec(0, 0)} end={vec(width, height)} colors={[colors.leatherSheen, colors.transparent, colors.scrim]} />
+            <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
+              <LinearGradient start={vec(0, 0)} end={vec(width, height)} colors={[colors.leatherSheen, colors.transparent, colors.bookShade]} />
             </RoundedRect>
-            {/* Vignette */}
             <Fill>
-              <RadialGradient c={vec(cx, height * 0.45)} r={height * 0.8} colors={[colors.transparent, colors.scrim]} />
+              <RadialGradient c={vec(cx, height * 0.45)} r={height * 0.85} colors={[colors.transparent, colors.bookShade]} />
             </Fill>
-            {/* Inset brass border: a thick line and a hairline, like blind-stamped foil */}
-            <RoundedRect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} r={width * 0.03} style="stroke" strokeWidth={bookStyle.borderThick}>
+            <RoundedRect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} r={width * 0.038} style="stroke" strokeWidth={bookStyle.borderThick}>
               <LinearGradient start={start} end={end} colors={[colors.dimBrass, colors.brass, colors.foilHighlight, colors.brass, colors.dimBrass]} positions={[0, 0.3, 0.5, 0.7, 1]} />
             </RoundedRect>
-            <RoundedRect x={inset * 1.5} y={inset * 1.5} width={width - inset * 3} height={height - inset * 3} r={width * 0.022} style="stroke" strokeWidth={bookStyle.borderHair} color={colors.dimBrass} />
-            {/* Foil: emblem and wordmark share one moving highlight */}
+            <RoundedRect x={inset * 1.5} y={inset * 1.5} width={width - inset * 3} height={height - inset * 3} r={width * 0.03} style="stroke" strokeWidth={bookStyle.borderHair} color={colors.dimBrass} />
             <Group transform={[{ translateX: cx }, { translateY: emblemY }, { scale: emblemR }]}>
               {paths.rings.map((p, i) => (p ? <Path key={i} path={p} style="stroke" strokeWidth={i === 0 ? bookStyle.emblemRing : bookStyle.emblemInner}><FoilGradient start={start} end={end} width={width} /></Path> : null))}
               {paths.ticks ? <Path path={paths.ticks} style="stroke" strokeWidth={bookStyle.emblemTick}><FoilGradient start={start} end={end} width={width} /></Path> : null}
               {paths.star ? <Path path={paths.star} style="fill"><FoilGradient start={start} end={end} width={width} /></Path> : null}
-              {paths.door ? <Path path={paths.door} style="fill" color={colors.black} /> : null}
+              {paths.door ? <Path path={paths.door} style="fill" color={colors.background} /> : null}
             </Group>
             {titleFont && letters
               ? WORDMARK.split("").map((ch, i) => (
@@ -118,7 +109,6 @@ function FoilGradient({ start, end }: { start: ReturnType<typeof useDerivedValue
   return <LinearGradient start={start} end={end} colors={[colors.dimBrass, colors.brass, colors.foilHighlight, colors.brass, colors.dimBrass]} positions={[0, 0.3, 0.5, 0.7, 1]} />;
 }
 
-/** Three brass numbers under the book: Stamps, Places, Neighborhoods. */
 export function Counts({ counts }: { counts: CoverCounts }) {
   const items: [string, number][] = [["STAMPS", counts.stamps], ["PLACES", counts.places], ["NEIGHBORHOODS", counts.neighborhoods]];
   return (
@@ -139,7 +129,7 @@ export function Counts({ counts }: { counts: CoverCounts }) {
 
 const styles = StyleSheet.create({
   wrap: { alignItems: "center", gap: space.xl },
-  book: { borderRadius: space.md, ...shadows.book },
+  book: { ...shadows.book },
   counts: { flexDirection: "row", gap: space.xl },
   count: { alignItems: "center", gap: space.xxs },
 });
