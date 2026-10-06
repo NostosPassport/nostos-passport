@@ -19,8 +19,21 @@ let mockAttribution: { text: string } | null = null;
 
 jest.mock("expo-router", () => ({ router: { push: (...a: unknown[]) => mockPush(...a) } }));
 jest.mock("react-native-maps", () => {
+  const React = jest.requireActual("react");
   const { View: V, Pressable: P } = jest.requireActual("react-native");
-  const MapView = ({ children, onPress, ...rest }: { children?: ReactNode; onPress?: () => void }) => <V {...rest} testID="map">{children}<P testID="map-background" onPress={onPress} /></V>;
+  const MapView = React.forwardRef(function MockMapView(
+    { children, onPress, showsUserLocation, ...rest }: { children?: ReactNode; onPress?: () => void; showsUserLocation?: boolean },
+    ref: unknown,
+  ) {
+    React.useImperativeHandle(ref, () => ({ animateToRegion: jest.fn() }));
+    return (
+      <V {...rest} testID="map">
+        {children}
+        {showsUserLocation ? <V accessibilityLabel="You are here" /> : null}
+        <P testID="map-background" onPress={onPress} />
+      </V>
+    );
+  });
   const Marker = ({ children, onPress, accessibilityLabel }: { children?: ReactNode; onPress?: () => void; accessibilityLabel?: string }) => (
     <P onPress={onPress} accessibilityLabel={accessibilityLabel} accessibilityRole="button">{children}</P>
   );
@@ -52,7 +65,7 @@ describe("map model", () => {
     const stats = statsByPlace([mineRow(near[9]!)]);
     const out = visiblePlaces([...near, far], region, stats, null);
     expect(out.map((p) => p.id)).not.toContain("far");
-    expect(out[0]!.id).toBe("n9"); // lit first
+    expect(out[0]!.id).toBe("n9");
     expect(visiblePlaces([...near, far], region, stats, "far")[0]!.id).toBe("far");
     expect(visiblePlaces(near, region, stats, null, 4)).toHaveLength(4);
     expect(visiblePlaces([], region, stats, null)).toEqual([]);
