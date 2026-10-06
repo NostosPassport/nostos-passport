@@ -1,6 +1,6 @@
 import { CormorantGaramond_600SemiBold } from "@expo-google-fonts/cormorant-garamond";
 import { CourierPrime_400Regular } from "@expo-google-fonts/courier-prime";
-import { Canvas, Fill, Group, LinearGradient, Path, RadialGradient, RoundedRect, Shader, Skia, Text as SkiaText, useFont, vec } from "@shopify/react-native-skia";
+import { Canvas, Group, LinearGradient, Path, RadialGradient, RoundedRect, Shader, Skia, Text as SkiaText, useFont, vec } from "@shopify/react-native-skia";
 import { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
@@ -72,9 +72,9 @@ export function Cover({ width, height, counts, onOpen, name, showCounts = true }
             <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
               <LinearGradient start={vec(0, 0)} end={vec(width, height)} colors={[colors.leatherSheen, colors.transparent, colors.bookShade]} />
             </RoundedRect>
-            <Fill>
+            <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
               <RadialGradient c={vec(cx, height * 0.45)} r={height * 0.85} colors={[colors.transparent, colors.bookShade]} />
-            </Fill>
+            </RoundedRect>
             <RoundedRect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} r={width * 0.038} style="stroke" strokeWidth={bookStyle.borderThick}>
               <LinearGradient start={start} end={end} colors={[colors.dimBrass, colors.brass, colors.foilHighlight, colors.brass, colors.dimBrass]} positions={[0, 0.3, 0.5, 0.7, 1]} />
             </RoundedRect>
