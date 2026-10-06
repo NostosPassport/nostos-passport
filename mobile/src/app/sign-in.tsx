@@ -9,7 +9,8 @@ import { farewellNotice, useAuth } from "@/auth/auth-context";
 import { InlineError } from "@/components/ui/inline-error";
 import { haptics } from "@/lib/haptics";
 import { colors, fonts } from "@/theme";
-import { SIGN_IN_ART_URI } from "../assets/sign-in-art";
+
+const SIGN_IN_ART = require("../../assets/images/nostos_art1.png");
 
 export default function SignIn() {
   const { signIn } = useAuth();
@@ -45,7 +46,7 @@ export default function SignIn() {
         <Pressable onPress={Keyboard.dismiss} accessible={false} style={styles.dismissArea}>
           <Text style={styles.wordmark}>NOSTOS</Text>
           <Image
-            source={{ uri: SIGN_IN_ART_URI }}
+            source={SIGN_IN_ART}
             style={styles.collage}
             resizeMode="cover"
             accessibilityLabel="Original Greek engraved-eye newspaper collage"
