@@ -13,7 +13,6 @@ const MAX_ATTEMPTS = 5;
 const RETENTION_MS = 24 * 60 * 60_000;
 const EXPIRY_MINUTES = CODE_TTL_MS / 60_000;
 const DEFAULT_OTP_TEMPLATE_ID = "email-otp";
-const OTP_SUBJECT = "Your Nostos verification code";
 
 function codeSecret(): string {
   const configured = process.env.AUTH_CODE_SECRET?.trim();
@@ -39,6 +38,10 @@ function firstName(displayName?: string): string {
 
 function localMessage(code: string): string {
   return `Your Nostos verification code is ${code}. It expires in ${EXPIRY_MINUTES} minutes.`;
+}
+
+function otpSubject(code: string): string {
+  return `${code} is your Nostos verification code`;
 }
 
 function resendApiKey(): string | null {
@@ -85,7 +88,7 @@ async function deliverOtpTemplate(to: string, code: string, displayName: string 
     {
       from: sender(),
       to: [to],
-      subject: OTP_SUBJECT,
+      subject: otpSubject(code),
       template: {
         id: templateId,
         variables: {
