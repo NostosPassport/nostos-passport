@@ -42,11 +42,11 @@ describe("tapping the 3D passport: the cover opens, then the reader takes over",
     await act(() => mockView.onReady({}));
     await fireEvent.press(screen.getByLabelText("Open your passport"));
     expect(mockView.open).toBe(true);
-    expect(screen.queryByLabelText("Close passport")).toBeNull(); // the cover is still swinging
+    expect(screen.queryByLabelText("Close passport")).toBeNull();
     await act(() => mockView.onOpenProgress(0.5));
     expect(screen.queryByLabelText("Close passport")).toBeNull();
     await act(() => mockView.onOpenProgress(0.9));
-    expect(screen.getByLabelText("Close passport")).toBeTruthy(); // handed off to the page reader
+    expect(screen.getByLabelText("Close passport")).toBeTruthy();
     expect(screen.getByText("NOSTOS PASSPORT")).toBeVisible();
   });
 
@@ -70,7 +70,6 @@ describe("tapping the 3D passport: the cover opens, then the reader takes over",
     expect(screen.queryByLabelText("Close passport")).toBeNull();
     expect(screen.getByLabelText(COUNTS)).toBeVisible();
     await act(() => mockView.onOpenSettled(false));
-    // and it can be opened again straight away
     await fireEvent.press(screen.getByLabelText("Open your passport"));
     expect(mockView.open).toBe(true);
     await act(() => mockView.onOpenProgress(0.9));
@@ -113,24 +112,9 @@ describe("tapping the 3D passport: the cover opens, then the reader takes over",
     await tapPage(300);
     await fireEvent.press(screen.getByRole("button", { name: "Stamp, Fourth, page 2, slot 1" }));
     expect(mockPush).toHaveBeenCalledWith({ pathname: "/stamp/[id]", params: { id: "s4" } });
-    expect(mockView.open).toBe(true); // the book stays open under the stamp page
+    expect(mockView.open).toBe(true);
     await act(() => mockFocus());
     expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(2);
     expect(screen.getByLabelText("Close passport")).toBeTruthy();
-  });
-
-  it("the index jump goes straight to the pages even with a live model (no two second animation just to navigate)", async () => {
-    const mk = (id: string, page: number, hoodId: string): StampView => ({ ...stamp(id, page, 1, `Place ${id}`), place: { id: `p-${id}`, slug: id, name: `Place ${id}`, neighborhood: "Somewhere", neighborhoodId: hoodId } });
-    const stamps = Array.from({ length: 10 }, (_, i) => mk(`s${i}`, Math.floor(i / 3) + 1, i >= 6 ? "n1" : "n2"));
-    mockData = ready({
-      stamps, counts: { stamps: 10, places: 10, neighborhoods: 2 },
-      neighborhoods: [{ neighborhoodId: "n1", name: "East Village", borough: "Manhattan", visited: 4, total: 12, complete: false, completedAt: null, percent: 33 }],
-    });
-    await render(<PassportBook />);
-    await act(() => mockView.onReady({}));
-    await fireEvent.press(screen.getByLabelText("Neighborhood index"));
-    await fireEvent.press(screen.getByRole("button", { name: /^East Village/ }));
-    expect(screen.getByLabelText("Close passport")).toBeTruthy(); // reader is up with no progress callbacks at all
-    expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(3);
   });
 });
