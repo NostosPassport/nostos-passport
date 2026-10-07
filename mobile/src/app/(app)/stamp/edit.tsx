@@ -74,7 +74,15 @@ function EditForm({ stamp }: { stamp: StampView }) {
         }}
       />
       <FieldGroup footer={`${caption.length}/${CAPTION_MAX}`} errors={[empty ? "Add a caption or a song, since this stamp has no photo." : null]}>
-        <Field label="Caption" value={caption} onChangeText={setCaption} maxLength={CAPTION_MAX} placeholder="What's it like?" multiline />
+        <Field
+          label="Caption"
+          value={caption}
+          onChangeText={setCaption}
+          maxLength={CAPTION_MAX}
+          placeholder="What's it like?"
+          multiline
+          inputAccessoryViewButtonLabel="Done"
+        />
       </FieldGroup>
       {song ? (
         <SongRow
