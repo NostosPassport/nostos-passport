@@ -13,6 +13,7 @@ const MAX_ATTEMPTS = 5;
 const RETENTION_MS = 24 * 60 * 60_000;
 const EXPIRY_MINUTES = CODE_TTL_MS / 60_000;
 const DEFAULT_OTP_TEMPLATE_ID = "email-otp";
+const OTP_SUBJECT = "Your Nostos verification code";
 
 function codeSecret(): string {
   const configured = process.env.AUTH_CODE_SECRET?.trim();
@@ -84,6 +85,7 @@ async function deliverOtpTemplate(to: string, code: string, displayName: string 
     {
       from: sender(),
       to: [to],
+      subject: OTP_SUBJECT,
       template: {
         id: templateId,
         variables: {
