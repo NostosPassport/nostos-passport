@@ -1,16 +1,16 @@
 NOSTOS BACKEND - REVIEW BUNDLE
-Generated: 2026-10-02T19:14:48.821044+00:00
-HEAD: 42a6c0d
+Checks reused from saved session logs; no checks rerun during packaging.
+Generated 2026-10-06T20:13:44.764Z
+HEAD: 5485fb4
 Branch: build-codex
 Snapshot: UNCOMMITTED WORKING TREE (HEAD is the base commit)
-Verification: single full gate recorded below; checks were not rerun for packaging.
 
 Contents:
   - TEST SUMMARY
   - REVIEW.md
   - DECISIONS.md
   - ../OPEN-QUESTIONS.md
-  - ../reviews/2026-10-02T191304Z-codex-3.md
+  - ../reviews/2026-10-06-passport-focus-codex.md
   - API.md
   - DEPLOY.md
   - src/contracts/api.ts
@@ -56,6 +56,7 @@ Contents:
   - src/app/api/me/avatar/route.ts
   - src/app/api/me/blocks/route.ts
   - src/app/api/me/delete/route.ts
+  - src/app/api/me/email/route.ts
   - src/app/api/me/follow-requests/[handle]/route.ts
   - src/app/api/me/follow-requests/approve-all/route.ts
   - src/app/api/me/follow-requests/route.ts
@@ -104,6 +105,7 @@ Contents:
   - src/server/services/admin.ts
   - src/server/services/auth.ts
   - src/server/services/blocks.ts
+  - src/server/services/email.ts
   - src/server/services/geofence.ts
   - src/server/services/image.ts
   - src/server/services/likes.ts
@@ -177,42 +179,57 @@ Contents:
   - tests/unit/privacy.test.ts
   - tests/unit/storage.test.ts
   - tests/unit/time.test.ts
-  - ../HANDOFF.md
-  - ../mobile/BOOK-PAGES-PHONE-CHECKLIST.md
 
 
 ====================================================================================================
 == TEST SUMMARY
 ====================================================================================================
 
-$ scripts/gate.sh
-== gate: disk (5 GB free)
-== gate: repo hygiene
-== gate: backend typecheck
-$ tsc --noEmit
-== gate: backend lint
-$ eslint .
-== gate: backend test (single process)
- ✓ |unit| tests/unit/personal-staff-pages.test.ts (2 tests) 1ms
- ✓ |unit| tests/unit/time.test.ts (5 tests) 1ms
+$ pnpm typecheck
+tsc --noEmit: no errors
 
- Test Files  34 passed (34)
-      Tests  292 passed (292)
-   Start at  15:11:59
-   Duration  56.86s (transform 421ms, setup 307ms, collect 3.22s, tests 47.73s, environment 2ms, prepare 1.04s)
+$ pnpm lint
+eslint: no problems
 
-== gate: mobile check
-PASS iOS eslint-rules/__tests__/rules.test.js (6.812 s)
+$ pnpm vitest run --reporter=verbose
+ FAIL  |integration| tests/integration/token-auth.test.ts > token hardening > logout: 401 for a dead bearer; cookie logout revokes the cookie session
+ Test Files  8 failed | 26 passed (34)
+      Tests  30 failed | 262 passed (292)
+   Duration  53.65s (transform 393ms, setup 307ms, collect 3.33s, tests 43.62s, environment 2ms, prepare 1.04s)
+GATE FAIL: backend tests
 
-Test Suites: 51 passed, 51 total
-Tests:       413 passed, 413 total
-Snapshots:   0 total
-Time:        7.308 s, estimated 9 s
-== gate: contract sync
-== gate: invariants suite
-== gate: dependency ledger
-dependency ledger ok (69 lines)
-GATE OK: backend 292 tests, mobile 413 tests
+Git history:
+8066cb5 Allow login by email or username
+cb2d893 Update legal policy date
+afcbda3 Align terms with private MVP scope
+4190661 Align privacy policy with private MVP scope
+7cb4b12 Expose authenticated email change endpoint
+784049e Add authenticated email change service
+0af0d36 Move public web pages to the editorial theme
+ececfa9 Enforce stronger signup credentials
+4251da3 Integrate mobile passport app and backend fixes
+42a6c0d phase 7: document Codex lane fixes and review evidence
+74ea16e phase 6: reject whitespace-only live song content
+e639860 phase G.1, G.2, H.1: DESIGN.md written in full with Swappable screens, DEVICE-CHECKLIST lists every effect, DECISIONS and both REVIEW.md updated
+4af3053 phase 5: close remaining backend visibility and content races
+973a714 phase F.12: place page, settings, welcome, under-21, first run, brand mark and web theme restyled; edit profile reachable from settings
+fb3bd16 phase 4: prevent empty live stamps atomically
+2723315 phase 3: enforce creation-only stamp photos
+a8fd412 phase 2: conceal foreign stamp mutation ids
+4d5424d phase 1: close personal-mode moderation leaks
+04c2247 phase 0: isolate Codex backend lane
+4806e72 phase F.5: page flip (finger drag from the edge, tap, live shading, springs, crossfade for Reduce Motion) and the passport book wired into the Passport tab
+789725c phase D: collections (NYC neighborhoods, progress, completion marker, broader importer)
+33bc4dd phase D: place pages (own stamps by night, inside-geofence flag)
+e4d6039 phase D: pinned stamps (up to 4, owner only)
+70fecc8 phase D: oldest-first passport, page and slot from one shared layout function
+3d9a5b6 phase D: multi-photo stamps (up to 6, layout, strip, hidden never deleted)
+54d3fff phase C: SOCIAL_ENABLED flag (default off), personal mode tests, rule 11
+7f9ecb5 phase 6: seed, device checklist, docs, review, bundles
+1d32d68 phase 4: age gate, report categories, error reporting flag, dependency cleanup
+a8ec112 strip + phases 1-3: stamps, privacy foundation, mobile passport
+af27e4e infrastructure: prompt, CLAUDE.md, ENGINE.md, DESIGN.md, gate, ledgers, invariants, bundles
+0c04bc2 baseline: fork of Last Call social layer, renamed to Nostos
 
 
 ====================================================================================================
@@ -447,72 +464,40 @@ blocked. Legal questions are never decided by the builder.
 
 
 ====================================================================================================
-== ../reviews/2026-10-02T191304Z-codex-3.md
+== ../reviews/2026-10-06-passport-focus-codex.md
 ====================================================================================================
 
-# Review: FlipBook terminal faces
+# Codex passport focus session — 2026-10-06
 
-Commit state: uncommitted `build-codex` working tree in `/Users/charlesjinn/nostos-codex`. HEAD remains `42a6c0da577d0a95072ba00617208bfd0c1e338d`; pending incoming merge is `e639860138f2059ff26906145606074f02e14b3f`. No new commit was made.
+Status: MOBILE CHECK PASS; FULL GATE FAIL; physical-iPhone verification pending. Working tree remains uncommitted on build-codex, base HEAD 5485fb4fa0a687ad30a300d8c998d720cf3a333b. Nothing pushed. No contract, database schema or migration change.
 
-## Gate output (last 15 lines)
+## Implementation and evidence
 
-```text
-   Start at  15:11:59
-   Duration  56.86s (transform 421ms, setup 307ms, collect 3.22s, tests 47.73s, environment 2ms, prepare 1.04s)
-
-== gate: mobile check
-PASS iOS eslint-rules/__tests__/rules.test.js (6.812 s)
-
-Test Suites: 51 passed, 51 total
-Tests:       413 passed, 413 total
-Snapshots:   0 total
-Time:        7.308 s, estimated 9 s
-== gate: contract sync
-== gate: invariants suite
-== gate: dependency ledger
-dependency ledger ok (69 lines)
-GATE OK: backend 292 tests, mobile 413 tests
-```
-
-PASS: backend 292 tests (34 files), mobile 413 tests (51 suites), contract sync, required invariants and dependency ledger. Exactly one full gate was run for this fix.
-
-## Done
-
-- Final right face restored at `mobile/src/features/book/FlipBook.tsx:116`: on the last spread, the underlying right face now comes from the current spread rather than an out-of-range next spread. The final turning-page exclusion remains correct: there is no following spread to turn into.
-- Initial inside-cover face restored at `mobile/src/features/book/FlipBook.tsx:115`: on spread zero, the underlying left face comes from the current spread rather than an out-of-range previous spread. Interior spreads retain their adjacent underlay faces and turning sheets.
-- Boundary regression tests at `mobile/src/features/book/__tests__/flipbook.test.tsx:32` and `:40`: **"renders both first-spread faces with Reduce Motion=%s"** and **"renders both final-spread faces with Reduce Motion=%s"** each run with Reduce Motion false and true. Assertions check both visible faces and no faces beyond the final spread.
-- The previous test that blessed the missing inside cover was corrected at `mobile/src/features/book/__tests__/flipbook.test.tsx:23`, **"draws the page it is on, the page under each turn, and nothing past either end of the book"**. It now requires the inside cover to be visible.
-- Four-stamp screen regression at `mobile/src/features/book/__tests__/passport-book.test.tsx:66`: **"four stamps: page 2 appears on the final spread and opens its stamp with Reduce Motion=%s"**, run with Reduce Motion false and true. It opens the actual PassportBook, checks inside cover/bearer, advances to the final spread, requires visible pages 1 and 2 and the fourth stamp, taps that stamp, and asserts navigation to `/stamp/s4`. Next remains disabled at the last spread.
+- The main Passport screen mounts the real GLB renderer at mobile/src/features/book/PassportBook.tsx:70, not PNG or RN-transform pseudo-3D. Existing historical loader restored selectively from 65db04f; WebGL compatibility helpers from 0658ce8. No branch checkout or old UI merge. Model SHA256 0187c7bdb8db1ef3a0cfb09f011de6325262257edffb377eb4e6145817607d56; GLB contains 1 nodes and 0 animations. Source Blender file unchanged. Evidence: mobile/src/features/lab3d/__tests__/load-model.test.ts (real-file model parse/triangle/material/texture assertions); native GPU appearance remains unverified.
+- Full-screen Modal removes surrounding tab/header/count chrome and has a safe-area Close button at mobile/src/features/book/PassportBook.tsx:74; target uses size.hitTarget (44) at :84. Test: passport-book.test.tsx, “main model opens a full-screen modal; Close has a 44pt target and restores main counts”.
+- Close retains the last committed spread and returning from stamp detail restores focus via useFocusEffect at PassportBook.tsx:43 and openStamp at :57. Test: “four stamps: both boundary faces and final right stamp work with Reduce Motion=false/true” checks page 2 stamp opening, detail return, Close/reopen and backward navigation. Reduce Motion is injected through the mocked hook rather than relying on a late spy; Dimensions.set sets a 390x844 phone.
+- Whole blank right/left page taps advance/back one spread at FlipBook.tsx:102 and focus-interaction.ts:4; clamped bounds, busy flag, stamp hit-box exclusion. Tests: focus-interaction.test.ts, “right/left page taps move exactly one spread and hold at both boundaries”, “blocks animation taps, off-page taps, and stamp targets”; flipbook.test.tsx focused-page and overlapping-animation tests. Existing first and last face regression retained. Gesture precedence against native Pressable requires physical-device confirmation.
+- Drag/tap separation records maximum travel and cancellation at lab-loop.ts:55–74; pure test “distinguishes a tap from rotation, including a drag that returns to its starting point” verifies predicate. Full native PanResponder and GL lifecycle are not claimed proven by that pure test. Stage stale-attach guard/disposal implemented at lab-loop.ts:88–113.
+- Reading size fits two pages in safe-area space at PassportBook.tsx:51 and focus-interaction.ts:12. Test “maximizes a two-page book within narrow, tall and landscape safe areas”. No permanent Previous/Index/Next pager in focus. Existing neighborhood index retained on the main screen at PassportBook.tsx:63/:72; index.test.tsx “opens from the book, jumps to a neighborhood's first page, and the book is on that spread” updated to the main index entry and asserts actual pages 3/4. FirstRunHint preserved; all existing first-run tests pass.
+- expo-gl ~57.0.2, expo-asset ~57.0.19, expo-file-system ~57.0.7, three 0.186.1 and @types/three 0.186.0 restored; Metro accepts GLB. Current palette tokens provide scene lighting without editing GLB material data. SDK-matched Expo GL is intended for Expo Go; actual iPhone runtime remains unchecked.
 
 ## Actual checks
 
-- Red phase: focused FlipBook and PassportBook suites reproduced the defect, **7 failed / 13 passed** across two suites. The corrected old expectation plus the six new parameterized cases failed before the production fix.
-- Green phase: `npm test -- --runInBand src/features/book/__tests__/flipbook.test.tsx src/features/book/__tests__/passport-book.test.tsx src/features/book/__tests__/flip-math.test.ts src/features/book/__tests__/pages.test.tsx`, **44 passed / 4 suites**.
-- One full gate passed after the combined fix, with its actual output above. Bundle snapshots reuse that recorded check output rather than rerunning tests during packaging.
-- Canonical code, tests and documentation remain uncommitted. The delivery folder contains the handoff, this report, both refreshed review bundles and a short real-phone checklist.
+- Final `cd mobile && npm run check`: exit 0; TypeScript clean; lint clean; 62 suites / 468 tests passed. Saved MOBILE-CHECK-OUTPUT.txt. Initial failures and focused runs preserved in the delivery logs; no assertions removed to hide failures. Incorrect initial screen spy was replaced with actual Dimensions.set.
+- One `scripts/gate.sh`: disk/hygiene/backend typecheck/backend lint passed; backend tests failed, 8 files failed / 26 passed, 30 tests failed / 262 passed. Failure reproduced the existing signup password-policy fixture incompatibility in token-auth and other integration files; no backend source changed in this task. Gate failed before mobile, contract-sync, invariant and dependency stages; those skipped gate stages must not be described as gate passes. Final mobile check separately includes contracts-sync and worklet-transform test suites. Dependency ledger separately passed.
+- Gate lock was absent before starting. Gate owned and released its lock normally. No lock deleted or bypassed. Database tests serialized; backend environment points to 5438. No other lane's database touched.
+- Existing full Nostos Expo process was verified as this workspace’s `expo start --go --lan --clear --port 8081`, then restarted after dependency installation. Backend process on 3001 retained, data preserved. `http://10.19.108.26:3001/api/health` HTTP 200, {ok:true,db:"up",env:"development"}. This checks LAN-interface reachability from the Mac, not a physical phone/firewall crossing.
+- Fresh Expo iOS manifest: SDK 57.0.0; launch asset built over LAN with HTTP 200, 17,729,544 bytes, SHA256 7af15ba7104caa0c9638f3e0727a588cf8466cb93a338d277083bd46140b5e4a. Bundle includes Passport3DView and Neighborhood index from the full app. Metro reports 2926 modules. No separate demo app.
+- QR PNG decoded independently with macOS Vision: exp://10.19.108.26:8081. Backend explicitly injected as EXPO_PUBLIC_API_URL=http://10.19.108.26:3001. Phone and Mac must use the same Wi-Fi; allow Expo Go Local Network access. No phone scan or device render claimed.
+- Both review bundles regenerated from current files with the saved check results injected into the existing generators. Packaging did not rerun checks or backend tests. Full gate failed output explicitly retained; bundle backend test output is the available gate tail, not a fabricated full verbose pass.
 
-## Claims not proven
+## Found but not fixed / remaining gaps
 
-- No physical iPhone or Expo Go run. Component visibility, navigation and Reduce Motion branches are covered under the existing React Native/Reanimated test mocks; native hit testing, actual page motion and rendering still require the phone checklist.
-- No new production build or iOS export was run for this fix. Earlier session packaging results are historical, not proof of this changed FlipBook on a device.
-
-## Decisions
-
-Keep the existing turn model. At the first/last book boundary, render the current outer face underneath because no turning sheet supplies it. Avoid adding a nonexistent terminal turn or duplicating interior faces.
-
-No contract, dependency, database schema or migration change. Database test configuration remains compose nostos-codex, Postgres 5438, nostos_codex/nostos_codex_test. No other checkout/database, archive, push, commit or branch checkout was touched. Existing gate locks are allowed to clear naturally; none is removed or bypassed.
-
-## Open questions / gaps
-
-Physical phone results remain unverified. The short checklist is `mobile/BOOK-PAGES-PHONE-CHECKLIST.md`; broader native/visual gaps and existing legal questions remain unchanged. No unrelated audit or speculative investigation was started.
-
-## Next task
-
-Run the real-phone checklist and review this uncommitted snapshot. Commit only after explicit user authorization.
-
-## Review bundle packaging
-
-Both bundles were regenerated from the current working-tree files using their existing indexed file lists, with this latest report and the short phone checklist included. The recorded single-gate output supplies verification; packaging does not run the generators' embedded test commands again. Bundle headers identify the uncommitted snapshot.
+- Actual Blender-driven opening/page turning is blocked by the existing GLB being a static closed mesh without rig/animations/page faces. The focused reader uses the existing RN/Reanimated/Skia page renderer. It is not the 3D Blender interior. To complete that requirement, provide/export a rigged openable asset with separately addressable page surfaces, or explicitly accept this hybrid. No new modeling or recoloring performed.
+- Physical iPhone camera, capture/create, stamp selection against native gesture handlers, mid-turn Close, all boundary faces, Reduce Motion, GPU rendering/frame performance and actual phone-to-backend access remain unchecked. Follow REAL-PHONE-CHECKLIST.md.
+- Full gate's 30 backend failures remain outside this passport task; investigation/fixes were not expanded here.
+- Existing historical render-loop frame rendering is not protected by the same attach try/catch; native GPU errors after attach remain unverified. No speculative runtime repair introduced.
+- Working-tree changes are uncommitted. No implementation commit created; no contract-changing commit, no sync required in this session. No push or organization settings change.
 
 
 ====================================================================================================
@@ -1714,7 +1699,6 @@ export type ModQueueResponse = z.infer<typeof ModQueueResponse>;
 ====================================================================================================
 
 import { useQueryClient } from "@tanstack/react-query";
-import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { api } from "@/api";
@@ -1722,55 +1706,40 @@ import { qk } from "@/api/keys";
 import type { TokenResponse } from "@/api/contracts";
 import { tokenStore } from "./token-store";
 
-/**
- * - signedOut: first launch or after sign-out; shows the welcome screen.
- * - guest: browsing the public map without an account (Guideline 5.1.1(v)); posting asks to sign in.
- * - signedIn: has a token.
- */
-export type AuthStatus = "loading" | "signedOut" | "guest" | "signedIn";
+export type AuthStatus = "loading" | "signedOut" | "signedIn";
 
 type AuthContextValue = {
   status: AuthStatus;
   signIn: (res: TokenResponse) => Promise<void>;
-  /** Forget the token locally at once, then revoke it on the server (best effort). */
   signOut: () => Promise<void>;
-  /** Forget the token without calling the server (after account deletion). */
   forget: () => Promise<void>;
-  browseAsGuest: () => void;
 };
 
-const GUEST_KEY = "nostos.guest";
-
-// A one-time message for the welcome screen after the account is deleted.
 let farewell: string | null = null;
 export const farewellNotice = {
   set: (m: string) => {
     farewell = m;
   },
-  /** Read once; later reads return null. */
   take: (): string | null => {
     const m = farewell;
     farewell = null;
     return m;
   },
 };
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [hasToken, setHasToken] = useState<boolean | null>(null);
-  const [guest, setGuest] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    void Promise.all([tokenStore.load(), SecureStore.getItemAsync(GUEST_KEY).catch(() => null)]).then(([token, g]) => {
-      if (!alive) return;
-      setGuest(g === "1");
-      setHasToken(!!token);
+    void tokenStore.load().then((token) => {
+      if (alive) setHasToken(!!token);
     });
     const unsubscribe = tokenStore.subscribe((token) => {
       setHasToken(!!token);
-      // Never show one account's cached data to the next.
       if (!token) queryClient.clear();
     });
     return () => {
@@ -1781,8 +1750,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (res: TokenResponse) => {
-      // Load the account first, so the app stays mounted
-      // instead of passing through the account gate. If it fails, the gate handles it.
       const me = await api.me.get(res.token).catch(() => null);
       queryClient.clear();
       if (me) queryClient.setQueryData(qk.me, me);
@@ -1791,29 +1758,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [queryClient],
   );
 
-  const endGuest = useCallback(() => {
-    setGuest(false);
-    void SecureStore.deleteItemAsync(GUEST_KEY).catch(() => undefined);
-  }, []);
-
   const forget = useCallback(async () => {
-    endGuest();
     await tokenStore.clear();
-  }, [endGuest]);
+  }, []);
 
   const signOut = useCallback(async () => {
-    endGuest();
     const previous = await tokenStore.clear();
     if (previous) void api.auth.logout(previous).catch(() => undefined);
-  }, [endGuest]);
-
-  const browseAsGuest = useCallback(() => {
-    setGuest(true);
-    void SecureStore.setItemAsync(GUEST_KEY, "1").catch(() => undefined);
   }, []);
 
-  const status: AuthStatus = hasToken === null ? "loading" : hasToken ? "signedIn" : guest ? "guest" : "signedOut";
-  const value = useMemo(() => ({ status, signIn, signOut, forget, browseAsGuest }), [status, signIn, signOut, forget, browseAsGuest]);
+  const status: AuthStatus = hasToken === null ? "loading" : hasToken ? "signedIn" : "signedOut";
+  const value = useMemo(() => ({ status, signIn, signOut, forget }), [status, signIn, signOut, forget]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
@@ -4069,6 +4024,17 @@ export const POST = route(async (req) => {
 
 
 ====================================================================================================
+== src/app/api/me/email/route.ts
+====================================================================================================
+
+import { prisma } from "@/lib/db";
+import { getActor, ok, readJson, route } from "@/server/http";
+import { changeEmail } from "@/server/services/email";
+
+export const PATCH = route(async (req) => ok(await changeEmail(prisma, await getActor(req), await readJson(req))));
+
+
+====================================================================================================
 == src/app/api/me/follow-requests/[handle]/route.ts
 ====================================================================================================
 
@@ -5384,32 +5350,35 @@ export const CURRENT_TERMS_VERSION = "2026-10-02";
 export const signupSchema = z
   .object({
     email: z.string().trim().toLowerCase().email().max(200),
-    password: z.string().min(10, "Password must be at least 10 characters").max(200),
+    password: z
+      .string()
+      .min(10, "Password must be at least 10 characters")
+      .max(200)
+      .refine((value) => /[A-Za-z]/.test(value) && /\d/.test(value), "Password must include at least one letter and one number"),
     displayName: z.string().trim().min(1).max(60),
     handle: z
       .string()
       .trim()
       .toLowerCase()
-      .regex(/^[a-z0-9_]{3,24}$/, "Handle: 3-24 letters, numbers, underscore"),
+      .min(3, "Handle must be at least 3 characters")
+      .max(30, "Handle must be 30 characters or fewer")
+      .regex(/^[a-z0-9._]+$/, "Handle can use lowercase letters, numbers, periods and underscores"),
     acceptTerms: z.literal(true, { errorMap: () => ({ message: "You need to accept the Terms and Privacy Policy" }) }),
     /** YYYY-MM-DD. Read once for the 21+ check and never stored. */
     birthdate: z.string().refine((v) => parseBirthdate(v) !== null, "Enter your birthdate as YYYY-MM-DD"),
   })
   .strict();
 
-export const loginSchema = z.object({ email: z.string().trim().toLowerCase().email().max(200), password: z.string().max(200) }).strict();
+export const loginSchema = z.object({ email: z.string().trim().toLowerCase().min(3).max(200), password: z.string().max(200) }).strict();
 
 export const UNDERAGE_MESSAGE = `You need to be ${MIN_AGE} or older to use Nostos`;
 
 export async function signup(db: Db, input: unknown, opts: { client?: SessionClient; now?: Date } = {}) {
   const { birthdate, ...data } = signupSchema.parse(input);
-  // The age gate comes before anything else touches the database. A refused attempt stores nothing about the person:
-  // no account, no email, no birthdate, no log row. The birthdate goes out of scope here and is never written anywhere.
   if (!isOldEnough(birthdate, opts.now)) throw new ServiceError(403, "underage", UNDERAGE_MESSAGE);
   assertCleanText({ handle: data.handle, "display name": data.displayName });
   const existing = await db.user.findFirst({ where: { OR: [{ email: data.email }, { handle: data.handle }] } });
   if (existing) throw conflict(existing.email === data.email ? "Email already registered" : "Handle taken");
-  // Public signup always creates a plain USER. Staff roles come from the command line or the seed.
   const passwordHash = await hashPassword(data.password);
   const user = await db.user
     .create({
@@ -5419,7 +5388,6 @@ export async function signup(db: Db, input: unknown, opts: { client?: SessionCli
       },
     })
     .catch((err: unknown) => {
-      // Lost a race with a concurrent signup for the same email/handle.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw conflict("Email or handle already taken");
       throw err;
     });
@@ -5427,12 +5395,6 @@ export async function signup(db: Db, input: unknown, opts: { client?: SessionCli
   return { user, session };
 }
 
-// Login throttle, stored in Postgres so it works across serverless instances: at most 10 failed attempts per
-// (email, client IP) per 15 minutes. Keying on the IP too means a stranger can't lock someone out from
-// elsewhere (their failures only throttle their own IP). A per-IP ceiling across all emails (50 / 15 min)
-// bounds how fast one client can grow the table or spray many accounts. The check, password verification
-// and failure insert run under a transaction-scoped advisory lock on (email, IP), so parallel requests can't
-// all slip under the limit. Old rows are pruned by the cron job.
 export const LOGIN_FAIL_WINDOW_MS = 15 * MINUTE_MS;
 export const LOGIN_MAX_FAILS = 10;
 export const LOGIN_MAX_FAILS_PER_IP = 50;
@@ -5443,30 +5405,30 @@ export async function login(
   meta: { ip: string; client?: SessionClient } = { ip: "unknown" },
   now = new Date(),
 ) {
-  const { email, password } = loginSchema.parse(input);
+  const { email: identifier, password } = loginSchema.parse(input);
   const ip = meta.ip.slice(0, 64) || "unknown";
   const since = new Date(now.getTime() - LOGIN_FAIL_WINDOW_MS);
   const user = await db.$transaction(
     async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`login:${email}:${ip}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`login:${identifier}:${ip}`}))`;
       const [pair, perIp] = await Promise.all([
-        tx.loginAttempt.count({ where: { email, ip, createdAt: { gt: since } } }),
+        tx.loginAttempt.count({ where: { email: identifier, ip, createdAt: { gt: since } } }),
         tx.loginAttempt.count({ where: { ip, createdAt: { gt: since } } }),
       ]);
       if (pair >= LOGIN_MAX_FAILS || perIp >= LOGIN_MAX_FAILS_PER_IP) throw tooMany("Too many failed attempts. Try again in 15 minutes.");
-      const found = await tx.user.findUnique({ where: { email } });
+      const found = await tx.user.findFirst({ where: { OR: [{ email: identifier }, { handle: identifier }] } });
       const ok = await verifyPassword(password, found?.passwordHash ?? (await getDummyHash()));
       if (!found || !ok || found.deletedAt) {
-        await tx.loginAttempt.create({ data: { email, ip, createdAt: now } });
+        await tx.loginAttempt.create({ data: { email: identifier, ip, createdAt: now } });
         return null;
       }
       if (found.suspendedAt) throw new ServiceError(403, "account_suspended", "This account has been suspended for breaking our rules.");
-      await tx.loginAttempt.deleteMany({ where: { email, ip } });
+      await tx.loginAttempt.deleteMany({ where: { email: identifier, ip } });
       return found;
     },
     { timeout: 15_000, maxWait: 10_000 },
   );
-  if (!user) throw new ServiceError(401, "invalid_credentials", "Wrong email or password");
+  if (!user) throw new ServiceError(401, "invalid_credentials", "Wrong email, username, or password");
   const session = await createSession(db, user.id, { client: meta.client, now });
   return { user, session };
 }
@@ -5568,6 +5530,50 @@ export async function listBlocks(db: Db, actor: Actor | null) {
     select: { createdAt: true, blocked: { select: { handle: true } } },
   });
   return rows.map((r) => ({ handle: r.blocked.handle, blockedAt: r.createdAt }));
+}
+
+
+====================================================================================================
+== src/server/services/email.ts
+====================================================================================================
+
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
+
+import { verifyPassword } from "@/lib/auth/password";
+import type { Db } from "@/lib/db";
+import type { Actor } from "@/server/actor";
+import { conflict, notFound, ServiceError } from "@/server/errors";
+import { requireSignedIn } from "@/server/permissions";
+
+export const changeEmailSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email("Enter a valid email address").max(200),
+    password: z.string().min(1, "Enter your password").max(200),
+  })
+  .strict();
+
+export async function changeEmail(db: Db, actor: Actor | null, raw: unknown) {
+  const me = requireSignedIn(actor);
+  const { email, password } = changeEmailSchema.parse(raw);
+  const user = await db.user.findUnique({ where: { id: me.userId }, select: { email: true, passwordHash: true, deletedAt: true } });
+  if (!user || user.deletedAt) throw notFound("Account not found");
+  if (!(await verifyPassword(password, user.passwordHash))) throw new ServiceError(403, "wrong_password", "That password isn't right");
+  if (user.email === email) return { ok: true as const };
+
+  const existing = await db.user.findUnique({ where: { email }, select: { id: true } });
+  if (existing && existing.id !== me.userId) throw conflict("Email already registered");
+
+  try {
+    await db.$transaction([
+      db.user.update({ where: { id: me.userId }, data: { email } }),
+      db.loginAttempt.deleteMany({ where: { email: user.email } }),
+    ]);
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw conflict("Email already registered");
+    throw err;
+  }
+  return { ok: true as const };
 }
 
 
@@ -12995,112 +13001,3 @@ describe("night rollover in America/New_York (5:00am)", () => {
     expect(zonedTimeToUtc(2026, 7, 15, 22).toISOString()).toBe("2026-07-16T02:00:00.000Z");
   });
 });
-
-
-====================================================================================================
-== ../HANDOFF.md
-====================================================================================================
-
-# Handoff
-
-Nostos is an iPhone app (Expo, iOS only) for New York: you go to a place and get a stamp. Your profile is a passport book you open
-and flip through; stamps appear on its pages. This version is strictly personal: no feed, no likes, no follows, no sharing. Only you
-can see your passport. The look is black and brass.
-
-Read first: `CLAUDE.md`, `ENGINE.md`, `NOSTOS-BUILD-PROMPT.md`, `NOSTOS-BUILD-PROMPT-2.md`, `DESIGN.md`. The only definition of green is
-`scripts/gate.sh`. `LEDGER.md` is written by the gate only. Current combined checkout: `/Users/charlesjinn/nostos-codex`, branch `build-codex`; never push.
-Claude's committed `build` work at e639860 has been imported into this working tree alongside Codex HEAD 42a6c0d.
-The user requested an uncommitted merge and uncommitted fixes; do not commit without renewed authorization.
-
-## What exists
-- **Backend** (`backend/`: Next.js 15, Prisma, Postgres): accounts and sessions, the geofence check on every stamp, up to six photos
-  per stamp with EXIF and GPS stripped, songs as metadata (iTunes Search proxy), neighborhoods and completion, pinned stamps (up to
-  four), the place page, oldest-first page and slot numbering, moderation, the age gate, account deletion. The social layer is still
-  there behind `SOCIAL_ENABLED` (default off), and 404s when off.
-- **App** (`mobile/`): Passport (the book), Stamp (the stamp flow), Map, and Settings behind a gear. A development-only Design gallery.
-- **Rules that must never break:** `CLAUDE.md` lists eleven; each has a test in `backend/tests/integration/invariants.test.ts`.
-
-## Run it
-```
-cd /Users/charlesjinn/nostos-codex
-(cd backend && docker compose up -d db)    # nostos-codex, Postgres 5438 only
-(cd backend && pnpm db:seed && pnpm dev)   # nostos_codex, API on :3001
-(cd mobile && npx expo start --go --port 8082) # scan the QR code in Expo Go
-scripts/gate.sh                            # everything: typecheck, lint, tests, invariants, dependency ledger
-```
-Demo sign-in after the seed: `avaa@lastcall.dev` (or `maya_r@lastcall.dev`), password `lastcall-dev`. The phone and the Mac must be on
-the same network (or use `npx expo start --tunnel`). See `mobile/README.md`.
-
-## Try each thing on the phone
-- **The book:** Passport tab. Tap the cover: it swings open to the bearer page. Drag from the outer edge of a page, or tap the edge,
-  to turn it. "Index" under the book lists neighborhoods; tap one to jump to its first page.
-- **Stamp a place:** the large center button. The list says "Here" or "Nearby" with distances. Take photos with the in-app camera (up
-  to six), add a caption or a song, tap Stamp, and watch it land. To try it away from a place in a development build, long-press the
-  Map to pretend you are there (the server still checks the geofence).
-- **A stamp:** tap one on a page. The photos are on the right; drag them about (it saves), tap one for full screen and pinch.
-  The ellipsis menu pins it, edits it or deletes it from your profile.
-- **Map:** places you have stamped glow; tap a pin for its sheet and the place page.
-- **The Design gallery (development builds only):** on the Welcome screen tap "Design gallery (development)", or in Settings under
-  Development, or open the link `nostos://design` (in Expo Go: `exp://<your Mac's address>:8082/--/design`). Every piece of the design
-  is there on made-up data with no account and no server.
-
-## What needs your decision (`OPEN-QUESTIONS.md`)
-- **L6:** the server saves the phone's position with each stamp (to audit the geofence check) and never shows it. The stamp screen
-  says so. Is that wording right, and should the position be dropped after the check?
-- **L7:** the privacy policy and terms still describe the social layer. Only recolored this session; the text needs a lawyer.
-- L1 to L5 (songs terms, age gate, SAFE for Kids Act, geolocation disclosures, error reporting) are unchanged.
-- Product questions 1 to 8 (ratings, place catalog, stamp frequency and others) are unchanged.
-
-## What has not been run
-**Nothing in session 2 has run on a phone.** The app type-checks, lints, and passes Jest, which tests the math and that screens render,
-but the leather and foil shaders, the cover swing, the page flip, the stamp landing, the typewriter, the pinch zoom, the camera, haptics,
-Reduce Motion, VoiceOver and the map have never been seen. `mobile/DEVICE-CHECKLIST.md` lists every effect to check. Expect to fix
-things on first contact with a real device. Skia, `react-native-svg`, `expo-camera` and `expo-sensors` are claimed to work in Expo Go
-from the Expo SDK 57 docs, not from a run.
-
-## Where things are
-`backend/src/app/api` (routes), `backend/src/server/services` (logic), `backend/src/contracts/api.ts` (the API contract, copied to
-`mobile/src/api/contracts.ts` by `node scripts/sync-contracts.mjs`), `mobile/src/app` (screens), `mobile/src/features/book` (the
-book), `mobile/src/theme` (Midnight), `reviews/` (one file per session), `DEPENDENCIES.md` (one line per dependency).
-
-## Codex integration fixes
-
-Creation-only photo content, indistinguishable foreign/missing stamp mutation 404s, personal-mode service guards (including
-moderation/admin), and atomic live-content database guards remain present from the prior Codex session. Photo layout edits and
-final removal remain allowed. Contract documentation changed only in prior commit 2723315; its generated mobile copy is already
-synchronized. Run `npm run sync:contracts` after a future merge rather than resolving generated-file conflicts by hand.
-
-The remaining mobile fixes and final check results are recorded in the newest `reviews/*-codex-2.md` session report.
-No native rendering, camera, location permission, haptics, VoiceOver or animation performance claim is proven by automated tests.
-
-## Current automated evidence
-
-Final combined gate: 292 backend tests (34 files), 407 mobile tests (51 suites), plus required invariants, contract sync
-and dependency ledger, all passed. Backend production build and final iOS/Hermes export passed. Full details and gaps:
-`reviews/2026-10-02T185815Z-codex-2.md`. These changes remain uncommitted.
-
-## Verification workflow for future work
-
-Use targeted tests while fixing individual issues. Run the full gate once after combined changes and repeat only if a check fails or a later change affects the result. Do not start speculative audits. The user requested no commits. Both review bundles have been regenerated and their fresh summaries and complete test-file inclusion verified.
-
-## Latest fix: book boundary pages
-
-The first inside cover and final right page now render. Focused tests passed 44/44; one full gate passed backend 292 / mobile 413. Details: `reviews/2026-10-02T191304Z-codex-3.md`. Real-phone checklist: `mobile/BOOK-PAGES-PHONE-CHECKLIST.md`. The merge and changes remain uncommitted. Review bundles are regenerated from the working tree using the recorded gate results, without repeating checks.
-
-
-====================================================================================================
-== ../mobile/BOOK-PAGES-PHONE-CHECKLIST.md
-====================================================================================================
-
-# Real-phone checklist: book-page fix
-
-Use `/Users/charlesjinn/nostos-codex` only. Mac and iPhone should be on the same Wi-Fi. Start the isolated backend with `(cd backend && pnpm dev)` on port 3001, then `(cd mobile && npx expo start --go --port 8082)` and scan the QR code in Expo Go. If overriding the API URL, use the Mac's LAN address on port 3001, not the phone's localhost. Do not reset or reseed an existing database just for this checklist.
-
-- [ ] **Backend connection:** sign in, open your passport and load nearby places. Confirm there is no connection error and requests reach the backend on 3001.
-- [ ] **Camera:** open Stamp, take a photo inside the app, confirm the preview, remove one and take it again. Capture up to six; a seventh must be blocked. Return to the composer and confirm the photos remain.
-- [ ] **Stamp creation:** at a place marked Here, add a caption or song and submit with photos. Confirm the landing, then reopen the passport and confirm the new stamp persists.
-- [ ] **Every book page:** use an account with at least four visible stamps. Open the book: inside cover on the left, bearer page on the right. Turn through every spread forwards and backwards, using buttons and edge gestures; check both faces each time. On the final spread, page 2 (and later final right pages for a larger passport) must render. Next must stop at the end.
-- [ ] **Open stamps:** tap a stamp on the first stamp page and the fourth stamp on page 2. Each must open the correct stamp with its caption/song/photos; return and repeat from the final spread.
-- [ ] **Reduce Motion:** enable Settings > Accessibility > Motion > Reduce Motion on iPhone, relaunch Expo Go, and repeat the first/last-spread and stamp-opening checks. Both faces must remain visible and tappable during the reduced-motion transition.
-
-Record iPhone model, iOS/Expo Go versions, Reduce Motion setting, and pass/fail for each item. Screenshots or a short recording of the first and final spreads help review failures. No device result has been recorded yet.

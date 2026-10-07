@@ -1,0 +1,86 @@
+
+> nostos-mobile@1.0.0 check
+> npm run typecheck && npm run lint && npm test -- --silent
+
+
+> nostos-mobile@1.0.0 typecheck
+> tsc --noEmit
+
+
+> nostos-mobile@1.0.0 lint
+> expo lint --max-warnings 0
+
+
+> nostos-mobile@1.0.0 test
+> jest --silent
+
+PASS iOS src/lib/__tests__/age-timezones.test.js
+PASS iOS src/features/stamps/__tests__/stamp-screens.test.tsx
+PASS iOS src/features/place/__tests__/place.test.tsx
+PASS iOS src/features/people/__tests__/profile.test.tsx
+PASS iOS src/features/map/__tests__/map.test.tsx
+PASS iOS src/features/account/__tests__/age-gate-screens.test.tsx
+PASS iOS src/features/book/__tests__/worklet-transform.test.js
+PASS iOS src/features/moderation/__tests__/guideline-1-2.test.tsx
+PASS iOS src/features/gallery/__tests__/gallery.test.tsx
+PASS iOS src/features/book/__tests__/visa.test.tsx
+PASS iOS src/features/book/__tests__/passport-book.test.tsx
+PASS iOS src/features/book/__tests__/cover.test.tsx
+PASS iOS src/features/stamps/__tests__/config.test.tsx
+PASS iOS src/features/account/__tests__/account-gate.test.tsx
+PASS iOS src/features/stamps/__tests__/screens.test.tsx
+PASS iOS src/features/account/__tests__/settings-welcome.test.tsx
+PASS iOS src/features/book/__tests__/pages.test.tsx
+PASS iOS src/features/book/__tests__/landing.test.tsx
+PASS iOS src/features/people/__tests__/delete-account.test.tsx
+PASS iOS src/features/book/__tests__/stamps.test.tsx
+PASS iOS src/features/book/__tests__/visa-logic.test.ts
+PASS iOS src/features/book/__tests__/bearer.test.tsx
+PASS iOS src/features/book/__tests__/open.test.tsx
+PASS iOS src/api/__tests__/contracts-sync.test.ts
+PASS iOS src/features/lab3d/__tests__/studio-env.test.ts
+PASS iOS src/features/book/__tests__/flipbook.test.tsx
+PASS iOS src/lib/__tests__/report-error.test.ts
+PASS iOS src/features/location/__tests__/dev-simulator.test.tsx
+PASS iOS src/features/account/__tests__/customize.test.tsx
+PASS iOS src/features/account/__tests__/tabs.test.tsx
+PASS iOS src/lib/__tests__/rng.test.ts
+PASS iOS src/api/__tests__/client.test.ts
+PASS iOS src/api/__tests__/base-url.test.ts
+PASS iOS src/features/location/__tests__/location-store.test.ts
+PASS iOS src/lib/__tests__/age.test.ts
+PASS iOS src/features/book/__tests__/dimensions-emblem.test.ts
+PASS iOS src/features/stamps/__tests__/stamp-flow.test.ts
+PASS iOS src/features/lab3d/__tests__/finger.test.ts
+PASS iOS src/auth/__tests__/token-store.test.ts
+(node:9259) [THREE_CJS_DEPRECATED] DeprecationWarning: `require("three")` is deprecated and will be removed.
+Replace `const THREE = require("three")` with `import * as THREE from "three"`.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASS iOS src/features/lab3d/__tests__/load-model.test.ts
+PASS iOS src/features/lab3d/__tests__/flip-rows.test.ts
+PASS iOS src/lib/__tests__/layout.test.ts
+PASS iOS src/features/stamps/__tests__/composer.test.ts
+PASS iOS src/features/lab3d/__tests__/rotation.test.ts
+PASS iOS src/features/book/__tests__/flip-math.test.ts
+PASS iOS src/lib/__tests__/format.test.ts
+PASS iOS src/features/moderation/__tests__/format.test.ts
+PASS iOS src/features/book/__tests__/first-run.test.tsx
+PASS iOS src/features/lab3d/__tests__/gl-compat.test.ts
+PASS iOS src/features/lab3d/__tests__/sim.test.ts
+PASS iOS src/features/book/__tests__/foil.test.ts
+PASS iOS src/features/book/__tests__/book-state.test.ts
+PASS iOS src/features/people/__tests__/edit-profile.test.ts
+PASS iOS src/features/book/__tests__/index.test.tsx
+PASS iOS src/features/book/__tests__/worklet-files.test.ts
+PASS iOS src/features/book/__tests__/focus-interaction.test.ts
+PASS iOS src/features/lab3d/__tests__/frame-cap.test.ts
+PASS iOS src/features/lab3d/__tests__/fps-meter.test.ts
+PASS iOS src/features/lab3d/__tests__/asset-select.test.ts
+PASS iOS src/theme/__tests__/midnight.test.ts
+PASS iOS src/features/moderation/__tests__/reasons.test.ts (6.41 s)
+PASS iOS eslint-rules/__tests__/rules.test.js (8.787 s)
+
+Test Suites: 62 passed, 62 total
+Tests:       468 passed, 468 total
+Snapshots:   0 total
+Time:        9.299 s, estimated 14 s

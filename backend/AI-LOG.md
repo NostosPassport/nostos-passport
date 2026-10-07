@@ -76,3 +76,6 @@ uncommitted snapshot (HEAD 42a6c0d, incoming e639860). No new implementation com
 Focused red tests reproduced first-cover/final-right omissions (7 failed, 13 passed). Boundary underlays now render the current outer face. Focused rendering/navigation/math/page tests passed 44/44. One full gate is running; results and remaining native gaps are recorded in `reviews/2026-10-02T191304Z-codex-3.md`. No unrelated change, contract or migration. Everything remains uncommitted.
 
 Book-face fix full gate: PASS, backend 292 / mobile 413. One full gate only; bundle refresh reuses its saved output and does not rerun tests. Physical iPhone checklist remains unchecked; no native runtime claim.
+
+## Codex 2026-10-06 passport focus
+Restored unchanged static GLB and historical Expo GL loader; main cover now real 3D. Full-screen existing reader supports whole-page taps, clamped bounds, preserved details/page, first-run and main neighborhood index. Final mobile 62 suites / 468 tests pass with typecheck/lint. One full gate failed: backend 30 failed / 262 passed (existing password-policy fixture failures). Backend 3001 healthy on LAN, fresh full-app Expo 8081 and independently decoded QR delivered. Openable Blender interior/device proof remain gaps. No contract/migration/commit/push. Review and all artifacts grouped under deliveries/2026-10-06-passport-focus/.

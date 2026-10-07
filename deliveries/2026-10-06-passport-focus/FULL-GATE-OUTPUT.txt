@@ -1,0 +1,48 @@
+== gate: disk (5 GB free)
+== gate: repo hygiene
+== gate: backend typecheck
+$ tsc --noEmit
+== gate: backend lint
+$ eslint .
+== gate: backend test (single process)
+     38| 
+     39| export async function signup(db: Db, input: unknown, opts: { client?: …
+     40|   const { birthdate, ...data } = signupSchema.parse(input);
+       |                                               ^
+     41|   if (!isOldEnough(birthdate, opts.now)) throw new ServiceError(403, "…
+     42|   assertCleanText({ handle: data.handle, "display name": data.displayN…
+ ❯ tests/integration/token-auth.test.ts:137:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/30]⎯
+
+ FAIL  |integration| tests/integration/token-auth.test.ts > token hardening > logout: 401 for a dead bearer; cookie logout revokes the cookie session
+ZodError: [
+  {
+    "code": "custom",
+    "message": "Password must include at least one letter and one number",
+    "path": [
+      "password"
+    ]
+  }
+]
+ ❯ Object.get error [as error] node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/types.js:39:31
+ ❯ ZodObject.parse node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/types.js:114:22
+ ❯ signup src/server/services/auth.ts:40:47
+     38| 
+     39| export async function signup(db: Db, input: unknown, opts: { client?: …
+     40|   const { birthdate, ...data } = signupSchema.parse(input);
+       |                                               ^
+     41|   if (!isOldEnough(birthdate, opts.now)) throw new ServiceError(403, "…
+     42|   assertCleanText({ handle: data.handle, "display name": data.displayN…
+ ❯ tests/integration/token-auth.test.ts:155:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/30]⎯
+
+
+ Test Files  8 failed | 26 passed (34)
+      Tests  30 failed | 262 passed (292)
+   Start at  16:07:09
+   Duration  53.65s (transform 393ms, setup 307ms, collect 3.33s, tests 43.62s, environment 2ms, prepare 1.04s)
+
+[ELIFECYCLE] Test failed. See above for more details.
+GATE FAIL: backend tests

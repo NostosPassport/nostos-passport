@@ -83,3 +83,10 @@ The gate (scripts/check-deps.mjs) fails if a package.json dependency has no matc
 
 - @gorhom/bottom-sheet, @react-native-community/datetimepicker, expo-blur, expo-glass-effect, @expo/ui: nothing in Nostos uses them (the venue sheets and promo pickers are gone).
 - leaflet, @types/leaflet: the web map is gone (Nostos is an iPhone app; the web holds legal pages and moderation tools).
+
+## Restored 3D passport runtime (Codex 2026-10-06)
+- expo-gl@~57.0.2: original passport renderer, SDK 57 compatible Expo Go native module.
+- expo-asset@~57.0.19: load unchanged local GLB and environment assets.
+- expo-file-system@~57.0.7: read embedded asset bytes for the existing native loader.
+- three@0.186.1: existing 3D renderer restored from the historical lab; no broad upgrade.
+- @types/three@0.186.0: renderer TypeScript types.

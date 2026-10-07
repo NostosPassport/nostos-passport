@@ -1,3 +1,18 @@
+## Latest: the 3D passport opens (2026-10-06, Claude)
+
+Tapping the Blender passport now swings the cover open (a hinged `open` clip in `mobile/assets/3d/passport-openable.glb`) into a two-page spread,
+then the 2D page reader fades in over it; Close plays the clip backwards. If the 3D model is not live, a tap goes straight to the reader as before.
+Checks: `npm run check` 68 suites / 510 tests, iOS bundle export OK. NOT run on a phone: see `reviews/2026-10-06-passport-opens-claude.md`
+(claims not proven, and the three numbers to tune on a device). Still uncommitted. Blender sources are in `~/nostos-blender`.
+
+## Current session — 2026-10-06 passport focus
+
+Current base HEAD 5485fb4 on build-codex in /Users/charlesjinn/nostos-codex. This session's changes remain uncommitted; no push. Main passport restores the real static GLB; full-screen reader uses existing dynamic page rendering, with page taps and a Close control. An actual opening Blender interior remains blocked on an openable asset export.
+
+Final mobile check: 62 suites / 468 tests pass, typecheck/lint clean. Full gate failed on 30 existing backend tests; not green. Backend 3001 and freshly restarted full-app Expo 8081 run on LAN 10.19.108.26. QR and exact evidence: deliveries/2026-10-06-passport-focus/. Physical phone still unchecked. Review: reviews/2026-10-06-passport-focus-codex.md. No contract or migrations changed.
+
+The historical handoff below is preserved for context and does not supersede this session status.
+
 # Handoff
 
 Nostos is an iPhone app (Expo, iOS only) for New York: you go to a place and get a stamp. Your profile is a passport book you open
