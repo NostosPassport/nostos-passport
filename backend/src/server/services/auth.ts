@@ -41,7 +41,10 @@ export const signupStartSchema = z
 
 export const signupSchema = challenge.extend({ displayName, handle, acceptTerms }).strict();
 
-export const loginStartSchema = z.object({ identifier: loginIdentifier }).strict();
+export const loginStartSchema = z.union([
+  z.object({ email }).strict(),
+  z.object({ identifier: loginIdentifier }).strict(),
+]);
 export const loginSchema = challenge.strict();
 export const devLoginSchema = z.object({ email, password: z.string().max(200) }).strict();
 
@@ -134,8 +137,9 @@ export async function signup(db: Db, input: unknown, opts: { client?: SessionCli
 
 export async function startLogin(db: Db, input: unknown, meta: { ip: string; now?: Date }) {
   const data = loginStartSchema.parse(input);
+  const identifier = "identifier" in data ? data.identifier : data.email;
   const user = await db.user.findUnique({
-    where: data.identifier.includes("@") ? { email: data.identifier } : { handle: data.identifier },
+    where: identifier.includes("@") ? { email: identifier } : { handle: identifier },
   });
   if (!user || user.deletedAt) throw notFound("No Nostos account uses that email or handle.");
   if (user.suspendedAt) throw new ServiceError(403, "account_suspended", "This account has been suspended for breaking our rules.");
