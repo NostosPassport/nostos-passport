@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, Stack, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -43,6 +43,7 @@ function Composer() {
   const { permission } = useLocationState();
   const coords = useUserCoords();
   const nearby = useNearbyPlaces(coords);
+  const stampAt = useRef(Date.now()).current;
   const [chosenId, setChosenId] = useState<string | null>(null);
   const [choosingPlace, setChoosingPlace] = useState(false);
   const photoUris = usePhotoDraft();
@@ -58,6 +59,20 @@ function Composer() {
   const places = orderPlaces(nearby.data?.places ?? []);
   const selectedPlace = places.find((p) => p.id === chosenId) ?? null;
   const place: Nearby | null = choosingPlace ? null : selectedPlace ?? autoPlace(places);
+
+  const openPhotos = () => {
+    if (!place) return;
+    router.push({
+      pathname: "/stamp/camera",
+      params: {
+        placeName: place.name,
+        placeLat: String(place.lat),
+        placeLng: String(place.lng),
+        placeRadius: String(place.geofenceMeters),
+        stampAt: String(stampAt),
+      },
+    });
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -118,9 +133,9 @@ function Composer() {
               {photoUris[0] ? (
                 <Image source={{ uri: photoUris[0] }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel="First stamp photo" />
               ) : (
-                <Pressable style={styles.emptyPhoto} onPress={() => router.push("/stamp/camera")} accessibilityRole="button" accessibilityLabel="Take a photo">
+                <Pressable style={styles.emptyPhoto} onPress={openPhotos} accessibilityRole="button" accessibilityLabel="Add a photo">
                   <Icon name="camera.fill" color="accent" size={30} />
-                  <Text variant="callout" color="textSecondary">Take a photo</Text>
+                  <Text variant="callout" color="textSecondary">Add a photo</Text>
                 </Pressable>
               )}
               {photoUris.length > 0 ? (
@@ -133,7 +148,7 @@ function Composer() {
               ) : null}
             </View>
 
-            {photoUris.length < MAX_STAMP_PHOTOS ? <EditorialButton label={photoUris.length === 0 ? "+  Take a photo" : "+  Take another photo"} outline onPress={() => router.push("/stamp/camera")} /> : null}
+            {photoUris.length < MAX_STAMP_PHOTOS ? <EditorialButton label={photoUris.length === 0 ? "+  Add a photo" : "+  Add another photo"} outline onPress={openPhotos} /> : null}
 
             <View style={styles.captionBlock}>
               <Kicker>A FEW WORDS</Kicker>
