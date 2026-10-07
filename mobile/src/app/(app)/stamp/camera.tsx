@@ -1,70 +1,75 @@
-import { CameraView, useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useRef, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { CAMERA_NOTE, takePhoto } from "@/features/photos/pick";
+import { prepareImage } from "@/features/photos/prepare";
 import { photoDraft, usePhotoDraft } from "@/features/stamps/photo-draft";
 import { MAX_STAMP_PHOTOS, photoCount } from "@/features/stamps/stamp-flow";
-import { prepareImage } from "@/features/photos/prepare";
 import { haptics } from "@/lib/haptics";
 import { colors, radius, screenPadding, size, space } from "@/theme";
 
 export default function StampCamera() {
-  const [permission, request] = useCameraPermissions();
-  const ref = useRef<CameraView>(null);
+  const insets = useSafeAreaInsets();
   const photos = usePhotoDraft();
-  const [ready, setReady] = useState(false);
+  const initialPhotoCount = useRef(photoDraft.get().length);
+  const openedInitialCamera = useRef(false);
+  const busyRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const full = photos.length >= MAX_STAMP_PHOTOS;
 
-  const shoot = async () => {
-    if (!ref.current || busy || full) return;
+  const capture = useCallback(async (initial = false) => {
+    if (busyRef.current || photoDraft.get().length >= MAX_STAMP_PHOTOS) return;
+    busyRef.current = true;
     setBusy(true);
     setNote(null);
+
     try {
-      const shot = await ref.current.takePictureAsync({ quality: 1, exif: false, skipProcessing: false });
-      const prepared = await prepareImage(shot.uri);
+      const outcome = await takePhoto();
+      if (outcome === "cancelled") {
+        if (initial && initialPhotoCount.current === 0) router.back();
+        return;
+      }
+      if (typeof outcome === "string") {
+        setNote(CAMERA_NOTE[outcome]);
+        return;
+      }
+
+      const prepared = await prepareImage(outcome.uri);
       if (photoDraft.add(prepared.uri)) haptics.select();
     } catch {
-      setNote("Couldn't take that photo. Try again.");
+      setNote("Couldn't add that photo. Try again.");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
-  };
+  }, []);
 
-  if (!permission) {
-    return (
-      <View style={styles.center} accessibilityRole="progressbar" accessibilityLabel="Opening the camera">
-        <Text variant="callout" color="textSecondary">Opening the camera…</Text>
-      </View>
-    );
-  }
-  if (!permission.granted) {
-    return (
-      <View style={styles.center}>
-        <Icon name="camera.fill" color="textPrimary" size={size.iconLarge} />
-        <Text variant="title2" align="center">Camera access</Text>
-        <Text variant="callout" color="textSecondary" align="center">
-          Nostos takes your stamp photos here, inside the app, so they show where you really are.
-        </Text>
-        <Button title={permission.canAskAgain ? "Allow the camera" : "Open Settings"} block={false} onPress={() => (permission.canAskAgain ? void request() : void Linking.openSettings())} />
-        <Button title="Not now" variant="plain" block={false} onPress={() => router.back()} />
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (openedInitialCamera.current || full) return;
+    openedInitialCamera.current = true;
+    void capture(true);
+  }, [capture, full]);
 
   return (
-    <View style={styles.root}>
-      <CameraView ref={ref} style={styles.preview} facing="back" onCameraReady={() => setReady(true)} accessibilityLabel="Camera" />
-      <View style={styles.top}>
-        <Text variant="typewriterSmall" color="onAccent" accessibilityLiveRegion="polite">{photoCount(photos.length)}</Text>
+    <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.lg }]}>
+      <View style={styles.header}>
+        <View>
+          <Text variant="title2">Photos</Text>
+          <Text variant="footnote" color="textSecondary" accessibilityLiveRegion="polite">{photoCount(photos.length)}</Text>
+        </View>
+        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Done" style={styles.done}>
+          <Text variant="callout" weight="semibold">Done</Text>
+        </Pressable>
       </View>
-      <View style={styles.bottom}>
+
+      <View style={styles.body}>
         {photos.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
             {photos.map((uri, i) => (
@@ -76,46 +81,34 @@ export default function StampCamera() {
               </View>
             ))}
           </ScrollView>
-        ) : null}
-        {note ? <Text variant="footnote" color="onAccent" align="center" accessibilityLiveRegion="polite">{note}</Text> : null}
-        <View style={styles.controls}>
-          <View style={styles.side} />
-          <Pressable
-            onPress={() => void shoot()}
-            disabled={!ready || busy || full}
-            accessibilityRole="button"
-            accessibilityLabel={full ? "Six photos taken" : "Take photo"}
-            accessibilityState={{ disabled: !ready || busy || full }}
-            style={[styles.shutter, (!ready || busy || full) && styles.shutterOff]}
-          >
-            <View style={styles.shutterInner} />
-          </Pressable>
-          <View style={styles.side}>
-            <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Done" style={styles.done}>
-              <Text variant="callout" color="onAccent" weight="semibold">Done</Text>
-            </Pressable>
+        ) : (
+          <View style={styles.empty}>
+            <Icon name="camera.fill" color="textSecondary" size={size.iconLarge} />
+            <Text variant="callout" color="textSecondary" align="center">{busy ? "Opening camera…" : "No photos yet."}</Text>
           </View>
-        </View>
+        )}
+
+        {note ? <Text variant="footnote" color="danger" align="center" accessibilityLiveRegion="polite">{note}</Text> : null}
+      </View>
+
+      <View style={styles.actions}>
+        {!full ? <Button title={photos.length > 0 ? "Take another photo" : "Take a photo"} onPress={() => void capture(false)} loading={busy} /> : null}
+        <Button title="Done" variant="plain" onPress={() => router.back()} />
       </View>
     </View>
   );
 }
 
-const THUMB = size.listRow;
+const THUMB = 148;
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.textPrimary },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.md, padding: screenPadding, backgroundColor: colors.background },
-  preview: { flex: 1 },
-  fill: { width: "100%", height: "100%" },
-  top: { position: "absolute", top: space.xxxl + space.md, alignSelf: "center", paddingHorizontal: space.sm, paddingVertical: space.xxs, borderRadius: radius.pill, backgroundColor: colors.scrim },
-  bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingBottom: space.xxxl, gap: space.sm, backgroundColor: colors.scrim },
-  strip: { gap: space.xs, paddingHorizontal: screenPadding, paddingTop: space.sm },
-  thumb: { width: THUMB, height: THUMB, borderRadius: radius.chip, overflow: "hidden", backgroundColor: colors.elevated },
-  remove: { position: "absolute", top: space.xxs, right: space.xxs, width: size.iconSmall + space.xs, height: size.iconSmall + space.xs, borderRadius: radius.pill, backgroundColor: colors.scrim, alignItems: "center", justifyContent: "center" },
-  controls: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: screenPadding },
-  side: { width: 88, alignItems: "flex-end" },
+  root: { flex: 1, backgroundColor: colors.background, paddingHorizontal: screenPadding },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   done: { minWidth: 64, minHeight: 44, alignItems: "flex-end", justifyContent: "center" },
-  shutter: { width: size.avatarLarge + space.xs, height: size.avatarLarge + space.xs, borderRadius: radius.pill, borderWidth: size.focusRingWidth, borderColor: colors.background, alignItems: "center", justifyContent: "center" },
-  shutterOff: { opacity: 0.45 },
-  shutterInner: { width: size.avatarLarge - space.md, height: size.avatarLarge - space.md, borderRadius: radius.pill, backgroundColor: colors.background },
+  body: { flex: 1, justifyContent: "center", gap: space.md },
+  strip: { gap: space.sm, alignItems: "center", paddingVertical: space.lg },
+  thumb: { width: THUMB, height: THUMB, borderRadius: radius.card, overflow: "hidden", backgroundColor: colors.elevated },
+  fill: { width: "100%", height: "100%" },
+  remove: { position: "absolute", top: space.xs, right: space.xs, width: 32, height: 32, borderRadius: radius.pill, backgroundColor: colors.scrim, alignItems: "center", justifyContent: "center" },
+  empty: { alignItems: "center", justifyContent: "center", gap: space.sm },
+  actions: { gap: space.xs },
 });
