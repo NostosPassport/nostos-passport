@@ -10,19 +10,19 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://preview.nostos.app"
+        "EXPO_PUBLIC_API_URL": "https://preview-api.nostospassport.com"
       }
     },
     "preview": {
       "distribution": "store",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://preview.nostos.app"
+        "EXPO_PUBLIC_API_URL": "https://preview-api.nostospassport.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://nostos.app"
+        "EXPO_PUBLIC_API_URL": "https://api.nostospassport.com"
       }
     }
   },
