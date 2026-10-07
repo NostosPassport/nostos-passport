@@ -26,6 +26,13 @@ enum SessionClient {
   IOS
 }
 
+enum EmailChallengePurpose {
+  SIGN_UP
+  SIGN_IN
+  CHANGE_EMAIL
+  DELETE_ACCOUNT
+}
+
 enum ContentType {
   PHOTO
   COMMENT
@@ -75,7 +82,11 @@ model User {
   email           String    @unique
   handle          String    @unique
   displayName     String    @map("display_name")
-  passwordHash    String    @map("password_hash")
+  /// Legacy/dev fixture support only. Production accounts authenticate with email codes, Apple, or passkeys.
+  passwordHash    String?   @map("password_hash")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  /// The eligibility check is recorded, but the birthdate itself is never stored.
+  ageVerifiedAt   DateTime? @map("age_verified_at") @db.Timestamptz(3)
   role            Role      @default(USER)
   /// Moderation reputation in [0.2, 1.5]; new accounts start at 0.5. Visible only to the user and moderators.
   reputation      Float     @default(0.5)
@@ -132,6 +143,24 @@ model Session {
 
   @@index([userId])
   @@map("session")
+}
+
+/// Short-lived one-time email codes. Only a keyed digest is stored, never the six-digit code itself.
+model EmailChallenge {
+  id         String                @id
+  email      String
+  codeHash   String                @map("code_hash")
+  purpose    EmailChallengePurpose
+  ip         String
+  attempts   Int                   @default(0)
+  expiresAt  DateTime              @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime?             @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([email, purpose, createdAt])
+  @@index([ip, createdAt])
+  @@index([expiresAt])
+  @@map("email_challenge")
 }
 
 /// A place (the table keeps its old name). Name, location and geofence only: no live data.
@@ -270,7 +299,7 @@ model PinnedStamp {
 model Follow {
   followerId String   @map("follower_id")
   followeeId String   @map("followee_id")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   follower   User     @relation("follower", fields: [followerId], references: [id])
   followee   User     @relation("followee", fields: [followeeId], references: [id])
 
@@ -374,7 +403,7 @@ model ModerationEvent {
   @@map("moderation_event")
 }
 
-/// Failed login attempts, for the email+IP throttle. Rows older than a day are pruned by the cron job.
+/// Failed legacy/dev password-login attempts. Production sign-in uses email challenges instead.
 model LoginAttempt {
   id        String   @id @default(cuid())
   email     String
