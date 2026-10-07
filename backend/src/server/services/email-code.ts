@@ -89,7 +89,7 @@ async function deliverOtpTemplate(to: string, code: string, displayName: string 
         variables: {
           verification_code: code,
           first_name: firstName(displayName),
-          expiry_minutes: EXPIRY_MINUTES,
+          expiry_minutes: String(EXPIRY_MINUTES),
           company_address: companyAddress(),
         },
       },
