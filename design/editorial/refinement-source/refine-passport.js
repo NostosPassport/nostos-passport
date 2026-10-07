@@ -1,0 +1,12 @@
+
+const p=await figma.getNodeByIdAsync('61:19');await figma.setCurrentPageAsync(p);const f=await figma.getNodeByIdAsync('61:20');const all=[f,...f.findAll()],ids=new Set();const fonts=new Map();for(const n of all)if(n.type==='TEXT')for(const s of n.getStyledTextSegments(['fontName']))fonts.set(JSON.stringify(s.fontName),s.fontName);await Promise.all([...fonts.values(),{family:'Instrument Serif',style:'Regular'}].map(x=>figma.loadFontAsync(x)));
+const K={r:23/255,g:23/255,b:20/255},B={r:18/255,g:59/255,b:1};const paint=(c,o=1)=>({type:'SOLID',color:c,opacity:o});const mark=n=>(ids.add(n.id),n);
+const text=s=>f.findAllWithCriteria({types:['TEXT']}).find(n=>n.characters===s);
+mark(f).fills=[{type:'GRADIENT_LINEAR',gradientTransform:[[0,1,0],[-1,0,1]],gradientStops:[{position:0,color:{r:.970,g:.958,b:.933,a:1}},{position:1,color:{r:.953,g:.938,b:.900,a:1}}]}];
+const title=mark(text('A life,\ncollected.'));title.fontName={family:'Instrument Serif',style:'Regular'};title.fontSize=82;title.lineHeight={unit:'PERCENT',value:89};title.letterSpacing={unit:'PIXELS',value:-1.8};title.y=165;
+const logo=mark(text('NOSTOS'));logo.fontSize=66;logo.letterSpacing={unit:'PIXELS',value:-2};logo.y=43;
+const counts=f.findOne(n=>n.name==='Collection statistics');for(const t of counts.findAllWithCriteria({types:['TEXT']})){mark(t);if(['24','18','6'].includes(t.characters)){t.fontName={family:'Instrument Serif',style:'Regular'};t.fontSize=32;t.fills=[paint(K)];t.letterSpacing={unit:'PIXELS',value:0};}else{t.fontSize=12;t.letterSpacing={unit:'PIXELS',value:1.35};}}
+for(const n of all){if(n.name==='Newspaper rule'||n.name==='Statistics separator'){mark(n).opacity=.58;}if(n.name==='Subtle editable paper grain'){mark(n).opacity=1;for(const dot of n.findAll()){if('fills' in dot&&Array.isArray(dot.fills)&&dot.fills.length){mark(dot);dot.fills=dot.fills.map(q=>({...q,opacity:Math.min(.2,(q.opacity??1)*1.8)}));}}}}
+const nav=f.findOne(n=>n.name==='Passport / Stamp / Map');const stamp=nav.findOne(n=>n.name.startsWith('Stamp /'));const slot=stamp.children[0];mark(slot);slot.fills=[];slot.strokes=[paint(B,.8)];slot.strokeWeight=.8;slot.cornerRadius=22;for(const n of slot.findAll()){if('strokes' in n&&Array.isArray(n.strokes)&&n.strokes.length){mark(n).strokes=n.strokes.map(q=>({...q,color:B}));}}for(const n of nav.findAllWithCriteria({types:['TEXT']})){mark(n).fontSize=12;}
+return {mutatedNodeIds:[...ids],title:{font:title.fontName,size:title.fontSize,height:title.height,width:title.width,y:title.y},frame:f.id};
+

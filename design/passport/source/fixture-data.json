@@ -1,0 +1,54 @@
+[
+  [
+    [
+      "WASHINGTON|SQUARE",
+      "Greenwich Village",
+      "12 SEP 2026",
+      "round",
+      1,
+      -7
+    ],
+    [
+      "THE STRAND",
+      "Union Square",
+      "18 SEP 2026",
+      "ticket",
+      2,
+      5
+    ],
+    [
+      "CAFFE REGGIO",
+      "Greenwich Village",
+      "20 SEP 2026",
+      "oval",
+      3,
+      -4
+    ]
+  ],
+  [
+    [
+      "CENTRAL PARK",
+      "Manhattan",
+      "24 SEP 2026",
+      "oval",
+      4,
+      6
+    ],
+    [
+      "THE MET",
+      "Upper East Side",
+      "28 SEP 2026",
+      "round",
+      5,
+      -6
+    ],
+    [
+      "THE HIGH LINE",
+      "Chelsea",
+      "02 OCT 2026",
+      "ticket",
+      6,
+      4
+    ]
+  ]
+]
