@@ -10,7 +10,11 @@ const mockSignIn = jest.fn();
 
 const CHALLENGE = "11111111-1111-4111-8111-111111111111";
 
-jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() }, Stack: { Screen: () => null } }));
+jest.mock("expo-router", () => ({
+  router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() },
+  Stack: { Screen: () => null },
+  useLocalSearchParams: () => ({}),
+}));
 jest.mock("@/auth/auth-context", () => ({ useAuth: () => ({ signIn: mockSignIn }) }));
 jest.mock("@/api/email-auth", () => ({
   startSignupEmail: (...args: unknown[]) => mockStartSignup(...args),
