@@ -18,12 +18,12 @@ export const changeEmailSchema = z
 export async function startEmailChange(db: Db, actor: Actor | null, raw: unknown, meta: { ip: string; now?: Date }) {
   const me = requireSignedIn(actor);
   const { email } = startEmailChangeSchema.parse(raw);
-  const user = await db.user.findUnique({ where: { id: me.userId }, select: { email: true, deletedAt: true } });
+  const user = await db.user.findUnique({ where: { id: me.userId }, select: { email: true, displayName: true, deletedAt: true } });
   if (!user || user.deletedAt) throw notFound("Account not found");
   if (user.email === email) throw conflict("That's already your account email");
   const existing = await db.user.findUnique({ where: { email }, select: { id: true } });
   if (existing && existing.id !== me.userId) throw conflict("Email already registered");
-  return startEmailChallenge(db, { email, purpose: "CHANGE_EMAIL", ip: meta.ip, now: meta.now });
+  return startEmailChallenge(db, { email, purpose: "CHANGE_EMAIL", ip: meta.ip, displayName: user.displayName, now: meta.now });
 }
 
 export async function changeEmail(db: Db, actor: Actor | null, raw: unknown, now = new Date()) {
