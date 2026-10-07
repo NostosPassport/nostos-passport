@@ -62,6 +62,7 @@ jest.mock("@/features/photos/prepare", () => ({ prepareImage: async (uri: string
 
 const near = (over: Record<string, unknown>) => ({ id: "p1", slug: "p1", name: "Katz's", address: "", neighborhood: "East Village", lat: 1, lng: 2, geofenceMeters: 100, neighborhoodId: "n1", fromOsm: false, distanceM: 20, inside: true, ...over });
 const wrap = async (ui: React.ReactElement) => render(<QueryClientProvider client={testQueryClient()}>{ui}</QueryClientProvider>);
+const chooseKatz = async () => fireEvent.press(screen.getByRole("button", { name: /Katz's/ }));
 const flatStamp = { id: "s1", photoUrl: null, photos: [], caption: "hi", song: null, page: 1, slot: 1, createdAt: "2026-10-04T03:41:00.000Z", editedAt: null, place: { id: "p1", slug: "p1", name: "Katz's", neighborhood: "East Village", neighborhoodId: "n1" }, author: { handle: "ava", displayName: "Ava", avatarUrl: null, verified: false }, mine: true, likes: { count: 0, viewerLiked: false }, hidden: false, removed: false };
 const pickedLibraryPhoto = { uri: "file://library.jpg", width: 100, height: 100, assetId: "asset-1", fileName: "IMG_1.HEIC", mimeType: "image/heic", exif: {} };
 
@@ -73,8 +74,11 @@ describe("the composer", () => {
     mockPlaces = [near({})];
   });
 
-  it("opens the approved journal composer when exactly one place contains you", async () => {
+  it("starts at Where are you even when exactly one place contains you, then opens the composer after selection", async () => {
     await wrap(<NewStamp />);
+    expect(screen.getByText(/Where are/)).toBeTruthy();
+    expect(screen.queryByText(/Make it/)).toBeNull();
+    await chooseKatz();
     expect(screen.getByText(/Make it/)).toBeTruthy();
     expect(screen.getByText("KATZ'S · YOU'RE HERE")).toBeTruthy();
     expect(screen.getByText("Add a photo, a caption or a song.")).toBeTruthy();
@@ -93,8 +97,9 @@ describe("the composer", () => {
     expect(screen.getByText("East Village · 1.8 km away, need to be within 100 m")).toBeTruthy();
   });
 
-  it("auto-picks the one place you're inside, and the stamp action waits for content", async () => {
+  it("the stamp action waits for content after a place is selected", async () => {
     await wrap(<NewStamp />);
+    await chooseKatz();
     expect(screen.getByRole("button", { name: "Stamp this place" }).props.accessibilityState.disabled).toBe(true);
     expect(screen.getByText("Add a photo, a caption or a song.")).toBeTruthy();
     await fireEvent.changeText(screen.getByLabelText("A few words"), "good pastrami");
@@ -110,13 +115,29 @@ describe("the composer", () => {
     expect(screen.getByRole("button", { name: "Stamp this place" }).props.accessibilityState.disabled).toBe(true);
   });
 
-  it("passes the place and stamp time into the photo flow", async () => {
+  it("passes the selected place and stamp time into the photo flow", async () => {
     await wrap(<NewStamp />);
+    await chooseKatz();
     await fireEvent.press(screen.getByLabelText("Add a photo"));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: "/stamp/camera",
       params: expect.objectContaining({ placeName: "Katz's", placeLat: "1", placeLng: "2", placeRadius: "100", stampAt: expect.any(String) }),
     });
+  });
+
+  it("Cancel closes the new-stamp modal instead of returning to the place picker", async () => {
+    await wrap(<NewStamp />);
+    await chooseKatz();
+    await fireEvent.press(screen.getByLabelText("Cancel"));
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("the back arrow returns to Where are you when the draft is clean", async () => {
+    await wrap(<NewStamp />);
+    await chooseKatz();
+    await fireEvent.press(screen.getByLabelText("Back to places"));
+    expect(screen.getByText(/Where are/)).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
   });
 
   it("shows all draft photos, opens them full screen, removes the visible photo, sends the rest, then lands", async () => {
@@ -126,6 +147,7 @@ describe("the composer", () => {
     const appended: [string, unknown][] = [];
     const appendSpy = jest.spyOn(FormData.prototype, "append").mockImplementation((k: string, v: unknown) => void appended.push([k, v]));
     await wrap(<NewStamp />);
+    await chooseKatz();
     expect(screen.getByLabelText("Open photo 1 of 2")).toBeTruthy();
     expect(screen.getByLabelText("Open photo 2 of 2")).toBeTruthy();
     expect(screen.getByText("2 / 6")).toBeTruthy();
@@ -152,6 +174,7 @@ describe("the composer", () => {
   it("shows the server's own sentence when it refuses, with Try again", async () => {
     mockUpload.mockRejectedValue(Object.assign(new Error("x"), { status: 403, code: "outside_geofence", message: "You need to be within 100 m of this place to stamp it (you're 140 m away)" }));
     await wrap(<NewStamp />);
+    await chooseKatz();
     await fireEvent.changeText(screen.getByLabelText("A few words"), "hi");
     await act(async () => {
       await fireEvent.press(screen.getByRole("button", { name: "Stamp this place" }));
@@ -162,6 +185,7 @@ describe("the composer", () => {
   it("stops offering another photo action at six photos", async () => {
     for (let i = 0; i < 6; i++) photoDraft.add(`file://${i}.jpg`);
     await wrap(<NewStamp />);
+    await chooseKatz();
     expect(screen.getByText("6 / 6")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Add another photo/ })).toBeNull();
   });
