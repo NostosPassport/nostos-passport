@@ -22,7 +22,7 @@ async function fetchElements(): Promise<OverpassElement[]> {
   if (fileIdx >= 0) return (JSON.parse(readFileSync(args[fileIdx + 1]!, "utf8")) as { elements: OverpassElement[] }).elements;
   const res = await fetch(endpoint, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": "Nostos-venue-import/1.0 (support@REPLACE-ME)" },
+    headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": "Nostos-venue-import/1.0 (support@nostospassport.com)" },
     body: new URLSearchParams({ data: overpassQuery(bbox) }),
     signal: AbortSignal.timeout(120_000),
   });
