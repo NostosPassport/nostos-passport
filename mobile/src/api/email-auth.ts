@@ -28,11 +28,7 @@ function challengeResponse(value: unknown): EmailChallenge {
   };
 }
 
-async function post(
-  path: string,
-  body?: unknown,
-  authenticated = false,
-): Promise<unknown> {
+async function post(path: string, body?: unknown, authenticated = false): Promise<unknown> {
   const token = authenticated ? tokenStore.current() : null;
   if (authenticated && !token) throw new ApiError(401, "unauthorized", "Sign in again to continue.");
 
@@ -112,8 +108,8 @@ function tokenResponse(value: unknown): C.TokenResponse {
   return parsed.data;
 }
 
-export async function startSignupEmail(email: string, birthdate: string): Promise<EmailChallenge> {
-  return challengeResponse(await post("/api/auth/signup/start", { email: email.trim(), birthdate }));
+export async function startSignupEmail(email: string, displayName: string, birthdate: string): Promise<EmailChallenge> {
+  return challengeResponse(await post("/api/auth/signup/start", { email: email.trim(), displayName: displayName.trim(), birthdate }));
 }
 
 export async function completeSignup(input: {
