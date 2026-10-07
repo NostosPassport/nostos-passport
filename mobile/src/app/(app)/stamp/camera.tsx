@@ -75,7 +75,8 @@ export default function StampCamera() {
       if (photoDraft.add(prepared.uri)) {
         haptics.select();
         const saved = await saveAcceptedCameraPhoto(prepared.uri);
-        if (!saved) setNote("Photo added, but Nostos couldn't save a copy to Photos.");
+        if (saved === "permission-denied") setNote("Photo added. Allow Nostos to add photos in Settings to save a copy to Photos.");
+        else if (saved === "failed") setNote("Photo added, but Nostos couldn't save a copy to Photos.");
       }
     } catch {
       setNote("Couldn't add that photo. Try again.");
