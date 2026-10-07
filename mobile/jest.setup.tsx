@@ -18,6 +18,10 @@ jest.mock("expo-secure-store", () => {
   };
 });
 
+jest.mock("expo-media-library", () => ({
+  Asset: { create: jest.fn(async (uri: string) => ({ id: uri })) },
+}));
+
 jest.mock("react-native-safe-area-context", () => {
   const React = require("react");
   const { View } = require("react-native");
