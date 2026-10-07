@@ -14,9 +14,9 @@ This is current product copy, but legal/privacy fields remain drafts until final
 | Age rating | REPLACE after legal/App Store review |
 | Price | Free |
 | Availability | United States |
-| Privacy Policy URL | `https://nostos.app/privacy` placeholder until deployment is verified |
-| Terms URL | `https://nostos.app/terms` placeholder until deployment is verified |
-| Support URL | `https://nostos.app/support` placeholder until deployment is verified |
+| Privacy Policy URL | `https://nostospassport.com/privacy` |
+| Terms URL | `https://nostospassport.com/terms` |
+| Support URL | `https://nostospassport.com/support` |
 
 ## Promotional text
 
@@ -51,18 +51,18 @@ These are implementation notes, not final legal answers.
 
 ## App Review information
 
-- **Sign-in required:** Yes for the current app experience. The old `Look around first` guest preview has been removed.
-- **Demo account:** `appreview@lastcall.dev`, password **REPLACE** with the actual review credential in App Store Connect, never in source.
+- **Sign-in required:** Yes for the current app experience. Authentication is passwordless by email verification code. The old `Look around first` guest preview has been removed.
+- **Review access:** REPLACE with a reviewer-accessible passwordless sign-in path before submission. Do not provide or document a password because production accounts do not use passwords.
 - **Geofence review behavior:** the designated review account may be configured as geofence-exempt so an Apple reviewer outside New York can exercise stamp creation. Its behavior must match the current backend implementation.
 
 Suggested reviewer note:
 
-> Nostos is a personal passport for places you visit in New York. Sign in with the review account, open Stamp, choose a place, then add a photo, caption, song, or combination. The review account is configured so the stamp flow can be exercised outside New York. Take Photo opens the native iPhone camera. Choose from Photo Library accepts only photos that pass Nostos's local validation for the selected place/time. Uploaded images are re-encoded and original EXIF/GPS metadata is stripped.
+> Nostos is a personal passport for places you visit in New York. Sign in using the review access instructions, open Stamp, choose a place, then add a photo, caption, song, or combination. The review account is configured so the stamp flow can be exercised outside New York. Take Photo opens the native iPhone camera. Choose from Photo Library accepts only photos that pass Nostos's local validation for the selected place/time. Uploaded images are re-encoded and original EXIF/GPS metadata is stripped.
 
 ## Before submission
 
 1. Verify production backend/domain deployment and legal-page URLs.
-2. Create/test the final App Review account and credential.
+2. Establish and test a reviewer-accessible passwordless sign-in path and designated review account.
 3. Resolve the current legal/privacy questions in `../OPEN-QUESTIONS.md`.
 4. Confirm App Store privacy labels match actual production configuration, including diagnostics if enabled.
 5. Set final App Store Connect IDs/metadata in EAS configuration.
