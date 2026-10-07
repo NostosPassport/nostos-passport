@@ -2,22 +2,48 @@ import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
 import { Alert, Linking } from "react-native";
 
-export type PickedImage = { uri: string; width: number; height: number };
-/** Why the camera didn't produce a photo. "cancelled" means the person backed out. */
+export type PickedImage = {
+  uri: string;
+  width: number;
+  height: number;
+  assetId: string | null;
+  fileName: string | null;
+  mimeType: string | null;
+  exif: Record<string, unknown> | null;
+};
+
 export type CameraOutcome = PickedImage | "cancelled" | "denied" | "no-camera" | "failed";
 
-const OPTIONS: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 1, exif: false, allowsEditing: false };
+const CAMERA_OPTIONS: ImagePicker.ImagePickerOptions = {
+  mediaTypes: ["images"],
+  quality: 1,
+  exif: false,
+  allowsEditing: false,
+};
+
+const LIBRARY_OPTIONS: ImagePicker.ImagePickerOptions = {
+  mediaTypes: ["images"],
+  quality: 1,
+  exif: true,
+  allowsEditing: false,
+  shouldDownloadFromNetwork: true,
+  preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Current,
+};
 
 function first(res: ImagePicker.ImagePickerResult): PickedImage | null {
   if (res.canceled || !res.assets?.[0]) return null;
   const a = res.assets[0];
-  return { uri: a.uri, width: a.width, height: a.height };
+  return {
+    uri: a.uri,
+    width: a.width,
+    height: a.height,
+    assetId: a.assetId ?? null,
+    fileName: a.fileName ?? null,
+    mimeType: a.mimeType ?? null,
+    exif: (a.exif as Record<string, unknown> | null | undefined) ?? null,
+  };
 }
 
-/**
- * Camera first. The system asks for camera access (with the purpose string) the first time. If access
- * was already refused before this tap, offer Settings; a fresh "Don't Allow" is respected silently.
- */
 export async function takePhoto(): Promise<CameraOutcome> {
   if (!Device.isDevice) return "no-camera";
   const before = await ImagePicker.getCameraPermissionsAsync();
@@ -32,18 +58,20 @@ export async function takePhoto(): Promise<CameraOutcome> {
     return "denied";
   }
   try {
-    return first(await ImagePicker.launchCameraAsync(OPTIONS)) ?? "cancelled";
+    return first(await ImagePicker.launchCameraAsync(CAMERA_OPTIONS)) ?? "cancelled";
   } catch {
     return "failed";
   }
 }
 
-/** The system photo picker (no library permission needed on iOS 14+). Reserved for the later import flow. */
 export async function pickFromLibrary(): Promise<PickedImage | null> {
-  return first(await ImagePicker.launchImageLibraryAsync(OPTIONS));
+  try {
+    return first(await ImagePicker.launchImageLibraryAsync(LIBRARY_OPTIONS));
+  } catch {
+    return null;
+  }
 }
 
-/** What to tell someone when the camera didn't open. */
 export const CAMERA_NOTE: Record<Exclude<CameraOutcome, PickedImage | "cancelled">, string> = {
   denied: "Camera access is off. Turn it on in Settings to take a photo for your stamp.",
   "no-camera": "This device doesn't have a camera available.",
