@@ -18,11 +18,9 @@ import { cameraDistance, facingAngle, motionShare, shadowSpread } from "./open-m
 import { shadowWidthRatio } from "./rotation";
 import { buildCubeFace, buildEquirect } from "./studio-env";
 
-// Metro asset ids (.glb is an asset type, see metro.config.js).
 import MODEL from "../../../assets/3d/passport-openable.glb";
 import ENV_IMAGE from "../../../assets/3d/studio-env.jpg";
 
-/** `open` is how far the passport is open: 0 closed, 1 the flat two-page spread (scrubs the model's `open` clip). */
 export type Pose = { angle: number; tiltX: number; tiltY: number; bob: number; open: number };
 
 export type StageInfo = {
@@ -35,7 +33,6 @@ export type StageInfo = {
   pmremOk: boolean;
   texturesLoaded: number;
   texturesLost: number;
-  /** The model carries the `open` clip; if false the passport can only be shown closed. */
   hasOpenClip: boolean;
 };
 
@@ -81,7 +78,6 @@ async function loadEnvironment(): Promise<{ texture: THREE.DataTexture; choice: 
   return { texture, choice };
 }
 
-/** Six procedural faces as a cube texture, for the fake glass (a plain cube map needs no prefilter, so no float render targets). */
 function buildCube(): THREE.CubeTexture {
   const faces = Array.from({ length: 6 }, (_, f) => {
     const t = new THREE.DataTexture(buildCubeFace(f, CUBE_SIZE), CUBE_SIZE, CUBE_SIZE, THREE.RGBAFormat, THREE.UnsignedByteType);
@@ -96,7 +92,6 @@ function buildCube(): THREE.CubeTexture {
   return cube;
 }
 
-/** A soft round falloff in the shadow color; the opacity at its center is the material's. */
 function buildShadowTexture(): THREE.DataTexture {
   const n = 64;
   const px = new Uint8Array(n * n * 4);
@@ -129,13 +124,12 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
   const started = Date.now();
   const width = gl.drawingBufferWidth;
   const height = gl.drawingBufferHeight;
-  // three expects a canvas; expo-gl has none, so hand it a stand-in that returns the existing context.
   const glx = gl as unknown as { getContextAttributes?: () => unknown };
   glx.getContextAttributes ??= () => ({ alpha: false, depth: true, stencil: true, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, powerPreference: "default", failIfMajorPerformanceCaveat: false });
   const canvas = { width, height, clientWidth: width, clientHeight: height, style: {}, addEventListener() {}, removeEventListener() {}, getContext: () => gl } as unknown as HTMLCanvasElement;
   guardUnimplemented(gl as unknown as Record<string, unknown>, createCompatLog());
   const renderer = withoutWebGL1Global(() => new THREE.WebGLRenderer({ canvas, context: gl as unknown as WebGL2RenderingContext, antialias: true, alpha: false }));
-  renderer.setPixelRatio(1); // the native buffer is already sized for the capped pixel ratio (see Passport3DView)
+  renderer.setPixelRatio(1);
   renderer.setSize(width, height, false);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
@@ -151,7 +145,6 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
   key.position.set(0.1, 0.3, 0.3);
   scene.add(key);
 
-  // Environment: the studio panorama, prefiltered for physically based materials. If this fails, the fake glass takes over.
   const env = await loadEnvironment();
   let pmremOk = false;
   let envTarget: THREE.WebGLRenderTarget | null = null;
@@ -168,8 +161,6 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
   }
 
   const model = await parseModel(await bytesOf(MODEL), decodeImage);
-  // The cover swing is a clip made in Blender. We never play it in real time: the loop scrubs it to `pose.open`, which
-  // makes closing the same clip backwards, and lets Reduce Motion jump straight to either end.
   const openClip = model.animations.find((c) => c.name === "open");
   const mixer = openClip ? new THREE.AnimationMixer(model.root) : null;
   if (mixer && openClip) {
@@ -179,13 +170,21 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
     action.play();
   }
   let lastOpen = -1;
-  // The studio lighting is moody and the opened pages are meant to match the cream 2D reader they cross-fade into. PAPER_LIFT
-  // adds a little self-light to the two interior pages only: 0 = lit by the studio alone. It cannot be judged without a phone, so
-  // it is one number to nudge on a device (raise it if the 3D pages look greyer than the 2D pages, lower it if they look washed out).
+  const hiddenPageTextures: THREE.Texture[] = [];
   model.root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     const m = mesh.material as THREE.MeshStandardMaterial | undefined;
     if (!mesh.isMesh || !m || (m.name !== "InsideLining" && m.name !== "BearerPage")) return;
+    if (m.name === "BearerPage") {
+      if (m.map) hiddenPageTextures.push(m.map);
+      m.map = null;
+      m.color.set(colors.background);
+      m.emissive.set(colors.background);
+      m.emissiveMap = null;
+      m.emissiveIntensity = PAPER_LIFT;
+      m.needsUpdate = true;
+      return;
+    }
     m.emissive.setScalar(1);
     m.emissiveMap = m.map;
     m.emissiveIntensity = PAPER_LIFT;
@@ -197,7 +196,6 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
   tilt.add(spin);
   scene.add(tilt);
 
-  // Glass: clearcoat is what the file carries; the fake is a Phong material reflecting a procedural cube.
   const covers: THREE.Mesh[] = [];
   model.root.traverse((o) => {
     const m = o as THREE.Mesh;
@@ -260,7 +258,6 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
         mixer.setTime(openClip.duration * p.open);
         lastOpen = p.open;
       }
-      // Opening squares the book up to the viewer, stills the tilt and bob, and pulls the camera back to fit the spread.
       const facing = facingAngle(p.angle, p.open);
       const calm = motionShare(p.open);
       spin.rotation.y = facing;
@@ -283,6 +280,7 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
         m.geometry.dispose();
         [m.material].flat().forEach(disposeMaterial);
       });
+      hiddenPageTextures.forEach((texture) => texture.dispose());
       if (fakeMaterial) disposeMaterial(fakeMaterial);
       cube?.dispose();
       (cube?.images as THREE.DataTexture[] | undefined)?.forEach((t) => t.dispose?.());
