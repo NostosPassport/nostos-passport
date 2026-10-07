@@ -17,11 +17,16 @@ const CHALLENGE = "11111111-1111-4111-8111-111111111111";
 describe("contract request schemas agree with server validation", () => {
   it("signup start", () =>
     agree(C.SignupStartRequest, signupStartSchema, [
-      { email: "a@b.co", displayName: "A", birthdate: "1990-05-05" },
-      { email: "nope", displayName: "A", birthdate: "1990-05-05" },
-      { email: "a@b.co", displayName: "", birthdate: "1990-05-05" },
-      { email: "a@b.co", displayName: "A", birthdate: "2001-02-29" },
-      { email: "a@b.co", displayName: "A", birthdate: "1990-05-05", extra: true },
+      { email: "a@b.co", displayName: "A", handle: "abc", birthdate: "1990-05-05", acceptTerms: true },
+      { email: "nope", displayName: "A", handle: "abc", birthdate: "1990-05-05", acceptTerms: true },
+      { email: "a@b.co", displayName: "", handle: "abc", birthdate: "1990-05-05", acceptTerms: true },
+      { email: "a@b.co", displayName: "A", handle: "a", birthdate: "1990-05-05", acceptTerms: true },
+      { email: "a@b.co", displayName: "A", handle: "bad-handle", birthdate: "1990-05-05", acceptTerms: true },
+      { email: "a@b.co", displayName: "A", handle: "abc", birthdate: "2001-02-29", acceptTerms: true },
+      { email: "a@b.co", displayName: "A", handle: "abc", birthdate: "1990-05-05", acceptTerms: false },
+      { email: "a@b.co", displayName: "A", birthdate: "1990-05-05", acceptTerms: true },
+      { email: "a@b.co", displayName: "A", handle: "abc", birthdate: "1990-05-05" },
+      { email: "a@b.co", displayName: "A", handle: "abc", birthdate: "1990-05-05", acceptTerms: true, extra: true },
     ]));
 
   it("signup completion", () =>
