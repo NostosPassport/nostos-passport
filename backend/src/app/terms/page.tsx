@@ -12,7 +12,7 @@ export default function TermsPage() {
       </p>
 
       <h2>1. Who can use Nostos</h2>
-      <p>You must be 21 or older. You are responsible for your account, for keeping your password private, and for activity performed through your account.</p>
+      <p>You must be 13 or older. You are responsible for your account, for keeping access to your email and devices secure, and for activity performed through your account.</p>
 
       <h2>2. What Nostos is</h2>
       <p>
