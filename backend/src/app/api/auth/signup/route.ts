@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+
 import { SESSION_COOKIE, sessionCookieAttributes } from "@/lib/auth/session";
+import { prisma } from "@/lib/db";
 import { readJson, route } from "@/server/http";
 import { signup } from "@/server/services/auth";
 import { isIosClient, publicUser } from "../client";
