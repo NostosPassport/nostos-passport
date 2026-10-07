@@ -46,10 +46,10 @@ export async function addNostosCameraMetadata(uri: string, metadata: NostosCamer
     [piexif.ExifIFD.DateTimeDigitized]: taken,
   };
   const gps: Record<number, unknown> = {};
+  const lat = metadata.lat;
+  const lng = metadata.lng;
 
-  if (Number.isFinite(metadata.lat) && Number.isFinite(metadata.lng)) {
-    const lat = metadata.lat!;
-    const lng = metadata.lng!;
+  if (typeof lat === "number" && Number.isFinite(lat) && typeof lng === "number" && Number.isFinite(lng)) {
     const date = new Date(metadata.capturedAt);
     gps[piexif.GPSIFD.GPSVersionID] = [2, 3, 0, 0];
     gps[piexif.GPSIFD.GPSLatitudeRef] = lat < 0 ? "S" : "N";
