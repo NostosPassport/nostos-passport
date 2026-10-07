@@ -11,12 +11,12 @@ export const maxDuration = 60;
 async function handler(req: Request) {
   if (!isAuthorizedCron(req)) return NextResponse.json({ error: "unauthorized", message: "Bad cron secret" }, { status: 401 });
   const started = Date.now();
-  const [prunedLoginAttempts, prunedRateEvents, prunedEmailChallenges] = await Promise.all([
+  const [prunedLoginAttempts, prunedRateEvents] = await Promise.all([
     pruneLoginAttempts(prisma),
     pruneRateEvents(prisma),
     pruneEmailChallenges(prisma),
   ]);
-  return NextResponse.json({ ok: true, prunedLoginAttempts, prunedRateEvents, prunedEmailChallenges, ms: Date.now() - started });
+  return NextResponse.json({ ok: true, prunedLoginAttempts, prunedRateEvents, ms: Date.now() - started });
 }
 
 export const GET = handler;
