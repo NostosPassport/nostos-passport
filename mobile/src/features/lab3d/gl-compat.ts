@@ -31,6 +31,18 @@ export function withoutWebGL1Global<T>(fn: () => T): T {
   }
 }
 
+/**
+ * Three configures several WebGL unpack flags while uploading textures. Expo GL only supports the flip-Y variant and logs for
+ * the others. Expo Three uses this same compatibility shim in its examples, so ignore the unsupported calls instead of
+ * forwarding them to native and filling the console with EXGL warnings.
+ */
+export function guardPixelStorei(gl: ExpoWebGLRenderingContext) {
+  const original = gl.pixelStorei.bind(gl);
+  gl.pixelStorei = ((parameter: number, value: number | boolean) => {
+    if (parameter === gl.UNPACK_FLIP_Y_WEBGL) original(parameter, value);
+  }) as typeof gl.pixelStorei;
+}
+
 export type CompatLog = { note: (name: string) => void; entries: () => { name: string; count: number }[]; summary: () => string };
 
 export function createCompatLog(): CompatLog {
