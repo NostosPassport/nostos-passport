@@ -5,15 +5,16 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
 import { mediaUrl } from "@/api";
-import type { StampPhotoView } from "@/api/contracts";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { bookMotion, colors, size, space } from "@/theme";
 import { clampPan, clampScale, doubleTapScale } from "./zoom";
 
-type Props = { photos: readonly StampPhotoView[]; index: number | null; onClose: () => void };
+export type PhotoViewerPhoto = { id: string; url?: string; uri?: string };
+type Props = { photos: readonly PhotoViewerPhoto[]; index: number | null; onClose: () => void };
 
-/** A photo full screen: pinch to zoom up to four times, drag when zoomed, double tap to zoom in and out. Several photos: step through them. */
+const photoUri = (photo: PhotoViewerPhoto): string => photo.uri ?? (photo.url ? mediaUrl(photo.url) : "");
+
 export function PhotoViewer({ photos, index, onClose }: Props) {
   const [current, setCurrent] = useState<number | null>(null);
   const shown = index === null ? null : (current ?? index);
@@ -24,9 +25,9 @@ export function PhotoViewer({ photos, index, onClose }: Props) {
   return (
     <Modal visible={index !== null} transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
       <View style={styles.root}>
-        {shown !== null && photos[shown] ? <ZoomableImage key={photos[shown]!.id} uri={mediaUrl(photos[shown]!.url)} /> : null}
-        <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close photo" hitSlop={space.sm} style={styles.close}>
-          <Icon name="xmark" color="accent" size={size.icon} />
+        {shown !== null && photos[shown] ? <ZoomableImage key={photos[shown]!.id} uri={photoUri(photos[shown]!)} /> : null}
+        <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Back" hitSlop={space.sm} style={styles.back}>
+          <Icon name="chevron.left" color="accent" size={size.icon} />
         </Pressable>
         {shown !== null && photos.length > 1 ? (
           <View style={styles.pager}>
@@ -104,7 +105,7 @@ function ZoomableImage({ uri }: { uri: string }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.black },
   fill: { flex: 1 },
-  close: { position: "absolute", top: space.xxxl + space.md, right: space.md, minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
+  back: { position: "absolute", top: space.xxxl + space.md, left: space.md, minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
   pager: { position: "absolute", bottom: space.xxxl, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: space.xl },
   pagerButton: { minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
 });
