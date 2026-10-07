@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "nostos",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#F7F4EE",
     "platforms": [
       "ios"
@@ -20,7 +20,8 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Nostos uses your location to find the places near you and to confirm you're there when you stamp one. Your position isn't shown to anyone.",
         "NSCameraUsageDescription": "Take a photo for your stamp.",
-        "NSPhotoLibraryUsageDescription": "Choose a photo for your stamp."
+        "NSPhotoLibraryUsageDescription": "Choose a photo for your stamp.",
+        "NSPhotoLibraryAddUsageDescription": "Save photos you take in Nostos to your photo library."
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -88,6 +89,13 @@
           "cameraPermission": "Take photos for your stamp, inside the app.",
           "microphonePermission": false,
           "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Choose photos for your stamp.",
+          "savePhotosPermission": "Save photos you take in Nostos to your photo library."
         }
       ],
       "expo-font",
