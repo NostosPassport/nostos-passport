@@ -8,7 +8,7 @@ import type { NeighborhoodProgress, StampView } from "@/api/contracts";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { haptics } from "@/lib/haptics";
-import { colors, radius, shadows, space } from "@/theme";
+import { colors, radius, shadows, size, space } from "@/theme";
 import { LANDING, landingFrame } from "./landing";
 import { landingCopy, photoPins } from "./landing-copy";
 import { PageView } from "./PageView";
@@ -105,5 +105,5 @@ const styles = StyleSheet.create({
   fill: { width: "100%", height: "100%" },
   pin: { position: "absolute", top: space.xxs, alignSelf: "center", width: space.xs, height: space.xs, borderRadius: space.xxs, backgroundColor: colors.brass },
   words: { alignItems: "center", gap: space.xs, paddingHorizontal: space.lg },
-  done: { width: 180 },
+  done: { width: size.heroHeight },
 });
