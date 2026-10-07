@@ -122,11 +122,11 @@ export function Counts({ counts }: { counts: CoverCounts }) {
   return (
     <View style={styles.counts} accessible accessibilityLabel={`${counts.stamps} stamps, ${counts.places} places, ${counts.neighborhoods} neighborhoods`}>
       {items.map(([label, n]) => (
-        <View key={label} style={styles.count}>
+        <View key={label} testID={`passport-count-${label}`} style={styles.count}>
           <Text variant="title" color="bookAccent" tabular accessibilityElementsHidden>
             {n}
           </Text>
-          <Text variant="typewriterSmall" color="dimBrass" accessibilityElementsHidden>
+          <Text variant="typewriterSmall" color="dimBrass" align="center" numberOfLines={1} adjustsFontSizeToFit style={styles.countLabel} accessibilityElementsHidden>
             {label}
           </Text>
         </View>
@@ -139,6 +139,7 @@ const styles = StyleSheet.create({
   wrap: { alignItems: "center", gap: space.xl },
   shadowShell: { backgroundColor: colors.surface, ...shadows.book },
   bookClip: { overflow: "hidden", backgroundColor: colors.surface },
-  counts: { flexDirection: "row", gap: space.xl },
-  count: { alignItems: "center", gap: space.xxs },
+  counts: { alignSelf: "stretch", flexDirection: "row", justifyContent: "center", gap: space.sm, paddingHorizontal: space.xs },
+  countLabel: { alignSelf: "stretch" },
+  count: { flex: 1, minWidth: 0, alignItems: "center", gap: space.xxs },
 });

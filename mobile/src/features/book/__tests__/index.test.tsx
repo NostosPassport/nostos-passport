@@ -6,8 +6,9 @@ import { IndexList } from "../IndexList";
 import { PassportBook } from "../PassportBook";
 import type { PassportData } from "../use-passport";
 
+jest.mock("../../lab3d/Passport3DView",()=>{const React=jest.requireActual("react");const {Pressable}=jest.requireActual("react-native");return {Passport3DView:({onTap}:{onTap:()=>void})=>React.createElement(Pressable,{accessibilityRole:"button",accessibilityLabel:"Open your passport",onPress:onTap})};});
 let mockData: PassportData;
-jest.mock("expo-router", () => ({ router: { push: jest.fn() } }));
+jest.mock("expo-router", () => ({ router: { push: jest.fn() }, useFocusEffect: jest.fn() }));
 jest.mock("../use-passport", () => ({ usePassport: () => mockData }));
 jest.mock("@/api", () => ({ api: {}, mediaUrl: (u: string) => u }));
 
@@ -77,10 +78,11 @@ describe("the index in the book", () => {
       counts: { stamps: 10, places: 10, neighborhoods: 2 }, neighborhoods: [hood("n1", "East Village", 4, 12), hood("n2", "Chelsea", 6, 9)], retry: jest.fn(),
     };
     await render(<PassportBook />);
-    await fireEvent.press(screen.getByRole("button", { name: /Open your passport/ }));
-    await fireEvent.press(screen.getByLabelText("Index"));
+    await fireEvent.press(screen.getByLabelText("Neighborhood index"));
     expect(screen.getByText("Index")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: /^East Village/ }));
-    expect(screen.getByText("Pages 3 and 4")).toBeTruthy();
+    expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(3);
+    expect(screen.getByLabelText("Page 3")).toBeVisible();
+    expect(screen.getByLabelText("Page 4")).toBeVisible();
   });
 });

@@ -106,3 +106,20 @@ describe("FlipBook", () => {
     expect(a.onSpreadChange).not.toHaveBeenCalled();
   });
 });
+
+describe("whole-page focused gestures",()=>{
+ it("a blank center tap advances; a stamp target keeps detail precedence; first-left stays open",async()=>{
+ const changed=jest.fn(),closed=jest.fn();
+ const v=await render(<FlipBook pageWidth={PW} pageHeight={426} total={3} spread={1} pageTaps stampTargets={[{left:350,right:420,top:80,bottom:160}]} onSpreadChange={changed} onCloseBook={closed} renderFace={face}/>);
+ const tap=async(x:number,y:number)=>fireGestureHandler(getByGestureTestId("flip-tap"),[{state:State.BEGAN,x,y},{state:State.ACTIVE,x,y},{state:State.END,x,y}]);
+ await tap(380,100);expect(changed).not.toHaveBeenCalled();await tap(450,100);expect(changed).toHaveBeenCalledWith(2);
+ await v.unmount();await render(<FlipBook pageWidth={PW} pageHeight={426} total={3} spread={0} pageTaps onSpreadChange={changed} onCloseBook={closed} renderFace={face}/>);
+ await tap(120,100);expect(closed).not.toHaveBeenCalled();
+ });
+ it("rapid repeated taps do not start another animation while settling",async()=>{
+ const spring=jest.spyOn(Reanimated,"withSpring").mockImplementation(()=>1);
+ await render(<FlipBook pageWidth={PW} pageHeight={426} total={3} spread={0} pageTaps onSpreadChange={jest.fn()} renderFace={face}/>);
+ const tap=async()=>fireGestureHandler(getByGestureTestId("flip-tap"),[{state:State.BEGAN,x:450,y:100},{state:State.ACTIVE,x:450,y:100},{state:State.END,x:450,y:100}]);
+ await tap();await tap();expect(spring).toHaveBeenCalledTimes(1);spring.mockRestore();
+ });
+});

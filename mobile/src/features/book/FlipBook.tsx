@@ -1,19 +1,22 @@
+import { pageTapTarget, type HitRect } from "./focus-interaction";
 /* eslint-disable react-hooks/immutability -- Reanimated shared values are written through .value by design */
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { type SharedValue, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { type SharedValue, useAnimatedStyle, useReducedMotion, useSharedValue, cancelAnimation, withSpring, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 
 import { haptics } from "@/lib/haptics";
-import { bookMotion, colors } from "@/theme";
+import { bookMotion, colors, hairlineWidth } from "@/theme";
 import { DRAG_ZONE, FLICK, TAP_ZONE, castShade, dragPos, flipAngle, flipShade, settleTarget, showsBack, stepTarget, turnProgress, zoneAt } from "./flip-math";
 import { PERSPECTIVE } from "./open-math";
 import { type PageFace, spreadAt } from "./spreads";
 import { Spread } from "./Spread";
 
 type Props = {
+  pageTaps?: boolean;
+  stampTargets?: readonly HitRect[];
   pageWidth: number;
   pageHeight: number;
   /** How many spreads the book has. */
@@ -35,12 +38,13 @@ const faceOf = (spread: number, total: number, side: "left" | "right"): PageFace
  * an outer edge drags the page, a tap on the edge turns it, and a release springs to the nearest spread. With Reduce
  * Motion on, pages crossfade instead of turning.
  */
-export function FlipBook({ pageWidth: pw, pageHeight: ph, total, spread, onSpreadChange, onCloseBook, renderFace }: Props) {
+export function FlipBook({ pageWidth: pw, pageHeight: ph, total, spread, onSpreadChange, onCloseBook, renderFace, pageTaps = false, stampTargets = [] }: Props) {
   const reduced = useReducedMotion();
   const pos = useSharedValue(spread);
   const from = useSharedValue(spread);
   const startPos = useSharedValue(spread);
   const startX = useSharedValue(0);
+  const busy = useSharedValue(false);
   const zone = useSharedValue(0); // 1 = forward edge, -1 = back edge, 0 = not from an edge
 
   const commit = (target: number, previous: number) => {
@@ -49,6 +53,7 @@ export function FlipBook({ pageWidth: pw, pageHeight: ph, total, spread, onSprea
     onSpreadChange(target);
   };
   const closeBook = () => onCloseBook?.();
+  useEffect(()=>()=>cancelAnimation(pos),[pos]);
 
   // A change from outside (a jump) moves the book there.
   useEffect(() => {
@@ -58,8 +63,11 @@ export function FlipBook({ pageWidth: pw, pageHeight: ph, total, spread, onSprea
 
   const settle = (target: number, origin: number, velocity: number) => {
     "worklet";
+    if (busy.value) return;
+    busy.value = true;
     const done = (finished?: boolean) => {
       "worklet";
+      busy.value = false;
       if (finished) scheduleOnRN(commit, target, origin);
     };
     pos.value = reduced ? withTiming(target, { duration: bookMotion.durations.crossfade }, done) : withSpring(target, { ...bookMotion.pageFlip, velocity: -velocity / (pw * 1.7) }, done);
@@ -69,6 +77,7 @@ export function FlipBook({ pageWidth: pw, pageHeight: ph, total, spread, onSprea
     .withTestId("flip-pan")
     .activeOffsetX([-8, 8])
     .onBegin((e) => {
+      if (busy.value) { zone.value = 0; return; }
       const z = zoneAt(e.x, pw, DRAG_ZONE);
       zone.value = z === "next" ? 1 : z === "prev" ? -1 : 0;
       startX.value = e.x;
@@ -83,14 +92,21 @@ export function FlipBook({ pageWidth: pw, pageHeight: ph, total, spread, onSprea
     .onEnd((e) => {
       if (zone.value === 0) return;
       if (zone.value === -1 && from.value === 0) {
+        if (pageTaps) return;
         if (e.translationX > pw * 0.3 || e.velocityX > FLICK) scheduleOnRN(closeBook);
         return;
       }
       settle(settleTarget(pos.value, from.value, e.velocityX, pw, total), from.value, e.velocityX);
     });
 
-  const tap = Gesture.Tap().withTestId("flip-tap").onEnd((e, ok) => {
-    if (!ok) return;
+  const tap = Gesture.Tap().maxDistance(8).cancelsTouchesInView(false).withTestId("flip-tap").onEnd((e, ok) => {
+    if (!ok || busy.value) return;
+    if (pageTaps) {
+      const origin = Math.round(pos.value);
+      const target = pageTapTarget(e.x,e.y,pw,ph,origin,total,busy.value,stampTargets);
+      if (target !== origin) settle(target,origin,0);
+      return;
+    }
     const z = zoneAt(e.x, pw, TAP_ZONE);
     if (z === null) return;
     const origin = Math.round(pos.value);
@@ -110,6 +126,7 @@ export function FlipBook({ pageWidth: pw, pageHeight: ph, total, spread, onSprea
   return (
     <GestureDetector gesture={Gesture.Exclusive(pan, tap)}>
       <View collapsable={false}>
+        {pageTaps ? <View pointerEvents="none" accessible accessibilityRole="adjustable" accessibilityLabel="Passport pages" accessibilityValue={{min:1,max:total,now:spread+1}} accessibilityActions={[{name:"increment",label:"Next spread"},{name:"decrement",label:"Previous spread"}]} onAccessibilityAction={(e)=>{const target=stepTarget(spread,e.nativeEvent.actionName==="increment"?1:-1,total);if(target!==spread&&!busy.value)settle(target,spread,0);}} style={{position:"absolute",width:hairlineWidth,height:hairlineWidth}} /> : null}
         <Spread pageWidth={pw} pageHeight={ph} spreadIndex={s} spreadTotal={total}>
           {/* At either book boundary, no turning sheet carries the outer face: keep that current face underneath. */}
           <View style={[styles.half, { width: pw, height: ph }]}>{under(s === 0 ? s : s - 1, "left")}</View>

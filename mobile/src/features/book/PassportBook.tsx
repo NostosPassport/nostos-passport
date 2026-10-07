@@ -1,173 +1,127 @@
-import { router } from "expo-router";
-import { useEffect, useMemo, useReducer, useState } from "react";
-import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
-
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppState, Modal, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { bookMotion, size, space } from "@/theme";
+import { Skeleton } from "@/components/ui/skeleton";
+import { bookMotion, colors, size, space } from "@/theme";
+import { Passport3DView } from "../lab3d/Passport3DView";
+import { READER_AT, SPREAD_FILL } from "../lab3d/open-motion";
 import { BearerPage } from "./BearerPage";
+import { Counts } from "./Cover";
+import { FlipBook } from "./FlipBook";
 import { FirstRunHint } from "./FirstRunHint";
 import { useFirstRun } from "./first-run";
-import { type Phase, type PhaseEvent, isOpenish, nextPhase, spreadLabel, stageTransform } from "./book-state";
-import { Counts, Cover } from "./Cover";
-import { bookSize, openScale } from "./dimensions";
-import { FlipBook } from "./FlipBook";
-import { InsideCover } from "./InsideCover";
-import { OpeningCover } from "./OpeningCover";
-import { PageView } from "./PageView";
-import { type PageFace, groupByPage, pageCountFor, spreadCountFor } from "./spreads";
 import { IndexList } from "./IndexList";
 import { indexRows, spreadForPage } from "./index-data";
+import { InsideCover } from "./InsideCover";
+import { PageView } from "./PageView";
+import { type PageFace, groupByPage } from "./spreads";
+import { slotPlacement } from "./slots";
+import { FOCUS_TOP_SPACE, FOCUS_BOTTOM_SPACE, focusBookSize, focusSpreadCount, stampHitRect } from "./focus-interaction";
 import { usePassport } from "./use-passport";
 
-/**
- * Your passport as a book: the cover, which opens on a tap to the bearer page, then spreads of stamps you turn with a finger
- * or a tap on the edge. Everything here is yours alone to see.
+/* eslint-disable react-hooks/immutability -- Reanimated shared values are written through .value by design */
+/** The real 3D passport outside: tap and its cover swings open (the Blender `open` clip), and once the spread is nearly flat
+ * the existing 2D page reader fades in over it. Close fades the reader out and plays the same clip backwards.
+ * If there is no live 3D model (still loading, failed, or a test), tapping goes straight to the reader as before.
  */
 export function PassportBook() {
-  const data = usePassport();
-  const { width: sw, height: sh } = useWindowDimensions();
-  const reduced = useReducedMotion();
-  const [phase, send] = useReducer((p: Phase, e: PhaseEvent) => nextPhase(p, e), "closed" as Phase);
-  const [spread, setSpread] = useState(0);
-  const [showIndex, setShowIndex] = useState(false);
-  const firstRun = useFirstRun();
-
-  const book = useMemo(() => bookSize(sw, sh), [sw, sh]);
-  const fit = useMemo(() => openScale(sw, book, space.md), [sw, book]);
-  const open = useSharedValue(0);
-  useEffect(() => {
-    const target = isOpenish(phase) ? 1 : 0;
-    open.value = reduced ? withTiming(target, { duration: bookMotion.durations.crossfade }) : withSpring(target, bookMotion.coverOpen);
-  }, [phase, reduced, open]);
-  const stage = useAnimatedStyle(() => {
-    const t = stageTransform(open.value, book.pageWidth, fit);
-    return { transform: [{ translateX: t.translateX }, { scale: t.scale }] };
-  });
-
-  const byPage = useMemo(() => groupByPage(data.stamps), [data.stamps]);
-  const rows = useMemo(() => indexRows(data.neighborhoods, data.stamps), [data.neighborhoods, data.stamps]);
-  const pinnedIds = useMemo(() => data.pins.map((s) => s.id), [data.pins]);
-  const pages = pageCountFor(data.counts.stamps);
-  const spreads = spreadCountFor(data.counts.stamps);
-  const bearer = { displayName: data.displayName, handle: data.handle, memberSince: data.memberSince, bio: data.bio };
-
-  if (data.status === "error") {
-    return (
-      <View style={styles.center}>
-        <InlineError message="Couldn't open your passport. Your connection may be down." onRetry={data.retry} />
-      </View>
-    );
-  }
-  if (data.status === "pending") {
-    return (
-      <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Opening your passport">
-        <Skeleton width={book.width} height={book.height} />
-      </View>
-    );
-  }
-
-  const bearerFace = <BearerPage width={book.pageWidth} height={book.pageHeight} bearer={bearer} avatarUrl={data.avatarUrl} />;
-  const renderFace = (face: PageFace, side: "left" | "right") => {
-    if (face.kind === "inside-cover") return <InsideCover width={book.pageWidth} height={book.pageHeight} />;
-    if (face.kind === "bearer") return bearerFace;
-    return (
-      <PageView
-        page={face.page}
-        side={side}
-        width={book.pageWidth}
-        height={book.pageHeight}
-        stamps={byPage.get(face.page) ?? []}
-        pinnedIds={pinnedIds}
-        onStampPress={(s) => router.push({ pathname: "/stamp/[id]", params: { id: s.id } })}
-      />
-    );
-  };
-
-  const cover = (
-    <Cover width={book.width} height={book.height} counts={data.counts} name={data.displayName} showCounts={false} onOpen={() => {
-      firstRun.dismiss();
-      send("tapCover");
-    }} />
-  );
-  const go = (to: number) => setSpread(Math.max(0, Math.min(spreads - 1, to)));
-
-  if (showIndex) {
-    return (
-      <IndexList
-        rows={rows}
-        onClose={() => setShowIndex(false)}
-        onJump={(page) => {
-          setSpread(Math.min(spreads - 1, spreadForPage(page)));
-          setShowIndex(false);
-        }}
-      />
-    );
-  }
-
-  return (
-    <View style={styles.root}>
-      <View style={styles.stageWrap}>
-        <Animated.View style={[{ width: book.pageWidth * 2, height: book.pageHeight }, stage]}>
-          {phase === "open" ? (
-            <FlipBook pageWidth={book.pageWidth} pageHeight={book.pageHeight} total={spreads} spread={spread} onSpreadChange={setSpread} onCloseBook={() => { setSpread(0); send("closeBook"); }} renderFace={renderFace} />
-          ) : (
-            <View style={[styles.rightHalf, { left: book.pageWidth, width: book.width, height: book.height }]}>
-              <OpeningCover
-                width={book.width}
-                height={book.height}
-                open={phase === "opening"}
-                initialOpen={phase === "closing"}
-                outside={cover}
-                page={bearerFace}
-                onSettled={() => send("coverSettled")}
-              />
-            </View>
-          )}
-        </Animated.View>
-      </View>
-      <View style={styles.footer}>
-        {phase === "closed" ? (
-          <>
-            <Counts counts={data.counts} />
-            {firstRun.show ? <FirstRunHint onDismiss={firstRun.dismiss} /> : null}
-          </>
-        ) : phase === "open" ? (
-          <View style={styles.pager}>
-            <Pressable onPress={() => (spread === 0 ? send("closeBook") : go(spread - 1))} accessibilityRole="button" accessibilityLabel={spread === 0 ? "Close the passport" : "Previous page"} hitSlop={space.sm} style={styles.pagerButton}>
-              <Icon name={spread === 0 ? "xmark" : "chevron.left"} color="accent" size={size.icon} />
-            </Pressable>
-            <Pressable onPress={() => setShowIndex(true)} accessibilityRole="button" accessibilityLabel="Index" accessibilityHint="Lists your neighborhoods and jumps to their pages" hitSlop={space.sm} style={styles.indexButton}>
-              <Icon name="list.bullet" color="dimBrass" size={size.iconSmall} />
-              <Text variant="typewriterSmall" color="dimBrass" accessibilityLiveRegion="polite">
-                {spreadLabel(spread, pages)}
-              </Text>
-            </Pressable>
-            <Pressable onPress={() => go(spread + 1)} disabled={spread >= spreads - 1} accessibilityRole="button" accessibilityLabel="Next page" accessibilityState={{ disabled: spread >= spreads - 1 }} hitSlop={space.sm} style={styles.pagerButton}>
-              <Icon name="chevron.right" color={spread >= spreads - 1 ? "textTertiary" : "accent"} size={size.icon} />
-            </Pressable>
-          </View>
-        ) : null}
-        {data.counts.stamps === 0 && phase === "open" ? (
-          <Text variant="callout" color="textSecondary" align="center">
-            Your first page is empty. Go to a place and stamp it.
-          </Text>
-        ) : null}
-      </View>
-    </View>
-  );
+ const data=usePassport();
+ const firstRun=useFirstRun();
+ const [showIndex,setShowIndex]=useState(false);
+ const openPages=()=>{firstRun.dismiss();setTransitioning(true);setFocused(true);}; // straight to the page reader, no 3D opening
+ const open=()=>{ // takes no arguments on purpose: it is wired to touch and accessibility callbacks that pass event objects
+  if(!modelReady.current){openPages();return;} // nothing live to animate (loading, failed, or no GPU)
+  firstRun.dismiss();readerRequested.current=false;setOpening(true); // 3D opens; the reader joins at READER_AT (see onOpenProgress)
+ };
+ const {width,height}=useWindowDimensions();
+ const insets=useSafeAreaInsets();
+ const reduced=useReducedMotion();
+ const [focused,setFocused]=useState(false);
+ const [spread,setSpread]=useState(0);
+ const [transitioning,setTransitioning]=useState(false);
+ const [opening,setOpening]=useState(false);
+ const [modelFrame,setModelFrame]=useState({y:0,height:0,width:0});
+ const progress=useSharedValue(0);
+ const openProgress=useSharedValue(0); // how far the 3D passport is open, 0..1, written by the render loop
+ const modelReady=useRef(false);
+ const readerRequested=useRef(false);
+ const closing=useSharedValue(false);
+ const finishClose=()=>{setFocused(false);setTransitioning(false);readerRequested.current=false;setOpening(false);}; // the 3D passport closes once the reader has faded out
+ useEffect(()=>{
+  closing.value=false;
+  if(!focused){progress.value=0;return;}
+  progress.value=withTiming(1,{duration:reduced?0:bookMotion.durations.standard},finished=>{if(finished)scheduleOnRN(setTransitioning,false);});
+ },[focused,reduced,progress,closing]);
+ const backdropMotion=useAnimatedStyle(()=>({opacity:progress.value}));
+ const readerMotion=useAnimatedStyle(()=>({opacity:reduced?progress.value:interpolate(progress.value,[0,0.3,1],[0,0,1]),transform:[{scale:reduced?1:interpolate(progress.value,[0,1],[0.92,1])}]}));
+ const [screenActive,setScreenActive]=useState(true);
+ const [appActive,setAppActive]=useState(AppState.currentState!=="background"&&AppState.currentState!=="inactive");
+ const [modelError,setModelError]=useState(false);
+ const [modelKey,setModelKey]=useState(0);
+ const returnToFocus=useRef(false);
+ useFocusEffect(useCallback(()=>{
+  setScreenActive(true);
+  if(returnToFocus.current){returnToFocus.current=false;setTransitioning(true);setFocused(true);}
+  return ()=>setScreenActive(false);
+ },[]));
+ useEffect(()=>{const sub=AppState.addEventListener("change",s=>setAppActive(s==="active"));return()=>sub.remove();},[]);
+ const total=focusSpreadCount(data.stamps.map(s=>s.page));
+ const current=Math.min(spread,total-1);
+ const book=focusBookSize(width-insets.left-insets.right,height-insets.top-insets.bottom);
+ const fitScale=modelFrame.width>0?Math.min(1.6,Math.max(1,(book.pageWidth*2)/(SPREAD_FILL*modelFrame.width))):1.1; // the 3D spread grows to the reader's book width
+ const modelMotion=useAnimatedStyle(()=>{
+  const sourceCenter=insets.top+size.hitTarget+space.xs+modelFrame.y+modelFrame.height/2;
+  const destinationCenter=(height+insets.top-insets.bottom+FOCUS_TOP_SPACE-FOCUS_BOTTOM_SPACE)/2;
+  return {transform:[{translateY:reduced?0:openProgress.value*(destinationCenter-sourceCenter)},{scale:reduced?1:interpolate(openProgress.value,[0,1],[1,fitScale])}]};
+ });
+ const chromeMotion=useAnimatedStyle(()=>({opacity:interpolate(openProgress.value,[0,0.33],[1,0],"clamp")}));
+ const requestReader=()=>{if(readerRequested.current)return;readerRequested.current=true;setTransitioning(true);setFocused(true);};
+ const onOpenProgress=(p:number)=>{openProgress.value=p;if(opening&&p>=READER_AT)requestReader();};
+ const onOpenSettled=(isOpen:boolean)=>{if(isOpen&&opening)requestReader();else if(!isOpen)readerRequested.current=false;};
+ const byPage=useMemo(()=>groupByPage(data.stamps),[data.stamps]);
+ const pinnedIds=useMemo(()=>data.pins.map(s=>s.id),[data.pins]);
+ const stampTargets=useMemo(()=>[current*2-1,current*2].flatMap((p,index)=>
+  (byPage.get(p)??[]).map(s=>stampHitRect(slotPlacement(s.id,s.slot??1,book.pageWidth,book.pageHeight),index*book.pageWidth))),[byPage,current,book.pageWidth,book.pageHeight]);
+ const close=()=>{
+  if(closing.value)return;
+  closing.value=true;setTransitioning(true);
+  progress.value=withTiming(0,{duration:reduced?0:bookMotion.durations.standard},finished=>{if(finished)scheduleOnRN(finishClose);});
+ };
+ const openStamp=(id:string)=>{returnToFocus.current=true;setFocused(false);router.push({pathname:"/stamp/[id]",params:{id}});};
+ const renderFace=(face:PageFace,side:"left"|"right")=>{
+  if(face.kind==="inside-cover")return <InsideCover width={book.pageWidth} height={book.pageHeight}/>;
+  if(face.kind==="bearer")return <BearerPage width={book.pageWidth} height={book.pageHeight} bearer={{displayName:data.displayName,handle:data.handle,memberSince:data.memberSince,bio:data.bio}} avatarUrl={data.avatarUrl}/>;
+  return <PageView page={face.page} side={side} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(face.page)??[]} pinnedIds={pinnedIds} onStampPress={s=>openStamp(s.id)}/>;
+ };
+ if(showIndex)return <IndexList rows={indexRows(data.neighborhoods,data.stamps)} onClose={()=>setShowIndex(false)} onJump={page=>{setSpread(Math.min(total-1,spreadForPage(page)));setShowIndex(false);openPages();}}/>;
+ if(data.status==="error")return <View style={styles.center}><InlineError message="Couldn't open your passport. Your connection may be down." onRetry={data.retry}/></View>;
+ if(data.status==="pending")return <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Opening your passport"><Skeleton width={width*.8} height={height*.5}/></View>;
+ return <View style={styles.root}>
+  <View testID="passport-home" pointerEvents={focused?"none":"auto"} style={[styles.home,{paddingTop:insets.top+size.hitTarget+space.xs}]} accessibilityElementsHidden={focused} importantForAccessibility={focused?"no-hide-descendants":"auto"}>
+   <Animated.View testID="passport-model-stage" onLayout={e=>setModelFrame({y:e.nativeEvent.layout.y,height:e.nativeEvent.layout.height,width:e.nativeEvent.layout.width})} style={[styles.model,modelMotion]}>
+    {modelError?<View style={styles.center}><InlineError message="Couldn't load the 3D passport." onRetry={()=>{setModelError(false);setModelKey(k=>k+1);}}/><Pressable onPress={openPages} accessibilityRole="button" accessibilityLabel="Open stamp pages" style={styles.close}><Icon name="book" size={size.icon} color="accent"/></Pressable></View>:
+    <Passport3DView key={modelKey} running={screenActive&&appActive} lowPower reduceMotion={reduced} soak={false} glassMode="auto" open={opening} onTap={()=>open()} onOpenProgress={onOpenProgress} onOpenSettled={onOpenSettled} onReady={()=>{modelReady.current=true;setModelError(false);}} onError={()=>{modelReady.current=false;setModelError(true);}} onGlass={()=>undefined} onStats={()=>undefined}/>}
+   </Animated.View>
+   <Animated.View style={[styles.counts,chromeMotion]}><Counts counts={data.counts}/>{firstRun.show?<FirstRunHint onDismiss={firstRun.dismiss}/>:null}<Pressable accessibilityRole="button" accessibilityLabel="Neighborhood index" onPress={()=>setShowIndex(true)} style={[styles.close,styles.index]}><Icon name="list.bullet" size={size.iconSmall} color="textSecondary"/><Text variant="typewriterSmall" color="textSecondary">Index</Text></Pressable></Animated.View>
+  </View>
+  <Modal visible={focused} transparent presentationStyle="overFullScreen" animationType="none" onRequestClose={close}>
+   <View style={[styles.focus,{paddingTop:insets.top+FOCUS_TOP_SPACE,paddingBottom:insets.bottom+FOCUS_BOTTOM_SPACE,paddingLeft:insets.left+8,paddingRight:insets.right+8}]} accessibilityViewIsModal>
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill,styles.backdrop,backdropMotion]}/>
+    <Animated.View testID="passport-reader-stage" pointerEvents={transitioning?"none":"auto"} style={readerMotion}>
+    <FlipBook key="focused-pages" pageWidth={book.pageWidth} pageHeight={book.pageHeight} total={total} spread={current} onSpreadChange={setSpread} renderFace={renderFace} pageTaps stampTargets={stampTargets}/>
+    </Animated.View>
+    <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close passport" accessibilityHint="Returns to the main screen without changing your page" onAccessibilityEscape={close} style={[styles.close,{position:"absolute",top:insets.top+4,right:insets.right+8}]}><Icon name="xmark" color="textPrimary" size={size.iconSmall}/></Pressable>
+   </View>
+  </Modal>
+ </View>;
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.xl },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: space.lg },
-  stageWrap: { alignItems: "center", justifyContent: "center" },
-  rightHalf: { position: "absolute", top: 0 },
-  footer: { minHeight: size.hitTarget, alignItems: "center", gap: space.sm },
-  pager: { flexDirection: "row", alignItems: "center", gap: space.xl },
-  indexButton: { flexDirection: "row", alignItems: "center", gap: space.xs, minHeight: size.hitTarget },
-  pagerButton: { minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
+const styles=StyleSheet.create({
+ root:{flex:1,backgroundColor:colors.background},home:{flex:1,paddingHorizontal:space.md,paddingBottom:space.xs,alignItems:"center"},center:{flex:1,alignItems:"center",justifyContent:"center",padding:space.lg},
+ model:{flex:1,width:"100%",minHeight:0},counts:{width:"100%",alignItems:"center",paddingTop:space.md,gap:space.xs},focus:{flex:1,alignItems:"center",justifyContent:"center"},backdrop:{backgroundColor:colors.background},index:{flexDirection:"row",gap:space.xs},close:{minWidth:size.hitTarget,minHeight:size.hitTarget,alignItems:"center",justifyContent:"center"},
 });

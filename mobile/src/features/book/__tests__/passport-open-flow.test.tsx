@@ -1,0 +1,136 @@
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
+import { State } from "react-native-gesture-handler";
+import { Dimensions } from "react-native";
+import type { StampView } from "@/api/contracts";
+import { PassportBook } from "../PassportBook";
+import type { PassportData } from "../use-passport";
+
+let mockReduced = false;
+jest.mock("react-native-reanimated", () => ({ ...jest.requireActual("react-native-reanimated/mock"), useSharedValue: (value: unknown) => jest.requireActual("react").useState(() => ({ value }))[0], useReducedMotion: () => mockReduced }));
+const mockPush = jest.fn();
+let mockFocus: () => void;
+let mockData: PassportData;
+let mockView: { open: boolean; onTap: () => void; onReady: (i: unknown) => void; onError: (m: string) => void; onOpenProgress: (p: number) => void; onOpenSettled: (o: boolean) => void };
+jest.mock("expo-router", () => ({ router: { push: (...a: unknown[]) => mockPush(...a) }, useFocusEffect: (cb: () => void) => { mockFocus = cb; } }));
+jest.mock("../use-passport", () => ({ usePassport: () => mockData }));
+jest.mock("../../lab3d/Passport3DView", () => {
+  const { Pressable } = jest.requireActual("react-native");
+  return { Passport3DView: (props: typeof mockView) => { mockView = props; return <Pressable accessibilityRole="button" accessibilityLabel="Open your passport" onPress={props.onTap} />; } };
+});
+jest.mock("../first-run", () => ({ useFirstRun: () => ({ show: false, dismiss: jest.fn() }) }));
+
+const stamp = (id: string, page: number, slot: number, name: string): StampView => ({
+  id, photoUrl: null, photos: [], caption: "", song: null, page, slot, createdAt: "2026-10-03T00:00:00.000Z", editedAt: null,
+  place: { id: `p-${id}`, slug: id, name, neighborhood: "East Village", neighborhoodId: null },
+  author: { handle: "ava", displayName: "Ava", avatarUrl: null, verified: false }, mine: true, likes: { count: 0, viewerLiked: false }, hidden: false, removed: false,
+});
+const ready = (over: Partial<PassportData> = {}): PassportData => ({
+  status: "ready", handle: "ava", displayName: "Ava Lee", avatarUrl: null, bio: "", memberSince: "2026-10-03T04:00:00.000Z", stamps: [], pins: [],
+  counts: { stamps: 7, places: 5, neighborhoods: 2 }, neighborhoods: [], retry: jest.fn(), ...over,
+});
+const COUNTS = "7 stamps, 5 places, 2 neighborhoods";
+const tapPage = async (x: number) => { await act(() => fireGestureHandler(getByGestureTestId("flip-tap"), [{ state: State.BEGAN, x, y: 15 }, { state: State.ACTIVE, x, y: 15 }, { state: State.END, x, y: 15 }])); };
+
+describe("tapping the 3D passport: the cover opens, then the reader takes over", () => {
+  beforeEach(() => { mockPush.mockClear(); mockReduced = false; Dimensions.set({ window: { width: 390, height: 844, scale: 3, fontScale: 1 }, screen: { width: 390, height: 844, scale: 3, fontScale: 1 } }); });
+
+  it("with a live model: a tap starts the 3D opening and the reader waits until the cover is nearly flat", async () => {
+    mockData = ready();
+    await render(<PassportBook />);
+    expect(mockView.open).toBe(false);
+    await act(() => mockView.onReady({}));
+    await fireEvent.press(screen.getByLabelText("Open your passport"));
+    expect(mockView.open).toBe(true);
+    expect(screen.queryByLabelText("Close passport")).toBeNull(); // the cover is still swinging
+    await act(() => mockView.onOpenProgress(0.5));
+    expect(screen.queryByLabelText("Close passport")).toBeNull();
+    await act(() => mockView.onOpenProgress(0.9));
+    expect(screen.getByLabelText("Close passport")).toBeTruthy(); // handed off to the page reader
+    expect(screen.getByText("NOSTOS PASSPORT")).toBeVisible();
+  });
+
+  it("the reader still appears if only the final settled signal arrives", async () => {
+    mockData = ready();
+    await render(<PassportBook />);
+    await act(() => mockView.onReady({}));
+    await fireEvent.press(screen.getByLabelText("Open your passport"));
+    await act(() => mockView.onOpenSettled(true));
+    expect(screen.getByLabelText("Close passport")).toBeTruthy();
+  });
+
+  it("Close brings the cover back: the 3D passport is told to close and the home counts return", async () => {
+    mockData = ready();
+    await render(<PassportBook />);
+    await act(() => mockView.onReady({}));
+    await fireEvent.press(screen.getByLabelText("Open your passport"));
+    await act(() => mockView.onOpenProgress(0.95));
+    await fireEvent.press(screen.getByLabelText("Close passport"));
+    expect(mockView.open).toBe(false);
+    expect(screen.queryByLabelText("Close passport")).toBeNull();
+    expect(screen.getByLabelText(COUNTS)).toBeVisible();
+    await act(() => mockView.onOpenSettled(false));
+    // and it can be opened again straight away
+    await fireEvent.press(screen.getByLabelText("Open your passport"));
+    expect(mockView.open).toBe(true);
+    await act(() => mockView.onOpenProgress(0.9));
+    expect(screen.getByLabelText("Close passport")).toBeTruthy();
+  });
+
+  it("without a live model (still loading, failed, or no GPU) a tap goes straight to the pages as before", async () => {
+    mockData = ready();
+    await render(<PassportBook />);
+    await fireEvent.press(screen.getByLabelText("Open your passport"));
+    expect(screen.getByLabelText("Close passport")).toBeTruthy();
+    expect(mockView.open).toBe(false);
+  });
+
+  it("a model that errors after loading falls back to the instant reader", async () => {
+    mockData = ready();
+    await render(<PassportBook />);
+    await act(() => mockView.onReady({}));
+    await act(() => mockView.onError("gpu"));
+    await fireEvent.press(screen.getByLabelText("Open stamp pages"));
+    expect(screen.getByLabelText("Close passport")).toBeTruthy();
+  });
+
+  it("Reduce Motion: the model reports one jump to open and the reader is there at once", async () => {
+    mockReduced = true;
+    mockData = ready();
+    await render(<PassportBook />);
+    await act(() => mockView.onReady({}));
+    await fireEvent.press(screen.getByLabelText("Open your passport"));
+    await act(() => mockView.onOpenProgress(1));
+    expect(screen.getByLabelText("Close passport")).toBeTruthy();
+  });
+
+  it("opening a stamp keeps the 3D passport open behind it, and coming back restores the reader on the same spread", async () => {
+    mockData = ready({ stamps: [stamp("s1", 1, 1, "First"), stamp("s2", 1, 2, "Second"), stamp("s3", 1, 3, "Third"), stamp("s4", 2, 1, "Fourth")], counts: { stamps: 4, places: 4, neighborhoods: 1 } });
+    await render(<PassportBook />);
+    await act(() => mockView.onReady({}));
+    await fireEvent.press(screen.getByLabelText("Open your passport"));
+    await act(() => mockView.onOpenProgress(0.9));
+    await tapPage(300);
+    await fireEvent.press(screen.getByRole("button", { name: "Stamp, Fourth, page 2, slot 1" }));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: "/stamp/[id]", params: { id: "s4" } });
+    expect(mockView.open).toBe(true); // the book stays open under the stamp page
+    await act(() => mockFocus());
+    expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(2);
+    expect(screen.getByLabelText("Close passport")).toBeTruthy();
+  });
+
+  it("the index jump goes straight to the pages even with a live model (no two second animation just to navigate)", async () => {
+    const mk = (id: string, page: number, hoodId: string): StampView => ({ ...stamp(id, page, 1, `Place ${id}`), place: { id: `p-${id}`, slug: id, name: `Place ${id}`, neighborhood: "Somewhere", neighborhoodId: hoodId } });
+    const stamps = Array.from({ length: 10 }, (_, i) => mk(`s${i}`, Math.floor(i / 3) + 1, i >= 6 ? "n1" : "n2"));
+    mockData = ready({
+      stamps, counts: { stamps: 10, places: 10, neighborhoods: 2 },
+      neighborhoods: [{ neighborhoodId: "n1", name: "East Village", borough: "Manhattan", visited: 4, total: 12, complete: false, completedAt: null, percent: 33 }],
+    });
+    await render(<PassportBook />);
+    await act(() => mockView.onReady({}));
+    await fireEvent.press(screen.getByLabelText("Neighborhood index"));
+    await fireEvent.press(screen.getByRole("button", { name: /^East Village/ }));
+    expect(screen.getByLabelText("Close passport")).toBeTruthy(); // reader is up with no progress callbacks at all
+    expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(3);
+  });
+});
