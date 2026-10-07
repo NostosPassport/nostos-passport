@@ -43,12 +43,12 @@ describe("VisaSpread", () => {
     jest.useFakeTimers();
     try {
       await wrap(stamp());
-      expect(screen.getByText("hello there")).toBeTruthy(); // the whole caption is in place from the start
+      expect(screen.getByText("hello there")).toBeTruthy();
       expect(screen.queryByText("hel", { includeHiddenElements: true })).toBeNull();
       await act(async () => jest.advanceTimersByTime(160));
-      expect(screen.getByText("hello", { includeHiddenElements: true })).toBeTruthy(); // typed so far, laid over it (hidden from a screen reader)
+      expect(screen.getByText("hello", { includeHiddenElements: true })).toBeTruthy();
       await act(async () => jest.advanceTimersByTime(2000));
-      expect(screen.getAllByText("hello there")).toHaveLength(1); // finished: one plain line
+      expect(screen.getAllByText("hello there")).toHaveLength(1);
     } finally {
       jest.useRealTimers();
     }
@@ -59,7 +59,7 @@ describe("VisaSpread", () => {
     expect(screen.queryByLabelText(/^Photo \d/)).toBeNull();
     expect(screen.queryByText("SOUNDTRACK")).toBeNull();
   });
-  it("lists each photo and opens one full screen, with a way to step through them and to close", async () => {
+  it("lists each photo and opens one full screen, with a way to step through them and to go back", async () => {
     await wrap(stamp());
     expect(screen.getAllByLabelText(/^Photo \d of 3$/)).toHaveLength(3);
     await fireEvent(screen.getByLabelText("Photo 2 of 3"), "accessibilityAction", { nativeEvent: { actionName: "activate" } });
@@ -68,7 +68,7 @@ describe("VisaSpread", () => {
     await fireEvent.press(screen.getByLabelText("Next photo"));
     expect(screen.getByText("3 of 3")).toBeTruthy();
     expect(screen.getByLabelText("Next photo").props.accessibilityState?.disabled).toBe(true);
-    await fireEvent.press(screen.getByLabelText("Close photo"));
+    await fireEvent.press(screen.getByLabelText("Back"));
     expect(screen.queryByText("3 of 3")).toBeNull();
   });
   it("saves the layout when the owner drops a photo: the dragged one on top, where it was left", async () => {
