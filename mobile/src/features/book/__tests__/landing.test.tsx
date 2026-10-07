@@ -44,7 +44,7 @@ describe("landing timeline", () => {
   it("flares to full brass quickly and fades to nothing, and spreads ink once", () => {
     const glows = Array.from({ length: 120 }, (_, i) => landingFrame(LANDING.impact + i * 10, false).glow);
     expect(Math.max(...glows)).toBeCloseTo(1, 1);
-    expect(glows.indexOf(Math.max(...glows))).toBeLessThan(40); // the peak comes early
+    expect(glows.indexOf(Math.max(...glows))).toBeLessThan(40);
     expect(landingFrame(LANDING.impact + LANDING.glow, false).glow).toBeCloseTo(0);
     expect(landingFrame(LANDING.impact + LANDING.ink, false).inkSpread).toBeCloseTo(1);
     expect(landingFrame(LANDING.total, false)).toMatchObject({ scale: 1, opacity: 1 });
@@ -61,12 +61,12 @@ describe("landing timeline", () => {
 });
 
 describe("what the landing says", () => {
-  it("names the page and the progress through the neighborhood", () => {
-    expect(landingCopy(3, progress())).toEqual({ added: "Added to page 3", progress: "East Village: 4 of 12 places.", completed: false });
+  it("names the page and neighborhood without exposing dataset-size counts", () => {
+    expect(landingCopy(3, progress())).toEqual({ added: "Added to page 3", progress: "New place in East Village.", completed: false });
   });
   it("says so when it is another visit, and when the neighborhood is finished", () => {
-    expect(landingCopy(3, progress({ newPlace: false })).progress).toBe("Another visit. East Village: 4 of 12 places.");
-    expect(landingCopy(3, progress({ justCompleted: true, complete: true, visited: 12 }))).toMatchObject({ completed: true, progress: "East Village is complete. 12 of 12 places." });
+    expect(landingCopy(3, progress({ newPlace: false })).progress).toBe("Another visit in East Village.");
+    expect(landingCopy(3, progress({ justCompleted: true, complete: true, visited: 12 }))).toMatchObject({ completed: true, progress: "East Village is complete." });
   });
   it("copes with no neighborhood and with no page", () => {
     expect(landingCopy(null, null)).toEqual({ added: "Stamped", progress: null, completed: false });
@@ -92,10 +92,11 @@ describe("LandingScene", () => {
   });
   afterEach(() => jest.useRealTimers());
 
-  it("says which page the stamp went on and how far through the neighborhood you are, and gives a haptic knock on impact", async () => {
+  it("says which page the stamp went on and names the neighborhood without dataset-size counts, and gives a haptic knock on impact", async () => {
     await render(<LandingScene stamp={stamp()} others={[]} progress={progress()} pageWidth={300} pageHeight={426} onDone={jest.fn()} />);
     expect(screen.getByText("Added to page 3")).toBeTruthy();
-    expect(screen.getByText("East Village: 4 of 12 places.")).toBeTruthy();
+    expect(screen.getByText("New place in East Village.")).toBeTruthy();
+    expect(screen.queryByText(/4 of 12/)).toBeNull();
     expect(screen.getByLabelText("New stamp, Katz's, page 3, slot 2")).toBeTruthy();
     expect(Haptics.notificationAsync).not.toHaveBeenCalled();
     await act(async () => jest.advanceTimersByTime(LANDING.impact));
