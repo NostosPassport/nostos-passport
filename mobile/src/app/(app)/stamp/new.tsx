@@ -57,11 +57,7 @@ function Composer() {
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const photoWidth = Math.max(1, width - 48);
-
-  useEffect(() => {
-    if (photoUris.length === 0) setActivePhoto(0);
-    else if (activePhoto >= photoUris.length) setActivePhoto(photoUris.length - 1);
-  }, [activePhoto, photoUris.length]);
+  const currentPhoto = photoUris.length > 0 ? Math.min(activePhoto, photoUris.length - 1) : 0;
 
   const draft = { photoUris, caption, song };
   const dirty = !done && (photoUris.length > 0 || caption.trim() !== "" || song !== null);
@@ -152,8 +148,8 @@ function Composer() {
   };
 
   const removeActivePhoto = () => {
-    photoDraft.remove(activePhoto);
-    setActivePhoto((current) => Math.max(0, Math.min(current, photoUris.length - 2)));
+    photoDraft.remove(currentPhoto);
+    setActivePhoto(Math.max(0, Math.min(currentPhoto, photoUris.length - 2)));
   };
   const viewerPhotos = photoUris.map((uri, index) => ({ id: `${uri}-${index}`, uri }));
 
@@ -218,12 +214,12 @@ function Composer() {
               {photoUris.length > 0 ? (
                 <>
                   <View style={styles.photoCount}><Kicker>{photoUris.length} / {MAX_STAMP_PHOTOS}</Kicker></View>
-                  <Pressable onPress={removeActivePhoto} accessibilityRole="button" accessibilityLabel={`Remove photo ${activePhoto + 1}`} style={styles.removePhoto}>
+                  <Pressable onPress={removeActivePhoto} accessibilityRole="button" accessibilityLabel={`Remove photo ${currentPhoto + 1}`} style={styles.removePhoto}>
                     <Icon name="xmark" color="textPrimary" size={20} />
                   </Pressable>
                   {photoUris.length > 1 ? (
                     <View style={styles.photoDots} pointerEvents="none">
-                      {photoUris.map((uri, index) => <View key={`${uri}-dot-${index}`} style={[styles.dot, index === activePhoto && styles.dotActive]} />)}
+                      {photoUris.map((uri, index) => <View key={`${uri}-dot-${index}`} style={[styles.dot, index === currentPhoto && styles.dotActive]} />)}
                     </View>
                   ) : null}
                 </>
