@@ -1,13 +1,13 @@
 import type { NeighborhoodProgress } from "@/api/contracts";
 import { seeded } from "@/lib/rng";
 
-/** What the landing says once the stamp is down: where it went, and how far through the neighborhood you are. */
+/** What the landing says once the stamp is down without exposing neighborhood dataset-size counts. */
 export function landingCopy(page: number | null, progress: NeighborhoodProgress | null): { added: string; progress: string | null; completed: boolean } {
   const added = page === null ? "Stamped" : `Added to page ${page}`;
   if (!progress) return { added, progress: null, completed: false };
-  if (progress.justCompleted) return { added, progress: `${progress.name} is complete. ${progress.visited} of ${progress.total} places.`, completed: true };
-  if (!progress.newPlace) return { added, progress: `Another visit. ${progress.name}: ${progress.visited} of ${progress.total} places.`, completed: false };
-  return { added, progress: `${progress.name}: ${progress.visited} of ${progress.total} places.`, completed: false };
+  if (progress.justCompleted) return { added, progress: `${progress.name} is complete.`, completed: true };
+  if (!progress.newPlace) return { added, progress: `Another visit in ${progress.name}.`, completed: false };
+  return { added, progress: `New place in ${progress.name}.`, completed: false };
 }
 
 /** Where the small photos pinned beside a stamp sit, across a page `width` wide. Same seed, same pins. */
