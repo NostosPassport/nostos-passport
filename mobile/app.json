@@ -12,7 +12,7 @@
       "ios"
     ],
     "ios": {
-      "bundleIdentifier": "com.charlesjinn.nostos",
+      "bundleIdentifier": "com.nostos.ios",
       "supportsTablet": false,
       "config": {
         "usesNonExemptEncryption": false
