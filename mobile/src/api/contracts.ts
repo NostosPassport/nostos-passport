@@ -59,6 +59,14 @@ export const PlaceRef = z.object({ id: z.string(), slug: z.string(), name: z.str
 const EmailAddress = z.string().trim().toLowerCase().email().max(200);
 const VerificationCode = z.string().trim().regex(/^\d{6}$/, "Enter the six-digit code");
 const ChallengeId = z.string().uuid();
+const DisplayName = z.string().trim().min(1).max(60);
+const SignupHandle = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, "Handle must be at least 3 characters")
+  .max(30, "Handle must be 30 characters or fewer")
+  .regex(/^[a-z0-9._]+$/, "Handle can use lowercase letters, numbers, periods and underscores");
 const Birthdate = z.string().refine((value) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return false;
@@ -71,25 +79,13 @@ export const EmailChallengeResponse = z
   .object({ challengeId: ChallengeId, expiresAt: IsoDate, resendAfterSeconds: z.number().int().nonnegative() })
   .strict();
 
-/** First half of sign-up. Age eligibility is checked here; birthdate is never stored. */
+/** First half of sign-up. All profile fields and age eligibility are checked before any email is sent; birthdate is never stored. */
 export const SignupStartRequest = z
-  .object({ email: EmailAddress, displayName: z.string().trim().min(1).max(60), birthdate: Birthdate })
+  .object({ email: EmailAddress, displayName: DisplayName, handle: SignupHandle, birthdate: Birthdate, acceptTerms: z.literal(true) })
   .strict();
 /** Second half of sign-up after the email code has been verified. */
 export const SignupRequest = z
-  .object({
-    challengeId: ChallengeId,
-    code: VerificationCode,
-    displayName: z.string().trim().min(1).max(60),
-    handle: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .min(3, "Handle must be at least 3 characters")
-      .max(30, "Handle must be 30 characters or fewer")
-      .regex(/^[a-z0-9._]+$/, "Handle can use lowercase letters, numbers, periods and underscores"),
-    acceptTerms: z.literal(true),
-  })
+  .object({ challengeId: ChallengeId, code: VerificationCode, displayName: DisplayName, handle: SignupHandle, acceptTerms: z.literal(true) })
   .strict();
 export const LoginStartRequest = z.object({ email: EmailAddress }).strict();
 export const LoginRequest = z.object({ challengeId: ChallengeId, code: VerificationCode }).strict();
