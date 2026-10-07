@@ -11,7 +11,7 @@ import * as THREE from "three";
 import { createViewportSizer } from "./viewport";
 import { colors, scene3d } from "@/theme";
 import { type EnvChoice, type GlassChoice, type GlassMode, chooseEnvironment, chooseGlass, describeAssets } from "./asset-select";
-import { withoutWebGL1Global, guardUnimplemented, createCompatLog } from "./gl-compat";
+import { withoutWebGL1Global, guardPixelStorei, guardUnimplemented, createCompatLog } from "./gl-compat";
 import { decodeImage, flipRows } from "./decode-image";
 import { parseModel } from "./load-model";
 import { cameraDistance, facingAngle, motionShare, shadowSpread } from "./open-motion";
@@ -127,6 +127,7 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
   const glx = gl as unknown as { getContextAttributes?: () => unknown };
   glx.getContextAttributes ??= () => ({ alpha: false, depth: true, stencil: true, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, powerPreference: "default", failIfMajorPerformanceCaveat: false });
   const canvas = { width, height, clientWidth: width, clientHeight: height, style: {}, addEventListener() {}, removeEventListener() {}, getContext: () => gl } as unknown as HTMLCanvasElement;
+  guardPixelStorei(gl);
   guardUnimplemented(gl as unknown as Record<string, unknown>, createCompatLog());
   const renderer = withoutWebGL1Global(() => new THREE.WebGLRenderer({ canvas, context: gl as unknown as WebGL2RenderingContext, antialias: true, alpha: false }));
   renderer.setPixelRatio(1);
