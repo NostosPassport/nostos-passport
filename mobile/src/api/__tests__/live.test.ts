@@ -1,11 +1,12 @@
 /**
- * Live contract check: runs the app's client against a real backend and parses every response with
+ * Live contract check: runs the app's client against a real local backend and parses every response with
  * the app's copy of the contract. Opt-in (it writes to that backend's database):
  *
  *   NOSTOS_LIVE_API=http://localhost:3000 npx jest src/api/__tests__/live.test.ts
  *
- * Uses the dev seed accounts (password `lastcall-dev`), including the geofence-exempt @appreview.
+ * Uses the development seed accounts and the development-only password fallback on /api/auth/login.
  */
+import { TokenResponse } from "../contracts";
 import { createApi, type Api } from "../client";
 
 const BASE = process.env.NOSTOS_LIVE_API;
@@ -14,15 +15,19 @@ const d = BASE ? describe : describe.skip;
 
 async function signedIn(email: string): Promise<Api> {
   let token: string | null = null;
-  const api = createApi({ baseUrl: BASE!, getToken: () => token, onInvalidToken: () => (token = null) });
-  const res = await api.auth.login({ email, password: PASSWORD });
-  token = res.token;
-  return api;
+  const response = await fetch(`${BASE!}/api/auth/login`, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json", "X-Client": "ios" },
+    body: JSON.stringify({ email, password: PASSWORD }),
+  });
+  if (!response.ok) throw new Error(`Dev login failed (${response.status}): ${await response.text()}`);
+  const parsed = TokenResponse.parse(await response.json());
+  token = parsed.token;
+  return createApi({ baseUrl: BASE!, getToken: () => token, onInvalidToken: () => (token = null) });
 }
 
 d("live backend", () => {
   jest.setTimeout(60_000);
-  // Surface contract mismatches loudly instead of the generic "Something went wrong".
   const errors: unknown[] = [];
   beforeAll(() => jest.spyOn(console, "error").mockImplementation((...a) => void errors.push(a)));
   afterAll(() => expect(errors).toEqual([]));
@@ -72,7 +77,6 @@ d("live backend", () => {
     if (grid.nextAfter) await ava.users.stamps(handle, grid.nextAfter);
     if (grid.stamps[0]) expect((await ava.stamps.get(grid.stamps[0].id)).stamp.mine).toBe(true);
 
-    // The seed keeps @avaa private, and @moth_hopeful follows no one.
     const stranger = await signedIn("moth_hopeful@lastcall.dev");
     const limited = await stranger.users.get(handle);
     expect(limited.access).toBe("limited");
