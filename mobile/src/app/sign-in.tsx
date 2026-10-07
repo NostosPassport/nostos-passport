@@ -44,7 +44,11 @@ export default function SignIn() {
 
   const createAccount = () => {
     const value = email.trim();
-    router.push(value ? { pathname: "/sign-up", params: { email: value } } : "/sign-up");
+    if (value) {
+      router.push({ pathname: "/sign-up", params: { email: value } });
+      return;
+    }
+    router.push("/sign-up");
   };
 
   const submitEmail = () => {
