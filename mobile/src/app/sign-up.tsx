@@ -143,6 +143,7 @@ export default function SignUp() {
               onChangeText={(value) => setCode(value.replace(/\D/g, "").slice(0, 6))}
               keyboardType="number-pad"
               textContentType="oneTimeCode"
+              autoComplete="one-time-code"
               maxLength={6}
               returnKeyType="done"
               onSubmitEditing={submit}
