@@ -12,7 +12,7 @@ const MAX_SENDS_PER_IP = 25;
 const MAX_ATTEMPTS = 5;
 const RETENTION_MS = 24 * 60 * 60_000;
 const EXPIRY_MINUTES = CODE_TTL_MS / 60_000;
-const DEFAULT_VERIFY_EMAIL_TEMPLATE_ID = "email-otp";
+const DEFAULT_OTP_TEMPLATE_ID = "email-otp";
 
 function codeSecret(): string {
   const configured = process.env.AUTH_CODE_SECRET?.trim();
@@ -36,21 +36,8 @@ function firstName(displayName?: string): string {
   return value ? value.split(/\s+/)[0]! : "there";
 }
 
-function actionFor(purpose: EmailChallengePurpose): string {
-  if (purpose === "DELETE_ACCOUNT") return "confirm deleting your Nostos account";
-  if (purpose === "CHANGE_EMAIL") return "confirm this email address";
-  if (purpose === "SIGN_IN") return "sign in to Nostos";
-  return "continue setting up your Nostos passport";
-}
-
-function subjectFor(purpose: EmailChallengePurpose): string {
-  if (purpose === "DELETE_ACCOUNT") return "Confirm your Nostos account deletion";
-  if (purpose === "SIGN_IN") return "Your Nostos sign-in code";
-  return "Verify your Nostos email";
-}
-
-function localMessage(code: string, purpose: EmailChallengePurpose): string {
-  return `Your Nostos verification code is ${code}. It expires in ${EXPIRY_MINUTES} minutes. Use it to ${actionFor(purpose)}. If you didn't request this, you can ignore this email.`;
+function localMessage(code: string): string {
+  return `Your Nostos verification code is ${code}. It expires in ${EXPIRY_MINUTES} minutes.`;
 }
 
 function resendApiKey(): string | null {
@@ -91,8 +78,8 @@ async function postResend(body: Record<string, unknown>, idempotencyKey: string)
   }
 }
 
-async function deliverVerificationTemplate(to: string, code: string, displayName: string | undefined, idempotencyKey: string): Promise<void> {
-  const templateId = process.env.RESEND_VERIFY_EMAIL_TEMPLATE_ID?.trim() || DEFAULT_VERIFY_EMAIL_TEMPLATE_ID;
+async function deliverOtpTemplate(to: string, code: string, displayName: string | undefined, idempotencyKey: string): Promise<void> {
+  const templateId = process.env.RESEND_VERIFY_EMAIL_TEMPLATE_ID?.trim() || DEFAULT_OTP_TEMPLATE_ID;
   await postResend(
     {
       from: sender(),
@@ -111,37 +98,16 @@ async function deliverVerificationTemplate(to: string, code: string, displayName
   );
 }
 
-async function deliverPurposeEmail(to: string, code: string, purpose: EmailChallengePurpose, displayName: string | undefined, idempotencyKey: string): Promise<void> {
-  const name = firstName(displayName);
-  const action = actionFor(purpose);
-  const subject = subjectFor(purpose);
-  const text = `Hi ${name}, your Nostos verification code is ${code}. It expires in ${EXPIRY_MINUTES} minutes. Use it to ${action}. Never share this code with anyone. If you didn't request this email, you can safely ignore it.`;
-  const html = `<p>Hi ${name},</p><p>Your Nostos verification code is:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px">${code}</p><p>This code expires in ${EXPIRY_MINUTES} minutes. Use it to ${action}.</p><p>Never share this code with anyone. If you didn't request this email, you can safely ignore it.</p>`;
-  await postResend({ from: sender(), to: [to], subject, text, html }, idempotencyKey);
-}
-
-async function deliverVerification(
-  to: string,
-  code: string,
-  purpose: EmailChallengePurpose,
-  displayName: string | undefined,
-  idempotencyKey: string,
-): Promise<void> {
+async function deliverOtp(to: string, code: string, displayName: string | undefined, idempotencyKey: string): Promise<void> {
   const key = resendApiKey();
   if (!key) {
     if (process.env.NODE_ENV !== "production") {
-      console.info(`[auth-email] ${to}: ${localMessage(code, purpose)}`);
+      console.info(`[auth-email] ${to}: ${localMessage(code)}`);
       return;
     }
     throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
   }
-
-  if (purpose === "SIGN_UP" || purpose === "CHANGE_EMAIL") {
-    await deliverVerificationTemplate(to, code, displayName, idempotencyKey);
-    return;
-  }
-
-  await deliverPurposeEmail(to, code, purpose, displayName, idempotencyKey);
+  await deliverOtpTemplate(to, code, displayName, idempotencyKey);
 }
 
 async function deliverRaw(to: string, subject: string, text: string, html: string, idempotencyKey: string): Promise<void> {
@@ -153,7 +119,6 @@ async function deliverRaw(to: string, subject: string, text: string, html: strin
     }
     throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
   }
-
   await postResend({ from: sender(), to: [to], subject, text, html }, idempotencyKey);
 }
 
@@ -185,7 +150,7 @@ export async function startEmailChallenge(
   });
 
   try {
-    await deliverVerification(email, code, input.purpose, input.displayName, `nostos-auth/${id}`);
+    await deliverOtp(email, code, input.displayName, `nostos-auth/${id}`);
   } catch (error) {
     await db.emailChallenge.delete({ where: { id } }).catch(() => {});
     throw error;
