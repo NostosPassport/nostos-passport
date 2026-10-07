@@ -100,6 +100,7 @@ export default function DeleteAccount() {
             }}
             keyboardType="number-pad"
             textContentType="oneTimeCode"
+            autoComplete="one-time-code"
             maxLength={6}
             returnKeyType="done"
             onSubmitEditing={confirm}
