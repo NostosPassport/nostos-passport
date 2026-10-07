@@ -1,6 +1,6 @@
 /**
- * COPIED VERBATIM from backend/src/contracts/api.ts (this repo, commit 1646b870).
- * Do not edit here: change the backend contract, then re-copy with `npm run sync:contracts`.
+ * COPIED VERBATIM from backend/src/contracts/api.ts.
+ * Do not edit here: change the backend contract, then re-copy with the contract sync script.
  */
 /**
  * Nostos HTTP API contract: the single source of truth for clients (the Expo iOS app copies this file
@@ -56,14 +56,30 @@ export const PlaceRef = z.object({ id: z.string(), slug: z.string(), name: z.str
 // Auth and account
 // ------------------------------------------------------------------------------------------------
 
+const EmailAddress = z.string().trim().toLowerCase().email().max(200);
+const VerificationCode = z.string().trim().regex(/^\d{6}$/, "Enter the six-digit code");
+const ChallengeId = z.string().uuid();
+const Birthdate = z.string().refine((value) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  return probe.getUTCFullYear() === year && probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
+}, "Enter your birthdate as YYYY-MM-DD");
+
+export const EmailChallengeResponse = z
+  .object({ challengeId: ChallengeId, expiresAt: IsoDate, resendAfterSeconds: z.number().int().nonnegative() })
+  .strict();
+
+/** First half of sign-up. Age eligibility is checked here; birthdate is never stored. */
+export const SignupStartRequest = z
+  .object({ email: EmailAddress, displayName: z.string().trim().min(1).max(60), birthdate: Birthdate })
+  .strict();
+/** Second half of sign-up after the email code has been verified. */
 export const SignupRequest = z
   .object({
-    email: z.string().trim().toLowerCase().email().max(200),
-    password: z
-      .string()
-      .min(10, "Password must be at least 10 characters")
-      .max(200)
-      .refine((value) => /[A-Za-z]/.test(value) && /\d/.test(value), "Password must include at least one letter and one number"),
+    challengeId: ChallengeId,
+    code: VerificationCode,
     displayName: z.string().trim().min(1).max(60),
     handle: z
       .string()
@@ -73,12 +89,10 @@ export const SignupRequest = z
       .max(30, "Handle must be 30 characters or fewer")
       .regex(/^[a-z0-9._]+$/, "Handle can use lowercase letters, numbers, periods and underscores"),
     acceptTerms: z.literal(true),
-    /** YYYY-MM-DD. Checked once for 21+ (403 `underage` if not) and never stored. */
-    birthdate: z.string().refine((v) => /^\d{4}-\d{2}-\d{2}$/.test(v), "Enter your birthdate as YYYY-MM-DD"),
   })
   .strict();
-/** Legacy field name `email` carries either an email address or handle. */
-export const LoginRequest = z.object({ email: z.string().trim().toLowerCase().min(3).max(200), password: z.string().max(200) }).strict();
+export const LoginStartRequest = z.object({ email: EmailAddress }).strict();
+export const LoginRequest = z.object({ challengeId: ChallengeId, code: VerificationCode }).strict();
 /** POST /api/auth/login and /api/auth/signup with header `X-Client: ios`. */
 export const TokenResponse = z.object({ token: z.string(), expiresAt: IsoDate, user: PublicUser }).strict();
 /** Same endpoints without X-Client (web): the session is set as an httpOnly cookie. */
@@ -105,7 +119,10 @@ export const MeResponse = z
   .strict();
 export const AcceptTermsRequest = z.object({ version: z.string() }).strict();
 export const AcceptTermsResponse = z.object({ acceptedVersion: z.string(), acceptedAt: IsoDate }).strict();
-export const DeleteAccountRequest = z.object({ password: z.string().min(1).max(200) }).strict();
+export const EmailChangeStartRequest = z.object({ email: EmailAddress }).strict();
+export const EmailChangeRequest = z.object({ challengeId: ChallengeId, code: VerificationCode }).strict();
+export const EmailChangeResponse = z.object({ ok: z.literal(true), email: EmailAddress }).strict();
+export const DeleteAccountRequest = z.object({ challengeId: ChallengeId, code: VerificationCode }).strict();
 export const DeleteAccountResponse = z.object({ deleted: z.literal(true) }).strict();
 
 // ------------------------------------------------------------------------------------------------
@@ -472,8 +489,16 @@ export type PeopleListResponse = z.infer<typeof PeopleListResponse>;
 export type FollowRequestsResponse = z.infer<typeof FollowRequestsResponse>;
 export type ProfileSettingsRequest = z.infer<typeof ProfileSettingsRequest>;
 export type ProfileSettingsResponse = z.infer<typeof ProfileSettingsResponse>;
+export type EmailChallengeResponse = z.infer<typeof EmailChallengeResponse>;
+export type SignupStartRequest = z.infer<typeof SignupStartRequest>;
 export type SignupRequest = z.infer<typeof SignupRequest>;
+export type LoginStartRequest = z.infer<typeof LoginStartRequest>;
 export type LoginRequest = z.infer<typeof LoginRequest>;
+export type EmailChangeStartRequest = z.infer<typeof EmailChangeStartRequest>;
+export type EmailChangeRequest = z.infer<typeof EmailChangeRequest>;
+export type EmailChangeResponse = z.infer<typeof EmailChangeResponse>;
+export type DeleteAccountRequest = z.infer<typeof DeleteAccountRequest>;
+export type DeleteAccountResponse = z.infer<typeof DeleteAccountResponse>;
 export type TokenResponse = z.infer<typeof TokenResponse>;
 export type MeResponse = z.infer<typeof MeResponse>;
 export type ProfileResponse = z.infer<typeof ProfileResponse>;
