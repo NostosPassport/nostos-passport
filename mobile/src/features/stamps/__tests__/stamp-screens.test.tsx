@@ -1,4 +1,4 @@
-/** The stamp flow's screens: the journal composer, nearby place selection, photos, stamping and the in-app camera. */
+/** The stamp flow's screens: the journal composer, nearby place selection, photos, stamping and the native camera handoff. */
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
@@ -11,12 +11,12 @@ import { photoDraft } from "../photo-draft";
 const mockUpload = jest.fn();
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
+const mockBack = jest.fn();
+const mockTakePhoto = jest.fn();
 let mockPlaces: unknown[] = [];
-let mockPerm = { granted: true, canAskAgain: true };
-const mockTake = jest.fn();
 
 jest.mock("expo-router", () => ({
-  router: { push: (...a: unknown[]) => mockPush(...a), back: jest.fn(), replace: (...a: unknown[]) => mockReplace(...a), dismissAll: jest.fn() },
+  router: { push: (...a: unknown[]) => mockPush(...a), back: (...a: unknown[]) => mockBack(...a), replace: (...a: unknown[]) => mockReplace(...a), dismissAll: jest.fn() },
   Stack: { Screen: () => null },
   useFocusEffect: jest.fn(),
   useNavigation: () => ({ addListener: () => () => undefined, dispatch: jest.fn() }),
@@ -37,16 +37,15 @@ jest.mock("@/features/location/location-store", () => ({
   useLocationState: () => ({ permission: "granted", simulated: null }),
   useUserCoords: () => ({ lat: 40.7, lng: -73.9 }),
 }));
+jest.mock("@/features/photos/pick", () => ({
+  takePhoto: (...a: unknown[]) => mockTakePhoto(...a),
+  CAMERA_NOTE: {
+    denied: "Camera access is off. Turn it on in Settings to take a photo for your stamp.",
+    "no-camera": "This device doesn't have a camera available.",
+    failed: "Couldn't open the camera. Try again.",
+  },
+}));
 jest.mock("@/features/photos/prepare", () => ({ prepareImage: async (uri: string) => ({ uri: `prepared:${uri}`, width: 10, height: 10 }) }));
-jest.mock("expo-camera", () => {
-  const { forwardRef, useEffect, useImperativeHandle } = jest.requireActual("react");
-  const CameraView = forwardRef(function Cam(props: { onCameraReady?: () => void }, ref: unknown) {
-    useImperativeHandle(ref, () => ({ takePictureAsync: mockTake }));
-    useEffect(() => props.onCameraReady?.(), []); // eslint-disable-line react-hooks/exhaustive-deps
-    return null;
-  });
-  return { CameraView, useCameraPermissions: () => [mockPerm, jest.fn()] };
-});
 
 const near = (over: Record<string, unknown>) => ({ id: "p1", slug: "p1", name: "Katz's", address: "", neighborhood: "East Village", lat: 1, lng: 2, geofenceMeters: 100, neighborhoodId: "n1", fromOsm: false, distanceM: 20, inside: true, ...over });
 const wrap = async (ui: React.ReactElement) => render(<QueryClientProvider client={testQueryClient()}>{ui}</QueryClientProvider>);
@@ -147,55 +146,67 @@ describe("the composer", () => {
   });
 });
 
-describe("the in-app camera", () => {
+describe("the native camera handoff", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     photoDraft.clear();
-    mockPerm = { granted: true, canAskAgain: true };
-    mockTake.mockResolvedValue({ uri: "file://shot.jpg", width: 10, height: 10 });
+    mockTakePhoto.mockResolvedValue({ uri: "file://shot.jpg", width: 10, height: 10 });
   });
 
-  it("takes a photo into the stamp, counts them, and stops at six", async () => {
+  it("opens the system camera immediately and adds the confirmed photo", async () => {
     await wrap(<StampCamera />);
-    expect(screen.getByText("0 of 6")).toBeTruthy();
-    for (let i = 0; i < 6; i++) {
+    await waitFor(() => expect(mockTakePhoto).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(photoDraft.get()).toEqual(["prepared:file://shot.jpg"]));
+    expect(screen.getByText("1 of 6")).toBeTruthy();
+    expect(screen.getByLabelText("Photo 1")).toBeTruthy();
+  });
+
+  it("lets you take more photos and stops offering another at six", async () => {
+    await wrap(<StampCamera />);
+    await waitFor(() => expect(photoDraft.get()).toHaveLength(1));
+    for (let i = 1; i < 6; i++) {
       await act(async () => {
-        await fireEvent.press(screen.getByRole("button", { name: /Take photo|Six photos taken/ }));
+        await fireEvent.press(screen.getByRole("button", { name: "Take another photo" }));
       });
       await waitFor(() => expect(photoDraft.get()).toHaveLength(i + 1));
     }
     expect(screen.getByText("6 of 6")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Six photos taken" }).props.accessibilityState.disabled).toBe(true);
-    expect(mockTake).toHaveBeenCalledTimes(6);
-    expect(photoDraft.get()[0]).toBe("prepared:file://shot.jpg");
+    expect(screen.queryByRole("button", { name: "Take another photo" })).toBeNull();
+    expect(mockTakePhoto).toHaveBeenCalledTimes(6);
   });
-  it("asks the camera not to record where it was", async () => {
+
+  it("returns to the composer unchanged when the first camera is cancelled", async () => {
+    mockTakePhoto.mockResolvedValue("cancelled");
     await wrap(<StampCamera />);
-    await act(async () => {
-      await fireEvent.press(screen.getByRole("button", { name: "Take photo" }));
-    });
-    await waitFor(() => expect(mockTake).toHaveBeenCalled());
-    expect(mockTake.mock.calls[0]![0]).toMatchObject({ exif: false });
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1));
+    expect(photoDraft.get()).toEqual([]);
   });
-  it("lets you remove a photo from the strip", async () => {
+
+  it("keeps existing photos when adding another is cancelled", async () => {
     photoDraft.add("file://x.jpg");
+    mockTakePhoto.mockResolvedValue("cancelled");
     await wrap(<StampCamera />);
+    await waitFor(() => expect(mockTakePhoto).toHaveBeenCalledTimes(1));
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(photoDraft.get()).toEqual(["file://x.jpg"]);
+    expect(screen.getByLabelText("Photo 1")).toBeTruthy();
+  });
+
+  it("lets you remove a photo from the list", async () => {
+    photoDraft.add("file://x.jpg");
+    mockTakePhoto.mockResolvedValue("cancelled");
+    await wrap(<StampCamera />);
+    await waitFor(() => expect(mockTakePhoto).toHaveBeenCalledTimes(1));
     await fireEvent.press(screen.getByLabelText("Remove photo 1"));
     expect(photoDraft.get()).toEqual([]);
   });
-  it("says why it needs the camera, calmly, when access is off, and offers Settings when it can't ask again", async () => {
-    mockPerm = { granted: false, canAskAgain: false };
+
+  it("shows a calm retryable note if the system camera fails and keeps existing photos", async () => {
+    photoDraft.add("file://x.jpg");
+    mockTakePhoto.mockResolvedValue("failed");
     await wrap(<StampCamera />);
-    expect(screen.getByText(/inside the app, so they show where you really are/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Open Settings" })).toBeTruthy();
-  });
-  it("tells you when a shot fails and keeps what you have", async () => {
-    mockTake.mockRejectedValue(new Error("camera busy"));
-    await wrap(<StampCamera />);
-    await act(async () => {
-      await fireEvent.press(screen.getByRole("button", { name: "Take photo" }));
-    });
-    await waitFor(() => expect(screen.getByText("Couldn't take that photo. Try again.")).toBeTruthy());
-    expect(photoDraft.get()).toEqual([]);
+    await waitFor(() => expect(screen.getByText("Couldn't open the camera. Try again.")).toBeTruthy());
+    expect(photoDraft.get()).toEqual(["file://x.jpg"]);
+    expect(screen.getByRole("button", { name: "Take another photo" })).toBeTruthy();
   });
 });
