@@ -20,7 +20,7 @@ import { PhotoViewer } from "@/features/book/PhotoViewer";
 import { devSimulator } from "@/features/location/dev-simulator";
 import { locationStore, usePermissionRefresh, useLocationState, useUserCoords } from "@/features/location/location-store";
 import { SimulatedLocationChip } from "@/features/location/sim-chip";
-import { autoPlace, CAPTION_MAX, orderPlaces, stampFields, stampProblem } from "@/features/stamps/composer";
+import { CAPTION_MAX, orderPlaces, stampFields, stampProblem } from "@/features/stamps/composer";
 import { landingDraft } from "@/features/stamps/landing-draft";
 import { photoDraft, usePhotoDraft } from "@/features/stamps/photo-draft";
 import { songDraft } from "@/features/stamps/song-draft";
@@ -48,7 +48,7 @@ function Composer() {
   const nearby = useNearbyPlaces(coords);
   const [stampAt, setStampAt] = useState(() => Date.now());
   const [chosenId, setChosenId] = useState<string | null>(null);
-  const [choosingPlace, setChoosingPlace] = useState(false);
+  const [choosingPlace, setChoosingPlace] = useState(true);
   const photoUris = usePhotoDraft();
   const [activePhoto, setActivePhoto] = useState(0);
   const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
@@ -65,7 +65,7 @@ function Composer() {
 
   const places = orderPlaces(nearby.data?.places ?? []);
   const selectedPlace = places.find((p) => p.id === chosenId) ?? null;
-  const place: Nearby | null = choosingPlace ? null : selectedPlace ?? autoPlace(places);
+  const place: Nearby | null = choosingPlace ? null : selectedPlace;
 
   const openPhotos = () => {
     if (!place) return;
@@ -140,10 +140,6 @@ function Composer() {
 
   const cancel = () => {
     Keyboard.dismiss();
-    if (place) {
-      returnToPlaces();
-      return;
-    }
     router.back();
   };
 
@@ -213,7 +209,9 @@ function Composer() {
               )}
               {photoUris.length > 0 ? (
                 <>
-                  <View style={styles.photoCount}><Kicker>{photoUris.length} / {MAX_STAMP_PHOTOS}</Kicker></View>
+                  <View style={styles.photoCount}>
+                    <NativeText style={styles.photoCountText}>{photoUris.length} / {MAX_STAMP_PHOTOS}</NativeText>
+                  </View>
                   <Pressable onPress={removeActivePhoto} accessibilityRole="button" accessibilityLabel={`Remove photo ${currentPhoto + 1}`} style={styles.removePhoto}>
                     <Icon name="xmark" color="textPrimary" size={20} />
                   </Pressable>
@@ -359,6 +357,7 @@ const styles = StyleSheet.create({
   photoPage: { height: 259, backgroundColor: colors.elevated },
   emptyPhoto: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
   photoCount: { position: "absolute", right: 62, top: 8, height: 28, minWidth: 50, paddingHorizontal: 10, borderRadius: 14, backgroundColor: colors.scrim, alignItems: "center", justifyContent: "center" },
+  photoCountText: { color: colors.background, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.35 },
   removePhoto: { position: "absolute", right: 8, top: 8, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" },
   photoDots: { position: "absolute", left: 0, right: 0, bottom: 10, flexDirection: "row", justifyContent: "center", gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.textTertiary, opacity: 0.55 },
