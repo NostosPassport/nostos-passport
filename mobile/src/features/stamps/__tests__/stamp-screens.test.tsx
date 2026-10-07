@@ -119,17 +119,20 @@ describe("the composer", () => {
     });
   });
 
-  it("shows the photo count, removes the first photo, sends every remaining photo, then lands", async () => {
+  it("shows all draft photos, opens them full screen, removes the visible photo, sends the rest, then lands", async () => {
     photoDraft.add("file://a.jpg");
     photoDraft.add("file://b.jpg");
     mockUpload.mockResolvedValue({ stamp: flatStamp, progress: null });
     const appended: [string, unknown][] = [];
     const appendSpy = jest.spyOn(FormData.prototype, "append").mockImplementation((k: string, v: unknown) => void appended.push([k, v]));
     await wrap(<NewStamp />);
-    expect(screen.getByLabelText("First stamp photo")).toBeTruthy();
+    expect(screen.getByLabelText("Open photo 1 of 2")).toBeTruthy();
+    expect(screen.getByLabelText("Open photo 2 of 2")).toBeTruthy();
     expect(screen.getByText("2 / 6")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Add another photo/ })).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText("Remove first photo"));
+    await fireEvent.press(screen.getByLabelText("Open photo 1 of 2"));
+    expect(screen.getByLabelText("Photo. Pinch to zoom, double tap to zoom in or out.")).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText("Back"));
+    await fireEvent.press(screen.getByLabelText("Remove photo 1"));
     expect(screen.getByText("1 / 6")).toBeTruthy();
     await act(async () => void photoDraft.add("file://c.jpg"));
     await act(async () => {
@@ -175,17 +178,22 @@ describe("the photo source flow", () => {
     mockValidateLibraryPhoto.mockReturnValue({ viable: true, reason: null });
   });
 
-  it("opens the source chooser and accepts a native camera capture without library validation", async () => {
+  it("shows Photos first and only opens the source chooser after Add a photo is pressed", async () => {
     await wrap(<StampCamera />);
+    expect(screen.getByText("Photos")).toBeTruthy();
+    expect(ActionSheetIOS.showActionSheetWithOptions).not.toHaveBeenCalled();
+    expect(mockTakePhoto).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
     await waitFor(() => expect(mockTakePhoto).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(photoDraft.get()).toEqual(["prepared:file://shot.jpg"]));
     expect(mockValidateLibraryPhoto).not.toHaveBeenCalled();
-    expect(screen.getByText("1 of 6")).toBeTruthy();
   });
 
-  it("validates a library selection before adding it", async () => {
+  it("validates a library selection only after Add a photo is pressed", async () => {
     mockSourceIndex = 1;
     await wrap(<StampCamera />);
+    expect(mockPickFromLibrary).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
     await waitFor(() => expect(mockPickFromLibrary).toHaveBeenCalledTimes(1));
     expect(mockValidateLibraryPhoto).toHaveBeenCalledWith(pickedLibraryPhoto, {
       place: { name: "Katz's", lat: 40.7222, lng: -73.9874, geofenceMeters: 100 },
@@ -199,35 +207,34 @@ describe("the photo source flow", () => {
     mockSourceIndex = 1;
     mockValidateLibraryPhoto.mockReturnValue({ viable: false, reason: "Screenshots can't be used for a stamp." });
     await wrap(<StampCamera />);
+    await fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
     await waitFor(() => expect(Alert.alert).toHaveBeenCalledWith("This photo can't be added", "Screenshots can't be used for a stamp."));
     expect(photoDraft.get()).toEqual([]);
   });
 
-  it("returns to the composer unchanged when the initial source chooser is cancelled", async () => {
+  it("leaves you on Photos when the source chooser is cancelled", async () => {
     mockSourceIndex = 2;
     await wrap(<StampCamera />);
-    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1));
+    await fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
+    expect(ActionSheetIOS.showActionSheetWithOptions).toHaveBeenCalledTimes(1);
+    expect(mockBack).not.toHaveBeenCalled();
     expect(photoDraft.get()).toEqual([]);
   });
 
-  it("returns to the composer unchanged when the first camera is cancelled", async () => {
+  it("leaves you on Photos when the native camera is cancelled", async () => {
     mockTakePhoto.mockResolvedValue("cancelled");
     await wrap(<StampCamera />);
-    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1));
-    expect(photoDraft.get()).toEqual([]);
-  });
-
-  it("keeps existing photos when adding another source is cancelled", async () => {
-    photoDraft.add("file://x.jpg");
-    mockSourceIndex = 2;
-    await wrap(<StampCamera />);
-    await waitFor(() => expect(ActionSheetIOS.showActionSheetWithOptions).toHaveBeenCalledTimes(1));
+    await fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
+    await waitFor(() => expect(mockTakePhoto).toHaveBeenCalledTimes(1));
     expect(mockBack).not.toHaveBeenCalled();
-    expect(photoDraft.get()).toEqual(["file://x.jpg"]);
+    expect(photoDraft.get()).toEqual([]);
   });
 
   it("lets you add more camera photos and stops offering another at six", async () => {
     await wrap(<StampCamera />);
+    await act(async () => {
+      await fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
+    });
     await waitFor(() => expect(photoDraft.get()).toHaveLength(1));
     for (let i = 1; i < 6; i++) {
       await act(async () => {
@@ -240,11 +247,13 @@ describe("the photo source flow", () => {
     expect(mockTakePhoto).toHaveBeenCalledTimes(6);
   });
 
-  it("lets you remove a photo from the list", async () => {
+  it("opens an existing draft photo full screen and lets you remove it", async () => {
     photoDraft.add("file://x.jpg");
-    mockSourceIndex = 2;
     await wrap(<StampCamera />);
-    await waitFor(() => expect(ActionSheetIOS.showActionSheetWithOptions).toHaveBeenCalledTimes(1));
+    expect(ActionSheetIOS.showActionSheetWithOptions).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByLabelText("Open photo 1"));
+    expect(screen.getByLabelText("Photo. Pinch to zoom, double tap to zoom in or out.")).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText("Back"));
     await fireEvent.press(screen.getByLabelText("Remove photo 1"));
     expect(photoDraft.get()).toEqual([]);
   });
@@ -253,6 +262,7 @@ describe("the photo source flow", () => {
     photoDraft.add("file://x.jpg");
     mockTakePhoto.mockResolvedValue("failed");
     await wrap(<StampCamera />);
+    await fireEvent.press(screen.getByRole("button", { name: "Add another photo" }));
     await waitFor(() => expect(screen.getByText("Couldn't open the camera. Try again.")).toBeTruthy());
     expect(photoDraft.get()).toEqual(["file://x.jpg"]);
     expect(screen.getByRole("button", { name: "Add another photo" })).toBeTruthy();
