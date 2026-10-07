@@ -43,7 +43,7 @@ export const FollowState = z.enum(["none", "requested", "following"]);
  * A person in a list (search, followers, following, requests). The handle and verified badge always; displayName
  * and avatarUrl are null when the account is private and the viewer doesn't follow it (show a generic avatar).
  */
-export const PersonView = z.object({ id: z.string().optional(), handle: z.string(), displayName: z.string().nullable(), avatarUrl: z.string().nullable(), verified: z.boolean() }).strict();
+export const PersonView = z.object({ handle: z.string(), displayName: z.string().nullable(), avatarUrl: z.string().nullable(), verified: z.boolean() }).strict();
 /** A person plus the viewer's follow state toward them (drives Follow / Requested / Following buttons). */
 export const PersonRow = PersonView.extend({ follow: FollowState, isSelf: z.boolean() }).strict();
 export const PlaceRef = z.object({ id: z.string(), slug: z.string(), name: z.string(), neighborhood: z.string(), neighborhoodId: z.string().nullable() }).strict();
@@ -410,7 +410,7 @@ export const ModHiddenResponse = z
 export const ModLogResponse = z
   .object({
     events: z.array(
-      z.object({ id: z.string(), action: ModerationAction, targetType: z.enum(["PHOTO", "COMMENT", "REPORT", "USER"]), targetId: z.string(), by: z.string(), note: z.string().nullable(), createdAt: IsoDate }).strict()),
+      z.object({ id: z.string(), action: ModerationAction, targetType: z.enum(["PHOTO", "COMMENT", "REPORT", "USER"]), targetId: z.string(), by: z.string(), note: z.string().nullable(), createdAt: IsoDate }).strict(),
     ),
   })
   .strict();
@@ -434,7 +434,7 @@ export const AdminUserSearchResponse = z
   .strict();
 /** POST /api/admin/users/:handle/verification. The note is required and goes into the append-only log. */
 export const VerificationRequest = z.object({ verified: z.boolean(), note: z.string().trim().min(3).max(300) }).strict();
-export const VerificationResponse = z.object({ user: z.object({ handle: z.string(), verified: z.boolean(), verifiedAt: IsoDate.nullable() }).strict();
+export const VerificationResponse = z.object({ user: z.object({ handle: z.string(), verified: z.boolean(), verifiedAt: IsoDate.nullable() }).strict() }).strict();
 export const VerificationLogResponse = z
   .object({ events: z.array(z.object({ id: z.string(), handle: z.string(), action: z.enum(["GRANT", "REVOKE"]), note: z.string(), by: z.string(), at: IsoDate }).strict()) })
   .strict();
