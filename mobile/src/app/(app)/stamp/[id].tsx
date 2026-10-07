@@ -15,6 +15,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { toast, ToastHost } from "@/components/ui/toast";
+import { PhotoViewer } from "@/features/book/PhotoViewer";
 import { pinChange } from "@/features/book/pin-change";
 import { a11yActions, showActions, useStampActions, type ContentAction } from "@/features/moderation/content-actions";
 import { dropStamp } from "@/features/stamps/cache";
@@ -61,6 +62,7 @@ function Memory({ stamp, actions }: { stamp: StampView; actions: ContentAction[]
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [activePhoto, setActivePhoto] = useState(0);
+  const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
   const like = useLike();
   const pins = usePins();
   const pinned = pins.data?.stamps.some((p) => p.id === stamp.id) ?? false;
@@ -72,57 +74,60 @@ function Memory({ stamp, actions }: { stamp: StampView; actions: ContentAction[]
   const photoWidth = Math.max(1, width - 48);
 
   return (
-    <ScrollView contentContainerStyle={[styles.memory, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 20 }]} {...a11yActions(actions)}>
-      <View style={styles.memoryTopbar}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back" style={styles.hitTarget}>
-          <Icon name="chevron.left" color="textPrimary" size={22} />
-        </Pressable>
-        <Pressable onPress={() => showActions(actions)} accessibilityRole="button" accessibilityLabel="More options" style={styles.hitTarget}>
-          <NativeText style={styles.more}>•••</NativeText>
-        </Pressable>
-      </View>
-      <Kicker>NO. {number} / {dateLabel}</Kicker>
-      <NativeText style={styles.memoryTitle}>{stamp.place.name}</NativeText>
-      <Kicker>{stamp.place.neighborhood}, NEW YORK</Kicker>
-
-      <View style={styles.heroFrame}>
-        {stamp.photos.length ? (
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            bounces={stamp.photos.length > 1}
-            onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}
-          >
-            {stamp.photos.map((photo, index) => (
-              <View key={photo.id} style={[styles.photoPage, { width: photoWidth }]}>
-                <Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} accessibilityLabel={`Photo ${index + 1} of ${stamp.photos.length}`} />
-              </View>
-            ))}
-          </ScrollView>
-        ) : (
-          <View style={styles.emptyPhoto} />
-        )}
-        <View style={styles.travelStamp} pointerEvents="none">
-          <Kicker>BEEN HERE</Kicker>
-          <NativeText style={styles.stampCity}>NYC</NativeText>
-          <Icon name="seal" color="accent" size={34} />
-          <NativeText style={styles.stampFooter}>RETURN / REMEMBER</NativeText>
+    <>
+      <ScrollView contentContainerStyle={[styles.memory, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 20 }]} {...a11yActions(actions)}>
+        <View style={styles.memoryTopbar}>
+          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back" style={styles.hitTarget}>
+            <Icon name="chevron.left" color="textPrimary" size={22} />
+          </Pressable>
+          <Pressable onPress={() => showActions(actions)} accessibilityRole="button" accessibilityLabel="More options" style={styles.hitTarget}>
+            <NativeText style={styles.more}>•••</NativeText>
+          </Pressable>
         </View>
-      </View>
+        <Kicker>NO. {number} / {dateLabel}</Kicker>
+        <NativeText style={styles.memoryTitle}>{stamp.place.name}</NativeText>
+        <Kicker>{stamp.place.neighborhood}, NEW YORK</Kicker>
 
-      {stamp.caption ? <NativeText style={styles.caption}>{stamp.caption}</NativeText> : null}
-      {stamp.song ? <SongRow song={stamp.song} /> : null}
-
-      <View style={styles.photoMeta}>
-        <Kicker>{stamp.photos.length === 0 ? "NO PHOTOS" : `${activePhoto + 1} OF ${stamp.photos.length} ${stamp.photos.length === 1 ? "PHOTO" : "PHOTOS"}`}</Kicker>
-        <View style={styles.dots}>
-          {stamp.photos.slice(0, 6).map((photo, index) => <View key={photo.id} style={[styles.dot, index === activePhoto && styles.dotActive]} />)}
+        <View style={styles.heroFrame}>
+          {stamp.photos.length ? (
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              bounces={stamp.photos.length > 1}
+              onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}
+            >
+              {stamp.photos.map((photo, index) => (
+                <Pressable key={photo.id} onPress={() => setViewingPhoto(index)} accessibilityRole="button" accessibilityLabel={`Open photo ${index + 1} of ${stamp.photos.length}`} style={[styles.photoPage, { width: photoWidth }]}>
+                  <Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} accessibilityLabel={`Photo ${index + 1} of ${stamp.photos.length}`} />
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.emptyPhoto} />
+          )}
+          <View style={styles.travelStamp} pointerEvents="none">
+            <Kicker>BEEN HERE</Kicker>
+            <NativeText style={styles.stampCity}>NYC</NativeText>
+            <Icon name="seal" color="accent" size={34} />
+            <NativeText style={styles.stampFooter}>RETURN / REMEMBER</NativeText>
+          </View>
         </View>
-      </View>
-      {stamp.mine ? <EditorialButton label={pinned ? "Pinned to passport" : "Pin to passport"} outline onPress={() => pinAction?.onPress()} /> : null}
-      {SOCIAL_ENABLED ? <LikeButton likes={stamp.likes} disabled={stamp.mine} onPress={() => like.toggle(stamp.id, stamp.likes)} /> : null}
-    </ScrollView>
+
+        {stamp.caption ? <NativeText style={styles.caption}>{stamp.caption}</NativeText> : null}
+        {stamp.song ? <SongRow song={stamp.song} /> : null}
+
+        <View style={styles.photoMeta}>
+          <Kicker>{stamp.photos.length === 0 ? "NO PHOTOS" : `${activePhoto + 1} OF ${stamp.photos.length} ${stamp.photos.length === 1 ? "PHOTO" : "PHOTOS"}`}</Kicker>
+          <View style={styles.dots}>
+            {stamp.photos.slice(0, 6).map((photo, index) => <View key={photo.id} style={[styles.dot, index === activePhoto && styles.dotActive]} />)}
+          </View>
+        </View>
+        {stamp.mine ? <EditorialButton label={pinned ? "Pinned to passport" : "Pin to passport"} outline onPress={() => pinAction?.onPress()} /> : null}
+        {SOCIAL_ENABLED ? <LikeButton likes={stamp.likes} disabled={stamp.mine} onPress={() => like.toggle(stamp.id, stamp.likes)} /> : null}
+      </ScrollView>
+      <PhotoViewer photos={stamp.photos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
+    </>
   );
 }
 
