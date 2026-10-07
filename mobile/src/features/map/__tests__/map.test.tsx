@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { View } from "react-native";
+import { Keyboard, View } from "react-native";
 import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
 import { State } from "react-native-gesture-handler";
 
@@ -151,6 +151,19 @@ describe("MapScreen", () => {
     expect(screen.getByText("Not stamped yet.")).toBeTruthy();
     await fireEvent.press(screen.getByTestId("map-background"));
     expect(screen.queryByText("Not stamped yet.")).toBeNull();
+  });
+  it("clears search with the x button and dismisses the keyboard when the map is tapped", async () => {
+    const dismiss = jest.spyOn(Keyboard, "dismiss").mockImplementation(() => undefined);
+    await render(<MapScreen />);
+    const search = screen.getByLabelText("Find a place");
+    await fireEvent.changeText(search, "Cafe");
+    expect(screen.getByLabelText("Clear search")).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText("Clear search"));
+    expect(screen.getByLabelText("Find a place").props.value).toBe("");
+    await fireEvent.changeText(search, "Katz");
+    await fireEvent.press(screen.getByTestId("map-background"));
+    expect(dismiss).toHaveBeenCalled();
+    dismiss.mockRestore();
   });
   it("shows the OpenStreetMap credit when the data carries one, and not otherwise", async () => {
     mockAttribution = { text: "© OpenStreetMap contributors" };
