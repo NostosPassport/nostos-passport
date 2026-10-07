@@ -92,7 +92,7 @@ export async function startLogin(db: Db, input: unknown, meta: { ip: string; now
   const user = await db.user.findUnique({ where: { email: data.email } });
   if (!user || user.deletedAt) throw notFound("No Nostos account uses that email.");
   if (user.suspendedAt) throw new ServiceError(403, "account_suspended", "This account has been suspended for breaking our rules.");
-  return startEmailChallenge(db, { email: data.email, purpose: "SIGN_IN", ip: meta.ip, now: meta.now });
+  return startEmailChallenge(db, { email: data.email, purpose: "SIGN_IN", ip: meta.ip, displayName: user.displayName, now: meta.now });
 }
 
 export async function login(
