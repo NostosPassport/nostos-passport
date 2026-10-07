@@ -212,7 +212,9 @@ describe("API contract", () => {
     const realResendKey = process.env.RESEND_API_KEY;
     delete process.env.RESEND_API_KEY;
     try {
-      await call("POST /api/auth/signup/start", signupStartR.POST, { body: { email: "start@x.dev", displayName: "Start User", birthdate: "1990-05-05" } });
+      await call("POST /api/auth/signup/start", signupStartR.POST, {
+        body: { email: "start@x.dev", displayName: "Start User", handle: "start_user", birthdate: "1990-05-05", acceptTerms: true },
+      });
     } finally {
       if (realResendKey) process.env.RESEND_API_KEY = realResendKey;
     }
