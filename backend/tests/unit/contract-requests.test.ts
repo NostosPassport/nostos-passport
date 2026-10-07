@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ZodTypeAny } from "zod";
 import * as C from "@/contracts/api";
-import { loginSchema, signupSchema } from "@/server/services/auth";
+import { loginSchema, loginStartSchema, signupSchema, signupStartSchema } from "@/server/services/auth";
+import { changeEmailSchema, startEmailChangeSchema } from "@/server/services/email";
 import { flagSchema, moderateSchema } from "@/server/services/moderation";
 import { deleteAccountSchema } from "@/server/services/account";
 import { stampEditSchema } from "@/server/services/stamps";
@@ -11,33 +12,61 @@ function agree(contract: ZodTypeAny, server: ZodTypeAny, samples: unknown[]) {
   for (const s of samples) expect(contract.safeParse(s).success, JSON.stringify(s)).toBe(server.safeParse(s).success);
 }
 
+const CHALLENGE = "11111111-1111-4111-8111-111111111111";
+
 describe("contract request schemas agree with server validation", () => {
-  it("signup", () =>
+  it("signup start", () =>
+    agree(C.SignupStartRequest, signupStartSchema, [
+      { email: "a@b.co", displayName: "A", birthdate: "1990-05-05" },
+      { email: "nope", displayName: "A", birthdate: "1990-05-05" },
+      { email: "a@b.co", displayName: "", birthdate: "1990-05-05" },
+      { email: "a@b.co", displayName: "A", birthdate: "2001-02-29" },
+      { email: "a@b.co", displayName: "A", birthdate: "1990-05-05", extra: true },
+    ]));
+
+  it("signup completion", () =>
     agree(C.SignupRequest, signupSchema, [
-      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "abc.def_123", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "short1", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "abcdefghij", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "1234567890", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "a", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "a".repeat(31), acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "bad-handle", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "ABC_ok", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "abc", acceptTerms: false, birthdate: "1990-05-05" },
-      { email: "nope", password: "long enough pw1", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05" },
-      { email: "a@b.co", password: "long enough pw1", displayName: "A", handle: "abc", acceptTerms: true, birthdate: "1990-05-05", extra: 1 },
+      { challengeId: CHALLENGE, code: "123456", displayName: "A", handle: "abc", acceptTerms: true },
+      { challengeId: CHALLENGE, code: "123456", displayName: "A", handle: "abc.def_123", acceptTerms: true },
+      { challengeId: "bad", code: "123456", displayName: "A", handle: "abc", acceptTerms: true },
+      { challengeId: CHALLENGE, code: "12345", displayName: "A", handle: "abc", acceptTerms: true },
+      { challengeId: CHALLENGE, code: "abcdef", displayName: "A", handle: "abc", acceptTerms: true },
+      { challengeId: CHALLENGE, code: "123456", displayName: "A", handle: "a", acceptTerms: true },
+      { challengeId: CHALLENGE, code: "123456", displayName: "A", handle: "a".repeat(31), acceptTerms: true },
+      { challengeId: CHALLENGE, code: "123456", displayName: "A", handle: "bad-handle", acceptTerms: true },
+      { challengeId: CHALLENGE, code: "123456", displayName: "A", handle: "ABC_ok", acceptTerms: true },
+      { challengeId: CHALLENGE, code: "123456", displayName: "A", handle: "abc", acceptTerms: false },
+      { challengeId: CHALLENGE, code: "123456", displayName: "A", handle: "abc", acceptTerms: true, extra: 1 },
     ]));
-  it("login", () =>
+
+  it("login", () => {
+    agree(C.LoginStartRequest, loginStartSchema, [
+      { email: "a@b.co" },
+      { email: "nope" },
+      { email: "a@b.co", extra: true },
+    ]);
     agree(C.LoginRequest, loginSchema, [
-      { email: "a@b.co", password: "anything" },
-      { email: "abc.def_123", password: "anything" },
-      { email: "ABCD", password: "anything" },
-      { email: "ab", password: "anything" },
-      { email: "a".repeat(201), password: "anything" },
-      { email: "abc", password: "x".repeat(201) },
-      { email: "abc", password: "anything", extra: true },
-    ]));
-  it("flags, moderation, deletion", () => {
+      { challengeId: CHALLENGE, code: "123456" },
+      { challengeId: "bad", code: "123456" },
+      { challengeId: CHALLENGE, code: "12345" },
+      { challengeId: CHALLENGE, code: "abcdef" },
+      { challengeId: CHALLENGE, code: "123456", extra: true },
+    ]);
+  });
+
+  it("email change and deletion", () => {
+    agree(C.EmailChangeStartRequest, startEmailChangeSchema, [
+      { email: "new@b.co" }, { email: "nope" }, { email: "new@b.co", extra: true },
+    ]);
+    agree(C.EmailChangeRequest, changeEmailSchema, [
+      { challengeId: CHALLENGE, code: "123456" }, { challengeId: "bad", code: "123456" }, { challengeId: CHALLENGE, code: "12345" }, {},
+    ]);
+    agree(C.DeleteAccountRequest, deleteAccountSchema, [
+      { challengeId: CHALLENGE, code: "123456" }, { challengeId: "bad", code: "123456" }, { challengeId: CHALLENGE, code: "12345" }, {},
+    ]);
+  });
+
+  it("flags and moderation", () => {
     agree(C.FlagRequest, flagSchema, [
       { targetType: "STAMP", targetId: "p1", reason: "fake photo" }, { targetType: "USER", targetId: "someone", reason: "abuse" },
       { targetType: "STAMP", targetId: "p1", reason: "no" }, { targetType: "PHOTO", targetId: "p1", reason: "fake photo" }, { targetType: "COMMENT", targetId: "c", reason: "hmm hmm" },
@@ -49,8 +78,8 @@ describe("contract request schemas agree with server validation", () => {
       { targetType: "STAMP", targetId: "p", action: "HIDE" }, { targetType: "USER", targetId: "u", action: "SUSPEND", note: "abuse" }, { targetType: "STAMP", targetId: "p", action: "DELETE" },
       { targetType: "PHOTO", targetId: "p", action: "HIDE" },
     ]);
-    agree(C.DeleteAccountRequest, deleteAccountSchema, [{ password: "x" }, { password: "" }, {}]);
   });
+
   it("stamp edits", () =>
     agree(C.StampEditRequest, stampEditSchema, [
       { caption: "new caption" }, { caption: "x".repeat(280) }, { caption: "x".repeat(281) }, {}, { caption: "ok", extra: 1 },
