@@ -1,12 +1,13 @@
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ActionSheetIOS, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { PhotoViewer } from "@/features/book/PhotoViewer";
 import { CAMERA_NOTE, pickFromLibrary, takePhoto } from "@/features/photos/pick";
 import { prepareImage } from "@/features/photos/prepare";
 import { validateLibraryPhoto, type LibraryPhotoValidationContext } from "@/features/photos/validate-library";
@@ -21,11 +22,10 @@ export default function StampCamera() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const photos = usePhotoDraft();
-  const initialPhotoCount = useRef(photoDraft.get().length);
-  const openedInitialChooser = useRef(false);
   const busyRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
   const full = photos.length >= MAX_STAMP_PHOTOS;
 
   const validationContext = useMemo<LibraryPhotoValidationContext | null>(() => {
@@ -51,14 +51,11 @@ export default function StampCamera() {
     setBusy(false);
   }, []);
 
-  const capture = useCallback(async (initial = false) => {
+  const capture = useCallback(async () => {
     if (!startWork()) return;
     try {
       const outcome = await takePhoto();
-      if (outcome === "cancelled") {
-        if (initial && initialPhotoCount.current === 0) router.back();
-        return;
-      }
+      if (outcome === "cancelled") return;
       if (typeof outcome === "string") {
         setNote(CAMERA_NOTE[outcome]);
         return;
@@ -73,14 +70,11 @@ export default function StampCamera() {
     }
   }, [finishWork, startWork]);
 
-  const chooseLibraryPhoto = useCallback(async (initial = false) => {
+  const chooseLibraryPhoto = useCallback(async () => {
     if (!startWork()) return;
     try {
       const picked = await pickFromLibrary();
-      if (!picked) {
-        if (initial && initialPhotoCount.current === 0) router.back();
-        return;
-      }
+      if (!picked) return;
       if (!validationContext) {
         Alert.alert("This photo can't be added", "Nostos couldn't validate this photo for the current stamp.");
         return;
@@ -102,7 +96,7 @@ export default function StampCamera() {
     }
   }, [finishWork, startWork, validationContext]);
 
-  const chooseSource = useCallback((initial = false) => {
+  const chooseSource = useCallback(() => {
     if (busyRef.current || photoDraft.get().length >= MAX_STAMP_PHOTOS) return;
     ActionSheetIOS.showActionSheetWithOptions(
       {
@@ -111,18 +105,13 @@ export default function StampCamera() {
         cancelButtonIndex: 2,
       },
       (index) => {
-        if (index === 0) void capture(initial);
-        else if (index === 1) void chooseLibraryPhoto(initial);
-        else if (initial && initialPhotoCount.current === 0) router.back();
+        if (index === 0) void capture();
+        else if (index === 1) void chooseLibraryPhoto();
       },
     );
   }, [capture, chooseLibraryPhoto]);
 
-  useEffect(() => {
-    if (openedInitialChooser.current || full) return;
-    openedInitialChooser.current = true;
-    requestAnimationFrame(() => chooseSource(true));
-  }, [chooseSource, full]);
+  const viewerPhotos = photos.map((uri, index) => ({ id: `${uri}-${index}`, uri }));
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.lg }]}>
@@ -141,7 +130,9 @@ export default function StampCamera() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
             {photos.map((uri, i) => (
               <View key={`${uri}-${i}`} style={styles.thumb}>
-                <Image source={{ uri }} style={styles.fill} contentFit="cover" accessibilityLabel={`Photo ${i + 1}`} />
+                <Pressable onPress={() => setViewingPhoto(i)} accessibilityRole="button" accessibilityLabel={`Open photo ${i + 1}`} style={styles.fill}>
+                  <Image source={{ uri }} style={styles.fill} contentFit="cover" accessibilityLabel={`Photo ${i + 1}`} />
+                </Pressable>
                 <Pressable onPress={() => photoDraft.remove(i)} accessibilityRole="button" accessibilityLabel={`Remove photo ${i + 1}`} hitSlop={space.xs} style={styles.remove}>
                   <Icon name="xmark" color="onAccent" size={size.iconTiny} />
                 </Pressable>
@@ -159,9 +150,10 @@ export default function StampCamera() {
       </View>
 
       <View style={styles.actions}>
-        {!full ? <Button title={photos.length > 0 ? "Add another photo" : "Add a photo"} onPress={() => chooseSource(false)} loading={busy} /> : null}
+        {!full ? <Button title={photos.length > 0 ? "Add another photo" : "Add a photo"} onPress={chooseSource} loading={busy} /> : null}
         <Button title="Done" variant="plain" onPress={() => router.back()} />
       </View>
+      <PhotoViewer photos={viewerPhotos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
     </View>
   );
 }
