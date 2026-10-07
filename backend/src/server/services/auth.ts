@@ -19,6 +19,13 @@ const handle = z
   .min(3, "Handle must be at least 3 characters")
   .max(30, "Handle must be 30 characters or fewer")
   .regex(/^[a-z0-9._]+$/, "Handle can use lowercase letters, numbers, periods and underscores");
+const loginIdentifier = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(1, "Enter your email or handle")
+  .max(200)
+  .refine((value) => email.safeParse(value).success || handle.safeParse(value).success, "Enter a valid email or handle");
 const acceptTerms = z.literal(true, { errorMap: () => ({ message: "You need to accept the Terms and Privacy Policy" }) });
 const challenge = z.object({ challengeId: z.string().uuid(), code: z.string().trim().regex(/^\d{6}$/, "Enter the six-digit code") });
 
@@ -34,7 +41,7 @@ export const signupStartSchema = z
 
 export const signupSchema = challenge.extend({ displayName, handle, acceptTerms }).strict();
 
-export const loginStartSchema = z.object({ email }).strict();
+export const loginStartSchema = z.object({ identifier: loginIdentifier }).strict();
 export const loginSchema = challenge.strict();
 export const devLoginSchema = z.object({ email, password: z.string().max(200) }).strict();
 
@@ -127,10 +134,12 @@ export async function signup(db: Db, input: unknown, opts: { client?: SessionCli
 
 export async function startLogin(db: Db, input: unknown, meta: { ip: string; now?: Date }) {
   const data = loginStartSchema.parse(input);
-  const user = await db.user.findUnique({ where: { email: data.email } });
-  if (!user || user.deletedAt) throw notFound("No Nostos account uses that email.");
+  const user = await db.user.findUnique({
+    where: data.identifier.includes("@") ? { email: data.identifier } : { handle: data.identifier },
+  });
+  if (!user || user.deletedAt) throw notFound("No Nostos account uses that email or handle.");
   if (user.suspendedAt) throw new ServiceError(403, "account_suspended", "This account has been suspended for breaking our rules.");
-  return startEmailChallenge(db, { email: data.email, purpose: "SIGN_IN", ip: meta.ip, displayName: user.displayName, now: meta.now });
+  return startEmailChallenge(db, { email: user.email, purpose: "SIGN_IN", ip: meta.ip, displayName: user.displayName, now: meta.now });
 }
 
 export async function login(
