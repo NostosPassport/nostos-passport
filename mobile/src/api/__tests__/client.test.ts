@@ -45,11 +45,12 @@ describe("api client", () => {
       () => jsonResponse(201, { token: "t".repeat(40), expiresAt: "2026-12-24T00:00:00.000Z", user: { id: "u1", handle: "sam", displayName: "Sam", role: "USER" } }),
       null,
     );
-    await api.auth.login({ email: "sam@example.com", password: "pw" });
+    const body = { challengeId: "11111111-1111-4111-8111-111111111111", code: "123456" };
+    await api.auth.login(body);
     const h = calls[0].init.headers as Record<string, string>;
     expect(h.Authorization).toBeUndefined();
     expect(h["Content-Type"]).toBe("application/json");
-    expect(JSON.parse(String(calls[0].init.body))).toEqual({ email: "sam@example.com", password: "pw" });
+    expect(JSON.parse(String(calls[0].init.body))).toEqual(body);
   });
 
   it("surfaces the server's message and code unchanged (geofence 403)", async () => {
@@ -72,8 +73,8 @@ describe("api client", () => {
     await expect(dead.api.me.get()).rejects.toMatchObject({ code: "invalid_token" });
     expect(dead.onInvalidToken).toHaveBeenCalledTimes(1);
 
-    const wrong = setup(() => jsonResponse(401, { error: "invalid_credentials", message: "Wrong email or password." }));
-    await expect(wrong.api.auth.login({ email: "a@b.co", password: "x" })).rejects.toMatchObject({ code: "invalid_credentials" });
+    const wrong = setup(() => jsonResponse(401, { error: "invalid_credentials", message: "That sign-in code is no longer valid." }));
+    await expect(wrong.api.auth.login({ challengeId: "11111111-1111-4111-8111-111111111111", code: "000000" })).rejects.toMatchObject({ code: "invalid_credentials" });
     expect(wrong.onInvalidToken).not.toHaveBeenCalled();
   });
 
