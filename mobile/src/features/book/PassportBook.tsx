@@ -24,16 +24,17 @@ import { usePassport } from "./use-passport";
 
 /* eslint-disable react-hooks/immutability -- Reanimated shared values are written through .value by design */
 /** The real 3D passport outside: tap and its cover swings open (the Blender `open` clip), and once the spread is nearly flat
- * the existing 2D page reader fades in over it. Close fades the reader out and plays the same clip backwards.
+ * the existing 2D page reader fades in over it. Close fades the reader out while the 3D cover starts closing behind it.
  * If there is no live 3D model (still loading, failed, or a test), tapping goes straight to the reader as before.
  */
 export function PassportBook() {
  const data=usePassport();
  const firstRun=useFirstRun();
- const openPages=()=>{firstRun.dismiss();setTransitioning(true);setFocused(true);}; // straight to the page reader, no 3D opening
- const open=()=>{ // takes no arguments on purpose: it is wired to touch and accessibility callbacks that pass event objects
-  if(!modelReady.current){openPages();return;} // nothing live to animate (loading, failed, or no GPU)
-  firstRun.dismiss();readerRequested.current=false;setOpening(true); // 3D opens; the reader joins at READER_AT (see onOpenProgress)
+ const openPages=()=>{firstRun.dismiss();setTransitioning(true);setFocused(true);};
+ const open=()=>{
+  if(modelClosing)return;
+  if(!modelReady.current){openPages();return;}
+  firstRun.dismiss();readerRequested.current=false;setOpening(true);
  };
  const {width,height}=useWindowDimensions();
  const insets=useSafeAreaInsets();
@@ -42,13 +43,14 @@ export function PassportBook() {
  const [spread,setSpread]=useState(0);
  const [transitioning,setTransitioning]=useState(false);
  const [opening,setOpening]=useState(false);
+ const [modelClosing,setModelClosing]=useState(false);
  const [modelFrame,setModelFrame]=useState({y:0,height:0,width:0});
  const progress=useSharedValue(0);
- const openProgress=useSharedValue(0); // how far the 3D passport is open, 0..1, written by the render loop
+ const openProgress=useSharedValue(0);
  const modelReady=useRef(false);
  const readerRequested=useRef(false);
  const closing=useSharedValue(false);
- const finishClose=()=>{setFocused(false);setTransitioning(false);readerRequested.current=false;setOpening(false);}; // the 3D passport closes once the reader has faded out
+ const finishClose=()=>{setFocused(false);setTransitioning(false);readerRequested.current=false;};
  useEffect(()=>{
   closing.value=false;
   if(!focused){progress.value=0;return;}
@@ -70,7 +72,7 @@ export function PassportBook() {
  const total=focusSpreadCount(data.stamps.map(s=>s.page));
  const current=Math.min(spread,total-1);
  const book=focusBookSize(width-insets.left-insets.right,height-insets.top-insets.bottom);
- const fitScale=modelFrame.width>0?Math.min(1.6,Math.max(1,(book.pageWidth*2)/(SPREAD_FILL*modelFrame.width))):1.1; // the 3D spread grows to the reader's book width
+ const fitScale=modelFrame.width>0?Math.min(1.6,Math.max(1,(book.pageWidth*2)/(SPREAD_FILL*modelFrame.width))):1.1;
  const modelMotion=useAnimatedStyle(()=>{
   const sourceCenter=insets.top+size.hitTarget+space.xs+modelFrame.y+modelFrame.height/2;
   const destinationCenter=(height+insets.top-insets.bottom+FOCUS_TOP_SPACE-FOCUS_BOTTOM_SPACE)/2;
@@ -79,7 +81,10 @@ export function PassportBook() {
  const chromeMotion=useAnimatedStyle(()=>({opacity:interpolate(openProgress.value,[0,0.33],[1,0],"clamp")}));
  const requestReader=()=>{if(readerRequested.current)return;readerRequested.current=true;setTransitioning(true);setFocused(true);};
  const onOpenProgress=(p:number)=>{openProgress.value=p;if(opening&&p>=READER_AT)requestReader();};
- const onOpenSettled=(isOpen:boolean)=>{if(isOpen&&opening)requestReader();else if(!isOpen)readerRequested.current=false;};
+ const onOpenSettled=(isOpen:boolean)=>{
+  if(isOpen&&opening)requestReader();
+  else if(!isOpen){readerRequested.current=false;setModelClosing(false);}
+ };
  const byPage=useMemo(()=>groupByPage(data.stamps),[data.stamps]);
  const pinnedIds=useMemo(()=>data.pins.map(s=>s.id),[data.pins]);
  const stampTargets=useMemo(()=>[current*2-1,current*2].flatMap((p,index)=>
@@ -87,6 +92,7 @@ export function PassportBook() {
  const close=()=>{
   if(closing.value)return;
   closing.value=true;setTransitioning(true);
+  if(modelReady.current&&opening){setModelClosing(true);setOpening(false);}
   progress.value=withTiming(0,{duration:reduced?0:bookMotion.durations.standard},finished=>{if(finished)scheduleOnRN(finishClose);});
  };
  const openStamp=(id:string)=>{returnToFocus.current=true;setFocused(false);router.push({pathname:"/stamp/[id]",params:{id}});};
@@ -98,10 +104,10 @@ export function PassportBook() {
  if(data.status==="error")return <View style={styles.center}><InlineError message="Couldn't open your passport. Your connection may be down." onRetry={data.retry}/></View>;
  if(data.status==="pending")return <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Opening your passport"><Skeleton width={width*.8} height={height*.5}/></View>;
  return <View style={styles.root}>
-  <View testID="passport-home" pointerEvents={focused?"none":"auto"} style={[styles.home,{paddingTop:insets.top+size.hitTarget+space.xs}]} accessibilityElementsHidden={focused} importantForAccessibility={focused?"no-hide-descendants":"auto"}>
+  <View testID="passport-home" pointerEvents={focused||modelClosing?"none":"auto"} style={[styles.home,{paddingTop:insets.top+size.hitTarget+space.xs}]} accessibilityElementsHidden={focused||modelClosing} importantForAccessibility={focused||modelClosing?"no-hide-descendants":"auto"}>
    <Animated.View testID="passport-model-stage" onLayout={e=>setModelFrame({y:e.nativeEvent.layout.y,height:e.nativeEvent.layout.height,width:e.nativeEvent.layout.width})} style={[styles.model,modelMotion]}>
     {modelError?<View style={styles.center}><InlineError message="Couldn't load the 3D passport." onRetry={()=>{setModelError(false);setModelKey(k=>k+1);}}/><Pressable onPress={openPages} accessibilityRole="button" accessibilityLabel="Open stamp pages" style={styles.close}><Icon name="book" size={size.icon} color="accent"/></Pressable></View>:
-    <Passport3DView key={modelKey} running={screenActive&&appActive} lowPower reduceMotion={reduced} soak={false} glassMode="auto" open={opening} onTap={()=>open()} onOpenProgress={onOpenProgress} onOpenSettled={onOpenSettled} onReady={()=>{modelReady.current=true;setModelError(false);}} onError={()=>{modelReady.current=false;setModelError(true);}} onGlass={()=>undefined} onStats={()=>undefined}/>}
+    <Passport3DView key={modelKey} running={screenActive&&appActive} lowPower reduceMotion={reduced} soak={false} glassMode="auto" open={opening} onTap={()=>open()} onOpenProgress={onOpenProgress} onOpenSettled={onOpenSettled} onReady={()=>{modelReady.current=true;setModelError(false);}} onError={()=>{modelReady.current=false;setModelClosing(false);setModelError(true);}} onGlass={()=>undefined} onStats={()=>undefined}/>}
    </Animated.View>
    <Animated.View style={[styles.counts,chromeMotion]}><Counts counts={data.counts}/>{firstRun.show?<FirstRunHint onDismiss={firstRun.dismiss}/>:null}</Animated.View>
   </View>
