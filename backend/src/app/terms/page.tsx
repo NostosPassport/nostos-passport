@@ -1,4 +1,3 @@
-/* DRAFT: have a lawyer review before launch */
 import type { Metadata } from "next";
 import { LegalPage, POLICY_UPDATED, SUPPORT_EMAIL } from "@/components/legal/LegalPage";
 
@@ -8,69 +7,104 @@ export default function TermsPage() {
   return (
     <LegalPage title="Terms of Use" updated={POLICY_UPDATED}>
       <p>
-        These terms are an agreement between you and Nostos. By creating an account or using the app or website, you agree to them.
+        These Terms of Use govern your access to and use of Nostos. By creating an account or using Nostos, you agree to these Terms.
       </p>
 
-      <h2>1. Who can use Nostos</h2>
-      <p>You must be 13 or older. You are responsible for your account, for keeping access to your email and devices secure, and for activity performed through your account.</p>
-
-      <h2>2. What Nostos is</h2>
+      <h2>1. Eligibility and your account</h2>
       <p>
-        Nostos is a private passport for New York. You can stamp a place you are at with a photo, caption, song, or any mix, and
-        build a personal record of where you have been. The current version does not include public passports, a social feed, or
-        sharing your stamps with other users. We do not guarantee that place information, map information, or a stamp is error-free,
-        and Nostos is not advice about safety, entry, hours, prices, or whether you should visit a place.
+        You must be at least 13 years old to use Nostos. You are responsible for the accuracy of information you provide, maintaining
+        control of your email account and devices, and activity performed through your account. You may not impersonate another person
+        or create an account for deceptive or unlawful purposes.
       </p>
 
-      <h2>3. Your stamps</h2>
+      <h2>2. What Nostos provides</h2>
+      <p>
+        Nostos is a personal passport for New York. It lets you save visits to places as stamps containing a photo, caption, rating,
+        song metadata, or a combination of those items. Nostos may also provide maps, nearby-place results, neighborhood progress,
+        and other tools related to your passport. Place, map, and venue information may be incomplete, outdated, or inaccurate and
+        should not be treated as advice about safety, access, hours, pricing, or whether a place is suitable for you.
+      </p>
+
+      <h2>3. Location-verified stamps</h2>
       <ul>
-        <li>Only stamp a place when you are actually there. Nostos uses a geofence and checks your location on our server when a stamp is created.</li>
-        <li>You keep ownership of the photos and captions you create. You give Nostos a worldwide, royalty-free license to host, process, reproduce, and display that content as needed to operate, secure, support, and moderate the service, including showing your passport back to you.</li>
-        <li>Do not upload content you do not have the right to use, or photos that invade another person&apos;s privacy or identify them in a way they would reasonably object to.</li>
+        <li>You may create a stamp only when you are actually at or sufficiently near the place.</li>
+        <li>Nostos may use your current location and server-side geofence checks to verify eligibility to create a stamp.</li>
+        <li>You may not spoof, falsify, manipulate, or bypass location checks, rate limits, or other integrity controls.</li>
       </ul>
 
-      <h2>4. Content and acceptable use</h2>
-      <p>Even though your passport is private to your account, content stored in Nostos must not:</p>
+      <h2>4. Your content</h2>
+      <p>
+        You retain ownership of content you create and upload to Nostos. You grant Nostos a worldwide, non-exclusive, royalty-free
+        license to host, store, process, reproduce, modify as technically necessary, and display that content solely as needed to
+        operate, secure, support, improve, or maintain the service and to provide your passport back to you.
+      </p>
+      <p>
+        You are responsible for your content and must have the rights necessary to upload it. Do not upload content that infringes
+        another person&apos;s intellectual-property, privacy, publicity, or other rights.
+      </p>
+
+      <h2>5. Acceptable use</h2>
+      <p>You may not use Nostos to:</p>
       <ul>
-        <li>be hateful, harassing, threatening, bullying, stalking, or discriminatory;</li>
-        <li>be sexually explicit or sexualize anyone;</li>
-        <li>expose another person&apos;s private information without permission;</li>
-        <li>be spam, a scam, deliberately fraudulent, or intentionally falsify your location;</li>
-        <li>violate law or another person&apos;s intellectual-property or privacy rights.</li>
+        <li>break the law or encourage unlawful activity;</li>
+        <li>harass, threaten, stalk, exploit, or abuse another person;</li>
+        <li>upload hateful, sexually exploitative, or otherwise unlawful content;</li>
+        <li>expose another person&apos;s private information without authorization;</li>
+        <li>send spam, scams, malware, or fraudulent content;</li>
+        <li>scrape, overload, disrupt, reverse engineer, or interfere with the service except where applicable law expressly permits it;</li>
+        <li>probe for vulnerabilities, bypass security controls, or access data you are not authorized to access;</li>
+        <li>use Nostos or its data to build or populate a competing place, passport, or location-history dataset without permission.</li>
       </ul>
+
+      <h2>6. Enforcement</h2>
       <p>
-        We may use automated filters and authorized staff review to enforce these rules, investigate abuse or security problems, and
-        protect the service. We may hide or remove content, suspend access, or terminate an account that violates these Terms.
+        We may investigate suspected abuse, security issues, or violations of these Terms. We may restrict features, remove or hide
+        content, suspend access, or terminate an account when reasonably necessary to protect users or the service, enforce these Terms,
+        or comply with law.
       </p>
 
-      <h2>5. Fair use</h2>
-      <p>Do not scrape, overload, disrupt, or reverse engineer the service, bypass rate limits or location checks, probe for vulnerabilities without permission, or use Nostos to build a competing dataset.</p>
-
-      <h2>6. Map data and music information</h2>
-      <p>Place names and locations include data © OpenStreetMap contributors, available under the Open Database License. Song titles, artists, and album art come from Apple&apos;s iTunes Search API and belong to their respective owners. Nostos does not provide music playback.</p>
-
-      <h2>7. Your account and ending your use</h2>
+      <h2>7. Third-party services and data</h2>
       <p>
-        You can stop using Nostos and delete your account at any time. You may also update your profile and account email in the app.
-        We may suspend or end access when necessary to protect the service, comply with law, or enforce these Terms.
+        Nostos relies on third-party services and data. Place information may include data © OpenStreetMap contributors under the Open
+        Database License. Song titles, artist names, and album artwork may come from Apple&apos;s iTunes Search API and remain subject to
+        the rights of their respective owners. The app may use Apple Maps. Nostos does not control the availability or accuracy of
+        third-party services.
       </p>
 
-      <h2>8. Service availability</h2>
+      <h2>8. Changes to the service</h2>
       <p>
-        Nostos may change, add, remove, or temporarily disable features as the product develops. We may also perform maintenance or
-        experience outages. We do not promise that every feature or third-party service will always be available.
+        Nostos is an evolving product. We may add, change, limit, suspend, or discontinue features, and we may perform maintenance or
+        experience outages. We do not guarantee uninterrupted or error-free availability.
       </p>
 
-      <h2>9. Disclaimers and liability</h2>
+      <h2>9. Deleting your account</h2>
       <p>
-        The service is provided &quot;as is&quot; and &quot;as available&quot;. To the fullest extent allowed by law, Nostos is not liable for indirect
-        or consequential damages, or for decisions you make based on content, maps, place information, or other information in the app.
+        You may stop using Nostos and delete your account at any time through the app or the web account-deletion page. We may retain
+        limited anonymized, security, or legal records as described in our <a href="/privacy">Privacy Policy</a>.
       </p>
 
-      <h2>10. Changes</h2>
-      <p>We may update these Terms as Nostos changes. If a change is material, we may ask you to review and accept the updated Terms before continuing to use the app.</p>
+      <h2>10. Disclaimers</h2>
+      <p>
+        To the fullest extent permitted by law, Nostos is provided &quot;as is&quot; and &quot;as available&quot; without warranties of any kind,
+        whether express, implied, or statutory. We do not warrant that the service will always be available, secure, accurate, or free
+        of errors.
+      </p>
 
-      <h2>11. Contact</h2>
+      <h2>11. Limitation of liability</h2>
+      <p>
+        To the fullest extent permitted by law, Nostos and its operators will not be liable for indirect, incidental, special,
+        consequential, exemplary, or punitive damages, or for losses arising from reliance on maps, venue information, user content,
+        service interruptions, or unauthorized access outside our reasonable control. Nothing in these Terms excludes liability that
+        cannot legally be excluded or limited.
+      </p>
+
+      <h2>12. Changes to these Terms</h2>
+      <p>
+        We may update these Terms as Nostos changes. If a change is material, we may notify you in the app or require you to review
+        and accept the updated Terms before continuing to use certain features.
+      </p>
+
+      <h2>13. Contact</h2>
       <p><a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></p>
     </LegalPage>
   );
