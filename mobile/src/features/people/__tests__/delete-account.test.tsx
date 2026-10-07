@@ -4,21 +4,24 @@ import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Alert } from "react-native";
 
 import { ApiError } from "@/api/client";
-import { farewellNotice } from "@/auth/auth-context";
 import DeleteAccount from "@/app/(app)/settings/delete-account";
+import { farewellNotice } from "@/auth/auth-context";
 import { testQueryClient } from "@/test/query-client";
 
 const mockForget = jest.fn(async () => undefined);
+const mockStartDelete = jest.fn();
 const mockDelete = jest.fn();
+const CHALLENGE = "11111111-1111-4111-8111-111111111111";
 
 jest.mock("@/auth/auth-context", () => {
   const actual = jest.requireActual("@/auth/auth-context");
   return { useAuth: () => ({ forget: mockForget }), farewellNotice: actual.farewellNotice };
 });
-jest.mock("@/api", () => {
-  const client = jest.requireActual("@/api/client");
-  return { api: { me: { deleteAccount: (pw: string) => mockDelete(pw) } }, ApiError: client.ApiError, errorText: client.errorText };
-});
+
+jest.mock("@/api/email-auth", () => ({
+  startDeleteAccountVerification: () => mockStartDelete(),
+  deleteAccountWithCode: (challengeId: string, code: string) => mockDelete(challengeId, code),
+}));
 
 async function renderScreen() {
   return render(
@@ -28,34 +31,43 @@ async function renderScreen() {
   );
 }
 
-/** Press the destructive button in the confirmation alert. */
 const alert = jest.spyOn(Alert, "alert").mockImplementation((_t, _m, buttons) => {
   buttons?.find((b) => b.style === "destructive")?.onPress?.();
 });
 
 const flush = () => act(() => new Promise<void>((r) => setTimeout(r, 0)));
 
+async function beginDeletion() {
+  await renderScreen();
+  await fireEvent.press(screen.getByLabelText("Email confirmation code"));
+  return screen.findByTestId("delete-code");
+}
+
 describe("Delete account", () => {
   beforeEach(() => {
     mockForget.mockClear();
+    mockStartDelete.mockReset();
     mockDelete.mockReset();
     alert.mockClear();
+    farewellNotice.take();
+    mockStartDelete.mockResolvedValue({ challengeId: CHALLENGE, expiresAt: "2026-10-07T20:00:00.000Z", resendAfterSeconds: 60 });
   });
 
-  it("explains what happens and needs a password", async () => {
+  it("explains what happens and starts with an email confirmation step", async () => {
     await renderScreen();
     expect(screen.getByText("Your stamps are removed from every passport, and so are your follows and likes.")).toBeTruthy();
-    expect(screen.getByLabelText("Delete account")).toBeDisabled();
+    expect(screen.getByLabelText("Email confirmation code")).toBeTruthy();
+    expect(screen.queryByTestId("delete-code")).toBeNull();
   });
 
-  it("confirms, calls the API with the password, then signs out locally", async () => {
+  it("confirms, calls the API with the email code, then signs out locally", async () => {
     mockDelete.mockResolvedValue({ deleted: true });
-    await renderScreen();
-    await fireEvent.changeText(screen.getByTestId("delete-password"), "correct horse battery");
+    const code = await beginDeletion();
+    await fireEvent.changeText(code, "123456");
     await fireEvent.press(screen.getByLabelText("Delete account"));
     await flush();
     expect(alert).toHaveBeenCalledWith("Delete your account?", "This can't be undone.", expect.any(Array));
-    expect(mockDelete).toHaveBeenCalledWith("correct horse battery");
+    expect(mockDelete).toHaveBeenCalledWith(CHALLENGE, "123456");
     await flush();
     expect(mockForget).toHaveBeenCalledTimes(1);
     expect(farewellNotice.take()).toBe("Your account is deleted.");
@@ -63,34 +75,34 @@ describe("Delete account", () => {
 
   it("treats a dead token on retry as already deleted", async () => {
     mockDelete.mockRejectedValue(new ApiError(401, "invalid_token", "Sign in again."));
-    await renderScreen();
-    await fireEvent.changeText(screen.getByTestId("delete-password"), "pw");
+    const code = await beginDeletion();
+    await fireEvent.changeText(code, "123456");
     await fireEvent.press(screen.getByLabelText("Delete account"));
     await flush();
     await flush();
     expect(mockForget).toHaveBeenCalledTimes(1);
   });
 
-  it("says nothing about venues or plans (they no longer exist)", async () => {
+  it("says nothing about venues or plans", async () => {
     await renderScreen();
     expect(screen.queryByText(/venue/i)).toBeNull();
     expect(screen.queryByText(/plans/i)).toBeNull();
   });
 
-  it("shows a wrong password inline and stays signed in", async () => {
-    mockDelete.mockRejectedValue(new ApiError(403, "wrong_password", "Password is incorrect"));
-    await renderScreen();
-    await fireEvent.changeText(screen.getByTestId("delete-password"), "nope");
+  it("shows a wrong code inline and stays signed in", async () => {
+    mockDelete.mockRejectedValue(new ApiError(400, "invalid_code", "That code is not correct."));
+    const code = await beginDeletion();
+    await fireEvent.changeText(code, "000000");
     await fireEvent.press(screen.getByLabelText("Delete account"));
     await flush();
-    expect(await screen.findByText("That password isn't right.")).toBeTruthy();
+    expect(await screen.findByText("That code is not correct.")).toBeTruthy();
     expect(mockForget).not.toHaveBeenCalled();
   });
 
-  it("does nothing if the confirmation is cancelled", async () => {
+  it("does nothing if the destructive confirmation is cancelled", async () => {
     alert.mockImplementationOnce(() => undefined);
-    await renderScreen();
-    await fireEvent.changeText(screen.getByTestId("delete-password"), "pw");
+    const code = await beginDeletion();
+    await fireEvent.changeText(code, "123456");
     await fireEvent.press(screen.getByLabelText("Delete account"));
     expect(mockDelete).not.toHaveBeenCalled();
   });
