@@ -155,6 +155,8 @@ function useActions(stamp: StampView | undefined): ContentAction[] {
       dropStamp(queryClient, id);
       void queryClient.invalidateQueries({ queryKey: qk.feed });
       void queryClient.invalidateQueries({ queryKey: ["user"] });
+      void queryClient.invalidateQueries({ queryKey: qk.neighborhoods });
+      void queryClient.invalidateQueries({ queryKey: qk.pins });
       router.back();
     },
     onError: (e) => {
