@@ -9,21 +9,30 @@ import { completeEmailSignIn, startEmailSignIn, type EmailChallenge } from "@/ap
 import { farewellNotice, useAuth } from "@/auth/auth-context";
 import { InlineError } from "@/components/ui/inline-error";
 import { haptics } from "@/lib/haptics";
-import { isEmail } from "@/lib/validation";
+import { HANDLE_MAX, HANDLE_MIN, HANDLE_RE, isEmail } from "@/lib/validation";
 import { colors, fonts } from "@/theme";
 
 const SIGN_IN_ART = require("../../assets/images/nostos_art1.png");
+
+function isHandle(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return normalized.length >= HANDLE_MIN && normalized.length <= HANDLE_MAX && HANDLE_RE.test(normalized);
+}
+
+function isLoginIdentifier(value: string) {
+  return isEmail(value) || isHandle(value);
+}
 
 export default function SignIn() {
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
   const [farewell] = useState(() => farewellNotice.take());
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [code, setCode] = useState("");
   const [challenge, setChallenge] = useState<EmailChallenge | null>(null);
 
   const requestCode = useMutation({
-    mutationFn: () => startEmailSignIn(email.trim()),
+    mutationFn: () => startEmailSignIn(identifier.trim()),
     onSuccess: (next) => {
       setChallenge(next);
       setCode("");
@@ -39,18 +48,20 @@ export default function SignIn() {
   });
 
   const noAccount = requestCode.error instanceof ApiError && requestCode.error.code === "not_found";
+  const enteredEmail = isEmail(identifier);
+  const validIdentifier = isLoginIdentifier(identifier);
 
   const createAccount = () => {
-    const value = email.trim();
-    if (value) {
+    const value = identifier.trim();
+    if (enteredEmail) {
       router.push({ pathname: "/sign-up", params: { email: value } });
       return;
     }
     router.push("/sign-up");
   };
 
-  const submitEmail = () => {
-    if (!isEmail(email) || requestCode.isPending) return;
+  const submitIdentifier = () => {
+    if (!validIdentifier || requestCode.isPending) return;
     Keyboard.dismiss();
     requestCode.mutate();
   };
@@ -86,20 +97,20 @@ export default function SignIn() {
         <View style={styles.form}>
           <View style={styles.formHeading}>
             <Text style={styles.formTitle}>Sign in</Text>
-            <Text style={styles.formSubtitle}>Enter the email on your Nostos account. We’ll send you a sign-in code.</Text>
+            <Text style={styles.formSubtitle}>Enter your email or handle. We’ll send a sign-in code to the email on your account.</Text>
           </View>
 
           {farewell ? <Text style={styles.notice}>{farewell}</Text> : null}
 
           <View style={styles.field}>
-            <Text style={styles.label}>EMAIL</Text>
+            <Text style={styles.label}>EMAIL OR HANDLE</Text>
             <TextInput
               style={styles.input}
-              placeholder="name@example.com"
+              placeholder="name@example.com or handle"
               placeholderTextColor={colors.textSecondary}
-              value={email}
+              value={identifier}
               onChangeText={(value) => {
-                setEmail(value);
+                setIdentifier(value);
                 requestCode.reset();
                 if (challenge) {
                   setChallenge(null);
@@ -110,18 +121,18 @@ export default function SignIn() {
               autoCapitalize="none"
               autoCorrect={false}
               spellCheck={false}
-              autoComplete="email"
-              textContentType="emailAddress"
+              autoComplete="username"
+              textContentType="username"
               keyboardType="email-address"
               returnKeyType={challenge ? "next" : "go"}
-              onSubmitEditing={challenge ? undefined : submitEmail}
-              accessibilityLabel="Email"
+              onSubmitEditing={challenge ? undefined : submitIdentifier}
+              accessibilityLabel="Email or handle"
             />
           </View>
 
           {challenge ? (
             <>
-              <Text style={styles.notice}>We sent a six-digit code to {email.trim()}.</Text>
+              <Text style={styles.notice}>{enteredEmail ? `We sent a six-digit code to ${identifier.trim()}.` : "We sent a six-digit code to the email on your account."}</Text>
               <View style={styles.field}>
                 <Text style={styles.label}>VERIFICATION CODE</Text>
                 <TextInput
@@ -143,8 +154,8 @@ export default function SignIn() {
 
           {noAccount ? (
             <View style={styles.newAccount}>
-              <Text style={styles.newAccountTitle}>Looks like you’re new to Nostos.</Text>
-              <Text style={styles.notice}>Create a passport with {email.trim()}.</Text>
+              <Text style={styles.newAccountTitle}>{enteredEmail ? "Looks like you’re new to Nostos." : "We couldn’t find that Nostos account."}</Text>
+              <Text style={styles.notice}>{enteredEmail ? `Create a passport with ${identifier.trim()}.` : "Check the handle or create a new passport."}</Text>
               <Pressable onPress={createAccount} style={styles.secondaryAction} accessibilityRole="button" accessibilityLabel="Create a passport">
                 <Text style={styles.createText}>Create a passport</Text>
               </Pressable>
@@ -157,11 +168,11 @@ export default function SignIn() {
 
           {!noAccount ? (
             <Pressable
-              onPress={challenge ? submitCode : submitEmail}
-              disabled={challenge ? code.length !== 6 || verify.isPending : !isEmail(email) || requestCode.isPending}
+              onPress={challenge ? submitCode : submitIdentifier}
+              disabled={challenge ? code.length !== 6 || verify.isPending : !validIdentifier || requestCode.isPending}
               style={({ pressed }) => [
                 styles.signIn,
-                (challenge ? code.length !== 6 || verify.isPending : !isEmail(email) || requestCode.isPending) && styles.disabled,
+                (challenge ? code.length !== 6 || verify.isPending : !validIdentifier || requestCode.isPending) && styles.disabled,
                 pressed && styles.pressed,
               ]}
               accessibilityRole="button"
