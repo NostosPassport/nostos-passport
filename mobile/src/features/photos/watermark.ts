@@ -5,6 +5,7 @@ import { FilterMode, ImageFormat, MipmapMode, Skia, rect, type SkImage } from "@
 const WATERMARK_ASSET = require("../../../assets/images/nostos-watermark.png");
 const WATERMARK_SHARE = 0.11;
 const WATERMARK_INSET_SHARE = 0.03;
+const WATERMARK_OPACITY = 0.8;
 const JPEG_QUALITY = 80;
 
 let watermarkImagePromise: Promise<SkImage> | null = null;
@@ -56,6 +57,7 @@ export async function addNostosWatermark(input: { uri: string; width: number; he
     );
 
     const target = watermarkRect(input.width, input.height);
+    paint.setAlphaf(WATERMARK_OPACITY);
     canvas.drawImageRectOptions(
       mark,
       rect(0, 0, mark.width(), mark.height()),
