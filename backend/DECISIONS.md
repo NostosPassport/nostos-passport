@@ -1,111 +1,36 @@
-# Decisions (backend)
+# Backend decisions
 
-Judgment calls made while building Nostos from the Last Call social layer. The Last Call history (consensus, accuracy,
-owners, promos, featuring) is in the archive repo and is not repeated here. Open product and legal questions are in
-`../OPEN-QUESTIONS.md`.
+This file summarizes current backend decisions. Earlier build-session detail remains available in Git history and dated reviews/deliveries.
+
+## Product and privacy
+
+- Current product mode is personal and owner-only.
+- Legacy social functionality may remain behind `SOCIAL_ENABLED`, but disabled personal mode must not expose another person's passport data.
+- Geofence acceptance is enforced by the server, not trusted solely to client UI.
+- A stamp can contain photos, caption, song metadata, or a combination, subject to existing live-content constraints.
+- Up to six photos are accepted at stamp creation. Photo layout/removal behavior follows the current contract.
+- Uploaded images are re-encoded so original EXIF/GPS does not survive storage.
+- Normal viewer payloads must not expose raw storage keys, private coordinates, or internal user identifiers.
+- Hidden/removed content follows the existing retention/moderation rules rather than being silently hard-deleted.
 
 ## Data model
 
-- **Stamp = `photo`, place = `venue`.** The tables keep their names to avoid migration churn; the API, contract and
-  UI say stamp and place. Migrations are forward-only (`strip_to_nostos`, `stamps`, `flag_category`), so the
-  hand-written trigger history stays valid. No `migrate reset` outside development.
-- **`ContentType` keeps its COMMENT and REPORT values.** The append-only moderation log may reference them, so the enum is
-  not rewritten. The API only accepts STAMP and USER and maps STAMP to the database's PHOTO.
-- **Stamps are immutable except caption, song, moderation state and `removed_at`** (a trigger). The optional `rating` is
-  stored but immutable and never shown in v1.
-- **A stamp needs a photo, a caption or a song** (CHECK, and a service check with a clear message). A photo has both key
-  and type or neither. A song needs title and artist; art must be an https link (the service narrows it to Apple's
-  `mzstatic.com` CDN so a stamp can't embed a tracking pixel).
-- **Per-place geofence** (`geofence_meters`, default 100). The server checks the place's own radius.
-- **Cooldown**: one stamp per person per place per 15 minutes, plus 20 stamps an hour. Likes 200 an hour, song search 120 an hour.
+- Historical table names such as `photo` and `venue` remain for migration stability; API/UI terminology is stamp and place.
+- Schema changes use forward migrations.
+- Destructive reset commands are only for disposable local development databases.
+- Contract changes originate in `src/contracts/api.ts` and require the mobile copy to be synchronized.
 
-## Privacy
+## Photos and location
 
-- **Visibility is the account's privacy, nothing else.** No per-stamp toggle, so the `shared` column is gone.
-- **A stamp you may not see is a 404, never a 403,** so existence isn't revealed. Lists of a private account's stamps,
-  places and followers answer 403 `private_account` (the account exists and is findable by handle anyway).
-- **Reporting and liking require visibility.** A stranger can't probe a private account's stamps through `/api/flags` or
-  the like endpoint.
-- **A pending follow request grants nothing.** Staff see everything, including blocked pairs and hidden stamps.
-- **The limited profile** is handle, verified badge and a Follow button. Search matches a private account's display name
-  only for people who may see it.
-- **No "Anonymous" anywhere.** A stamp is only returned with its author's full profile view, because it is only returned
-  to people who may see that profile. Block-by-content is gone; blocks are by handle.
-- **Reputation** stays as a column (default 0.5), visible only to the user and moderators. Nothing recomputes it now; it
-  gates eligibility for the 3-flag auto-hide.
+- The backend cannot determine whether an accepted upload originated from the native camera or Photo Library. Client-side source/metadata validation is a mobile concern.
+- Regardless of source, server/upload processing continues to strip metadata and enforce photo/content limits.
+- The backend currently retains submitted stamp coordinates as an audit record of the geofence check while excluding them from normal viewer payloads.
+- Long-term coordinate retention/disclosure is still a product/legal question tracked in `../OPEN-QUESTIONS.md`.
 
-## Safety
+## Local development
 
-- **The 21+ gate is read-once.** The signup body carries a birthdate; `signup` checks it first (before any database access),
-  throws 403 `underage` if needed, and the value goes out of scope. There is no birthdate column. A refused attempt writes
-  nothing, and the refusal precedes the duplicate-email check so it reveals nothing about accounts. "Today" is the New York
-  date. The mobile app also checks and never sends an under-21 birthdate.
-- **Report categories** (`flag.category`): underage and stalking reports sort to the top of the queue. The reason text is
-  still free (3 to 300 characters).
-- **Song search** (`/api/songs/search`) is a proxy to Apple's iTunes Search API: signed-in only, rate limited, 3 second
-  timeout, only the search term goes upstream (no cookies, no user id), results with objectionable text are dropped, and a
-  failure is a 503. The terms question is open (OPEN-QUESTIONS L1).
-- **Moderation** keeps its rules: three flags from three eligible accounts auto-hide a stamp, the log is append-only,
-  nothing is deleted. Stamps of deleted accounts stay hidden for good.
-- **No error-reporting SDK on the backend.** Unhandled errors log to the console. Sentry is wired only in the app, off by
-  default.
+Current committed defaults are backend port 3001 and Docker Postgres host port 5438. Older 3000/5435 and `build-codex` notes are historical.
 
-## Web
+## Policy questions
 
-The web side keeps only what the iPhone app and App Review need: sign-in, signup (with the birthdate field), the legal
-pages (drafts, rewritten to describe Nostos, banner says so), account deletion, `/mod` and `/admin` (verified badge tools).
-The Last Call web map, venue pages, owner dashboards and people pages are gone, and so is Leaflet.
-
-## Seed
-
-`prisma/seed.ts` exports `seed(db, options)` so tests can run it. Song seeds carry title and artist only (no art URL and no
-source id), so no made-up links exist. Seeded stamps use generated placeholder images through the configured storage driver.
-
-## Collections and places (session 2)
-
-- **Neighborhood boundaries: NYC's Neighborhood Tabulation Areas (2020), NYC Open Data dataset 9nt8-h7nd** (public domain city
-  data, `https://data.cityofnewyork.us/resource/9nt8-h7nd.geojson`). Chosen over OSM relations because it is one consistent,
-  complete, city-maintained partition with stable codes (BK0101 and so on), where OSM's neighborhood relations overlap and
-  leave gaps. We keep residential areas (ntatype 0) and parks and open space (ntatype 9), the outer ring of each polygon only,
-  simplified with Douglas-Peucker to about 6 m and rounded to 5 decimals: 237 areas in 400 KB (`prisma/data/neighborhoods.json`,
-  built by `scripts/build-neighborhoods.mjs`, loaded by `pnpm neighborhoods:import`). Holes and slivers are dropped, so a place
-  within 6 m of a border can land on the wrong side. Cemeteries, airports and other types are left out (a place there has no neighborhood).
-- **Progress** = distinct places you stamped in a neighborhood, over places in it. Only live, in-geofence stamps count (App Review
-  stamps and removed stamps don't). **A set is at least 3 places**: finishing a neighborhood of 1 or 2 places is not an achievement.
-  **A completion is earned once and never taken back** (`neighborhood_completion`), even if the neighborhood gains places later
-  or you remove a stamp. Progress is computed in the stamp's own transaction so the marker and the stamp commit together.
-- **The importer now takes any place worth a stamp**: bars, pubs, nightclubs, restaurants, cafes, theatres, cinemas, arts centres,
-  libraries, parks, gardens, playgrounds, museums, galleries, attractions, viewpoints, bookshops. The default area is Manhattan from
-  the Battery to 59th St (`--bbox S,W,N,E` for more). With neighborhoods loaded, a place is kept only if it is inside NYC and is
-  filed under its neighborhood; without them it falls back to the old East Village and Lower East Side outlines.
-- **Page and slot**: the oldest live stamp is page 1 slot 1, three slots to a page. Removing a stamp closes the gap behind it
-  (later stamps move up); the oldest never move. One function (`src/lib/layout.ts`), mirrored in the app, same test vectors.
-- **Multi-photo**: all of a stamp's photos live in `stamp_photo`; `photo.storage_key` stays as the first photo at creation for
-  immutable audit history. Live stamp_photo rows drive display and content constraints. The in-app camera rule is a client rule: the server cannot tell a camera from a
-  library, it only strips and limits.
-- **Pins** are their own table, owner only, up to 4, unpinning deletes the row (a layout choice, not content).
-- **Social off**: with `SOCIAL_ENABLED` off the privacy functions themselves treat every viewer but the owner as a stranger
-  (staff too), so even a forgotten route check cannot leak; social routes 404.
-
-## Codex lane: reviewer fixes
-
-- Personal moderation/admin/social services reject the disabled flag before reading records. Foreign passport services
-  return 404, including staff, so legacy records cannot reveal handles through a direct service or web caller.
-- Photo sets are creation-only. A forced, immutable creation-transaction marker gates database child inserts; the
-  service rejects later append before image processing or storage. Seed parents and children are one transaction.
-- Empty-content checks use live stamp_photo rows. Parent locks serialize service edits/removals; deferred constraint
-  triggers validate committed content. Photo updates advance the parent row version to invalidate stale repeatable-read snapshots.
-- Historical empty live stamps are not assigned invented content or automatically removed. The migration preflight
-  stops for explicit review. See OPEN-QUESTIONS.md, Codex lane.
-- Summary photos are selected from live rows in layout order, including place, activity and moderation previews.
-- Tests and exact source references are in the Codex lane review. No mobile visual or device claim is made here.
-- A live song needs a non-whitespace title and artist even through direct SQL; removed historical metadata remains final.
-
-
-## 2026-10-02 combined Codex continuation
-
-The user authorized finishing both lanes in build-codex and requested all integration work remain uncommitted.
-Claude's incoming e639860 is combined with Codex HEAD 42a6c0d. Existing privacy and database fixes are reused; no new
-backend migration or reset is necessary. Backend configuration remains project nostos-codex, Postgres 5438 and dev port 3001.
-The mobile development API fallback now matches that port. The final combined gate passed 292 backend/407 mobile tests
-and the backend production build passed. Bundle headers explicitly distinguish dirty snapshots from committed HEAD.
+Final decisions about song metadata licensing, age-policy requirements, geolocation disclosures, Photo Library metadata disclosures, optional diagnostics, and final legal-page wording remain in `../OPEN-QUESTIONS.md`.
