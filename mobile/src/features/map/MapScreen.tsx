@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 
 import { useMe, usePlaces, useUserPlaces } from "@/api/queries";
@@ -10,7 +10,7 @@ import { useUserCoords } from "@/features/location/location-store";
 import { placesRegion } from "@/features/people/places";
 import { formatDistance } from "@/lib/format";
 import { HOME_REGION } from "@/lib/geo";
-import { colors } from "@/theme";
+import { colors, size } from "@/theme";
 import { type MapRegion, pinKind, sheetModel, statsByPlace, visiblePlaces } from "./map-model";
 import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
@@ -26,12 +26,18 @@ export function MapScreen() {
   const stats = useMemo(() => statsByPlace(mine.data?.places ?? []), [mine.data]);
   const start = useMemo(() => placesRegion(mine.data?.places ?? []) ?? HOME_REGION, [mine.data]);
   const mapRef = useRef<MapView>(null);
+  const searchRef = useRef<TextInput>(null);
   const regionRef = useRef<MapRegion>(HOME_REGION);
   const centeredOnce = useRef(false);
   const [region, setRegion] = useState<MapRegion>(HOME_REGION);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("nearby");
+
+  const dismissSearch = useCallback(() => {
+    searchRef.current?.blur();
+    Keyboard.dismiss();
+  }, []);
 
   const recenter = useCallback(() => {
     if (!here) return;
@@ -63,15 +69,19 @@ export function MapScreen() {
 
   return (
     <EditorialScreen>
-      <EditorialSafeContent>
+      <EditorialSafeContent bottom>
         <EditorialHeader compact action={<GearButton onPress={() => router.push("/settings")} />} />
         <Rule />
-        <DisplayTitle size={52} style={styles.title}>Go somewhere.</DisplayTitle>
+        <Pressable onPress={dismissSearch} accessible={false}>
+          <DisplayTitle size={52} style={styles.title}>Go somewhere.</DisplayTitle>
+        </Pressable>
         <View style={styles.search}>
           <Icon name="magnifyingglass" color="textSecondary" size={18} />
           <TextInput
+            ref={searchRef}
             value={query}
             onChangeText={setQuery}
+            onSubmitEditing={dismissSearch}
             placeholder="Find a place"
             placeholderTextColor={colors.textSecondary}
             style={styles.searchInput}
@@ -79,10 +89,24 @@ export function MapScreen() {
             returnKeyType="search"
             accessibilityLabel="Find a place"
           />
+          {query ? (
+            <Pressable
+              onPress={() => {
+                setQuery("");
+                searchRef.current?.focus();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+              hitSlop={8}
+              style={styles.clearSearch}
+            >
+              <Icon name="xmark" color="textSecondary" size={15} />
+            </Pressable>
+          ) : null}
         </View>
         <View style={styles.filters}>
-          <FilterButton label="NEARBY" active={filter === "nearby"} onPress={() => setFilter("nearby")} />
-          <FilterButton label="VISITED" active={filter === "visited"} onPress={() => setFilter("visited")} />
+          <FilterButton label="NEARBY" active={filter === "nearby"} onPress={() => { dismissSearch(); setFilter("nearby"); }} />
+          <FilterButton label="VISITED" active={filter === "visited"} onPress={() => { dismissSearch(); setFilter("visited"); }} />
         </View>
         <View style={styles.mapFrame}>
           <MapView
@@ -99,7 +123,10 @@ export function MapScreen() {
               regionRef.current = next;
               setRegion(next);
             }}
-            onPress={() => setSelectedId(null)}
+            onPress={() => {
+              dismissSearch();
+              setSelectedId(null);
+            }}
             accessibilityLabel="Map of your places"
           >
             {drawn.map((p) => {
@@ -109,7 +136,10 @@ export function MapScreen() {
                 <Marker
                   key={`${p.id}-${kind}-${isSelected}`}
                   coordinate={{ latitude: p.lat, longitude: p.lng }}
-                  onPress={() => setSelectedId(p.id)}
+                  onPress={() => {
+                    dismissSearch();
+                    setSelectedId(p.id);
+                  }}
                   tracksViewChanges={false}
                   anchor={{ x: 0.5, y: 0.5 }}
                   accessibilityLabel={`${p.name}, ${kind === "lit" ? "stamped" : "not stamped yet"}`}
@@ -152,9 +182,10 @@ const styles = StyleSheet.create({
   title: { marginTop: 8, marginBottom: 8 },
   search: { height: 44, flexDirection: "row", alignItems: "center", gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
   searchInput: { flex: 1, height: 44, color: colors.textPrimary, fontSize: 14, paddingVertical: 0 },
+  clearSearch: { width: size.hitTarget, height: 44, alignItems: "center", justifyContent: "center" },
   filters: { height: 48, flexDirection: "row", justifyContent: "space-between" },
   filter: { width: "47.5%", alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
   filterActive: { borderBottomColor: colors.accent },
-  mapFrame: { flex: 1, minHeight: 330, overflow: "hidden" },
+  mapFrame: { flex: 1, minHeight: 300, overflow: "hidden", marginBottom: 4 },
   attribution: { position: "absolute", left: 6, top: 6, paddingHorizontal: 4, paddingVertical: 2, backgroundColor: colors.background, opacity: 0.85 },
 });
