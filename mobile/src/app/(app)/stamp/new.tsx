@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, Stack, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, InputAccessoryView, Keyboard, Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, useWindowDimensions, View } from "react-native";
+import { Alert, Keyboard, Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
@@ -31,7 +31,6 @@ import { useConfirmDiscard } from "@/lib/use-confirm-discard";
 import { colors, fonts } from "@/theme";
 
 type Nearby = NearbyPlacesResponse["places"][number];
-const CAPTION_ACCESSORY_ID = "stamp-caption-accessory";
 
 export default function NewStamp() {
   return <Composer />;
@@ -115,6 +114,7 @@ function Composer() {
 
   const resetToPlaces = () => {
     Keyboard.dismiss();
+    stamp.reset();
     photoDraft.clear();
     setCaption("");
     setSong(null);
@@ -235,7 +235,7 @@ function Composer() {
                 placeholder="An afternoon worth keeping."
                 placeholderTextColor={colors.textSecondary}
                 multiline
-                inputAccessoryViewID={CAPTION_ACCESSORY_ID}
+                inputAccessoryViewButtonLabel="Done"
                 style={styles.captionInput}
                 accessibilityLabel="A few words"
               />
@@ -282,6 +282,7 @@ function Composer() {
             retry={() => void nearby.refetch()}
             places={places}
             onChoose={(id) => {
+              stamp.reset();
               setChosenId(id);
               setChoosingPlace(false);
               setStampAt(Date.now());
@@ -289,13 +290,6 @@ function Composer() {
           />
         )}
       </ScrollView>
-      <InputAccessoryView nativeID={CAPTION_ACCESSORY_ID}>
-        <View style={styles.keyboardAccessory}>
-          <Pressable onPress={Keyboard.dismiss} accessibilityRole="button" accessibilityLabel="Done editing caption" style={styles.keyboardDone}>
-            <Text variant="callout" color="accent" weight="semibold">Done</Text>
-          </Pressable>
-        </View>
-      </InputAccessoryView>
       <PhotoViewer photos={viewerPhotos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
     </View>
   );
@@ -365,8 +359,6 @@ const styles = StyleSheet.create({
   captionBlock: { gap: 5, marginTop: 2 },
   captionInput: { minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, color: colors.textPrimary, fontSize: 14, paddingHorizontal: 0, paddingVertical: 10 },
   counter: { color: colors.textSecondary, fontSize: 11, alignSelf: "flex-end" },
-  keyboardAccessory: { minHeight: 44, backgroundColor: colors.elevated, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hairline, alignItems: "flex-end", justifyContent: "center", paddingHorizontal: 16 },
-  keyboardDone: { minWidth: 56, minHeight: 40, alignItems: "center", justifyContent: "center" },
   songAction: { height: 46, flexDirection: "row", alignItems: "center", gap: 12 },
   songLabel: { color: colors.textPrimary, fontSize: 14 },
   songWrap: { minHeight: 54, justifyContent: "center" },
