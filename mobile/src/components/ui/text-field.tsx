@@ -31,7 +31,6 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, i
         accessibilityHint={accessibilityHint}
         placeholderTextColor={colors.textSecondary}
         selectionColor={colors.accent}
-        keyboardAppearance="light"
         maxFontSizeMultiplier={maxFontSizeMultiplier}
         {...rest}
         style={[styles.input, hasError && styles.inputInvalid, style]}
