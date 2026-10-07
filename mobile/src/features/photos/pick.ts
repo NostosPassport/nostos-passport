@@ -38,7 +38,7 @@ export async function takePhoto(): Promise<CameraOutcome> {
   }
 }
 
-/** The system photo picker (no library permission needed on iOS 14+). */
+/** The system photo picker (no library permission needed on iOS 14+). Reserved for the later import flow. */
 export async function pickFromLibrary(): Promise<PickedImage | null> {
   return first(await ImagePicker.launchImageLibraryAsync(OPTIONS));
 }
@@ -46,6 +46,6 @@ export async function pickFromLibrary(): Promise<PickedImage | null> {
 /** What to tell someone when the camera didn't open. */
 export const CAMERA_NOTE: Record<Exclude<CameraOutcome, PickedImage | "cancelled">, string> = {
   denied: "Camera access is off. Turn it on in Settings to take a photo for your stamp.",
-  "no-camera": "This device has no camera. Choose a photo from your library instead.",
+  "no-camera": "This device doesn't have a camera available.",
   failed: "Couldn't open the camera. Try again.",
 };
