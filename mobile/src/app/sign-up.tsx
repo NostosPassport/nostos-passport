@@ -46,7 +46,7 @@ export default function SignUp() {
   };
 
   const requestCode = useMutation({
-    mutationFn: (birthdate: string) => startSignupEmail(fields.email.trim(), birthdate),
+    mutationFn: (birthdate: string) => startSignupEmail(fields.email.trim(), fields.displayName.trim(), birthdate),
     onSuccess: (next) => {
       setChallenge(next);
       setCode("");
