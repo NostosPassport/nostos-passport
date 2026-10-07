@@ -236,6 +236,8 @@ function Composer() {
                 placeholderTextColor={colors.textSecondary}
                 multiline
                 inputAccessoryViewButtonLabel="Done"
+                returnKeyType="done"
+                submitBehavior="blurAndSubmit"
                 style={styles.captionInput}
                 accessibilityLabel="A few words"
               />
