@@ -17,12 +17,12 @@ export const HONESTY = {
   body: "When you stamp, our server checks where your phone is. That position is saved with the stamp and is never shown in the app.",
 };
 
-/** Add a photo taken in the app, up to six. Past six the list is returned as it was. */
+/** Add an approved photo, up to six. Past six the list is returned as it was. */
 export const addPhoto = (uris: readonly string[], uri: string): string[] => (uris.length >= MAX_STAMP_PHOTOS ? [...uris] : [...uris, uri]);
 export const removePhotoAt = (uris: readonly string[], index: number): string[] => uris.filter((_, i) => i !== index);
 export const photosLeft = (uris: readonly string[]): number => Math.max(0, MAX_STAMP_PHOTOS - uris.length);
 
-/** "n of 6" for the camera and the strip. */
+/** "n of 6" for the photo flow and strip. */
 export const photoCount = (n: number): string => `${Math.min(n, MAX_STAMP_PHOTOS)} of ${MAX_STAMP_PHOTOS}`;
 
 /** The places list split into "Here" (you're inside the geofence) and "Nearby" (close, not inside yet); empty groups are left out. */
