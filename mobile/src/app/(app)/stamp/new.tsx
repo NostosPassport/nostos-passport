@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, Stack, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
@@ -16,6 +16,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { ListGroup, ListRow } from "@/components/ui/list-row";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { PhotoViewer } from "@/features/book/PhotoViewer";
 import { devSimulator } from "@/features/location/dev-simulator";
 import { locationStore, usePermissionRefresh, useLocationState, useUserCoords } from "@/features/location/location-store";
 import { SimulatedLocationChip } from "@/features/location/sim-chip";
@@ -39,6 +40,7 @@ function Composer() {
   usePermissionRefresh();
   useEffect(() => () => photoDraft.clear(), []);
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const queryClient = useQueryClient();
   const { permission } = useLocationState();
   const coords = useUserCoords();
@@ -47,10 +49,18 @@ function Composer() {
   const [chosenId, setChosenId] = useState<string | null>(null);
   const [choosingPlace, setChoosingPlace] = useState(false);
   const photoUris = usePhotoDraft();
+  const [activePhoto, setActivePhoto] = useState(0);
+  const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
   const [caption, setCaption] = useState("");
   const [song, setSong] = useState<Song | null>(null);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
+  const photoWidth = Math.max(1, width - 48);
+
+  useEffect(() => {
+    if (photoUris.length === 0) setActivePhoto(0);
+    else if (activePhoto >= photoUris.length) setActivePhoto(photoUris.length - 1);
+  }, [activePhoto, photoUris.length]);
 
   const draft = { photoUris, caption, song };
   const dirty = !done && (photoUris.length > 0 || caption.trim() !== "" || song !== null);
@@ -108,6 +118,11 @@ function Composer() {
     photoDraft.clear();
     router.back();
   };
+  const removeActivePhoto = () => {
+    photoDraft.remove(activePhoto);
+    setActivePhoto((current) => Math.max(0, Math.min(current, photoUris.length - 2)));
+  };
+  const viewerPhotos = photoUris.map((uri, index) => ({ id: `${uri}-${index}`, uri }));
 
   return (
     <View style={styles.root}>
@@ -130,8 +145,22 @@ function Composer() {
             <NativeText style={styles.placeKicker}>{place.name.toUpperCase()} · YOU&apos;RE HERE</NativeText>
 
             <View style={styles.photoStage}>
-              {photoUris[0] ? (
-                <Image source={{ uri: photoUris[0] }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel="First stamp photo" />
+              {photoUris.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  pagingEnabled
+                  nestedScrollEnabled
+                  directionalLockEnabled
+                  showsHorizontalScrollIndicator={false}
+                  bounces={photoUris.length > 1}
+                  onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}
+                >
+                  {photoUris.map((uri, index) => (
+                    <Pressable key={`${uri}-${index}`} onPress={() => setViewingPhoto(index)} accessibilityRole="button" accessibilityLabel={`Open photo ${index + 1} of ${photoUris.length}`} style={[styles.photoPage, { width: photoWidth }]}>
+                      <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={`Photo ${index + 1} of ${photoUris.length}`} />
+                    </Pressable>
+                  ))}
+                </ScrollView>
               ) : (
                 <Pressable style={styles.emptyPhoto} onPress={openPhotos} accessibilityRole="button" accessibilityLabel="Add a photo">
                   <Icon name="camera.fill" color="accent" size={30} />
@@ -141,9 +170,14 @@ function Composer() {
               {photoUris.length > 0 ? (
                 <>
                   <View style={styles.photoCount}><Kicker>{photoUris.length} / {MAX_STAMP_PHOTOS}</Kicker></View>
-                  <Pressable onPress={() => photoDraft.remove(0)} accessibilityRole="button" accessibilityLabel="Remove first photo" style={styles.removePhoto}>
+                  <Pressable onPress={removeActivePhoto} accessibilityRole="button" accessibilityLabel={`Remove photo ${activePhoto + 1}`} style={styles.removePhoto}>
                     <Icon name="xmark" color="textPrimary" size={20} />
                   </Pressable>
+                  {photoUris.length > 1 ? (
+                    <View style={styles.photoDots} pointerEvents="none">
+                      {photoUris.map((uri, index) => <View key={`${uri}-dot-${index}`} style={[styles.dot, index === activePhoto && styles.dotActive]} />)}
+                    </View>
+                  ) : null}
                 </>
               ) : null}
             </View>
@@ -210,6 +244,7 @@ function Composer() {
           />
         )}
       </ScrollView>
+      <PhotoViewer photos={viewerPhotos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
     </View>
   );
 }
@@ -267,9 +302,13 @@ const styles = StyleSheet.create({
   title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 68, lineHeight: 68, letterSpacing: -1.5, marginTop: 0, paddingTop: 2 },
   placeKicker: { color: colors.accent, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.35, marginTop: 2 },
   photoStage: { height: 259, backgroundColor: colors.elevated, overflow: "hidden", position: "relative" },
+  photoPage: { height: 259, backgroundColor: colors.elevated },
   emptyPhoto: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
   photoCount: { position: "absolute", right: 62, top: 8, height: 28, minWidth: 50, paddingHorizontal: 10, borderRadius: 14, backgroundColor: colors.scrim, alignItems: "center", justifyContent: "center" },
   removePhoto: { position: "absolute", right: 8, top: 8, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" },
+  photoDots: { position: "absolute", left: 0, right: 0, bottom: 10, flexDirection: "row", justifyContent: "center", gap: 8 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.textTertiary, opacity: 0.55 },
+  dotActive: { backgroundColor: colors.accent, opacity: 1 },
   captionBlock: { gap: 5, marginTop: 2 },
   captionInput: { minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, color: colors.textPrimary, fontSize: 14, paddingHorizontal: 0, paddingVertical: 10 },
   counter: { color: colors.textSecondary, fontSize: 11, alignSelf: "flex-end" },
