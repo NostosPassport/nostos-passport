@@ -26,8 +26,8 @@ export const signupStartSchema = z
   .object({
     email,
     displayName,
-    handle: handle.optional(),
-    acceptTerms: acceptTerms.optional(),
+    handle,
+    acceptTerms,
     birthdate: z.string().refine((v) => parseBirthdate(v) !== null, "Enter your birthdate as YYYY-MM-DD"),
   })
   .strict();
@@ -50,9 +50,6 @@ async function reopenSignupChallenge(db: Db, challengeId: string, consumedAt: Da
 
 export async function startSignup(db: Db, input: unknown, meta: { ip: string; now?: Date }) {
   const data = signupStartSchema.parse(input);
-  if (!data.handle || data.acceptTerms !== true) {
-    throw new ServiceError(400, "invalid_input", "Complete all sign-up fields before verifying your email.");
-  }
   const now = meta.now ?? new Date();
   if (!isOldEnough(data.birthdate, now)) throw new ServiceError(403, "underage", UNDERAGE_MESSAGE);
   assertCleanText({ handle: data.handle, "display name": data.displayName });
