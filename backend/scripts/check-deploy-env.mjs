@@ -1,0 +1,69 @@
+const appEnv = process.env.APP_ENV?.trim();
+const deployed = process.env.VERCEL === "1" || appEnv === "preview" || appEnv === "production";
+
+if (!deployed) {
+  console.log("[deploy-check] local development, skipping deployment environment checks");
+  process.exit(0);
+}
+
+const errors = [];
+
+if (appEnv !== "preview" && appEnv !== "production") {
+  errors.push("APP_ENV must be preview or production for a deployed backend");
+}
+
+const required = [
+  "DATABASE_URL",
+  "DIRECT_URL",
+  "R2_ACCOUNT_ID",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
+  "R2_BUCKET",
+  "RESEND_API_KEY",
+  "AUTH_EMAIL_FROM",
+  "AUTH_COMPANY_ADDRESS",
+  "RESEND_VERIFY_EMAIL_TEMPLATE_ID",
+  "AUTH_CODE_SECRET",
+  "CRON_SECRET",
+];
+
+for (const name of required) {
+  if (!process.env[name]?.trim()) errors.push(`${name} is required`);
+}
+
+if ((process.env.STORAGE_DRIVER ?? "").toLowerCase() !== "r2") {
+  errors.push("STORAGE_DRIVER must be r2 for preview/production");
+}
+
+for (const name of ["DATABASE_URL", "DIRECT_URL"]) {
+  const value = process.env[name] ?? "";
+  if (/localhost|127\.0\.0\.1/.test(value)) errors.push(`${name} must not point to localhost`);
+}
+
+if ((process.env.AUTH_CODE_SECRET ?? "").length < 32) {
+  errors.push("AUTH_CODE_SECRET must be at least 32 characters");
+}
+
+if ((process.env.CRON_SECRET ?? "").length < 32) {
+  errors.push("CRON_SECRET must be at least 32 characters");
+}
+
+if (process.env.AUTH_CODE_SECRET && process.env.AUTH_CODE_SECRET === process.env.CRON_SECRET) {
+  errors.push("AUTH_CODE_SECRET and CRON_SECRET must be different values");
+}
+
+if ((process.env.AUTH_COMPANY_ADDRESS ?? "").trim() === "New York, NY") {
+  errors.push("AUTH_COMPANY_ADDRESS must be a complete mailing address in preview/production");
+}
+
+if ((process.env.RESEND_VERIFY_EMAIL_TEMPLATE_ID ?? "").trim() !== "email-otp") {
+  errors.push("RESEND_VERIFY_EMAIL_TEMPLATE_ID must be email-otp");
+}
+
+if (errors.length) {
+  console.error("[deploy-check] deployment environment is not ready:");
+  for (const error of errors) console.error(`- ${error}`);
+  process.exit(1);
+}
+
+console.log(`[deploy-check] ${appEnv} environment looks ready`);
