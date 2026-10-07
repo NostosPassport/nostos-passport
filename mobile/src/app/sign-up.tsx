@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { router, Stack } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,7 +23,9 @@ import { colors, fonts, screenPadding } from "@/theme";
 export default function SignUp() {
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
-  const [fields, setFields] = useState<SignupFields>({ email: "", handle: "", displayName: "", birthdate: "" });
+  const params = useLocalSearchParams<{ email?: string | string[] }>();
+  const initialEmail = Array.isArray(params.email) ? params.email[0] ?? "" : params.email ?? "";
+  const [fields, setFields] = useState<SignupFields>({ email: initialEmail, handle: "", displayName: "", birthdate: "" });
   const [terms, setTerms] = useState(false);
   const [errors, setErrors] = useState<SignupErrors>({});
   const [consentError, setConsentError] = useState<string | null>(null);
