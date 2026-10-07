@@ -1,4 +1,3 @@
-/* DRAFT: have a lawyer review before launch */
 import type { Metadata } from "next";
 import { LegalPage, POLICY_UPDATED, SUPPORT_EMAIL } from "@/components/legal/LegalPage";
 
@@ -8,71 +7,87 @@ export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy Policy" updated={POLICY_UPDATED}>
       <p>
-        Nostos is a private passport for New York. You can save visits as stamps with a photo, caption, song, or any mix. Your
-        passport is for you: the current version of Nostos does not have public passports, social profiles, or a feed. This policy
-        explains what we collect, why we collect it, and the choices you have.
+        Nostos is a personal passport for New York that lets you save visits as stamps. This Privacy Policy explains what
+        information Nostos collects, how we use it, when it is shared, and the choices available to you.
       </p>
 
-      <h2>What we collect</h2>
+      <h2>Information we collect</h2>
       <ul>
-        <li><b>Account details:</b> your verified email address, handle, display name, bio, and an optional profile photo. We also record when you accepted our Terms.</li>
-        <li><b>Your birthdate, once:</b> Nostos is for people 13 and older. When you sign up, the app and our server check your birthdate and then discard it. We do not keep your birthdate, and if you do not pass the age check we do not create an account.</li>
-        <li><b>Location, only when you use it:</b> when you look for nearby places or create a stamp, the app sends your current coordinates so we can find places around you and verify that you are within the place&apos;s geofence. We keep the coordinates associated with a created stamp so we can audit the location check. We do not track your location in the background.</li>
-        <li><b>Your passport content:</b> stamps you create, including photos, captions, and song metadata. Uploaded photos are re-encoded and embedded metadata, including camera GPS metadata, is removed. For a song we keep its title, artist, and album-art link from Apple&apos;s public iTunes Search API; Nostos does not play music.</li>
-        <li><b>Security data:</b> session tokens stored only in hashed form, short-lived email-verification challenges stored as keyed digests rather than the six-digit code itself, and limited IP-address data used to rate-limit verification requests. Verification challenge records are kept for up to 24 hours.</li>
+        <li><b>Account information:</b> your verified email address, handle, display name, bio, optional profile photo, account settings, and records showing when you accepted our Terms.</li>
+        <li><b>Age eligibility:</b> when you sign up, you provide your birthdate so Nostos can confirm that you meet the minimum age requirement. The birthdate is checked and is not stored after the eligibility check.</li>
+        <li><b>Location when you use location features:</b> when you request nearby places or create a stamp, the app sends your current coordinates so we can find places near you and verify that you are within the place&apos;s geofence. Nostos does not track your location in the background.</li>
+        <li><b>Stamp content:</b> places you stamp, photos, captions, ratings, song metadata, photo layout information, and related timestamps. Uploaded photos are re-encoded and embedded metadata such as EXIF and camera GPS metadata is removed.</li>
+        <li><b>Authentication and security information:</b> session information, hashed or keyed representations of authentication credentials and email codes, limited IP-address data used for abuse prevention and rate limiting, and technical records needed to keep the service secure and reliable.</li>
+        <li><b>Support communications:</b> if you contact us, we receive the information you choose to include in your message.</li>
       </ul>
-      <p>We do not collect your contacts, advertising identifiers, or payment information, and we do not use third-party advertising trackers.</p>
+      <p>We do not collect payment information, advertising identifiers, or your contacts, and we do not use third-party advertising trackers.</p>
 
-      <h2>How we use it</h2>
+      <h2>How we use information</h2>
       <ul>
-        <li>To run Nostos: create and display your passport, show the map and nearby places, save your stamps, and verify that a stamp is made at the place.</li>
-        <li>To manage your account: authenticate you, verify email addresses, keep your account secure, process profile or email changes, and record acceptance of our <a href="/terms">Terms</a>.</li>
-        <li>To protect the service: detect abuse, enforce our Terms, investigate technical or security issues, and perform moderation when necessary.</li>
+        <li>To create and operate your account, authenticate you, and deliver sign-in or verification emails.</li>
+        <li>To show your passport, nearby places, neighborhood progress, and the stamps you have created.</li>
+        <li>To verify that a stamp is created while you are physically near the place.</li>
+        <li>To process account changes, support requests, account deletion, and other actions you request.</li>
+        <li>To prevent abuse, enforce our Terms, troubleshoot problems, protect the service, and comply with legal obligations.</li>
       </ul>
-      <p>We do not sell your personal information and we do not share it for advertising. Nostos currently has no social feed and does not share your passport with other users.</p>
 
-      <h2>Who can see what</h2>
-      <ul>
-        <li><b>You:</b> your passport, stamps, places, and account information are available to you while you are signed in.</li>
-        <li><b>Other users:</b> the current version of Nostos does not let other users browse your passport or stamps.</li>
-        <li><b>Authorized staff and service providers:</b> they may access or process information only when needed to operate, secure, support, or moderate the service, or to comply with law.</li>
-        <li><b>Your email and exact stamp coordinates:</b> these are not displayed to other users.</li>
-      </ul>
+      <h2>Who can see your information</h2>
+      <p>
+        In the current personal mode, your passport, stamps, and visited places are available only to you while signed in.
+        Your email address and exact location information are not displayed publicly. Authorized personnel and service providers
+        may process information when reasonably necessary to operate, secure, support, or maintain Nostos, or when required by law.
+      </p>
 
       <h2>Service providers</h2>
       <p>
-        We use a small number of providers to host and operate the service: Vercel (application hosting), Neon (database), Cloudflare
-        R2 (photo storage), and Resend (transactional email delivery). They process data on our behalf. Song searches are sent through
-        our server to Apple&apos;s iTunes Search API using the words you search for. The iPhone app uses Apple Maps.
+        Nostos uses service providers including Vercel for application hosting, Neon for database hosting, Cloudflare R2 for
+        private photo storage, and Resend for transactional email delivery. The iPhone app uses Apple Maps. Song searches are
+        sent through our backend to Apple&apos;s iTunes Search API using the search terms you enter.
       </p>
 
-      <h2>How long we keep it</h2>
+      <h2>Location information</h2>
+      <p>
+        Nearby-place requests use the location you send for that request and do not require background tracking. When you create
+        a stamp, Nostos verifies your coordinates against the place&apos;s geofence. Location-related records may be retained when
+        needed to verify the integrity of a created stamp, investigate abuse, or protect the service.
+      </p>
+
+      <h2>Retention</h2>
       <ul>
-        <li>Account data is kept while your account is active, unless a longer period is required for security, legal, or operational reasons.</li>
-        <li>Stamps remain in your passport until you remove them or delete your account. When a stamp is removed, it is hidden from your passport; limited records may be retained for service integrity and moderation history.</li>
-        <li>Email-verification challenge records are kept for up to 24 hours.</li>
+        <li>Account information is generally kept while your account is active.</li>
+        <li>Stamps and their content remain associated with your account until you remove them or delete your account, subject to limited retention for security, integrity, or legal purposes.</li>
+        <li>Short-lived email authentication challenge records are retained only for a limited period and are periodically removed.</li>
+        <li>Some security, audit, and anonymized integrity records may be retained after deletion when reasonably necessary to protect the service or comply with law.</li>
       </ul>
 
-      <h2>Deleting your account</h2>
+      <h2>Account deletion</h2>
       <p>
-        You can delete your account at any time in the app (Passport, Settings, Delete account) or on the web at{" "}
-        <a href="/delete-account">/delete-account</a>. When you delete your account, we remove your email, display name, bio, and profile
-        photo; replace your handle with a randomized deleted-account identifier; revoke your sessions; hide your stamps; and delete
-        their stored image files. Limited anonymized records may remain where needed for moderation, security, or service integrity.
+        You can delete your account in the app or at <a href="/delete-account">/delete-account</a>. Deletion revokes active sessions,
+        removes or anonymizes account information, hides your stamps from normal use, and removes stored image files associated with
+        your account. Limited anonymized or security records may remain where necessary for service integrity, abuse prevention, or legal obligations.
       </p>
 
-      <h2>Your choices and rights</h2>
+      <h2>Your choices</h2>
       <p>
-        You can deny location access (you can still use parts of the app, but you cannot create a location-verified stamp), edit your
-        profile and account email, remove stamps, and delete your account. Depending on where you live, you may also have rights to
-        access, correct, or delete personal information. Email us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> and we will respond within 30 days.
+        You can deny location permission, although location-verified stamping will not work without it. You can edit supported
+        account information, remove stamps, and delete your account. Depending on where you live, applicable law may also give you
+        rights to request access to, correction of, or deletion of personal information. Contact us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
 
-      <h2>Age</h2>
-      <p>Nostos is for people 13 and older. We do not knowingly create accounts for anyone younger than 13.</p>
+      <h2>Children</h2>
+      <p>Nostos is intended for people age 13 and older, and we do not knowingly create accounts for children under 13.</p>
 
-      <h2>Changes</h2>
-      <p>If we change this policy in a meaningful way, we may ask you to review the updated policy the next time you use Nostos.</p>
+      <h2>Security</h2>
+      <p>
+        We use technical and organizational safeguards designed to protect account and service data. No online service can guarantee
+        absolute security, so you should protect access to your email account and devices and contact us if you believe your account has been compromised.
+      </p>
+
+      <h2>Changes to this policy</h2>
+      <p>
+        We may update this Privacy Policy as Nostos changes. If an update is material, we may provide notice in the app or require
+        you to review the updated policy before continuing to use certain features.
+      </p>
 
       <h2>Contact</h2>
       <p><a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></p>
