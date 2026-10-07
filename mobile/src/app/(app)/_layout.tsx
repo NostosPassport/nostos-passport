@@ -9,7 +9,7 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="place/[id]" options={{ title: "Place" }} />
       <Stack.Screen name="stamp/[id]" options={{ title: "Stamp" }} />
-      <Stack.Screen name="stamp/new" options={{ title: "New stamp", presentation: "modal" }} />
+      <Stack.Screen name="stamp/new" options={{ presentation: "modal", headerShown: false }} />
       <Stack.Screen name="stamp/camera" options={{ presentation: "fullScreenModal", headerShown: false }} />
       <Stack.Screen name="stamp/landed" options={{ headerShown: false, gestureEnabled: false, animation: "fade" }} />
       <Stack.Screen name="stamp/edit" options={{ title: "Edit stamp", presentation: "modal" }} />
