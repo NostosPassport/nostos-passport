@@ -8,7 +8,6 @@ import { isOldEnough, MIN_AGE, parseBirthdate } from "@/lib/age";
 import { assertCleanText, conflict, notFound, ServiceError } from "@/server/errors";
 import { consumeEmailChallenge, startEmailChallenge } from "@/server/services/email-code";
 
-/** Bump when the Terms or Privacy Policy change materially; users who accepted an older version can be re-prompted. */
 export const CURRENT_TERMS_VERSION = "2026-10-02";
 
 const email = z.string().trim().toLowerCase().email().max(200);
@@ -17,7 +16,7 @@ const challenge = z.object({ challengeId: z.string().uuid(), code: z.string().tr
 export const signupStartSchema = z
   .object({
     email,
-    /** YYYY-MM-DD. Checked for the minimum age and never stored. */
+    displayName: z.string().trim().min(1).max(60),
     birthdate: z.string().refine((v) => parseBirthdate(v) !== null, "Enter your birthdate as YYYY-MM-DD"),
   })
   .strict();
@@ -46,9 +45,10 @@ export async function startSignup(db: Db, input: unknown, meta: { ip: string; no
   const data = signupStartSchema.parse(input);
   const now = meta.now ?? new Date();
   if (!isOldEnough(data.birthdate, now)) throw new ServiceError(403, "underage", UNDERAGE_MESSAGE);
+  assertCleanText({ "display name": data.displayName });
   const existing = await db.user.findUnique({ where: { email: data.email }, select: { id: true, deletedAt: true } });
   if (existing && !existing.deletedAt) throw conflict("Email already registered");
-  return startEmailChallenge(db, { email: data.email, purpose: "SIGN_UP", ip: meta.ip, now });
+  return startEmailChallenge(db, { email: data.email, purpose: "SIGN_UP", ip: meta.ip, displayName: data.displayName, now });
 }
 
 export async function signup(db: Db, input: unknown, opts: { client?: SessionClient; now?: Date } = {}) {
@@ -115,7 +115,6 @@ export async function login(
   return { user, session };
 }
 
-/** Development-only seeded-account login. Production users never authenticate with passwords. */
 export async function devLogin(db: Db, input: unknown, opts: { client?: SessionClient; now?: Date } = {}) {
   if (process.env.NODE_ENV !== "development") throw notFound();
   const data = devLoginSchema.parse(input);
