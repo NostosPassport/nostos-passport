@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ApiError, errorText } from "@/api";
@@ -17,7 +17,6 @@ const SIGN_IN_ART = require("../../assets/images/nostos_art1.png");
 export default function SignIn() {
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
   const [farewell] = useState(() => farewellNotice.take());
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -40,7 +39,6 @@ export default function SignIn() {
   });
 
   const noAccount = requestCode.error instanceof ApiError && requestCode.error.code === "not_found";
-  const collageHeight = challenge ? Math.max(92, Math.min(132, height * 0.15)) : Math.max(128, Math.min(190, height * 0.22));
 
   const createAccount = () => {
     const value = email.trim();
@@ -65,12 +63,19 @@ export default function SignIn() {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <View style={[styles.content, { paddingTop: insets.top + 4, paddingBottom: Math.max(insets.bottom, 10) }]}>
-        <Pressable onPress={Keyboard.dismiss} accessible={false} style={styles.hero}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 4, paddingBottom: Math.max(insets.bottom, 12) }]}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        showsVerticalScrollIndicator={false}
+      >
+        <Pressable onPress={Keyboard.dismiss} accessible={false}>
           <Text style={styles.wordmark}>NOSTOS</Text>
           <Image
             source={SIGN_IN_ART}
-            style={[styles.collage, { height: collageHeight }]}
+            style={styles.collage}
             resizeMode="cover"
             accessibilityLabel="Original Greek engraved-eye newspaper collage"
             accessibilityIgnoresInvertColors
@@ -183,17 +188,17 @@ export default function SignIn() {
             </Pressable>
           ) : null}
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { flex: 1, justifyContent: "space-between" },
-  hero: { flexShrink: 1 },
+  scroll: { flex: 1 },
+  content: { flexGrow: 1 },
   wordmark: { color: colors.accent, fontFamily: fonts.serifRegular, fontSize: 54, lineHeight: 57, letterSpacing: -2.1, paddingHorizontal: 24, paddingBottom: 2 },
-  collage: { width: "100%", backgroundColor: colors.elevated },
+  collage: { width: "100%", height: 190, backgroundColor: colors.elevated },
   headline: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 46, lineHeight: 43, letterSpacing: -1.2, paddingHorizontal: 24, paddingTop: 8 },
   form: { paddingHorizontal: 24, paddingTop: 12, gap: 10 },
   formHeading: { gap: 2 },
