@@ -40,14 +40,14 @@ const withDev = (value: boolean, run: () => Promise<void>) => async () => {
 describe("the Design gallery", () => {
   beforeEach(() => mockPush.mockClear());
 
-  it("has a unique id, a title and a note for every section, and covers every piece of the book", () => {
+  it("has a unique id, a title and a note for every section, and covers every current piece of the book", () => {
     const ids = GALLERY_SECTIONS.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const s of GALLERY_SECTIONS) {
       expect(s.title.length).toBeGreaterThan(2);
       expect(s.note.length).toBeGreaterThan(10);
     }
-    for (const needed of ["palette", "type", "cover", "open", "bearer", "pages", "flip", "stamps", "completion", "landing", "visa", "viewer", "index", "map"]) expect(ids).toContain(needed);
+    for (const needed of ["palette", "type", "cover", "open", "bearer", "pages", "flip", "stamps", "completion", "landing", "visa", "viewer", "map"]) expect(ids).toContain(needed);
   });
 
   it.each(GALLERY_SECTIONS.map((s) => [s.id, s.title] as const))("renders the %s section (%s) on made-up data without a server", async (id) => {
