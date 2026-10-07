@@ -25,7 +25,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setBusy(true);
     setError(null);
     try {
-      const body = mode === "signup" ? { email, displayName, birthdate } : { email };
+      const body = mode === "signup" ? { email, displayName, handle, birthdate, acceptTerms } : { email };
       const next = await api<Challenge>(`/api/auth/${mode === "signup" ? "signup" : "login"}/start`, { method: "POST", json: body });
       setChallenge(next);
       setCode("");
