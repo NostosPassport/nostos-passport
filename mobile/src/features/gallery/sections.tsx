@@ -8,7 +8,6 @@ import { BearerPage } from "@/features/book/BearerPage";
 import { Counts, Cover } from "@/features/book/Cover";
 import { FirstRunHint } from "@/features/book/FirstRunHint";
 import { FlipBook } from "@/features/book/FlipBook";
-import { IndexList } from "@/features/book/IndexList";
 import { InsideCover } from "@/features/book/InsideCover";
 import { LandingScene } from "@/features/book/LandingScene";
 import { OpeningCover } from "@/features/book/OpeningCover";
@@ -21,12 +20,11 @@ import { CompletionStamp, StampMark } from "@/features/book/StampMark";
 import { TicketStub } from "@/features/book/TicketStub";
 import { VisaSpread } from "@/features/book/VisaSpread";
 import { bookSize } from "@/features/book/dimensions";
-import { indexRows } from "@/features/book/index-data";
 import { PinMarker } from "@/features/map/PinMarker";
 import { PlaceSheet } from "@/features/map/PlaceSheet";
 import { bookMotion, colors, fonts, palette, radius, screenPadding, shadows, size, space, stampStyle, type as typeScale } from "@/theme";
 import { SAMPLE_PHOTOS } from "./sample-photos";
-import { SAMPLE_INDEX, SAMPLE_PROGRESS, SAMPLE_USER, SAMPLE_VISA_STAMP, sampleStamp, sampleStamps } from "./sample";
+import { SAMPLE_PROGRESS, SAMPLE_USER, SAMPLE_VISA_STAMP, sampleStamp, sampleStamps } from "./sample";
 
 export type GallerySection = { id: string; title: string; note: string; Component: () => ReactNode };
 
@@ -298,15 +296,6 @@ function ViewerSection() {
   );
 }
 
-function IndexSection() {
-  const rows = indexRows(SAMPLE_INDEX, STAMPS);
-  return (
-    <View style={styles.indexBox}>
-      <IndexList rows={rows} onJump={() => undefined} onClose={() => undefined} />
-    </View>
-  );
-}
-
 function MapSection() {
   const i = input(0);
   return (
@@ -349,7 +338,6 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "landing", title: "Stamp landing", note: "Replay it as often as you like. Turn on Reduce Motion to see the fade.", Component: LandingSection },
   { id: "visa", title: "Visa spread", note: "Stamp left, photos right. Drag a photo, tap one for full screen, watch the caption type.", Component: VisaSection },
   { id: "viewer", title: "Photo viewer", note: "Pinch to zoom, drag, double tap.", Component: ViewerSection },
-  { id: "index", title: "Index and rings", note: "Progress rings per neighborhood; started ones jump to a page.", Component: IndexSection },
   { id: "map", title: "Map pins and sheet", note: "Lit pins are little stamps in a glowing ring; dim ones are dots.", Component: MapSection },
   { id: "stub", title: "Ticket stub and hints", note: "A song as a ticket stub, the first-run card, the three counts.", Component: StubSection },
 ];
@@ -366,6 +354,5 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   pair: { flexDirection: "row" },
   center: { alignItems: "center" },
-  indexBox: { height: size.heroHeight * 2, borderRadius: radius.card, overflow: "hidden", backgroundColor: colors.background },
   sheetBox: { height: size.heroHeight + space.xxxl, overflow: "hidden", borderRadius: radius.card, backgroundColor: colors.background },
 });
