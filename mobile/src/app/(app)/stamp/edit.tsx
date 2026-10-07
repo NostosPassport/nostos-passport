@@ -82,6 +82,8 @@ function EditForm({ stamp }: { stamp: StampView }) {
           placeholder="What's it like?"
           multiline
           inputAccessoryViewButtonLabel="Done"
+          returnKeyType="done"
+          submitBehavior="blurAndSubmit"
         />
       </FieldGroup>
       {song ? (
