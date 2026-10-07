@@ -89,7 +89,9 @@ export function LandingScene({ stamp, others, progress, pageWidth: pw, pageHeigh
         ) : null}
         {copy.completed && progress ? <CompletionStamp neighborhoodId={progress.neighborhoodId} name={progress.name} size={pw * 0.5} /> : null}
       </View>
-      <Button title="Done" block={false} onPress={onDone} />
+      <View style={styles.done}>
+        <Button title="Done" onPress={onDone} />
+      </View>
     </View>
   );
 }
@@ -103,4 +105,5 @@ const styles = StyleSheet.create({
   fill: { width: "100%", height: "100%" },
   pin: { position: "absolute", top: space.xxs, alignSelf: "center", width: space.xs, height: space.xs, borderRadius: space.xxs, backgroundColor: colors.brass },
   words: { alignItems: "center", gap: space.xs, paddingHorizontal: space.lg },
+  done: { width: 180 },
 });
