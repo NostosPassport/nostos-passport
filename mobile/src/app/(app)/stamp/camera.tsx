@@ -38,18 +38,18 @@ export default function StampCamera() {
     return { place: { name: placeName, lat: placeLat, lng: placeLng, geofenceMeters: placeRadius }, stampAt };
   }, [params.placeLat, params.placeLng, params.placeName, params.placeRadius, params.stampAt]);
 
-  const startWork = () => {
+  const startWork = useCallback(() => {
     if (busyRef.current || photoDraft.get().length >= MAX_STAMP_PHOTOS) return false;
     busyRef.current = true;
     setBusy(true);
     setNote(null);
     return true;
-  };
+  }, []);
 
-  const finishWork = () => {
+  const finishWork = useCallback(() => {
     busyRef.current = false;
     setBusy(false);
-  };
+  }, []);
 
   const capture = useCallback(async (initial = false) => {
     if (!startWork()) return;
@@ -71,7 +71,7 @@ export default function StampCamera() {
     } finally {
       finishWork();
     }
-  }, []);
+  }, [finishWork, startWork]);
 
   const chooseLibraryPhoto = useCallback(async (initial = false) => {
     if (!startWork()) return;
@@ -100,7 +100,7 @@ export default function StampCamera() {
     } finally {
       finishWork();
     }
-  }, [validationContext]);
+  }, [finishWork, startWork, validationContext]);
 
   const chooseSource = useCallback((initial = false) => {
     if (busyRef.current || photoDraft.get().length >= MAX_STAMP_PHOTOS) return;
@@ -121,7 +121,7 @@ export default function StampCamera() {
   useEffect(() => {
     if (openedInitialChooser.current || full) return;
     openedInitialChooser.current = true;
-    void requestAnimationFrame(() => chooseSource(true));
+    requestAnimationFrame(() => chooseSource(true));
   }, [chooseSource, full]);
 
   return (
