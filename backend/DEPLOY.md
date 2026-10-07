@@ -1,67 +1,211 @@
-# Deploying Nostos backend
+# Deploying the Nostos backend
 
-This is the current deployment checklist. It is not evidence that any external environment is presently deployed. Verify actual Vercel/Neon/R2 state before making a deployment claim.
+Nostos production is designed around:
 
-## Local configuration
+- Vercel for the Next.js API
+- Neon Postgres for persistent relational data
+- Cloudflare R2 for private photo storage
+- Resend for passwordless authentication email
+- Prisma forward-only migrations
 
-Current committed development defaults are:
+The mobile app is configured to use:
 
-- Next.js dev port: 3001
-- Docker Postgres host port: 5438
-- compose database: `nostos_codex`
+- production: `https://api.nostospassport.com`
+- preview: `https://preview-api.nostospassport.com`
 
-These replace old documentation that referenced ports 3000/5435.
+## Environment layout
 
-## Production/preview shape
+Keep production and preview data completely separate.
 
-The backend is designed for:
+| Resource | Production | Preview |
+| --- | --- | --- |
+| API domain | `api.nostospassport.com` | `preview-api.nostospassport.com` |
+| Vercel project | `nostos-backend` | `nostos-backend-preview` |
+| Neon database/project | `nostos-production` | `nostos-preview` |
+| R2 bucket | `nostos-production` | `nostos-preview` |
+| `APP_ENV` | `production` | `preview` |
 
-- Vercel for the Next.js service
-- Postgres such as Neon for persistent data
-- private S3-compatible object storage such as Cloudflare R2 for photos
-- forward-only Prisma migrations
+Never point a preview deployment at the production Postgres database or production R2 bucket.
 
-Required environment variables depend on the deployed storage/database configuration and include database URLs, storage credentials, upload-signing secret, and operational secrets. Never commit them.
+## Vercel
 
-## Build
+Create the project from `NostosPassport/nostos-passport` with:
 
-The package's Vercel build command is:
+- Root Directory: `backend`
+- Framework Preset: Next.js
+- Build Command: `pnpm vercel-build`
+- Node.js: 20 or newer
+
+`pnpm vercel-build` runs:
 
 ```bash
-pnpm vercel-build
+prisma generate
+prisma migrate deploy
+next build
 ```
 
-which generates Prisma, applies deployable migrations, and builds Next.js.
+The repository already defines the daily maintenance cron in `backend/vercel.json`.
 
-Before running migrations against any non-local database:
+Add the custom production domain `api.nostospassport.com` and the preview domain `preview-api.nostospassport.com` to the appropriate Vercel projects. Use the DNS values Vercel provides rather than hardcoding a CNAME target in this document.
 
-1. inspect pending migrations
-2. verify backups/restore strategy
-3. verify the target database URL
-4. run forward migrations only
-5. never use `pnpm db:reset` or `prisma migrate reset`
+## Neon Postgres
+
+Create separate production and preview databases.
+
+For each environment obtain:
+
+- a pooled connection string for application traffic
+- a direct, non-pooled connection string for Prisma migrations
+
+Set:
+
+```text
+DATABASE_URL=<pooled connection string>
+DIRECT_URL=<direct connection string>
+```
+
+The Prisma schema is already configured to use `DATABASE_URL` for normal queries and `DIRECT_URL` for migrations.
+
+Before any non-local migration:
+
+1. inspect the pending migrations
+2. confirm the database target
+3. confirm the provider backup or restore strategy
+4. use `prisma migrate deploy` only
+5. never run `pnpm db:reset` or `prisma migrate reset` against preview or production
+
+Do not seed development accounts into production.
+
+## Cloudflare R2
+
+Create two private buckets:
+
+```text
+nostos-production
+nostos-preview
+```
+
+Create R2 S3 API credentials that can read, write, and delete objects in the corresponding bucket.
+
+Set:
+
+```text
+STORAGE_DRIVER=r2
+R2_ACCOUNT_ID=<Cloudflare account id>
+R2_ACCESS_KEY_ID=<R2 S3 access key>
+R2_SECRET_ACCESS_KEY=<R2 S3 secret>
+R2_BUCKET=<environment bucket name>
+```
+
+Photos stay private. The backend generates short-lived S3-compatible presigned GET URLs for authorized viewers.
+
+## Resend
+
+Use the verified authentication sender:
+
+```text
+AUTH_EMAIL_FROM=Nostos <login@auth.nostospassport.com>
+```
+
+Set:
+
+```text
+RESEND_API_KEY=<production Resend API key>
+RESEND_VERIFY_EMAIL_TEMPLATE_ID=email-otp
+AUTH_COMPANY_ADDRESS=<complete business mailing address>
+AUTH_CODE_SECRET=<random secret>
+```
+
+The `email-otp` template must remain published and accept:
+
+- `verification_code`
+- `first_name`
+- `expiry_minutes`
+- `company_address`
+
+Generate `AUTH_CODE_SECRET` with:
+
+```bash
+openssl rand -hex 32
+```
+
+## Operational secret
+
+Generate a separate cron secret:
+
+```bash
+openssl rand -hex 32
+```
+
+Set it as:
+
+```text
+CRON_SECRET=<random secret>
+```
+
+Do not reuse `AUTH_CODE_SECRET` as `CRON_SECRET`.
+
+## Required Vercel variables
+
+Production should have at least:
+
+```text
+APP_ENV=production
+DATABASE_URL=<production pooled Neon URL>
+DIRECT_URL=<production direct Neon URL>
+STORAGE_DRIVER=r2
+R2_ACCOUNT_ID=<production value>
+R2_ACCESS_KEY_ID=<production value>
+R2_SECRET_ACCESS_KEY=<production value>
+R2_BUCKET=nostos-production
+RESEND_API_KEY=<production Resend key>
+AUTH_EMAIL_FROM=Nostos <login@auth.nostospassport.com>
+AUTH_COMPANY_ADDRESS=<complete mailing address>
+RESEND_VERIFY_EMAIL_TEMPLATE_ID=email-otp
+AUTH_CODE_SECRET=<unique random secret>
+CRON_SECRET=<unique random secret>
+SOCIAL_ENABLED=0
+```
+
+Preview should use the same variable names with its own Neon database, R2 bucket, and unique secrets, plus:
+
+```text
+APP_ENV=preview
+R2_BUCKET=nostos-preview
+```
+
+Do not set `DEV_SEED_PASSWORD`, `TEST_DATABASE_URL`, or local upload paths in production unless an explicit operational task requires them.
 
 ## Production data
 
-Do not seed fake/demo data into production. Import the approved real place/neighborhood catalog using the repository scripts only after reviewing the intended coverage.
+Do not seed fake or demo data into production. Import the approved real place and neighborhood catalog only after reviewing the intended coverage.
 
-## Preview/App Review
+## Preview and App Review
 
-If a preview environment is used for App Review, create the designated review account through the supported operational flow and verify any geofence exemption is limited to that account and behaves as documented.
+The current mobile app requires sign-in. If preview is used for App Review, create the designated review account through the supported operational flow and verify that any geofence exemption is limited to that account.
 
-The current mobile app requires sign-in. Do not prepare review instructions around the removed guest `Look around first` flow.
+## Verification after deployment
 
-## Mobile URLs
+Verify, in order:
 
-After deployment, update/verify `mobile/eas.json` and any `EXPO_PUBLIC_API_URL` values for preview/production. Do not assume placeholder `nostos.app` hosts are live merely because they appear in documentation or config.
+1. `GET /api/health` succeeds on the intended domain
+2. Prisma migrations are present in the intended database
+3. signup sends an OTP through Resend
+4. sign-in works by both email and handle
+5. a test photo can be uploaded to the correct R2 bucket
+6. the returned photo URL is signed and expires
+7. the maintenance cron authenticates successfully
+8. the mobile preview build talks only to `preview-api.nostospassport.com`
+9. the mobile production build talks only to `api.nostospassport.com`
+10. privacy, terms, and support URLs resolve before App Store submission
 
-## Launch checklist
+## Local development
 
-- backend health endpoint passes against the intended database
-- migrations applied successfully
-- object storage reads/writes work
-- review account tested
-- privacy/terms/support URLs resolve
-- legal text matches current personal product and photo/location behavior
-- mobile build points to the intended backend
-- no development seed credentials or secrets are shipped
+Local defaults remain:
+
+- Next.js port: 3001
+- Docker Postgres port: 5438
+- database: `nostos_codex`
+- `STORAGE_DRIVER=local`
+
+Local development may log OTP codes to the backend console when `RESEND_API_KEY` is blank.
