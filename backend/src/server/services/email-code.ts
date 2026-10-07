@@ -11,6 +11,7 @@ const MAX_SENDS_PER_EMAIL = 5;
 const MAX_SENDS_PER_IP = 25;
 const MAX_ATTEMPTS = 5;
 const RETENTION_MS = 24 * 60 * 60_000;
+const EXPIRY_MINUTES = CODE_TTL_MS / 60_000;
 
 function codeSecret(): string {
   const configured = process.env.AUTH_CODE_SECRET?.trim();
@@ -29,14 +30,27 @@ function sameDigest(a: string, b: string): boolean {
   return aa.length === bb.length && timingSafeEqual(aa, bb);
 }
 
+function firstName(displayName?: string): string {
+  const value = displayName?.trim();
+  return value ? value.split(/\s+/)[0]! : "there";
+}
+
 function actionFor(purpose: EmailChallengePurpose): string {
   if (purpose === "DELETE_ACCOUNT") return "confirm deleting your Nostos account";
   if (purpose === "CHANGE_EMAIL") return "confirm this email address";
-  return "continue with Nostos";
+  if (purpose === "SIGN_IN") return "sign in to Nostos";
+  return "continue setting up your Nostos passport";
+}
+
+function subjectFor(purpose: EmailChallengePurpose): string {
+  if (purpose === "DELETE_ACCOUNT") return "Confirm your Nostos account deletion";
+  if (purpose === "CHANGE_EMAIL") return "Confirm your new Nostos email";
+  if (purpose === "SIGN_IN") return "Your Nostos sign-in code";
+  return "Verify your Nostos email";
 }
 
 function localMessage(code: string, purpose: EmailChallengePurpose): string {
-  return `Your Nostos verification code is ${code}. It expires in 10 minutes. Use it to ${actionFor(purpose)}. If you didn't request this, you can ignore this email.`;
+  return `Your Nostos verification code is ${code}. It expires in ${EXPIRY_MINUTES} minutes. Use it to ${actionFor(purpose)}. If you didn't request this, you can ignore this email.`;
 }
 
 function resendApiKey(): string | null {
@@ -45,6 +59,10 @@ function resendApiKey(): string | null {
 
 function sender(): string {
   return process.env.AUTH_EMAIL_FROM?.trim() || "Nostos <login@auth.nostospassport.com>";
+}
+
+function companyAddress(): string {
+  return process.env.AUTH_COMPANY_ADDRESS?.trim() || "New York, NY";
 }
 
 async function postResend(body: Record<string, unknown>, idempotencyKey: string): Promise<void> {
@@ -73,7 +91,44 @@ async function postResend(body: Record<string, unknown>, idempotencyKey: string)
   }
 }
 
-async function deliverVerification(to: string, code: string, purpose: EmailChallengePurpose, idempotencyKey: string): Promise<void> {
+async function deliverVerificationTemplate(to: string, code: string, displayName: string | undefined, idempotencyKey: string): Promise<void> {
+  const templateId = process.env.RESEND_VERIFY_EMAIL_TEMPLATE_ID?.trim();
+  if (!templateId) throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
+
+  await postResend(
+    {
+      from: sender(),
+      to: [to],
+      template: {
+        id: templateId,
+        variables: {
+          verification_code: code,
+          first_name: firstName(displayName),
+          expiry_minutes: String(EXPIRY_MINUTES),
+          company_address: companyAddress(),
+        },
+      },
+    },
+    idempotencyKey,
+  );
+}
+
+async function deliverPurposeEmail(to: string, code: string, purpose: EmailChallengePurpose, displayName: string | undefined, idempotencyKey: string): Promise<void> {
+  const name = firstName(displayName);
+  const action = actionFor(purpose);
+  const subject = subjectFor(purpose);
+  const text = `Hi ${name}, your Nostos verification code is ${code}. It expires in ${EXPIRY_MINUTES} minutes. Use it to ${action}. Never share this code with anyone. If you didn't request this email, you can safely ignore it.`;
+  const html = `<p>Hi ${name},</p><p>Your Nostos verification code is:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px">${code}</p><p>This code expires in ${EXPIRY_MINUTES} minutes. Use it to ${action}.</p><p>Never share this code with anyone. If you didn't request this email, you can safely ignore it.</p>`;
+  await postResend({ from: sender(), to: [to], subject, text, html }, idempotencyKey);
+}
+
+async function deliverVerification(
+  to: string,
+  code: string,
+  purpose: EmailChallengePurpose,
+  displayName: string | undefined,
+  idempotencyKey: string,
+): Promise<void> {
   const key = resendApiKey();
   if (!key) {
     if (process.env.NODE_ENV !== "production") {
@@ -83,24 +138,12 @@ async function deliverVerification(to: string, code: string, purpose: EmailChall
     throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
   }
 
-  const templateId = process.env.RESEND_VERIFY_EMAIL_TEMPLATE_ID?.trim();
-  if (!templateId) {
-    throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
+  if (purpose === "SIGN_UP") {
+    await deliverVerificationTemplate(to, code, displayName, idempotencyKey);
+    return;
   }
 
-  await postResend(
-    {
-      from: sender(),
-      to: [to],
-      template: {
-        id: templateId,
-        variables: {
-          CODE: code,
-        },
-      },
-    },
-    idempotencyKey,
-  );
+  await deliverPurposeEmail(to, code, purpose, displayName, idempotencyKey);
 }
 
 async function deliverRaw(to: string, subject: string, text: string, html: string, idempotencyKey: string): Promise<void> {
@@ -120,7 +163,7 @@ export type StartedEmailChallenge = { challengeId: string; expiresAt: string; re
 
 export async function startEmailChallenge(
   db: Db,
-  input: { email: string; purpose: EmailChallengePurpose; ip: string; now?: Date },
+  input: { email: string; purpose: EmailChallengePurpose; ip: string; displayName?: string; now?: Date },
 ): Promise<StartedEmailChallenge> {
   const now = input.now ?? new Date();
   const email = input.email.trim().toLowerCase();
@@ -144,7 +187,7 @@ export async function startEmailChallenge(
   });
 
   try {
-    await deliverVerification(email, code, input.purpose, `nostos-auth/${id}`);
+    await deliverVerification(email, code, input.purpose, input.displayName, `nostos-auth/${id}`);
   } catch (error) {
     await db.emailChallenge.delete({ where: { id } }).catch(() => {});
     throw error;
