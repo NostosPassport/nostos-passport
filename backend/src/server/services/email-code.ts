@@ -29,30 +29,28 @@ function sameDigest(a: string, b: string): boolean {
   return aa.length === bb.length && timingSafeEqual(aa, bb);
 }
 
-function subjectFor(purpose: EmailChallengePurpose): string {
-  if (purpose === "CHANGE_EMAIL") return "Confirm your new Nostos email";
-  if (purpose === "DELETE_ACCOUNT") return "Confirm your Nostos account deletion";
-  return "Your Nostos code";
+function actionFor(purpose: EmailChallengePurpose): string {
+  if (purpose === "DELETE_ACCOUNT") return "confirm deleting your Nostos account";
+  if (purpose === "CHANGE_EMAIL") return "confirm this email address";
+  return "continue with Nostos";
 }
 
-function messageFor(code: string, purpose: EmailChallengePurpose): { text: string; html: string } {
-  const action = purpose === "DELETE_ACCOUNT" ? "confirm deleting your Nostos account" : purpose === "CHANGE_EMAIL" ? "confirm this email address" : "continue with Nostos";
-  const text = `Your Nostos verification code is ${code}. It expires in 10 minutes. Use it to ${action}. If you didn't request this, you can ignore this email.`;
-  const html = `<!doctype html><html><body style="margin:0;background:#f7f4ee;color:#171714;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"><div style="max-width:520px;margin:0 auto;padding:40px 24px"><div style="font-family:Georgia,serif;font-size:34px;margin-bottom:28px">NOSTOS</div><p style="font-size:16px;line-height:1.5">Your verification code is</p><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:36px;letter-spacing:8px;font-weight:700;margin:22px 0">${code}</div><p style="font-size:14px;line-height:1.5;color:#5a5a55">It expires in 10 minutes. Use it to ${action}.</p><p style="font-size:14px;line-height:1.5;color:#5a5a55">If you didn't request this, you can ignore this email.</p></div></body></html>`;
-  return { text, html };
+function localMessage(code: string, purpose: EmailChallengePurpose): string {
+  return `Your Nostos verification code is ${code}. It expires in 10 minutes. Use it to ${actionFor(purpose)}. If you didn't request this, you can ignore this email.`;
 }
 
-async function deliver(to: string, subject: string, text: string, html: string, idempotencyKey: string): Promise<void> {
-  const key = process.env.RESEND_API_KEY?.trim();
-  if (!key) {
-    if (process.env.NODE_ENV !== "production") {
-      console.info(`[auth-email] ${to}: ${text}`);
-      return;
-    }
-    throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
-  }
+function resendApiKey(): string | null {
+  return process.env.RESEND_API_KEY?.trim() || null;
+}
 
-  const from = process.env.AUTH_EMAIL_FROM?.trim() || "Nostos <login@auth.nostospassport.com>";
+function sender(): string {
+  return process.env.AUTH_EMAIL_FROM?.trim() || "Nostos <login@auth.nostospassport.com>";
+}
+
+async function postResend(body: Record<string, unknown>, idempotencyKey: string): Promise<void> {
+  const key = resendApiKey();
+  if (!key) throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
+
   let response: Response;
   try {
     response = await fetch("https://api.resend.com/emails", {
@@ -62,7 +60,7 @@ async function deliver(to: string, subject: string, text: string, html: string, 
         "Content-Type": "application/json",
         "Idempotency-Key": idempotencyKey,
       },
-      body: JSON.stringify({ from, to: [to], subject, text, html }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(10_000),
     });
   } catch {
@@ -73,6 +71,49 @@ async function deliver(to: string, subject: string, text: string, html: string, 
     console.error("[auth-email] Resend rejected an email", response.status, await response.text().catch(() => ""));
     throw new ServiceError(503, "email_unavailable", "We couldn't send that email. Try again in a moment.");
   }
+}
+
+async function deliverVerification(to: string, code: string, purpose: EmailChallengePurpose, idempotencyKey: string): Promise<void> {
+  const key = resendApiKey();
+  if (!key) {
+    if (process.env.NODE_ENV !== "production") {
+      console.info(`[auth-email] ${to}: ${localMessage(code, purpose)}`);
+      return;
+    }
+    throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
+  }
+
+  const templateId = process.env.RESEND_VERIFY_EMAIL_TEMPLATE_ID?.trim();
+  if (!templateId) {
+    throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
+  }
+
+  await postResend(
+    {
+      from: sender(),
+      to: [to],
+      template: {
+        id: templateId,
+        variables: {
+          CODE: code,
+        },
+      },
+    },
+    idempotencyKey,
+  );
+}
+
+async function deliverRaw(to: string, subject: string, text: string, html: string, idempotencyKey: string): Promise<void> {
+  const key = resendApiKey();
+  if (!key) {
+    if (process.env.NODE_ENV !== "production") {
+      console.info(`[auth-email] ${to}: ${text}`);
+      return;
+    }
+    throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
+  }
+
+  await postResend({ from: sender(), to: [to], subject, text, html }, idempotencyKey);
 }
 
 export type StartedEmailChallenge = { challengeId: string; expiresAt: string; resendAfterSeconds: number };
@@ -102,9 +143,8 @@ export async function startEmailChallenge(
     data: { id, email, codeHash: digest(id, code), purpose: input.purpose, ip, expiresAt, createdAt: now },
   });
 
-  const message = messageFor(code, input.purpose);
   try {
-    await deliver(email, subjectFor(input.purpose), message.text, message.html, `nostos-auth/${id}`);
+    await deliverVerification(email, code, input.purpose, `nostos-auth/${id}`);
   } catch (error) {
     await db.emailChallenge.delete({ where: { id } }).catch(() => {});
     throw error;
@@ -149,7 +189,7 @@ export async function consumeEmailChallenge(
 export async function sendAccountEmailChangedNotice(oldEmail: string, newEmail: string): Promise<void> {
   const text = `The email address on your Nostos account was changed to ${newEmail}. If you didn't make this change, contact support immediately.`;
   const html = `<p>The email address on your Nostos account was changed to <strong>${newEmail}</strong>.</p><p>If you didn't make this change, contact support immediately.</p>`;
-  await deliver(oldEmail, "Your Nostos email was changed", text, html, `nostos-email-changed/${randomUUID()}`);
+  await deliverRaw(oldEmail, "Your Nostos email was changed", text, html, `nostos-email-changed/${randomUUID()}`);
 }
 
 export async function pruneEmailChallenges(db: Db, now = new Date()): Promise<number> {
