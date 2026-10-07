@@ -1,70 +1,67 @@
-# Deploying Nostos
+# Deploying Nostos backend
 
-**Status: not deployed.** There is no git remote, no Vercel project, no Neon database and no R2 bucket for Nostos, and
-nothing here creates one for you. This is the plan, written so each step is a command or a value to paste. Legal and
-policy questions are in `../OPEN-QUESTIONS.md`.
+This is the current deployment checklist. It is not evidence that any external environment is presently deployed. Verify actual Vercel/Neon/R2 state before making a deployment claim.
 
-| Environment | App | Database | Photos | Data |
-|---|---|---|---|---|
-| development | `pnpm dev` | Docker Postgres :5435 | local disk (`uploads/`) | demo seed |
-| preview | Vercel, `preview` branch | Neon branch `preview` | R2 `nostos-photos-preview` | demo seed + `@appreview` |
-| production | Vercel, `main` branch | Neon branch `main` | R2 `nostos-photos-prod` | imported places, no fake data |
+## Local configuration
 
-## 1. Accounts and resources
+Current committed development defaults are:
 
-Vercel (the **Root Directory is `backend/`**), Neon (Postgres 16; a pooled URL for `DATABASE_URL` with
-`&pgbouncer=true&connect_timeout=15`, a direct URL for `DIRECT_URL`), and Cloudflare R2 (two private buckets, one
-read/write API token scoped to them).
+- Next.js dev port: 3001
+- Docker Postgres host port: 5438
+- compose database: `nostos_codex`
 
-## 2. Environment variables (Vercel)
+These replace old documentation that referenced ports 3000/5435.
 
-| Variable | Value |
-|---|---|
-| `DATABASE_URL`, `DIRECT_URL` | Neon pooled and direct URLs for that branch |
-| `APP_ENV` | `production` or `preview` |
-| `STORAGE_DRIVER` | `r2` |
-| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | from Cloudflare |
-| `CRON_SECRET` | random, 32+ characters (`openssl rand -base64 32`) |
-| `UPLOAD_URL_SECRET` | random, 32+ characters |
+## Production/preview shape
 
-Turn off Vercel Authentication for the preview branch, or the app gets a login wall instead of the API.
+The backend is designed for:
 
-## 3. Deploy
+- Vercel for the Next.js service
+- Postgres such as Neon for persistent data
+- private S3-compatible object storage such as Cloudflare R2 for photos
+- forward-only Prisma migrations
 
-Every build runs `prisma migrate deploy` over `DIRECT_URL` before `next build` (`pnpm vercel-build`). The one cron
-(`vercel.json`) runs `/api/cron/maintenance` daily at 09:00 UTC: it prunes day-old login attempts and rate-limit rows. It
-needs only the Hobby plan. Smoke test: `curl -s https://<host>/api/health` returns `{"ok":true,"db":"up",...}`.
+Required environment variables depend on the deployed storage/database configuration and include database URLs, storage credentials, upload-signing secret, and operational secrets. Never commit them.
 
-## 4. Production data
+## Build
 
-No fake data. Import real places from OpenStreetMap (idempotent; re-run any time):
+The package's Vercel build command is:
 
 ```bash
-DATABASE_URL='<pooled>' DIRECT_URL='<direct>' APP_ENV=production pnpm venues:import --dry-run
-DATABASE_URL='<pooled>' DIRECT_URL='<direct>' APP_ENV=production pnpm venues:import
+pnpm vercel-build
 ```
 
-The demo seed refuses to run against production. The first admin signs up normally, then:
-`DATABASE_URL='<pooled>' DIRECT_URL='<direct>' pnpm user:role you@example.com ADMIN`.
+which generates Prisma, applies deployable migrations, and builds Next.js.
 
-## 5. Preview data and the App Review account
+Before running migrations against any non-local database:
 
-```bash
-DATABASE_URL='<preview pooled>' DIRECT_URL='<preview direct>' APP_ENV=preview STORAGE_DRIVER=r2 R2_ACCOUNT_ID='<id>' \
-R2_ACCESS_KEY_ID='<key>' R2_SECRET_ACCESS_KEY='<secret>' R2_BUCKET=nostos-photos-preview \
-DEV_SEED_PASSWORD='<16+ chars>' APP_REVIEW_PASSWORD='<12+ chars>' pnpm db:seed
-```
+1. inspect pending migrations
+2. verify backups/restore strategy
+3. verify the target database URL
+4. run forward migrations only
+5. never use `pnpm db:reset` or `prisma migrate reset`
 
-This creates places, 17 demo accounts and the geofence-exempt `appreview@lastcall.dev`. The review account can stamp from
-anywhere, and only it can see those stamps. Re-run before a review submission so the feed looks recent.
+## Production data
 
-## 6. Point the app at it
+Do not seed fake/demo data into production. Import the approved real place/neighborhood catalog using the repository scripts only after reviewing the intended coverage.
 
-`../mobile/eas.json` sets `EXPO_PUBLIC_API_URL` for the `preview` and `production` profiles (placeholders:
-`https://preview.nostos.app` and `https://nostos.app`). App Store Connect needs `/privacy`, `/terms`, `/support` and
-`/delete-account` on that host. The policy pages are drafts from Last Call and need a rewrite and a lawyer.
+## Preview/App Review
 
-## 7. Ongoing
+If a preview environment is used for App Review, create the designated review account through the supported operational flow and verify any geofence exemption is limited to that account and behaves as documented.
 
-Commit migrations (forward only, never `migrate reset` outside development). Neon keeps point-in-time restore; raise the
-retention before launch. Rotate `CRON_SECRET` or the R2 keys in Vercel and redeploy.
+The current mobile app requires sign-in. Do not prepare review instructions around the removed guest `Look around first` flow.
+
+## Mobile URLs
+
+After deployment, update/verify `mobile/eas.json` and any `EXPO_PUBLIC_API_URL` values for preview/production. Do not assume placeholder `nostos.app` hosts are live merely because they appear in documentation or config.
+
+## Launch checklist
+
+- backend health endpoint passes against the intended database
+- migrations applied successfully
+- object storage reads/writes work
+- review account tested
+- privacy/terms/support URLs resolve
+- legal text matches current personal product and photo/location behavior
+- mobile build points to the intended backend
+- no development seed credentials or secrets are shipped

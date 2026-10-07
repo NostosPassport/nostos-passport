@@ -1,109 +1,70 @@
-# App Store listing: Nostos (draft)
+# App Store listing: Nostos (working draft)
 
-Everything to paste into App Store Connect, as a first draft. Placeholders are marked **REPLACE**. Age rating, privacy
-labels and review notes touch legal questions that are open in `../OPEN-QUESTIONS.md`; treat them as drafts until a
-lawyer has seen them. Nothing here has been submitted.
+This is current product copy, but legal/privacy fields remain drafts until final review. Replace every `REPLACE` value before submission.
 
 ## Basics
 
 | Field | Value |
 |---|---|
 | Name | Nostos |
-| Subtitle (30) | A passport for New York |
+| Subtitle | A passport for New York |
 | Bundle ID | `com.charlesjinn.nostos` |
-| Primary category | Social Networking |
+| Primary category | REPLACE after final product decision |
 | Secondary category | Travel |
-| Age rating | decide with the lawyer (see below) |
+| Age rating | REPLACE after legal/App Store review |
 | Price | Free |
 | Availability | United States |
-| Privacy Policy URL | `https://nostos.app/privacy` (placeholder host, page needs a rewrite) |
-| Terms (EULA) | `https://nostos.app/terms` (same) |
-| Support URL | `https://nostos.app/support` (same) |
+| Privacy Policy URL | `https://nostos.app/privacy` placeholder until deployment is verified |
+| Terms URL | `https://nostos.app/terms` placeholder until deployment is verified |
+| Support URL | `https://nostos.app/support` placeholder until deployment is verified |
 
-## Promotional text (170)
+## Promotional text
 
-Go somewhere in New York, get a stamp. Your profile is a passport of places, with a photo, a few words or a song from each.
+Go somewhere in New York. Make a stamp. Build a personal passport of the places and moments you want to remember.
 
-## Description
+## Description draft
 
 Go somewhere. Get a stamp.
 
-Nostos is a passport for New York. Every time you go somewhere, you can stamp it: a photo, a caption, a song, or any mix.
-Your profile is your passport, a collection of every place you have been.
+Nostos is a personal passport for New York. Visit a place, add the memory, and keep it in your passport.
 
-ONLY WHEN YOU'RE REALLY THERE
-You can only stamp a place when your phone is inside its geofence. We check on our server, so every stamp is a real visit.
+A stamp can include photos, a caption, a song, or a combination. Nostos checks your location when you stamp so the server can confirm that you are at the place.
 
-PRIVATE BY DEFAULT
-Only people you approve see your stamps and places. Make your passport public if you want to, and Nostos tells you exactly
-what that changes first.
+Your passport is personal in the current version. There is no public feed or guest browsing experience.
 
-YOUR FEED, IN ORDER
-Home shows stamps from the people you follow, newest first. No ranking, no suggestions, nothing you didn't choose.
+For photos, you can take a new picture with the iPhone camera or choose an eligible photo from your library. Library photos are checked against available metadata so Nostos can verify that they fit the place and time of the stamp. Images sent to the server are re-encoded so their original EXIF/GPS metadata does not remain in the uploaded file.
 
-SAFE BY DESIGN
-Report any stamp or account in two taps. Block anyone. Moderators review reports, and you can delete your account from the
-app at any time. Nostos is for adults 21 and over.
+## Keywords draft
 
-## Keywords (100)
+`passport,stamps,nyc,new york,places,travel,photos,music,memories`
 
-`passport,stamps,nyc,new york,places,check in,travel,photos,music,friends,private,memories`
+## Privacy label working notes
 
-## What's new (1.0)
+These are implementation notes, not final legal answers.
 
-First release.
-
-## Privacy ("nutrition label"), draft
-
-Tracking: **No.** No analytics, ads or tracking SDKs. Error reporting (Sentry) is off by default; if a build turns it on,
-add "Diagnostics" (see `../OPEN-QUESTIONS.md` L5).
-
-| Data type | Collected | Linked to user | Used for tracking | Purpose |
-|---|---|---|---|---|
-| Contact info: Email address | Yes | Yes | No | App functionality (account, sign-in) |
-| Contact info: Name | Yes | Yes | No | App functionality (the display name on your passport) |
-| Identifiers: User ID | Yes | Yes | No | App functionality |
-| Location: Precise location | Yes | Yes | No | App functionality (confirm you are at a place when you stamp; the position is kept with the stamp for auditing and is never shown to anyone) |
-| User content: Photos | Yes | Yes | No | App functionality (location data is stripped from the file) |
-| User content: Other user content | Yes | Yes | No | App functionality (captions, the song you attach, likes) |
-| Usage data: Product interaction | Yes | Yes | No | App functionality (who you follow and block) |
-| Birthdate | **No** | | | Checked once for 21+ and never stored |
-
-Location is when-in-use only. After account deletion, stamps are hidden and the account is anonymized.
+- Email and account identifiers are used for account functionality.
+- Precise location is used to find/verify places. The backend currently retains submitted stamp coordinates as an audit record; see `../OPEN-QUESTIONS.md`.
+- User content includes photos, captions, and attached song metadata.
+- For a Photo Library selection, the app may read available EXIF/source/time/location metadata locally to validate the selection. The prepared uploaded image is re-encoded and has EXIF/GPS stripped.
+- The app may request add access to Photos to save a copy of an accepted camera capture.
+- Sentry is optional/off unless configured. If enabled, review the Diagnostics privacy label and processing terms.
 
 ## App Review information
 
-- **Sign-in required?** No: reviewers can tap **Look around first** (a birthdate check) and look up public passports.
-  Stamping, following and likes need an account.
-- **Demo account** (geofence-exempt): Email `appreview@lastcall.dev`, Password **REPLACE**.
-- **Notes for the reviewer:**
+- **Sign-in required:** Yes for the current app experience. The old `Look around first` guest preview has been removed.
+- **Demo account:** `appreview@lastcall.dev`, password **REPLACE** with the actual review credential in App Store Connect, never in source.
+- **Geofence review behavior:** the designated review account may be configured as geofence-exempt so an Apple reviewer outside New York can exercise stamp creation. Its behavior must match the current backend implementation.
 
-  > Nostos is a passport for New York: you stamp places you visit with a photo, a caption, a song, or any mix. A stamp
-  > can only be made within the place's geofence, checked on our server. Because you are likely outside New York, the
-  > demo account above is exempt from that check so you can try stamping from anywhere. Its stamps are visible only to
-  > that account.
-  >
-  > To try it: sign in with the demo account, tap the Stamp tab, choose a place from the list, add a photo, a caption or a
-  > song, and tap Stamp. Song search uses Apple's public iTunes Search API through our server; nothing plays.
-  >
-  > User-generated content: every stamp and profile can be reported (the "..." menu) and its author blocked. Reports go to
-  > moderators, who can hide stamps and suspend accounts. The Terms prohibit objectionable content and abusive users, and
-  > objectionable language is filtered on the server.
-  >
-  > Account deletion: Passport (gear) > Delete account.
-  >
-  > Location is requested with an explanation screen first, and only while the app is in use. Nostos is for people 21 and
-  > older: sign-up and guest browsing ask for a birthdate, which is checked once and never stored.
+Suggested reviewer note:
 
-- **Contact:** **REPLACE** name, phone, email.
+> Nostos is a personal passport for places you visit in New York. Sign in with the review account, open Stamp, choose a place, then add a photo, caption, song, or combination. The review account is configured so the stamp flow can be exercised outside New York. Take Photo opens the native iPhone camera. Choose from Photo Library accepts only photos that pass Nostos's local validation for the selected place/time. Uploaded images are re-encoded and original EXIF/GPS metadata is stripped.
 
-## Before submitting (blockers)
+## Before submission
 
-1. Deploy the backend (see `../backend/DEPLOY.md`) and create the review account (sign up, then
-   `pnpm user:role` is not needed: ask an admin to set the geofence-exempt flag with `PATCH /api/admin/users/appreview`).
-2. Replace `support@REPLACE-ME` in `backend/src/components/legal/LegalPage.tsx` with an inbox you answer, and have a lawyer
-   rewrite and review Privacy and Terms (they are drafts carried over from Last Call).
-3. Settle the open legal questions in `../OPEN-QUESTIONS.md` (songs, age gate, age rating, geolocation disclosures).
-4. Set `ascAppId` in `eas.json`, then `eas build` and `eas submit`.
-5. Screenshots from a preview build with the demo seed: the feed, a passport (Stamps view), the Places view, a stamp with a
-   song, the composer.
+1. Verify production backend/domain deployment and legal-page URLs.
+2. Create/test the final App Review account and credential.
+3. Resolve the current legal/privacy questions in `../OPEN-QUESTIONS.md`.
+4. Confirm App Store privacy labels match actual production configuration, including diagnostics if enabled.
+5. Set final App Store Connect IDs/metadata in EAS configuration.
+6. Run a real-device pass using `DEVICE-CHECKLIST.md`.
+7. Capture screenshots from the current Figma/runtime direction, not historical social or black/brass screens.

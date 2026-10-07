@@ -1,40 +1,22 @@
 # Open questions
 
-Decisions Nostos needs from the user (or from the lawyer session). Each has a default already built, so nothing is
-blocked. Legal questions are never decided by the builder.
+Only unresolved current questions belong here. Historical questions that depended on the old guest/social UI or obsolete design direction have been removed. Legal questions must be decided by the user and qualified counsel, not by a builder.
 
 ## Product
 
-| # | Question | Default built | Where |
-|---|---|---|---|
-| 1 | **Ratings.** `photo.rating` stays in the table and becomes optional. It is not shown in the UI for v1. Do you want it back, or dropped in a later migration? | Stored when sent, never shown. | `backend/prisma/schema.prisma` |
-| 2 | **Follow requests show requesters in the limited view** (handle and badge, no name or photo) when they are private and you do not follow them. Show name and photo? | Limited, per the privacy rules. | `backend/src/server/services/people.ts#listFollowRequests` |
-| 3 | **GPS spoofing.** A stamp is only as trustworthy as the phone's reported location. Worth a server-side signal later (velocity checks)? | Geofence on the submitted coordinates only. | `backend/src/server/services/photos.ts` |
-| 4 | **DESIGN.md section 8 was not in the build prompt** ("DESIGN.md: see section 8"). DESIGN.md was written from the prompt's other sections, with an empty "Chosen reference". Fill that section to enable phase 5. | Phase 5 skipped until filled. | `DESIGN.md` |
-| 5 | **Source repo location.** `~/Downloads/lastcall-feature-social` did not exist. The fork was made from `/Users/charlesjinn/lastcall` (branch main, clean, has backend/, mobile/, HANDOFF.md). Confirm that is the right source. | Forked from `/Users/charlesjinn/lastcall`. | n/a |
-| 6 | **Reputation.** The accuracy score and consensus are removed, so nothing recomputes reputation. The column stays (default 0.5), visible only to the user and moderators. Keep it for moderation use or drop it? | Kept, moderator-only, no job. | `backend/prisma/schema.prisma` |
-| 7 | **The place catalog.** `pnpm venues:import` still imports only bars, pubs and nightclubs from OpenStreetMap in the East Village and Lower East Side. Nostos is about any place in NYC (parks, cafes, landmarks, shops). Which categories and which area should the real catalog cover, and who may add a place? The seed includes six landmarks by hand. | Bars only through the importer; manual or seeded places otherwise. | `backend/src/lib/osm.ts` |
-| 8 | **Stamp frequency.** One stamp per person per place per 15 minutes, 20 an hour. For a passport you may want "once per place per day", or repeat visits shown differently. | The old 15 minute cooldown. | `backend/src/server/services/geofence.ts` |
+1. **Place catalog coverage.** What place categories and geographic coverage should the launch catalog include, and who may add or correct a place?
+2. **Stamp frequency.** Keep the existing cooldown/rate-limit behavior, or move to a different repeat-visit rule such as once per place per day?
+3. **Location trust.** Server geofence checks trust the coordinates submitted by the phone. Is stronger anti-spoofing or anomaly detection needed later?
+4. **Legacy social data/code.** Social implementation remains behind feature flags while the current product is owner-only. Should that code/data remain available for a future product mode or be removed before launch?
+5. **Legacy fields.** Rating/reputation-era fields remain in parts of the schema for compatibility. Decide whether they have a future use or should be removed by a later forward migration.
+6. **Unused `expo-camera` dependency.** The current stamp flow launches the native camera with `expo-image-picker`, but `expo-camera` still exists in `mobile/package.json`. Remove it in a dedicated dependency cleanup once the lockfile and Expo config are updated together.
 
-## Legal (for the lawyer session; nothing here is decided by the builder)
+## Legal and privacy
 
-| # | Question | Default built |
-|---|---|---|
-| L1 | **Song metadata licensing.** Stamps store song title, artist and album art URL from Apple's public iTunes Search API, proxied through our backend, no audio playback. Are the iTunes Search API terms and artwork usage acceptable for an app that stores and displays this metadata? Is attribution required? | Metadata only, proxied, no user identifiers sent, short timeout and rate limit. |
-| L2 | **Age gate.** A birthdate check blocks under-21s at signup and guest browsing and stores nothing about them. What exactly may and must we do (storing a refusal flag to stop retries, COPPA and state rules, wording)? | Nothing stored about a refused attempt, so a retry is possible. |
-| L3 | **NY SAFE for Kids Act.** The feed is strictly chronological from followed accounts, no ranking, no personalization, to stay outside "addictive feed". Is that sufficient? | Chronological feed only. |
-| L4 | **Geolocation data.** Coordinates are used for the geofence check and stripped from uploads; stamp coordinates are not shown to viewers. What disclosures does the privacy policy need? | Policy text carried over from Last Call and needs a rewrite for Nostos. |
-| L2b | **Age gate retries.** Nothing is stored about someone who fails the 21+ check, so they can try again with a different birthdate. Is that acceptable, or must we remember a refusal (for example a flag on the device)? The app stores nothing and never sends an under-21 birthdate to the server. | No memory of a refusal. |
-| L5 | **Sentry and privacy labels.** Error reporting is built but off (needs `EXPO_PUBLIC_SENTRY_ENABLED=1` and a DSN at build time). If you turn it on, does the App Store privacy label need "Diagnostics", is a data processing agreement needed, and where should the Sentry project live (EU or US)? Events carry no user, request or breadcrumbs. | Off. No DSN in the repo. |
-
-| L6 | **What the stamp screen says about your position.** The server saves the phone's coordinates with each stamp (columns `lat`, `lng` on the `photo` table) as the record of the geofence check; they are never in any payload. The screen says: "When you stamp, our server checks where your phone is. That position is saved with the stamp and is never shown in the app." Is that wording enough, how long may the coordinates be kept, and should they be dropped after the check instead? (Related to L4. The nearby-places and place-page endpoints do not store the position.) | Saved with the stamp, never shown. Text in `mobile/src/features/stamps/stamp-flow.ts` (`HONESTY`). |
-| L7 | **The privacy policy and terms still describe the social layer** (private and public accounts, follow requests, a feed, likes, blocking). Nostos is strictly personal for this version: with `SOCIAL_ENABLED` off none of that exists and only you can see your passport. The pages were only recolored to black and brass this session; the text is unchanged because it is a legal text. It needs a rewrite for personal mode, and the "Who can see what" section should say only you. | Text unchanged. Pages: `backend/src/app/privacy/page.tsx`, `terms/page.tsx`. |
-
-## Codex lane
-
-- If a data-bearing environment contains existing empty live stamps or invalid song metadata, who should review their disposition before the
-  live-content migration is deployed? The migration stops without inventing content or changing those records
-  (`backend/prisma/migrations/20261003140000_live_stamp_content/migration.sql:42`). The isolated Codex databases migrated
-  successfully; this is not a current implementation blocker. No legal decision is made here.
-
-- Combined working-tree fixes and merge remain uncommitted by explicit user request. A physical iPhone/Expo Go run is still required for native interaction and visual verification; no device evidence is available in this session.
+1. **Song metadata.** Stamps can store song title, artist, artwork URL and source metadata from Apple's search API. Confirm licensing, artwork display, attribution, and API-term requirements.
+2. **Age gate.** Confirm the current 21+ eligibility policy, wording, data-minimization behavior, and any federal/state requirements.
+3. **Stored stamp coordinates.** The backend currently retains the submitted stamp coordinates as an audit record of the geofence check while normal viewer payloads do not expose them. Confirm disclosure, retention period, deletion policy, and whether coordinates should instead be discarded after verification.
+4. **Photo Library validation metadata.** When a user selects a library photo, the app may read available EXIF/source/time/location metadata on-device to decide whether the photo is viable for the selected stamp. The prepared upload is re-encoded and has EXIF/GPS stripped. Confirm the privacy copy and App Store privacy answers accurately describe this local processing.
+5. **Saving camera captures to Photos.** The app attempts to save accepted native-camera captures to the user's Photos library when add permission is granted. Confirm user-facing disclosure and whether this should remain automatic after capture or become an explicit preference.
+6. **Sentry.** Error reporting remains optional/off unless enabled and configured. If enabled, confirm App Store privacy labels, DPA/data region, and final scrubbing configuration.
+7. **Privacy Policy and Terms.** Final legal pages must describe the current personal owner-only product, account-required flow, precise-location use, Photo Library validation, account deletion, and any enabled diagnostics. Old social/guest wording must not ship.

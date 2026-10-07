@@ -1,46 +1,53 @@
-# Engine: how a builder session works
+# Engineering workflow
 
-A session is disposable and stateless. Anything not committed is expendable. Durable knowledge lives only in the repo.
-Limits are enforced by gates and ledgers, never by the builder's word. The reviewer verifies claims.
+This file describes the current repository workflow. The old one-task-per-commit `build` and `build-codex` session machinery is historical.
 
-## The loop
-1. Orient: `git log --oneline | head -30`, `tail -20 LEDGER.md`, the newest file in `reviews/`, `OPEN-QUESTIONS.md`.
-2. Read CLAUDE.md, ENGINE.md, NOSTOS-BUILD-PROMPT.md, then NOSTOS-BUILD-PROMPT-2.md (it supersedes the earlier prompt where they disagree: Nostos is strictly personal, no social, a literal passport book), then DESIGN.md.
-3. Run `scripts/gate.sh` for a baseline. If it is red, fixing it is the first task.
-4. Take the first unfinished task in NOSTOS-BUILD-PROMPT.md. Checkboxes are hints: prove the task is not already done
-   by finding its code and its test before building anything.
-5. Build test-first. Run the gate.
-6. Commit one task at a time as `phase N: <what>` (strip batches as `strip: <what>`). Tick the checkbox in the same commit.
-7. Write a review file `reviews/<UTC date>-<slug>.md` using the template below. Commit it.
-8. Continue to the next task. Phases are commit points, not stopping points. Stop only if truly blocked, and then write
-   exactly what is needed to OPEN-QUESTIONS.md.
+## 1. Orient
 
-## Hard stops
-- No push, no remote, no PR. Branch `build` only.
-- Never edit the archive (/Users/charlesjinn/lastcall).
-- Never loosen, skip or delete a test or a gate check. Never `.skip`, `.only` or `xit`.
-- No dependency without a line in DEPENDENCIES.md (name, version, why). The gate checks this.
-- No legal decisions. Legal questions go to OPEN-QUESTIONS.md.
-- No copying a real app's logo, icons, exact palette, name or proprietary assets.
-- Never `prisma migrate reset`. Forward migrations only.
-- Never run two backend test processes at once.
+1. Read `README.md`, `AGENTS.md`, `CLAUDE.md`, `DESIGN.md`, and `HANDOFF.md`.
+2. Read the scoped README/AGENTS/DECISIONS files for the area being changed.
+3. Inspect the actual current code, package manifests, migrations, and tests relevant to the task.
+4. Treat `reviews/`, `deliveries/`, `LEDGER.md`, AI logs, and superseded build prompts as historical evidence rather than current instructions.
 
-## Review template
+## 2. Build
+
+- Make the smallest change that satisfies the current request.
+- Reuse existing modules and contracts rather than recreating older implementations.
+- Keep geofence and privacy decisions on the server where they already belong.
+- For the mobile photo flow, use the native camera and validated library path that already exists. Do not restore the old custom camera UI from historical docs.
+- Follow the current Figma pages 9 and 10 when implementing visual work. Earlier Figma pages are reference history only.
+
+## 3. Verify
+
+Use focused tests during implementation. Run the relevant lane's normal validation before declaring code complete.
+
+Mobile:
+
+```bash
+cd mobile
+npm run check
 ```
-# Review: <slug>
-Commit range: <first>..<last>
 
-## Gate output (last 15 lines)
-<paste>
+Backend:
 
-## Done
-- <task>: <file:line>, test "<test name>"
-
-## Claims not proven
-- <anything asserted but not backed by a test or a command output>
-
-## Decisions
-## Open questions
-## Gaps
-## Next task
+```bash
+cd backend
+pnpm typecheck
+pnpm lint
+pnpm test
 ```
+
+Run shared/contract checks when a change crosses backend/mobile boundaries. Documentation-only changes should be reviewed for internal consistency; do not claim runtime validation that was not run.
+
+## 4. Safety
+
+- Never commit `.env` or secrets.
+- Never use `prisma migrate reset` or `pnpm db:reset` on shared, preview, or production data.
+- Schema changes use forward migrations.
+- Do not delete or weaken safety/invariant tests merely to make a change pass.
+- Do not run competing integration-test processes against the same database.
+- Do not edit generated native iOS/Android projects when Expo Continuous Native Generation is being used.
+
+## 5. Handoff
+
+A current handoff should state what changed, what was verified, and what remains unverified. Avoid stale local paths, LAN IP addresses, running-process claims, old branch names, and old test counts.

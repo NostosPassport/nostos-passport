@@ -1,43 +1,64 @@
 # Nostos
 
-A passport for New York. Go to a place, get a stamp. Your profile is your passport: a collection of stamps, each with a
-photo, a caption, a song, or any mix. You can only stamp a place when your phone is inside its geofence, and the server
-checks that. Accounts are private by default. *Nostos* is Greek for the longing to return home.
+Nostos is a personal passport for New York. Go to a place, create a stamp, and keep the memory in your passport. The current product is owner-only: there is no guest preview flow and the normal app experience requires an account.
 
-| Folder | What | Tooling |
+A stamp can contain up to six photos, a caption, a song, or a combination. The server verifies the place geofence before creating a stamp. Photos can come from the native iOS camera or from the Photo Library when the selected photo passes the app's local validation rules.
+
+## Repository
+
+| Folder | Purpose | Tooling |
 |---|---|---|
-| [`backend/`](backend/README.md) | Next.js 15 web app and API, Prisma, Postgres (Docker locally) | pnpm |
-| [`mobile/`](mobile/README.md) | Native iPhone app, Expo SDK 57 with Expo Router; runs in Expo Go | npm |
+| `backend/` | Next.js API/web shell, Prisma, Postgres | pnpm |
+| `mobile/` | Expo SDK 57 iPhone app with Expo Router | npm |
+| `design/` | Design handoffs and source material | varies |
+| `reviews/`, `deliveries/` | dated historical evidence and handoffs | read-only history |
 
-The two folders are independent: no root workspace, each installs its own dependencies. The app's API contract is a
-verbatim copy of `backend/src/contracts/api.ts` (`cd mobile && npm run sync:contracts`; a test fails if it drifts).
+The default branch is `main`. Do not treat old `build`, `build-codex`, local checkout paths, LAN addresses, or uncommitted-session instructions in dated documents as current repository instructions.
 
-Nostos is a fork of the Last Call project's social layer. Everything else from Last Call (live reports, venue owners,
-promos, comments, featuring) was removed.
+## Current product scope
 
-## For builders (human or AI)
+- iPhone only.
+- Account required for the product experience. The old `Look around first` guest/preview flow is no longer in scope.
+- Main navigation is Passport, Stamp, and Map. Social Feed and Activity code may remain behind feature flags, but they are not part of the current personal product.
+- Stamp photos: up to six. Camera capture opens the native iOS camera through `expo-image-picker`. Photo Library selection is also supported and validated locally using available metadata before the prepared upload has EXIF/GPS stripped.
+- Camera captures are watermarked and the app attempts to save an accepted copy to Photos when permission allows.
+- The server still owns geofence acceptance and content validation.
 
-Read `CLAUDE.md`, `ENGINE.md`, `NOSTOS-BUILD-PROMPT.md` and `DESIGN.md` first. `scripts/gate.sh` is the only definition of
-green. `reviews/` holds one review per session, `OPEN-QUESTIONS.md` is what needs a human decision.
+## Design authority
 
-## Run both locally
+Only Figma pages **9 and 10** are current design references. Earlier Figma pages and the old black/silver and black/brass directions are historical. See `DESIGN.md` and `design/editorial/CURRENT-SCOPE.md`.
 
-1. Backend (Postgres in Docker on port 5435, then the dev server on port 3000):
+The current app theme is the ivory/electric-blue editorial system. The historical module name `mobile/src/theme/midnight.ts` is intentionally retained while screens migrate.
 
-   ```bash
-   cd backend && pnpm install && docker compose up -d && pnpm db:reset && pnpm dev
-   ```
+## Run locally
 
-2. App, in a second terminal (scan the QR code with your iPhone's Camera app to open it in Expo Go):
+Backend:
 
-   ```bash
-   cd mobile && npm install && npx expo start
-   ```
+```bash
+cd backend
+pnpm install
+docker compose up -d db
+pnpm dev
+```
 
-   In development the app talks to the backend on the same Mac automatically. Demo sign-in: `avaa@lastcall.dev`
-   (private, four requests waiting) or `maya_r@lastcall.dev` (public, verified), password `lastcall-dev`.
+The committed backend currently uses port **3001** and the Docker database is exposed on **5438**. Use `pnpm db:seed` when you intentionally want the deterministic development seed. Use `pnpm db:reset` only on a disposable development database, never on shared or production data.
 
-## Docs
+Mobile:
 
-- Backend: [README](backend/README.md), [API](backend/API.md), [Deploy](backend/DEPLOY.md), [Review](backend/REVIEW.md), [Decisions](backend/DECISIONS.md)
-- App: [README](mobile/README.md), [Device checklist](mobile/DEVICE-CHECKLIST.md), [Store listing](mobile/STORE.md), [Review](mobile/REVIEW.md), [Decisions](mobile/DECISIONS.md)
+```bash
+cd mobile
+npm install
+npx expo start --go
+```
+
+For mobile validation after code changes:
+
+```bash
+npm run check
+```
+
+## Read first
+
+Current guidance: `AGENTS.md`, `CLAUDE.md`, `ENGINE.md`, `DESIGN.md`, `HANDOFF.md`, then the scoped README/AGENTS file for the folder you are changing.
+
+Historical build prompts, reviews, deliveries, AI logs, and dated handoffs are evidence of earlier states. They do not supersede the current files above.

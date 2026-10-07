@@ -1,41 +1,48 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+# Mobile agent guidance
 
-## Expo has changed — do not trust your training data
+This is an Expo SDK 57, React Native, iOS-only application.
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+## Expo APIs
 
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+Do not rely on remembered Expo APIs. Before modifying Expo, EAS, or React Native integration:
+
+1. Read the installed `expo` version in `package.json`.
+2. Use the matching SDK 57 documentation at `https://docs.expo.dev/versions/v57.0.0/`.
+3. Prefer Expo modules already in the app.
+4. Use `npx expo install <package>` for native Expo dependencies.
+
+If `ios/` or `android/` are generated rather than committed, do not hand-edit them. Use `app.json` and config plugins.
+
+## Current photo implementation
+
+The stamp photo flow uses `expo-image-picker` for both the native iOS camera and Photo Library. `stamp/camera.tsx` manages accepted photos. Do not infer current behavior from old docs that mention a `CameraView`, custom shutter, or camera-only stamps.
+
+Library validation intentionally reads available metadata before preparation. Upload preparation strips EXIF/GPS. Camera captures are watermarked and may be saved through `expo-media-library`.
+
+## Design
+
+Only Figma pages 9 and 10 are current. Earlier Figma work is historical. The active theme is Editorial even though `src/theme/midnight.ts` keeps a legacy filename/token vocabulary.
 
 ## Commands
 
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
-
 ```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
+npx expo start
+npx expo lint
+npx tsc --noEmit
+npx expo-doctor
+npx expo install --fix
+npm run check
 ```
 
-Run lint and typecheck before declaring any task done.
+Run `npm run check` before declaring a mobile implementation change complete. Documentation-only changes do not require a fabricated runtime-test claim.
 
-## Navigation & Routing
+## Routing
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
+Use Expo Router. Routes live in `src/app/`; non-route code belongs outside `src/app/`.
 
-## Building with EAS
+## General rules
 
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
-
-## Rules
-
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+- Preserve iOS safe areas, Dynamic Type, VoiceOver labels, keyboard behavior, and Reduce Motion.
+- Never commit secrets.
+- Keep server-side geofence verification authoritative.
+- Keep contract copies synchronized after backend contract changes.

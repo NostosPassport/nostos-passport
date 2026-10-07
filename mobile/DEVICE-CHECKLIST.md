@@ -1,141 +1,90 @@
-# Device checklist
+# Current real-iPhone checklist
 
-Things tests and bundling can't prove. Run them on a real iPhone in Expo Go against the local backend, freshly seeded
-(`cd backend && pnpm db:seed && pnpm dev`; `cd mobile && npx expo start`). Password for every seed account:
-`lastcall-dev` (or `DEV_SEED_PASSWORD`; the App Review account uses `APP_REVIEW_PASSWORD` if set).
+These checks cover behavior that unit tests, lint, and bundle export cannot prove. This checklist replaces the old social/guest/custom-camera checklist.
 
-Seed accounts: `avaa` (private, four requests waiting), `maya_r` (public, verified, most stamps), `theo_k`, `nia_s`,
-`kofi_b` (private), `moth_hopeful` (private, follows no one), `blocker_blake` and `blocked_bea` (a blocked pair),
-`mod_morgan` (moderator, one report in the queue), `admin`, `appreview` (stamps from anywhere, visible only to itself).
+Record the iPhone model, iOS version, app build/Expo Go version, text-size setting, and Reduce Motion setting when doing a formal pass.
 
-> Session 2 made Nostos strictly personal (`SOCIAL_ENABLED` off). The sections below about the feed, likes, follows, requests,
-> other people's passports and Blocked users apply only when you run with the social layer on (backend `SOCIAL_ENABLED=1` and
-> `EXPO_PUBLIC_SOCIAL_ENABLED=1`). With it off, start at "Book (session 2): phone checks" at the end of this file.
+## Account and startup
 
-## First launch and the age gate
-- [ ] Welcome screen: "Go somewhere. Get a stamp." with Create account, Sign in, Look around first. No mention of bars,
-      vibes or venues.
-- [ ] Look around first: asks your birthdate. Typing digits adds the slashes. A birthdate under 21 shows "Nostos is for
-      people 21 and older." with no Continue button. Force-quit and reopen: it asks again (nothing was remembered).
-- [ ] A birthdate that is 21 today lets you in. A guest sees Home with "A passport for New York" and Find people; the
-      Stamp, Activity and Passport tabs ask to sign in.
-- [ ] Create account: a Birthdate field replaces the old "I'm 21" checkbox. An under-21 birthdate stops on the phone.
+- [ ] Signed out: only Sign in and Create account flows are reachable. There is no `Look around first` guest preview.
+- [ ] Sign in and sign up handle slow/offline states without blank screens.
+- [ ] Age eligibility behaves as intended at the 21-year boundary.
+- [ ] Terms-update flow appears only when the account requires it.
 
-## "Checking account" (known device bug)
-- [ ] Sign in, then turn on Airplane Mode and relaunch: Passport and the Stamp screen say "Couldn't check your account"
-      with Try again, never "Sign in". With the network back, Try again loads them.
-- [ ] While signing in on a slow connection, the screens say "Checking your account", not "Sign in".
+## Navigation
 
-## Home feed
-- [ ] As `maya_r`: stamps from people she follows, newest first. Pull to refresh. Scroll to the end: more load.
-- [ ] As `moth_hopeful`: "Nothing here yet" and Find people. No stamps from strangers, no suggestions.
-- [ ] Like a stamp: the heart fills at once and the count goes up; tap again to unlike. Your own stamps show the count
-      but you can't like them.
-- [ ] The "..." on someone else's stamp: Report stamp and Block @handle. On your own stamp there is no menu in the feed.
-- [ ] Nothing anywhere says "Anonymous".
+- [ ] Main production tabs are Passport, Stamp, and Map.
+- [ ] Stamp center action opens the composer reliably.
+- [ ] Settings opens from the current Passport UI.
+- [ ] Feed/Activity do not appear in normal personal mode.
 
-## Passport
-- [ ] Your own: photo, name, handle, bio, Stamps / Places / Followers / Following counts, Edit profile, Follow requests
-      (with the waiting count), a gear for Settings.
-- [ ] Stamps view: a 3-column grid, newest first; photo tiles, and plain tiles with the caption or a note icon for
-      stamps without a photo. Each tile names its place. Scrolling to the end loads more.
-- [ ] Places view: a small dark map with a dot for every place, and a list with the stamp count; tapping a row opens the
-      latest stamp there. Distances anywhere over 1000 m read in km ("1.8 km", never "1815 m").
-- [ ] Another person's public passport: Follow becomes Following at once.
-- [ ] A private passport you don't follow: handle, badge if verified, generic avatar, "This account is private" and
-      Follow. Nothing else. Follow becomes Requested; tap again to cancel. A pending request still shows nothing.
-- [ ] Verified badge: a small champagne diamond after the handle on `maya_r` (passport, feed, search, lists).
-- [ ] The blocked pair: as `blocker_blake`, search for `blocked_bea`: no result; her passport is "not available".
+## Native camera and photo management
 
-## Making a stamp
-- [ ] Tap Stamp (the middle tab). In Settings > Location make sure location is allowed. Near a place, it is listed with
-      "You're here"; with exactly one place around, it is chosen for you.
-- [ ] Add a photo (camera or library), a caption (the counter stops at 280), a song (search "bowie": results with art,
-      title, artist; pick one; it shows with a remove button). Any one of the three is enough; with none, Stamp is off and
-      the screen says what is missing.
-- [ ] Stamp: it opens the new stamp. It appears at the top of your Stamps view and in your followers' feeds.
-- [ ] Try a place that is not near you (in development, pick one from "pretend to be at" and then another):
-      the server's message appears as written: "You need to be within 100 m of this place to stamp it (you're 140 m away)".
-- [ ] Stamp the same place again within 15 minutes: a "try again in N min" message.
-- [ ] Song search with Airplane Mode on shows an error with Try again, not a blank list.
+- [ ] In a new stamp, Add Photo offers Take Photo and Choose from Photo Library.
+- [ ] Take Photo opens Apple's native camera UI, not a custom Nostos camera preview.
+- [ ] Canceling the native camera does not add or remove a draft photo.
+- [ ] Accepting a camera photo adds it to the photo list.
+- [ ] Camera photos show the Nostos watermark at the intended subtle opacity.
+- [ ] When Photos add permission is granted, an accepted camera capture is saved to Photos.
+- [ ] If Photos add permission is denied, the stamp photo remains accepted and the app explains only that saving the extra copy failed.
+- [ ] Camera permission denial offers the appropriate Settings path.
+- [ ] On a simulator/no-camera environment, the flow fails calmly rather than presenting a broken preview.
+- [ ] Tapping an accepted draft photo opens the viewer.
+- [ ] Removing any draft photo updates the list/count correctly.
+- [ ] Six photos are allowed and a seventh cannot be added.
+- [ ] Done returns to the composer with the draft intact.
 
-## Stamp detail
-- [ ] Photo (if any), caption, a song row, who and where, likes, how long ago. Tapping the author opens their passport.
-- [ ] Yours: "..." has Edit and Delete from profile. Edit changes the caption and song only; Save is off until something
-      changes; Cancel asks first. Delete asks, then the stamp is gone from your passport and everyone's feed for good.
-- [ ] Someone else's: "..." has Report stamp (reasons include "Under 21 or looks underage", "Stalking or unwanted
-      contact" and "Not at this place") and Block.
-- [ ] A stamp that is not available (removed, hidden, a private account) says "This stamp isn't available" with Close.
+## Photo Library validation
 
-## Edit profile and privacy
-- [ ] Change the photo, name and bio (counter stops at 150). Save is off until something changes.
-- [ ] Switch Private off and Save: an alert "Make your passport public?" lists what changes (all stamps and every place,
-      to anyone, signed in or not; follows without asking). "Keep private" does nothing; "Make public" saves, then asks
-      "Approve N pending requests?" when requests are waiting.
-- [ ] Switch back to private: no alert is needed, and strangers lose access again.
+- [ ] Choose from Photo Library opens the native library picker.
+- [ ] A normal recent photo with metadata consistent with the selected place/time can be accepted.
+- [ ] A screenshot is rejected with the screenshot-specific message.
+- [ ] A geotagged photo far outside the allowed distance is rejected.
+- [ ] A photo whose capture timestamp is outside the allowed time window is rejected.
+- [ ] A photo without complete metadata can still be accepted when the overall validation score remains sufficient.
+- [ ] Rejected library photos are not added to the draft.
+- [ ] Accepted library photos are uploaded without original EXIF/GPS metadata.
 
-## Follow requests, Activity, lists
-- [ ] Approve and Decline remove the row at once; the count on the passport updates; "Approve all" asks first.
-- [ ] Activity (its own tab): requests, new followers, and likes with the stamp's thumbnail (opens the stamp). No
-      "featured" entries.
-- [ ] Followers and Following lists open; on your own followers, Remove asks first.
-- [ ] Settings: Following list, Blocked users (with Unblock), Privacy policy, Terms, Support, Sign out, Delete account.
-      Moderation appears only for `mod_morgan` and `admin`.
+## Stamp creation
 
-## Moderation (as `mod_morgan`)
-- [ ] Moderation: the queue has one stamp report; Hide, Dismiss and Restore each ask for an optional note. The Hidden tab
-      lists the hidden stamp with Restore; the Log tab lists actions and says it is permanent. An underage or stalking
-      report shows "Urgent" and sits at the top.
+- [ ] Nearby/Here place state matches the real location.
+- [ ] The server, not only the client, rejects an out-of-geofence stamp.
+- [ ] Caption and song attachment still work with zero or more photos.
+- [ ] At least one content item is required.
+- [ ] Submission cannot be accidentally repeated while uploading.
+- [ ] Server failures preserve the draft for retry.
+- [ ] Successful submission reaches the current stamp landing/passport flow.
 
-## Delete account
-- [ ] Settings > Delete account: the list says stamps are removed, follows and likes gone. Needs the password. After
-      deleting you land on the welcome screen with "Your account is deleted."
+## Passport and memories
 
-## No blank screens
-- [ ] Open every screen above with a slow connection and with Airplane Mode: each shows a skeleton, a message or an error
-      with Try again, never an empty screen. Swipe down on each modal to dismiss.
+- [ ] Passport opens and closes correctly on the device.
+- [ ] 3D cover/open transition, if enabled in the current screen, hands off to the readable page view without clipping or a blank frame.
+- [ ] First and final book faces render correctly.
+- [ ] Page navigation and stamp taps open the correct memory.
+- [ ] Photo viewer paging, pinch zoom, double-tap zoom, and close behavior work.
+- [ ] Photo arrangement/edit behavior persists where currently supported.
+- [ ] Pinned stamp limits behave correctly.
+- [ ] Long place names/captions remain legible at normal and large text sizes.
 
-## Book (session 2): phone checks
+## Map and place pages
 
-- [ ] Cover: foil highlight follows a finger drag, follows tilt, shimmers when idle, and stops with Reduce Motion on.
-- [ ] Open animation: the cover swings on its left edge, shades while turning, and the page under it is shadowed then clears. With Reduce Motion it crossfades.
-- [ ] Bearer page: your photo or initial, name, handle, passport number, issue date and the two machine lines sit inside the page rule without clipping, at the smallest and largest text sizes; a long bio stops at three lines.
-- [ ] Pages: a spread shows two pages with a dark fold down the middle, thin page edges on the outer sides that grow with the pages on that side, a page number in each bottom outer corner, faint guilloche behind the stamps and wave bands at the top. Stamps sit three to a page, slightly tilted and never colliding. A pinned stamp has a brass ribbon.
-- [ ] Passport tab: opens on the closed cover with three counts under it and a gear at the top right. Tap the cover: it swings open on its left edge, the book slides to center and shrinks to fit two pages, and hands over to the bearer spread with no jump.
-- [ ] Page flip: drag from the outer edge of a page and it follows the finger, shading as it goes edge-on; stop halfway and it stays halfway; let go past halfway or with a flick and it springs over, with a light haptic; let go before halfway and it springs back. Tap the outer edge to turn one page. Dragging or tapping the left edge of the first spread closes the book. Nothing turns when you drag from the middle of a page, and stamps stay tappable. With Reduce Motion on, pages crossfade.
-- [ ] Page flip: Previous, Next and Close under the book work with VoiceOver, and the label reads "Pages 1 and 2".
-- [ ] Stamps: each place has its own brass stamp (shape, figure, name on an arc or in lines, neighborhood underneath), the same every time you open the book. Places in one neighborhood share a border style. Ink looks slightly uneven with small gaps. Long names shrink and stay inside the ring. Nothing is any color but brass.
-- [ ] Completion stamp: a finished neighborhood has a foil stamp (rays, ring, "COMPLETE", the name) whose gold looks like the cover foil.
-- [ ] Stamp landing: the stamp hovers large, falls fast into its slot, the page shakes and a haptic knock lands at the moment of impact, a ring of ink spreads and a brass glow flares then fades. Photos pin on one by one afterwards. "Added to page N" and the neighborhood progress appear. A finished neighborhood shows the foil stamp. With Reduce Motion: a plain fade, no shake or flare.
-- [ ] Worklets: the cover foil, the cover swing and the page flip run on the UI thread (the math files carry a "worklet" directive, checked by `worklet-files.test.ts`); if a red screen says "non-worklet function on the UI thread", check the called helper and its worklet directive.
-  `book-state.ts#stageTransform` has a function-level directive and an installed-plugin transformation regression; the physical UI thread still needs verification.
-- [ ] Visa spread (open any stamp): the stamp inked on the left page, tilted; the photos on the right page stuck down at angles, up to six, none off the page; a typed slip below with date and time (New York time), place, neighborhood, page, caption and, if there is one, the song as a ticket stub with notches.
-- [ ] Visa spread: drag a photo (yours only) and it lifts, follows the finger, stays on the page, comes to the top and stays where you leave it after closing and reopening; a stamp of someone else's, if social is on, can't be rearranged.
-- [ ] Photo viewer: tap a photo for full screen; pinch to zoom up to 4x, drag when zoomed, double tap to zoom in and out, "n of m" and arrows when there are several, close button.
-- [ ] Caption typewriter: the caption types out at a steady pace without the text reflowing; with Reduce Motion it appears at once.
-- [ ] Menu (ellipsis): Pin to passport or Unpin, Edit, Delete from profile; a fifth pin is refused with a message.
-- [ ] Index: the "Index" row under the open book lists neighborhoods, each with a ring that fills with brass as you visit its places, "visited/total", and "COMPLETE" when finished; started ones are tappable and turn the book to that neighborhood's first page, the others are dimmed and say "Not started" to VoiceOver. An empty passport says what the index is for.
-- [ ] Stamp flow: the composer opens with the location note, then "Here" (places you are inside) and "Nearby" with distances in km from 1000 m up. Choose a place far away: the "Not quite there yet" card appears (no alarm), the Stamp button is dimmed, and walking inside the geofence turns it on.
-- [ ] In-app camera: "Take a photo" opens the camera inside the app (no library option anywhere), each shot lands in a strip with a remove button, the count reads "n of 6", the shutter turns off at six, Done returns to the composer with the photos. With camera access off, the screen explains why and offers Settings.
-- [ ] Stamping: Stamp uploads every photo, then the landing plays (see "Stamp landing"), Done returns to the passport. A refusal from the server shows its own sentence with Try again.
-- [ ] Map: dark map; places you have stamped are little brass stamps in a glowing ring, the rest are small dim dots, your position is a small bone ring (no blue dot). Pan and zoom stay smooth with many places (only those in view are drawn, at most 250). Tap a pin: it grows and a bottom sheet rises with the name, neighborhood, "Stamped n times. Last on ..." or "Not stamped yet.", and the distance in m or km; "Stamp here" appears only when you are inside the geofence and opens the composer. Swipe the sheet down or tap the map to close. The OpenStreetMap credit shows for imported places.
-- [ ] Welcome: black screen, the closed passport shimmering as a hero (following a finger), the emblem and NOSTOS in brass at the top, "Go somewhere. Get a stamp." and "Only you can see it.", three buttons. No map.
-- [ ] Under-21: entering an under-21 birthdate (guest gate) replaces the form with one calm sentence, the dim emblem and Close. Nothing is sent or remembered.
-- [ ] Settings: "Your passport" group with Edit profile (name, bio, photo; no Private switch) and "Only you can see your passport"; list headers in dim brass typewriter capitals; Customize row with a lock; legal links open; Sign out; Delete account.
-- [ ] Delete account: the warning card lists what happens, needs the password, ends on Welcome with "Your account is deleted."
-- [ ] First run: a brand-new account sees "This is your passport" under the closed cover once; "Got it" or opening the cover removes it for good; it does not come back after relaunching the app.
-- [ ] Place page (from a pin's sheet, or tap the place name on a stamp): name, neighborhood, address, "You're here" or "n km away", your stamps by night with their little stamps, tap one to open it; "You haven't stamped this place yet." when none.
-- [ ] Legal pages in a browser (privacy, terms, support, delete account): black page, brass links, serif titles; the text itself is unchanged and still describes the social layer (OPEN-QUESTIONS L7).
-- [ ] Design gallery (development builds only): open it from the Welcome screen ("Design gallery (development)") or from Settings under Development, or with the link `nostos://design` (in Expo Go: `exp://<your Mac's address>:8081/--/design`). Each section opens on made-up data with no account and no server: palette, type, spacing, controls, cover (drag it, tilt the phone), opening cover (button), bearer page, pages and spread, page flip (drag an edge), stamps (shapes, borders, figures), completion stamp, landing (Replay), visa spread (drag a photo, tap for full screen), photo viewer, index, map pins and sheet, ticket stub. In a release build the gallery is not reachable.
+- [ ] Current location and place pins render correctly without stale simulated-location state.
+- [ ] Pan/zoom remains responsive with many places.
+- [ ] Place sheet/page shows correct distance and stamp history.
+- [ ] Geofence eligibility shown by the UI agrees with server acceptance at the boundary.
+- [ ] Required OpenStreetMap attribution appears for imported data.
 
-## Codex integration device checks
+## Accessibility and motion
 
-- [ ] With Metro from `/Users/charlesjinn/nostos-codex/mobile` and the backend on port 3001, sign in and open the owner passport.
-- [ ] With device timezone set to Tokyo or Honolulu, birthday eligibility changes only at midnight in New York, including winter.
-- [ ] Song picker: type, loading, results, selection, no results, upstream failure and retry work through the native search bar.
+- [ ] VoiceOver reaches all primary controls and reads meaningful labels.
+- [ ] Touch targets remain usable at larger text sizes.
+- [ ] Keyboard does not obscure sign-in, sign-up, composer, or edit forms.
+- [ ] Reduce Motion removes or simplifies decorative motion without breaking navigation.
+- [ ] Background/resume does not corrupt the current passport page, photo draft, or pending composer state.
 
-The iOS JavaScript/Hermes export completed in this continuation; this is packaging evidence, not a native device run.
+## Permissions and privacy
 
-## Focused book-page regression checklist
-
-See `BOOK-PAGES-PHONE-CHECKLIST.md` for backend connection, camera capture, creation, both faces of every spread, page-2 stamp opening and Reduce Motion. Native results remain unverified.
+- [ ] Camera, Photo Library, Photos add, and Location permission prompts use current copy.
+- [ ] Denying any permission leaves a recoverable UI.
+- [ ] No uploaded stamp image preserves EXIF/GPS.
+- [ ] Precise location is never accidentally shown in viewer-facing UI.

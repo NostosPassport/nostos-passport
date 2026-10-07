@@ -1,52 +1,9 @@
-# Nostos build prompt 2 (session 2)
+# SUPERSEDED: historical Nostos build prompt 2
 
-Supersedes the "Review of session 1" fix list and the instruction not to do the visual design pass. Checkboxes are hints; git and tests are the truth. One task, one commit, message "phase N: <what>". Never push. Stop only if truly blocked (then OPEN-QUESTIONS.md).
+This document described the October 2026 session-2 rescope and is no longer current project instruction.
 
-## A. What changed
-Nostos is STRICTLY PERSONAL for this version. No feed, no likes, no follows, no sharing. Your passport is visible only to you. The look is BLACK and BRASS GOLD only. The product is a LITERAL PASSPORT BOOK you open and flip through, with stamps appearing on the pages. Every visual decision stays behind the theme and component layer so screens can be swapped for imported ones.
+In particular, do not treat its black/brass theme, camera-only `expo-camera` flow, old `build`/`build-codex` workflow, or dated completion checkboxes as present-day requirements.
 
-## B. Verify first
-- [x] B.1 Show `git -C ~/lastcall log --oneline | head -5` and whether b67381c is in it (answer in the review file: it is NOT; the object does not exist in the archive).
-- [x] B.2 gate.sh and ENGINE.md check free disk on /System/Volumes/Data, 5 GB minimum.
+Use `README.md`, `AGENTS.md`, `CLAUDE.md`, `ENGINE.md`, `DESIGN.md`, and `HANDOFF.md` for the current state.
 
-## C. Rescope
-- [x] C.1 SOCIAL_ENABLED flag (backend env, mobile config), default false. Off: every social route (feed, follows, follow requests, likes, activity, blocks, people search, other users' profiles and stamps) 404s; mobile hides those tabs and screens; every passport visible only to its owner. Keep code and tests; run the social tests with the flag on, add tests with it off.
-- [x] C.2 Invariants tests: flag off, no endpoint returns another user's stamps, places, handle or counts to anyone but the owner.
-- [x] C.3 Mobile tabs: exactly Passport (home), Stamp (large center button), Map. Settings gear on Passport. No feed, no bell.
-
-## D. Data features
-- [x] D.1 Multi-photo stamps: up to 6 photos, in-app camera only. stamp_photo table (stamp id, storage key, position, optional x, y, rotation). EXIF/GPS stripped. Same immutability and hidden-never-deleted. Contract, API.md, tests (limit, ordering, strip, layout persistence, visibility).
-- [x] D.2 Place pages (backend): your own stamps at a place (stack across nights) plus a flag for being inside the geofence now.
-- [x] D.3 Collections: neighborhoods table with boundaries (public NYC data or OSM, log choice in DECISIONS.md), progress per neighborhood, index endpoint, completion marker. Broaden the importer beyond bars and log it.
-- [x] D.4 Pinned stamps: up to 4, owner only.
-- [x] D.5 Oldest first ordering; stamp response includes page and slot from one shared layout function.
-
-## E. Theme system
-- [x] E.1 One theme "Midnight" in mobile/src/theme: black #000000, surfaces #0B0B0D #141418, brass #C9A24B, dim brass #8F7434, brass glow, bone #E8E4DC #A09C94 #6B6862, type scale, radii, spacing, shadows, motion durations and springs, stamp styles. No other hues, not even errors. Nothing white in chrome.
-- [x] E.2 Lint rule or test failing on color literals outside the theme file and on white; wired into the gate.
-- [x] E.3 Settings: quiet "Customize, coming soon" row with a lock, opening a teaser sheet.
-
-## F. The passport book UI (Expo Go compatible only; DEPENDENCIES.md line each; log anything that cannot run in DECISIONS.md)
-- [x] F.1 Cover (Skia leather grain, brass foil wordmark and original emblem, drag/tilt highlight, border, vignette, shadow, three numbers, gear)
-- [x] F.2 Open animation (3D swing, hinge left, inner-edge shading)
-- [x] F.3 Bearer page
-- [x] F.4 Pages (two-page spreads, gutter, page edges, numbers, ribbon, guilloche, 3 slots per page, seeded jitter, pinned ribbons)
-- [x] F.5 Page flip (drag from edge, tap edges, rotateY hinge with live shading, springs, hold halfway, reduced motion crossfade)
-- [x] F.6 Stamps (Skia/SVG brass ink, deterministic design from place id, border from neighborhood, pure function with tests, completed-neighborhood foil stamp)
-- [x] F.7 Stamp landing (slam, ink spread, glow, shake, haptic, photos pin, "Added to page N", progress)
-- [x] F.8 Visa spread (stamp left, scrapbook right up to 6 photos, drag rearrange persisted, full screen pinch zoom, caption typewriter, date, place, song ticket stub, menu)
-- [ ] F.9 Index (removed from current scope)
-- [x] F.10 Stamp flow (where are you list, km at 1000 m+, honesty banner, calm disabled state, compose, landing)
-- [x] F.11 Map (dark, glowing brass pins, dim pins, bottom sheet, custom markers)
-- [x] F.12 Place page, settings, welcome, sign up (age gate), under-21 screen, first run, delete-account and legal restyled
-- [x] F.13 Dev-only Design gallery
-
-## G. Tests and honesty
-- [x] G.1 Unit-test logic: layout, deterministic stamp design, ordering and page numbers, photo slots, theme lint, geofence states, distance formatting, multi-photo rules.
-- [x] G.2 Say visuals are untested in the review; list every effect; add each to DEVICE-CHECKLIST.md.
-
-## H. Docs and handoff
-- [x] H.1 DESIGN.md fully written incl. "Swappable screens".
-- [x] H.2 HANDOFF.md, both REVIEW.md, DECISIONS.md, OPEN-QUESTIONS.md, gate, bundles, session review with file:line and test names; tell the user how to open the Design gallery.
-
-H.2 integration note (Codex continuation): documentation and bundles reflect the uncommitted combined build-codex working tree. Automated checks and packaging are recorded in the newest Codex session review; physical iPhone visual and native-runtime checks remain unverified. The user explicitly requested no commits.
+Only Figma pages 9 and 10 are current. The complete historical prompt remains available through Git history.
