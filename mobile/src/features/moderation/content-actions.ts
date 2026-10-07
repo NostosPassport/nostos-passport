@@ -40,7 +40,6 @@ export function useFlag() {
     },
     onError: (e, v) => {
       haptics.warning();
-      // Already flagged (409): hide it for this person anyway. Limits (429) come with the server's sentence.
       if (e instanceof ApiError && e.status === 409 && v.targetType === "STAMP") flaggedStore.add(v.targetId);
       toast.show(errorText(e, "Couldn't send that report. Try again."), "neutral");
     },
@@ -54,7 +53,6 @@ export function useBlock() {
     mutationFn: (v: { handle: string; block: boolean }) => api.users.block(v.handle, v.block),
     onSuccess: (_r, v) => {
       toast.show(v.block ? `Blocked @${v.handle}.` : `Unblocked @${v.handle}.`);
-      // Blocking hides each other's stamps everywhere.
       void queryClient.invalidateQueries();
     },
     onError: (e) => toast.show(errorText(e, "Couldn't do that. Try again."), "neutral"),
@@ -75,7 +73,6 @@ export function chooseReportReason(
       options: [...reasons.map((r) => r.label), "Cancel"],
       cancelButtonIndex: reasons.length,
       tintColor: colors.accent,
-      userInterfaceStyle: "dark",
     },
     (i) => {
       const r = reasons[i];
@@ -141,7 +138,6 @@ export function showActions(actions: ContentAction[]): void {
       cancelButtonIndex: actions.length,
       destructiveButtonIndex: actions.map((a, i) => (a.destructive ? i : -1)).filter((i) => i >= 0),
       tintColor: colors.accent,
-      userInterfaceStyle: "dark",
     },
     (i) => actions[i]?.onPress(),
   );
