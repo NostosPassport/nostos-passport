@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, Stack, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, useWindowDimensions, View } from "react-native";
+import { Alert, InputAccessoryView, Keyboard, Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
@@ -31,6 +31,7 @@ import { useConfirmDiscard } from "@/lib/use-confirm-discard";
 import { colors, fonts } from "@/theme";
 
 type Nearby = NearbyPlacesResponse["places"][number];
+const CAPTION_ACCESSORY_ID = "stamp-caption-accessory";
 
 export default function NewStamp() {
   return <Composer />;
@@ -45,7 +46,7 @@ function Composer() {
   const { permission } = useLocationState();
   const coords = useUserCoords();
   const nearby = useNearbyPlaces(coords);
-  const [stampAt] = useState(() => Date.now());
+  const [stampAt, setStampAt] = useState(() => Date.now());
   const [chosenId, setChosenId] = useState<string | null>(null);
   const [choosingPlace, setChoosingPlace] = useState(false);
   const photoUris = usePhotoDraft();
@@ -72,6 +73,7 @@ function Composer() {
 
   const openPhotos = () => {
     if (!place) return;
+    Keyboard.dismiss();
     router.push({
       pathname: "/stamp/camera",
       params: {
@@ -114,10 +116,41 @@ function Composer() {
 
   const problem = stampProblem(draft, place?.id ?? null);
   const readiness = stampReadiness({ place, problem, busy: stamp.isPending });
-  const cancel = () => {
+
+  const resetToPlaces = () => {
+    Keyboard.dismiss();
     photoDraft.clear();
+    setCaption("");
+    setSong(null);
+    setProgress(0);
+    setActivePhoto(0);
+    setViewingPhoto(null);
+    setChosenId(null);
+    setChoosingPlace(true);
+    setStampAt(Date.now());
+  };
+
+  const returnToPlaces = () => {
+    Keyboard.dismiss();
+    if (!dirty) {
+      resetToPlaces();
+      return;
+    }
+    Alert.alert("Discard this stamp?", "The photos, caption and song you've added will be removed.", [
+      { text: "Keep editing", style: "cancel" },
+      { text: "Discard", style: "destructive", onPress: resetToPlaces },
+    ]);
+  };
+
+  const cancel = () => {
+    Keyboard.dismiss();
+    if (place) {
+      returnToPlaces();
+      return;
+    }
     router.back();
   };
+
   const removeActivePhoto = () => {
     photoDraft.remove(activePhoto);
     setActivePhoto((current) => Math.max(0, Math.min(current, photoUris.length - 2)));
@@ -127,10 +160,16 @@ function Composer() {
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 18 }]}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        onScrollBeginDrag={Keyboard.dismiss}
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 18 }]}
+      >
         <View style={[styles.topbar, place && styles.topbarWithBack]}>
           {place ? (
-            <Pressable onPress={() => setChoosingPlace(true)} accessibilityRole="button" accessibilityLabel="Back to places" style={styles.backTarget}>
+            <Pressable onPress={returnToPlaces} accessibilityRole="button" accessibilityLabel="Back to places" style={styles.backTarget}>
               <Icon name="chevron.left" color="textPrimary" size={22} />
             </Pressable>
           ) : null}
@@ -156,7 +195,16 @@ function Composer() {
                   onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}
                 >
                   {photoUris.map((uri, index) => (
-                    <Pressable key={`${uri}-${index}`} onPress={() => setViewingPhoto(index)} accessibilityRole="button" accessibilityLabel={`Open photo ${index + 1} of ${photoUris.length}`} style={[styles.photoPage, { width: photoWidth }]}>
+                    <Pressable
+                      key={`${uri}-${index}`}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setViewingPhoto(index);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open photo ${index + 1} of ${photoUris.length}`}
+                      style={[styles.photoPage, { width: photoWidth }]}
+                    >
                       <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={`Photo ${index + 1} of ${photoUris.length}`} />
                     </Pressable>
                   ))}
@@ -193,6 +241,7 @@ function Composer() {
                 placeholder="An afternoon worth keeping."
                 placeholderTextColor={colors.textSecondary}
                 multiline
+                inputAccessoryViewID={CAPTION_ACCESSORY_ID}
                 style={styles.captionInput}
                 accessibilityLabel="A few words"
               />
@@ -205,7 +254,7 @@ function Composer() {
                 <SongRow song={song} trailing={<Pressable onPress={() => setSong(null)} accessibilityRole="button" accessibilityLabel="Remove song" style={styles.hitTarget}><Icon name="xmark" color="textSecondary" size={18} /></Pressable>} />
               </View>
             ) : (
-              <Pressable style={styles.songAction} onPress={() => router.push("/stamp/song")} accessibilityRole="button">
+              <Pressable style={styles.songAction} onPress={() => { Keyboard.dismiss(); router.push("/stamp/song"); }} accessibilityRole="button">
                 <Icon name="music.note" color="textPrimary" size={23} />
                 <NativeText style={styles.songLabel}>Add a song</NativeText>
               </Pressable>
@@ -223,6 +272,7 @@ function Composer() {
               label={stamp.isPending ? `Stamping…${photoUris.length ? ` ${Math.round(progress * 100)}%` : ""}` : "Stamp this place"}
               disabled={!readiness.ready}
               onPress={() => {
+                Keyboard.dismiss();
                 haptics.select();
                 stamp.mutate();
               }}
@@ -240,10 +290,18 @@ function Composer() {
             onChoose={(id) => {
               setChosenId(id);
               setChoosingPlace(false);
+              setStampAt(Date.now());
             }}
           />
         )}
       </ScrollView>
+      <InputAccessoryView nativeID={CAPTION_ACCESSORY_ID}>
+        <View style={styles.keyboardAccessory}>
+          <Pressable onPress={Keyboard.dismiss} accessibilityRole="button" accessibilityLabel="Done editing caption" style={styles.keyboardDone}>
+            <Text variant="callout" color="accent" weight="semibold">Done</Text>
+          </Pressable>
+        </View>
+      </InputAccessoryView>
       <PhotoViewer photos={viewerPhotos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
     </View>
   );
@@ -312,6 +370,8 @@ const styles = StyleSheet.create({
   captionBlock: { gap: 5, marginTop: 2 },
   captionInput: { minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, color: colors.textPrimary, fontSize: 14, paddingHorizontal: 0, paddingVertical: 10 },
   counter: { color: colors.textSecondary, fontSize: 11, alignSelf: "flex-end" },
+  keyboardAccessory: { minHeight: 44, backgroundColor: colors.elevated, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hairline, alignItems: "flex-end", justifyContent: "center", paddingHorizontal: 16 },
+  keyboardDone: { minWidth: 56, minHeight: 40, alignItems: "center", justifyContent: "center" },
   songAction: { height: 46, flexDirection: "row", alignItems: "center", gap: 12 },
   songLabel: { color: colors.textPrimary, fontSize: 14 },
   songWrap: { minHeight: 54, justifyContent: "center" },
