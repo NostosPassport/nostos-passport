@@ -8,7 +8,7 @@ This is current product copy, but legal/privacy fields remain drafts until final
 |---|---|
 | Name | Nostos |
 | Subtitle | A passport for New York |
-| Bundle ID | `com.charlesjinn.nostos` |
+| Bundle ID | `com.nostos.ios` |
 | Primary category | REPLACE after final product decision |
 | Secondary category | Travel |
 | Age rating | REPLACE after legal/App Store review |
