@@ -61,7 +61,7 @@ describe("sign-up age gate", () => {
     await fill("05051990");
 
     await fireEvent.press(screen.getByLabelText("Verify email"));
-    await waitFor(() => expect(mockStartSignup).toHaveBeenCalledWith("sam@example.com", "Sam", "1990-05-05"));
+    await waitFor(() => expect(mockStartSignup).toHaveBeenCalledWith("sam@example.com", "Sam", "sam_s", "1990-05-05"));
 
     const code = await screen.findByLabelText("Verification code");
     await fireEvent.changeText(code, "123456");
