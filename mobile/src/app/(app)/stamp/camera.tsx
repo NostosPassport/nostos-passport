@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { PhotoViewer } from "@/features/book/PhotoViewer";
+import { locationStore } from "@/features/location/location-store";
 import { CAMERA_NOTE, pickFromLibrary, takePhoto } from "@/features/photos/pick";
 import { prepareImage } from "@/features/photos/prepare";
+import { saveAcceptedCameraPhoto } from "@/features/photos/save-camera-photo";
 import { validateLibraryPhoto, type LibraryPhotoValidationContext } from "@/features/photos/validate-library";
 import { photoDraft, usePhotoDraft } from "@/features/stamps/photo-draft";
 import { MAX_STAMP_PHOTOS, photoCount } from "@/features/stamps/stamp-flow";
@@ -61,8 +63,20 @@ export default function StampCamera() {
         return;
       }
 
-      const prepared = await prepareImage(outcome.uri, { watermark: true });
-      if (photoDraft.add(prepared.uri)) haptics.select();
+      const capturedAt = Date.now();
+      const here = await locationStore.currentForPosting().catch(() => null);
+      const prepared = await prepareImage(outcome.uri, {
+        watermark: true,
+        cameraMetadata: {
+          capturedAt,
+          ...(here ? { lat: here.lat, lng: here.lng } : {}),
+        },
+      });
+      if (photoDraft.add(prepared.uri)) {
+        haptics.select();
+        const saved = await saveAcceptedCameraPhoto(prepared.uri);
+        if (!saved) setNote("Photo added, but Nostos couldn't save a copy to Photos.");
+      }
     } catch {
       setNote("Couldn't add that photo. Try again.");
     } finally {
