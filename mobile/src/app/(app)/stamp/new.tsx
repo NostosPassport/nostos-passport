@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, Stack, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -43,7 +43,7 @@ function Composer() {
   const { permission } = useLocationState();
   const coords = useUserCoords();
   const nearby = useNearbyPlaces(coords);
-  const stampAt = useRef(Date.now()).current;
+  const [stampAt] = useState(() => Date.now());
   const [chosenId, setChosenId] = useState<string | null>(null);
   const [choosingPlace, setChoosingPlace] = useState(false);
   const photoUris = usePhotoDraft();
