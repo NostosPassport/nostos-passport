@@ -127,6 +127,7 @@ export default function SignIn() {
                   onChangeText={(value) => setCode(value.replace(/\D/g, "").slice(0, 6))}
                   keyboardType="number-pad"
                   textContentType="oneTimeCode"
+                  autoComplete="one-time-code"
                   returnKeyType="go"
                   onSubmitEditing={submitCode}
                   accessibilityLabel="Verification code"
