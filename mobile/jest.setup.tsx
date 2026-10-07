@@ -20,6 +20,8 @@ jest.mock("expo-secure-store", () => {
 
 jest.mock("expo-media-library", () => ({
   Asset: { create: jest.fn(async (uri: string) => ({ id: uri })) },
+  getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true, status: "granted", expires: "never", accessPrivileges: "all" })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true, status: "granted", expires: "never", accessPrivileges: "all" })),
 }));
 
 jest.mock("react-native-safe-area-context", () => {
