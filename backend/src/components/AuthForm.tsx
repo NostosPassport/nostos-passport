@@ -14,6 +14,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [busy, setBusy] = useState(false);
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [handle, setHandle] = useState("");
   const [birthdate, setBirthdate] = useState("");
@@ -25,7 +26,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setBusy(true);
     setError(null);
     try {
-      const body = mode === "signup" ? { email, displayName, handle, birthdate, acceptTerms } : { email };
+      const body = mode === "signup" ? { email, displayName, handle, birthdate, acceptTerms } : { identifier };
       const next = await api<Challenge>(`/api/auth/${mode === "signup" ? "signup" : "login"}/start`, { method: "POST", json: body });
       setChallenge(next);
       setCode("");
@@ -62,7 +63,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   if (challenge) {
     return (
       <form onSubmit={verifyCode} className="space-y-3">
-        <p className="text-sm text-muted">We sent a six-digit code to <strong>{email}</strong>.</p>
+        <p className="text-sm text-muted">
+          {mode === "signup" ? <>We sent a six-digit code to <strong>{email}</strong>.</> : <>We sent a six-digit code to the email on your account.</>}
+        </p>
         <input
           name="code"
           inputMode="numeric"
@@ -86,7 +89,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             setError(null);
           }}
         >
-          Change email
+          {mode === "login" ? "Change email or handle" : "Change email"}
         </button>
       </form>
     );
@@ -100,7 +103,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           <input name="handle" placeholder="handle (letters, numbers, ., _)" value={handle} onChange={(e) => setHandle(e.target.value.toLowerCase())} required className={input} autoCapitalize="none" />
         </>
       )}
-      <input name="email" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className={input} autoComplete="email" />
+      {mode === "signup" ? (
+        <input name="email" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className={input} autoComplete="email" />
+      ) : (
+        <input name="identifier" type="text" placeholder="Email or handle" value={identifier} onChange={(e) => setIdentifier(e.target.value)} required className={input} autoComplete="username" autoCapitalize="none" />
+      )}
       {mode === "signup" && (
         <div className="space-y-2 text-sm">
           <label className="block space-y-1">
@@ -117,7 +124,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         </div>
       )}
       {error && <p className="rounded-lg bg-packed/15 px-3 py-2 text-sm text-packed" role="alert">{error}</p>}
-      <button disabled={busy || (mode === "signup" && !acceptTerms)} className={button}>{busy ? "…" : "Email me a code"}</button>
+      <button disabled={busy || (mode === "signup" && !acceptTerms)} className={button}>{busy ? "…" : mode === "login" ? "Send sign-in code" : "Email me a code"}</button>
       <p className="text-center text-sm text-muted">
         {mode === "login" ? (
           <>New here? <Link className="text-accent" href="/signup">Create an account</Link></>
