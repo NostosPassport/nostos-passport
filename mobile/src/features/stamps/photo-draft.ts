@@ -1,5 +1,5 @@
 /**
- * The photos for the stamp being made, shared between the composer and the in-app camera. Photos come from the camera only:
+ * The photos for the stamp being made, shared between the composer and camera handoff. Photos come from the camera only:
  * a stamp's photos are proof you were there, so there is no way to add one from the library.
  */
 import { useSyncExternalStore } from "react";
