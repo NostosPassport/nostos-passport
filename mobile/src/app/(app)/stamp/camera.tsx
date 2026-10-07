@@ -61,7 +61,7 @@ export default function StampCamera() {
         return;
       }
 
-      const prepared = await prepareImage(outcome.uri);
+      const prepared = await prepareImage(outcome.uri, { watermark: true });
       if (photoDraft.add(prepared.uri)) haptics.select();
     } catch {
       setNote("Couldn't add that photo. Try again.");
