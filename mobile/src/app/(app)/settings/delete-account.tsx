@@ -2,7 +2,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
-import { api, ApiError, errorText } from "@/api";
+import { ApiError, errorText } from "@/api";
+import { deleteAccountWithCode, startDeleteAccountVerification, type EmailChallenge } from "@/api/email-auth";
 import { farewellNotice, useAuth } from "@/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { FormScreen } from "@/components/ui/form-screen";
@@ -14,24 +15,33 @@ import { haptics } from "@/lib/haptics";
 import { colors, radius, size, space } from "@/theme";
 
 const WHAT_HAPPENS = [
-  "Your name, handle, email and password are erased.",
+  "Your name, handle and email are erased.",
   "Your stamps are removed from every passport, and so are your follows and likes.",
-  "You\u2019re signed out on every device. This can\u2019t be undone.",
+  "You’re signed out on every device. This can’t be undone.",
 ];
 
 const FAREWELL = "Your account is deleted.";
 
-/** Guideline 5.1.1(v): delete the account from inside the app. Two taps from Profile to the button. */
 export default function DeleteAccount() {
   const { forget } = useAuth();
-  const [password, setPassword] = useState("");
+  const [challenge, setChallenge] = useState<EmailChallenge | null>(null);
+  const [code, setCode] = useState("");
+
+  const requestCode = useMutation({
+    mutationFn: startDeleteAccountVerification,
+    onSuccess: (next) => {
+      setChallenge(next);
+      setCode("");
+      haptics.success();
+    },
+    onError: () => haptics.warning(),
+  });
 
   const del = useMutation({
     mutationFn: async () => {
       try {
-        return await api.me.deleteAccount(password);
+        return await deleteAccountWithCode(challenge!.challengeId, code);
       } catch (e) {
-        // A retry after a timeout that actually succeeded: the token is already dead, so it's done.
         if (e instanceof ApiError && e.code === "invalid_token") {
           farewellNotice.set(FAREWELL);
           return { deleted: true as const };
@@ -41,7 +51,6 @@ export default function DeleteAccount() {
     },
     onMutate: () => farewellNotice.set(FAREWELL),
     onSuccess: async () => {
-      // The account is gone; the token already stopped working. Sign out locally only.
       await forget();
     },
     onError: () => {
@@ -51,14 +60,16 @@ export default function DeleteAccount() {
   });
 
   const confirm = () => {
-    if (!password || del.isPending) return;
+    if (!challenge) {
+      requestCode.mutate();
+      return;
+    }
+    if (code.length !== 6 || del.isPending) return;
     Alert.alert("Delete your account?", "This can't be undone.", [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: () => del.mutate() },
     ]);
   };
-
-  const wrongPassword = del.error instanceof ApiError && del.error.code === "wrong_password";
 
   return (
     <FormScreen>
@@ -77,27 +88,37 @@ export default function DeleteAccount() {
         ))}
       </View>
 
-      <FieldGroup footer="Enter your password to confirm." errors={[wrongPassword ? "That password isn't right." : null]}>
-        <Field
-          label="Password"
-          placeholder="Required"
-          value={password}
-          invalid={wrongPassword}
-          onChangeText={(v) => {
-            setPassword(v);
-            if (del.error) del.reset();
-          }}
-          secureTextEntry
-          autoComplete="current-password"
-          textContentType="password"
-          returnKeyType="done"
-          onSubmitEditing={confirm}
-          testID="delete-password"
-        />
-      </FieldGroup>
+      {challenge ? (
+        <FieldGroup footer="Enter the six-digit code we sent to your current account email.">
+          <Field
+            label="Verification code"
+            placeholder="000000"
+            value={code}
+            onChangeText={(value) => {
+              setCode(value.replace(/\D/g, "").slice(0, 6));
+              if (del.error) del.reset();
+            }}
+            keyboardType="number-pad"
+            textContentType="oneTimeCode"
+            maxLength={6}
+            returnKeyType="done"
+            onSubmitEditing={confirm}
+            testID="delete-code"
+          />
+        </FieldGroup>
+      ) : (
+        <Text variant="callout" color="textSecondary">We’ll email your current account address with a confirmation code before anything is deleted.</Text>
+      )}
 
-      {del.error && !wrongPassword && <InlineError message={errorText(del.error, "Couldn't delete your account. Try again.")} />}
-      <Button title="Delete account" variant="destructive" onPress={confirm} disabled={!password} loading={del.isPending} />
+      {requestCode.error ? <InlineError message={errorText(requestCode.error, "Couldn't send a confirmation code. Try again.")} /> : null}
+      {del.error ? <InlineError message={errorText(del.error, "Couldn't delete your account. Try again.")} /> : null}
+      <Button
+        title={challenge ? "Delete account" : "Email confirmation code"}
+        variant="destructive"
+        onPress={confirm}
+        disabled={challenge ? code.length !== 6 : false}
+        loading={requestCode.isPending || del.isPending}
+      />
     </FormScreen>
   );
 }
