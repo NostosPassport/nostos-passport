@@ -21,9 +21,9 @@ export const DELETED_DISPLAY_NAME = "Deleted user";
 
 export async function startDeleteAccount(db: Db, actor: Actor | null, meta: { ip: string; now?: Date }) {
   const me = requireSignedIn(actor);
-  const user = await db.user.findUnique({ where: { id: me.userId }, select: { email: true, deletedAt: true } });
+  const user = await db.user.findUnique({ where: { id: me.userId }, select: { email: true, displayName: true, deletedAt: true } });
   if (!user || user.deletedAt) throw notFound("Account not found");
-  return startEmailChallenge(db, { email: user.email, purpose: "DELETE_ACCOUNT", ip: meta.ip, now: meta.now });
+  return startEmailChallenge(db, { email: user.email, purpose: "DELETE_ACCOUNT", ip: meta.ip, displayName: user.displayName, now: meta.now });
 }
 
 export async function deleteAccount(db: Db, actor: Actor | null, raw: unknown, now = new Date()) {
