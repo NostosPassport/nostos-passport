@@ -130,8 +130,8 @@ export async function completeSignup(input: {
   return tokenResponse(await post("/api/auth/signup", input));
 }
 
-export async function startEmailSignIn(email: string): Promise<EmailChallenge> {
-  return challengeResponse(await post("/api/auth/login/start", { email: email.trim() }));
+export async function startEmailSignIn(identifier: string): Promise<EmailChallenge> {
+  return challengeResponse(await post("/api/auth/login/start", { identifier: identifier.trim() }));
 }
 
 export async function completeEmailSignIn(challengeId: string, code: string): Promise<C.TokenResponse> {
