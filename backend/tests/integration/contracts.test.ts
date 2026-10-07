@@ -3,25 +3,31 @@
  * and parses each response with the strict schemas in src/contracts/api.ts. A second test scans src/app/api and
  * fails if any route handler is missing from the registry below, so new endpoints can't skip the contract.
  */
-import { describe, expect, it } from "vitest";
+import { createHmac, randomUUID } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import type { EmailChallengePurpose } from "@prisma/client";
+import { describe, expect, it } from "vitest";
 import type { ZodTypeAny } from "zod";
 import * as C from "@/contracts/api";
 import { prisma } from "@/lib/db";
 import { createSession } from "@/lib/auth/session";
-import { signup } from "@/server/services/auth";
 import { importOsmVenues } from "@/server/services/osm-import";
 import { installMemoryStorage } from "./mem-storage";
 import { makeActor, makeUser, makeVenue, pngBytes, INSIDE, VENUE_POS } from "./factories";
 
 import * as loginR from "@/app/api/auth/login/route";
+import * as loginStartR from "@/app/api/auth/login/start/route";
 import * as signupR from "@/app/api/auth/signup/route";
+import * as signupStartR from "@/app/api/auth/signup/start/route";
 import * as logoutR from "@/app/api/auth/logout/route";
 import * as logoutAllR from "@/app/api/auth/logout-all/route";
 import * as meR from "@/app/api/me/route";
 import * as meTermsR from "@/app/api/me/terms/route";
+import * as meEmailR from "@/app/api/me/email/route";
+import * as meEmailStartR from "@/app/api/me/email/start/route";
 import * as meDeleteR from "@/app/api/me/delete/route";
+import * as meDeleteStartR from "@/app/api/me/delete/start/route";
 import * as meBlocksR from "@/app/api/me/blocks/route";
 import * as meFollowingR from "@/app/api/me/following/route";
 import * as placesR from "@/app/api/places/route";
@@ -69,12 +75,17 @@ installMemoryStorage();
 
 /** Every route handler and the schema its success response must satisfy. Binary routes are listed as "binary". */
 const REGISTRY: Record<string, ZodTypeAny | "binary"> = {
+  "POST /api/auth/login/start": C.EmailChallengeResponse,
   "POST /api/auth/login": C.TokenResponse,
+  "POST /api/auth/signup/start": C.EmailChallengeResponse,
   "POST /api/auth/signup": C.TokenResponse,
   "POST /api/auth/logout": C.OkResponse,
   "POST /api/auth/logout-all": C.LogoutAllResponse,
   "GET /api/me": C.MeResponse,
   "POST /api/me/terms": C.AcceptTermsResponse,
+  "POST /api/me/email/start": C.EmailChallengeResponse,
+  "PATCH /api/me/email": C.EmailChangeResponse,
+  "POST /api/me/delete/start": C.EmailChallengeResponse,
   "POST /api/me/delete": C.DeleteAccountResponse,
   "GET /api/me/blocks": C.BlocksResponse,
   "GET /api/me/following": C.FollowingResponse,
@@ -143,7 +154,6 @@ async function call(
   if (opts.token) headers.authorization = `Bearer ${opts.token}`;
   let body: BodyInit | undefined;
   if (opts.form) {
-    // Serialize once so the multipart boundary in Content-Type matches the bytes, and send Content-Length.
     const tmp = new Request("http://localhost", { method: "POST", body: opts.form });
     const bytes = await tmp.arrayBuffer();
     body = bytes;
@@ -165,6 +175,16 @@ async function call(
   return json;
 }
 
+const TEST_CODE_SECRET = "nostos-development-auth-code-secret-change-before-production";
+async function seedEmailChallenge(email: string, purpose: EmailChallengePurpose, code: string) {
+  const id = randomUUID();
+  const secret = process.env.AUTH_CODE_SECRET?.trim() || TEST_CODE_SECRET;
+  const codeHash = createHmac("sha256", secret).update(`${id}:${code}`).digest("hex");
+  await prisma.emailChallenge.create({
+    data: { id, email: email.toLowerCase(), codeHash, purpose, ip: "contract-test", expiresAt: new Date(Date.now() + 10 * 60_000) },
+  });
+  return id;
+}
 
 const png = () => pngBytes(150);
 const stampForm = (fields: Record<string, string>, photo = true) => {
@@ -180,7 +200,6 @@ const fakeItunes = async () =>
 
 describe("API contract", () => {
   it("every route's response matches src/contracts/api.ts", async () => {
-    // Fixture: an OSM place, people with follows, stamps with photo, caption and song, likes, flags.
     await importOsmVenues(prisma, [{ type: "node", id: 42, lat: VENUE_POS.lat, lon: VENUE_POS.lng, tags: { amenity: "bar", name: "Contract Bar", "addr:housenumber": "1", "addr:street": "Avenue A" } }]);
     const place = await prisma.venue.findUniqueOrThrow({ where: { osmId: "node/42" } });
     const mod = await makeActor({ role: "MODERATOR" });
@@ -189,16 +208,43 @@ describe("API contract", () => {
     const tok = async (userId: string) => (await createSession(prisma, userId, { client: "IOS" })).token;
     const [modT, adminT, friendT] = await Promise.all([tok(mod.userId), tok(admin.userId), tok(friend.userId)]);
 
-    // Auth (iOS)
+    // Auth (iOS). Start routes are exercised without a live Resend key; completion uses deterministic test challenges.
+    const realResendKey = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+    try {
+      await call("POST /api/auth/signup/start", signupStartR.POST, { body: { email: "start@x.dev", displayName: "Start User", birthdate: "1990-05-05" } });
+    } finally {
+      if (realResendKey) process.env.RESEND_API_KEY = realResendKey;
+    }
+    const signupChallengeId = await seedEmailChallenge("app@x.dev", "SIGN_UP", "123456");
     const su = await call("POST /api/auth/signup", signupR.POST, {
       headers: { "x-client": "ios" }, status: 201,
-      body: { email: "app@x.dev", password: "long enough pw", displayName: "App User", handle: "app_user", acceptTerms: true, birthdate: "1990-05-05" },
+      body: { challengeId: signupChallengeId, code: "123456", displayName: "App User", handle: "app_user", acceptTerms: true },
     });
-    const li = await call("POST /api/auth/login", loginR.POST, { headers: { "x-client": "ios" }, body: { email: "app@x.dev", password: "long enough pw" } });
+
+    const savedResendKey = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+    try {
+      await call("POST /api/auth/login/start", loginStartR.POST, { body: { email: "app@x.dev" } });
+    } finally {
+      if (savedResendKey) process.env.RESEND_API_KEY = savedResendKey;
+    }
+    const loginChallengeId = await seedEmailChallenge("app@x.dev", "SIGN_IN", "654321");
+    const li = await call("POST /api/auth/login", loginR.POST, { headers: { "x-client": "ios" }, body: { challengeId: loginChallengeId, code: "654321" } });
     const me = li.token as string;
     void su;
     const meBody = await call("GET /api/me", meR.GET, { token: me });
     await call("POST /api/me/terms", meTermsR.POST, { token: me, body: { version: meBody.terms.currentVersion } });
+
+    const emailResendKey = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+    try {
+      await call("POST /api/me/email/start", meEmailStartR.POST, { token: me, body: { email: "changed@x.dev" } });
+    } finally {
+      if (emailResendKey) process.env.RESEND_API_KEY = emailResendKey;
+    }
+    const emailChallengeId = await seedEmailChallenge("changed@x.dev", "CHANGE_EMAIL", "246810");
+    await call("PATCH /api/me/email", meEmailR.PATCH, { token: me, body: { challengeId: emailChallengeId, code: "246810" } });
 
     // Places and stamps
     const pid = place.id;
@@ -211,7 +257,6 @@ describe("API contract", () => {
       form: stampForm({ caption: "dance floor", lat: String(INSIDE.lat), lng: String(INSIDE.lng), songTitle: "Contract Song", songArtist: "The Schemas", songArtUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music/x/300x300bb.jpg", songSourceId: "1440857781" }),
     });
     expect(full.stamp).toMatchObject({ caption: "dance floor", song: { title: "Contract Song" }, mine: true });
-    // Caption only, song only and photo only are stamps too (each at its own place: one stamp per place per 15 minutes).
     const p2 = await makeVenue({ slug: "p2" });
     const p3 = await makeVenue({ slug: "p3" });
     const p4 = await makeVenue({ slug: "p4" });
@@ -223,7 +268,6 @@ describe("API contract", () => {
     const mine = await call("GET /api/places/[id]/mine", placeMineR.GET, { token: me, params: { id: place.slug }, query: `?lat=${INSIDE.lat}&lng=${INSIDE.lng}` });
     expect(mine).toMatchObject({ inside: true, visits: [{ stamps: [{ id: stampId }] }] });
 
-    // Songs (proxied): the route calls Apple, so the contract test serves it a canned reply.
     const realFetch = globalThis.fetch;
     globalThis.fetch = fakeItunes as typeof fetch;
     try {
@@ -233,7 +277,6 @@ describe("API contract", () => {
       globalThis.fetch = realFetch;
     }
 
-    // People: both accounts are private, so follows start as requests.
     await call("GET /api/users", usersR.GET, { token: me, query: `?q=${friend.handle.slice(0, 5)}` });
     const req1 = await call("PUT /api/users/[handle]/follow", followR.PUT, { token: me, params: { handle: friend.handle } });
     expect(req1.state).toBe("requested");
@@ -251,7 +294,6 @@ describe("API contract", () => {
     await call("GET /api/users/[handle]/followers", followersR.GET, { token: me, params: { handle: friend.handle } });
     await call("GET /api/users/[handle]/following", followingOfR.GET, { token: me, params: { handle: friend.handle } });
     await call("GET /api/me/following", meFollowingR.GET, { token: me });
-    // Friend follows back so my stamp reaches their feed; I follow friend (approved above), so my feed has theirs.
     const myFeed = await call("GET /api/feed", feedR.GET, { token: me });
     expect(myFeed.stamps).toHaveLength(3);
     await call("GET /api/feed", feedR.GET, { token: me, query: "?before=2999-01-01T00:00:00.000Z_zzzz" });
@@ -263,7 +305,6 @@ describe("API contract", () => {
     const pins = await call("GET /api/me/pins", pinsR.GET, { token: me });
     expect(pins.stamps.map((x: { id: string }) => x.id)).toEqual([stampId]);
 
-    // Photos: reject additions, lay out and remove the creation-time photo.
     const more = new FormData();
     more.append("photos", new Blob([new Uint8Array(png())], { type: "image/png" }), "a.png");
     more.append("photos", new Blob([new Uint8Array(png())], { type: "image/png" }), "b.png");
@@ -274,7 +315,6 @@ describe("API contract", () => {
     expect(laid.stamp.photos[0]).toMatchObject({ x: 0.4, y: 0.6, rotation: -7 });
     await call("POST /api/stamps/[id]/photos/[photoId]/remove", stampPhotoRemoveR.POST, { token: me, params: { id: stampId, photoId } });
 
-    // Stamp detail, likes, activity, edit, remove
     const friendStamp = myFeed.stamps[0].id as string;
     await call("GET /api/stamps/[id]", stampR.GET, { token: me, params: { id: friendStamp } });
     await call("PUT /api/stamps/[id]/like", stampLikeR.PUT, { token: me, params: { id: friendStamp } });
@@ -283,7 +323,6 @@ describe("API contract", () => {
     await call("PATCH /api/stamps/[id]", stampR.PATCH, { token: me, params: { id: stampId }, body: { caption: "still great", song: { title: "Edited Song", artist: "Edit Band" } } });
     await call("PATCH /api/stamps/[id]", stampR.PATCH, { token: me, params: { id: stampId }, body: { song: null } });
 
-    // Profile settings and avatar
     await call("GET /api/me/profile", meProfileR.GET, { token: me });
     await call("PATCH /api/me/profile", meProfileR.PATCH, { token: me, body: { bio: "Out most Fridays", isPrivate: false } });
     const avatarForm = new FormData();
@@ -300,7 +339,6 @@ describe("API contract", () => {
     expect(blocks.blocks).toHaveLength(1);
     await call("DELETE /api/users/[handle]/block", blockR.DELETE, { token: me, params: { handle: other.handle } });
 
-    // Flags + moderation (stamp and account reports)
     await call("POST /api/flags", flagsR.POST, { token: friendT, body: { targetType: "STAMP", targetId: stampId, reason: "not at this place" }, status: 201 });
     await call("POST /api/flags", flagsR.POST, { token: friendT, body: { targetType: "USER", targetId: other.handle, reason: "harassing people" }, status: 201 });
     await call("GET /api/mod/queue", modQueueR.GET, { token: modT });
@@ -312,27 +350,34 @@ describe("API contract", () => {
     await call("GET /api/mod/log", modLogR.GET, { token: modT });
     await call("POST /api/stamps/[id]/remove", stampRemoveR.POST, { token: friendT, params: { id: friendStamp } });
 
-    // Admin (web-only, still contracted)
     await call("PATCH /api/admin/users/[handle]", adminUserR.PATCH, { token: adminT, params: { handle: friend.handle }, body: { geofenceExempt: true } });
     await call("GET /api/admin/users", adminUsersR.GET, { token: adminT, query: `?q=${friend.handle.slice(0, 6)}` });
     await call("POST /api/admin/users/[handle]/verification", adminVerifyR.POST, { token: adminT, params: { handle: friend.handle }, body: { verified: true, note: "Known promoter" } });
     await call("GET /api/admin/verification-log", adminVerifyLogR.GET, { token: adminT });
 
-    // Ops
     const health = await healthR.GET();
     expect(C.HealthResponse.safeParse(await health.json()).success).toBe(true);
     checked.add("GET /api/health");
     process.env.CRON_SECRET = "contract-cron-secret-000";
     await call("GET /api/cron/maintenance", cronR.GET as Handler, { headers: { authorization: "Bearer contract-cron-secret-000" } });
     await call("POST /api/cron/maintenance", cronR.POST as Handler, { headers: { authorization: "Bearer contract-cron-secret-000" } });
-    checked.add("GET /api/uploads/[...key]"); // binary, covered by serverless.test.ts
+    checked.add("GET /api/uploads/[...key]");
 
-    // Sign-out flows and deletion last.
     await call("POST /api/auth/logout", logoutR.POST, { token: friendT });
     await call("POST /api/auth/logout-all", logoutAllR.POST, { token: me });
-    const fresh = await signup(prisma, { email: "bye@x.dev", password: "long enough pw", displayName: "Bye", handle: "bye_bye", acceptTerms: true, birthdate: "1990-05-05" });
-    const byeT = await tok(fresh.user.id);
-    await call("POST /api/me/delete", meDeleteR.POST, { token: byeT, body: { password: "long enough pw" } });
+
+    const bye = await makeActor();
+    const byeT = await tok(bye.userId);
+    const byeUser = await prisma.user.findUniqueOrThrow({ where: { id: bye.userId }, select: { email: true } });
+    const deleteResendKey = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+    try {
+      await call("POST /api/me/delete/start", meDeleteStartR.POST, { token: byeT });
+    } finally {
+      if (deleteResendKey) process.env.RESEND_API_KEY = deleteResendKey;
+    }
+    const deleteChallengeId = await seedEmailChallenge(byeUser.email, "DELETE_ACCOUNT", "135790");
+    await call("POST /api/me/delete", meDeleteR.POST, { token: byeT, body: { challengeId: deleteChallengeId, code: "135790" } });
   }, 60_000);
 
   it("error responses from real failure paths match ErrorResponse", async () => {
@@ -378,7 +423,6 @@ describe("API contract", () => {
         else if (name === "route.ts") {
           const src = readFileSync(full, "utf8");
           const p = "/api" + path.dirname(full).slice(root.length).split(path.sep).join("/");
-          // Any way of exporting a method handler: `export const X`, `export (async) function X`, `export { h as X }`.
           const methods = new Set<string>();
           for (const m of src.matchAll(/export\s+(?:const|let|var|async\s+function|function)\s+(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b/g)) methods.add(m[1]!);
           for (const block of src.matchAll(/export\s*\{([^}]*)\}/g)) {
