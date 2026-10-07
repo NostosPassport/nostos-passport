@@ -6,7 +6,6 @@ import Animated, { interpolate, useAnimatedStyle, useReducedMotion, useSharedVal
 import { scheduleOnRN } from "react-native-worklets";
 import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
-import { Text } from "@/components/ui/text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { bookMotion, colors, size, space } from "@/theme";
 import { Passport3DView } from "../lab3d/Passport3DView";
@@ -16,8 +15,6 @@ import { Counts } from "./Cover";
 import { FlipBook } from "./FlipBook";
 import { FirstRunHint } from "./FirstRunHint";
 import { useFirstRun } from "./first-run";
-import { IndexList } from "./IndexList";
-import { indexRows, spreadForPage } from "./index-data";
 import { InsideCover } from "./InsideCover";
 import { PageView } from "./PageView";
 import { type PageFace, groupByPage } from "./spreads";
@@ -33,7 +30,6 @@ import { usePassport } from "./use-passport";
 export function PassportBook() {
  const data=usePassport();
  const firstRun=useFirstRun();
- const [showIndex,setShowIndex]=useState(false);
  const openPages=()=>{firstRun.dismiss();setTransitioning(true);setFocused(true);}; // straight to the page reader, no 3D opening
  const open=()=>{ // takes no arguments on purpose: it is wired to touch and accessibility callbacks that pass event objects
   if(!modelReady.current){openPages();return;} // nothing live to animate (loading, failed, or no GPU)
@@ -99,7 +95,6 @@ export function PassportBook() {
   if(face.kind==="bearer")return <BearerPage width={book.pageWidth} height={book.pageHeight} bearer={{displayName:data.displayName,handle:data.handle,memberSince:data.memberSince,bio:data.bio}} avatarUrl={data.avatarUrl}/>;
   return <PageView page={face.page} side={side} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(face.page)??[]} pinnedIds={pinnedIds} onStampPress={s=>openStamp(s.id)}/>;
  };
- if(showIndex)return <IndexList rows={indexRows(data.neighborhoods,data.stamps)} onClose={()=>setShowIndex(false)} onJump={page=>{setSpread(Math.min(total-1,spreadForPage(page)));setShowIndex(false);openPages();}}/>;
  if(data.status==="error")return <View style={styles.center}><InlineError message="Couldn't open your passport. Your connection may be down." onRetry={data.retry}/></View>;
  if(data.status==="pending")return <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Opening your passport"><Skeleton width={width*.8} height={height*.5}/></View>;
  return <View style={styles.root}>
@@ -108,7 +103,7 @@ export function PassportBook() {
     {modelError?<View style={styles.center}><InlineError message="Couldn't load the 3D passport." onRetry={()=>{setModelError(false);setModelKey(k=>k+1);}}/><Pressable onPress={openPages} accessibilityRole="button" accessibilityLabel="Open stamp pages" style={styles.close}><Icon name="book" size={size.icon} color="accent"/></Pressable></View>:
     <Passport3DView key={modelKey} running={screenActive&&appActive} lowPower reduceMotion={reduced} soak={false} glassMode="auto" open={opening} onTap={()=>open()} onOpenProgress={onOpenProgress} onOpenSettled={onOpenSettled} onReady={()=>{modelReady.current=true;setModelError(false);}} onError={()=>{modelReady.current=false;setModelError(true);}} onGlass={()=>undefined} onStats={()=>undefined}/>}
    </Animated.View>
-   <Animated.View style={[styles.counts,chromeMotion]}><Counts counts={data.counts}/>{firstRun.show?<FirstRunHint onDismiss={firstRun.dismiss}/>:null}<Pressable accessibilityRole="button" accessibilityLabel="Neighborhood index" onPress={()=>setShowIndex(true)} style={[styles.close,styles.index]}><Icon name="list.bullet" size={size.iconSmall} color="textSecondary"/><Text variant="typewriterSmall" color="textSecondary">Index</Text></Pressable></Animated.View>
+   <Animated.View style={[styles.counts,chromeMotion]}><Counts counts={data.counts}/>{firstRun.show?<FirstRunHint onDismiss={firstRun.dismiss}/>:null}</Animated.View>
   </View>
   <Modal visible={focused} transparent presentationStyle="overFullScreen" animationType="none" onRequestClose={close}>
    <View style={[styles.focus,{paddingTop:insets.top+FOCUS_TOP_SPACE,paddingBottom:insets.bottom+FOCUS_BOTTOM_SPACE,paddingLeft:insets.left+8,paddingRight:insets.right+8}]} accessibilityViewIsModal>
@@ -123,5 +118,5 @@ export function PassportBook() {
 }
 const styles=StyleSheet.create({
  root:{flex:1,backgroundColor:colors.background},home:{flex:1,paddingHorizontal:space.md,paddingBottom:space.xs,alignItems:"center"},center:{flex:1,alignItems:"center",justifyContent:"center",padding:space.lg},
- model:{flex:1,width:"100%",minHeight:0},counts:{width:"100%",alignItems:"center",paddingTop:space.md,gap:space.xs},focus:{flex:1,alignItems:"center",justifyContent:"center"},backdrop:{backgroundColor:colors.background},index:{flexDirection:"row",gap:space.xs},close:{minWidth:size.hitTarget,minHeight:size.hitTarget,alignItems:"center",justifyContent:"center"},
+ model:{flex:1,width:"100%",minHeight:0},counts:{width:"100%",alignItems:"center",paddingTop:space.md,gap:space.xs},focus:{flex:1,alignItems:"center",justifyContent:"center"},backdrop:{backgroundColor:colors.background},close:{minWidth:size.hitTarget,minHeight:size.hitTarget,alignItems:"center",justifyContent:"center"},
 });
