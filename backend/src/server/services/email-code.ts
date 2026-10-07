@@ -12,6 +12,7 @@ const MAX_SENDS_PER_IP = 25;
 const MAX_ATTEMPTS = 5;
 const RETENTION_MS = 24 * 60 * 60_000;
 const EXPIRY_MINUTES = CODE_TTL_MS / 60_000;
+const DEFAULT_VERIFY_EMAIL_TEMPLATE_ID = "email-otp";
 
 function codeSecret(): string {
   const configured = process.env.AUTH_CODE_SECRET?.trim();
@@ -44,7 +45,6 @@ function actionFor(purpose: EmailChallengePurpose): string {
 
 function subjectFor(purpose: EmailChallengePurpose): string {
   if (purpose === "DELETE_ACCOUNT") return "Confirm your Nostos account deletion";
-  if (purpose === "CHANGE_EMAIL") return "Confirm your new Nostos email";
   if (purpose === "SIGN_IN") return "Your Nostos sign-in code";
   return "Verify your Nostos email";
 }
@@ -92,9 +92,7 @@ async function postResend(body: Record<string, unknown>, idempotencyKey: string)
 }
 
 async function deliverVerificationTemplate(to: string, code: string, displayName: string | undefined, idempotencyKey: string): Promise<void> {
-  const templateId = process.env.RESEND_VERIFY_EMAIL_TEMPLATE_ID?.trim();
-  if (!templateId) throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
-
+  const templateId = process.env.RESEND_VERIFY_EMAIL_TEMPLATE_ID?.trim() || DEFAULT_VERIFY_EMAIL_TEMPLATE_ID;
   await postResend(
     {
       from: sender(),
@@ -138,7 +136,7 @@ async function deliverVerification(
     throw new ServiceError(503, "email_unavailable", "Email sign-in is temporarily unavailable.");
   }
 
-  if (purpose === "SIGN_UP") {
+  if (purpose === "SIGN_UP" || purpose === "CHANGE_EMAIL") {
     await deliverVerificationTemplate(to, code, displayName, idempotencyKey);
     return;
   }
