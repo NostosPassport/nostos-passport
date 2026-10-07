@@ -3,13 +3,12 @@ import { execFileSync } from "child_process";
 import path from "path";
 
 const fixtures = [
-  ["2026-10-03T03:59:59Z", "10/03/2005", false, { y: 2026, m: 10, d: 2 }],
-  ["2026-10-03T04:00:00Z", "10/03/2005", true, { y: 2026, m: 10, d: 3 }],
-  ["2026-01-02T04:59:59Z", "01/02/2005", false, { y: 2026, m: 1, d: 1 }],
-  ["2026-01-02T05:00:00Z", "01/02/2005", true, { y: 2026, m: 1, d: 2 }],
+  ["2026-10-03T03:59:59Z", "10/03/2013", false, { y: 2026, m: 10, d: 2 }],
+  ["2026-10-03T04:00:00Z", "10/03/2013", true, { y: 2026, m: 10, d: 3 }],
+  ["2026-01-02T04:59:59Z", "01/02/2013", false, { y: 2026, m: 1, d: 1 }],
+  ["2026-01-02T05:00:00Z", "01/02/2013", true, { y: 2026, m: 1, d: 2 }],
 ];
 
-// A separate Node process uses the real device-zone Date getters, without Jest's mocked process.env.
 const script = `
   const fs = require('fs'), vm = require('vm'), babel = require('@babel/core');
   const filename = process.argv[1];
@@ -37,8 +36,7 @@ describe("New York age boundary in every device timezone", () => {
       if (ok) {
         const [month, day, year] = birth.split("/");
         expect(results[i].check.apiDate).toBe(`${year}-${month}-${day}`);
-      }
-      else {
+      } else {
         expect(results[i].check).toMatchObject({ reason: "underage" });
         expect(results[i].check).not.toHaveProperty("apiDate");
       }
