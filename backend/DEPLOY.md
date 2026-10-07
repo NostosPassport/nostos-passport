@@ -2,7 +2,7 @@
 
 Nostos production is designed around:
 
-- Vercel for the Next.js API
+- Vercel for the Next.js API and public legal/support site
 - Neon Postgres for persistent relational data
 - Cloudflare R2 for private photo storage
 - Resend for passwordless authentication email
@@ -10,8 +10,10 @@ Nostos production is designed around:
 
 The mobile app is configured to use:
 
-- production: `https://api.nostospassport.com`
-- preview: `https://preview-api.nostospassport.com`
+- production API: `https://api.nostospassport.com`
+- preview API: `https://preview-api.nostospassport.com`
+
+The public production site uses `https://nostospassport.com` for privacy, terms, support, and account-deletion pages.
 
 ## Environment layout
 
@@ -19,6 +21,7 @@ Keep production and preview data completely separate.
 
 | Resource | Production | Preview |
 | --- | --- | --- |
+| Public site | `nostospassport.com` | optional |
 | API domain | `api.nostospassport.com` | `preview-api.nostospassport.com` |
 | Vercel project | `nostos-backend` | `nostos-backend-preview` |
 | Neon database/project | `nostos-production` | `nostos-preview` |
@@ -35,22 +38,26 @@ Create the project from `NostosPassport/nostos-passport` with:
 - Framework Preset: Next.js
 - Build Command: `pnpm vercel-build`
 - Node.js: 20 or newer
+- Function region: `iad1` (Washington, D.C.)
 
 `pnpm vercel-build` runs:
 
 ```bash
+pnpm deploy:check
 prisma generate
 prisma migrate deploy
 next build
 ```
 
+`deploy:check` refuses a preview/production deployment when required secrets are missing, database URLs point to localhost, storage is not configured for R2, or auth/cron secrets are invalid.
+
 The repository already defines the daily maintenance cron in `backend/vercel.json`.
 
-Add the custom production domain `api.nostospassport.com` and the preview domain `preview-api.nostospassport.com` to the appropriate Vercel projects. Use the DNS values Vercel provides rather than hardcoding a CNAME target in this document.
+Add `nostospassport.com` and `api.nostospassport.com` to the production Vercel project. Add `preview-api.nostospassport.com` to the preview project. Use the DNS values Vercel provides rather than hardcoding an A or CNAME target here.
 
 ## Neon Postgres
 
-Create separate production and preview databases.
+Create separate production and preview databases in AWS US East 1 (N. Virginia) so they are close to Vercel `iad1`.
 
 For each environment obtain:
 
@@ -78,14 +85,16 @@ Do not seed development accounts into production.
 
 ## Cloudflare R2
 
-Create two private buckets:
+Create two private buckets using the default jurisdiction so the standard R2 S3 endpoint used by the backend remains valid:
 
 ```text
 nostos-production
 nostos-preview
 ```
 
-Create R2 S3 API credentials that can read, write, and delete objects in the corresponding bucket.
+A location hint such as Eastern North America is fine. Do not make either bucket public.
+
+Create separate R2 S3 API credentials for production and preview with Object Read & Write access scoped to the corresponding bucket.
 
 Set:
 
@@ -107,10 +116,12 @@ Use the verified authentication sender:
 AUTH_EMAIL_FROM=Nostos <login@auth.nostospassport.com>
 ```
 
+Create separate sending-only API keys for production and preview, restricted to the verified authentication domain when possible.
+
 Set:
 
 ```text
-RESEND_API_KEY=<production Resend API key>
+RESEND_API_KEY=<environment Resend API key>
 RESEND_VERIFY_EMAIL_TEMPLATE_ID=email-otp
 AUTH_COMPANY_ADDRESS=<complete business mailing address>
 AUTH_CODE_SECRET=<random secret>
@@ -167,7 +178,7 @@ CRON_SECRET=<unique random secret>
 SOCIAL_ENABLED=0
 ```
 
-Preview should use the same variable names with its own Neon database, R2 bucket, and unique secrets, plus:
+Preview should use the same variable names with its own Neon database, R2 bucket, Resend key, and unique secrets, plus:
 
 ```text
 APP_ENV=preview
@@ -197,7 +208,7 @@ Verify, in order:
 7. the maintenance cron authenticates successfully
 8. the mobile preview build talks only to `preview-api.nostospassport.com`
 9. the mobile production build talks only to `api.nostospassport.com`
-10. privacy, terms, and support URLs resolve before App Store submission
+10. `https://nostospassport.com/privacy`, `/terms`, and `/support` resolve before App Store submission
 
 ## Local development
 
