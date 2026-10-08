@@ -1,72 +1,16 @@
-/**
- * COPIED VERBATIM from backend/src/contracts/api.ts.
- * Do not edit here: change the backend contract, then re-copy with the contract sync script.
- */
-/**
- * Nostos HTTP API contract: the single source of truth for clients (the Expo iOS app copies this file
- * verbatim into src/api/contracts.ts). Depends only on `zod` **v3** (written against 3.25; install `zod@^3.25`,
- * not v4). Every response schema is `.strict()`, and
- * tests/integration/contracts.test.ts calls every route and fails if a response drifts from these schemas.
- * Human-readable reference: API.md.
- *
- * Conventions: JSON bodies; timestamps are ISO-8601 UTC strings. Errors are `{ error: <code>, message: <human sentence> }`.
- * A stamp is one visit to a place: a photo, a caption, a song, or any mix. Nothing here is ever "Anonymous":
- * a stamp is only returned to people who may see its author's full profile.
- */
 import { z } from "zod";
 
-// ------------------------------------------------------------------------------------------------
-// Primitives and enums
-// ------------------------------------------------------------------------------------------------
-
 export const IsoDate = z.string().datetime({ offset: true });
-export const Role = z.enum(["USER", "MODERATOR", "ADMIN"]);
-/** What can be reported or moderated. The database calls a stamp "PHOTO"; the API says STAMP. */
-export const TargetType = z.enum(["STAMP", "USER"]);
-/** Why something is reported. Moderators read UNDERAGE and STALKING first. */
-export const FlagCategory = z.enum(["SPAM", "HARASSMENT", "SEXUAL_OR_VIOLENT", "NOT_AT_PLACE", "STALKING", "UNDERAGE", "PRIVATE_INFO", "OTHER"]);
-export const ModerationAction = z.enum(["FLAGGED", "AUTO_HIDE", "HIDE", "DISMISS", "RESTORE", "ACCOUNT_DELETED", "SUSPEND", "UNSUSPEND"]);
-
-export const ErrorResponse = z
-  .object({
-    /** Machine-readable code, e.g. "unauthorized", "invalid_token", "forbidden", "rate_limited", "objectionable_content", "private_account". */
-    error: z.string(),
-    /** Human sentence, safe to show inline (e.g. "You need to be within 100 m of this place to stamp it (you're 140 m away)"). */
-    message: z.string(),
-  })
-  .strict();
-
-/** ODbL attribution; show wherever OpenStreetMap-sourced place data appears. */
+export const ErrorResponse = z.object({ error: z.string(), message: z.string() }).strict();
 export const Attribution = z.object({ text: z.literal("© OpenStreetMap contributors"), url: z.string().url(), license: z.literal("ODbL-1.0") }).strict();
-
-export const PublicUser = z.object({ id: z.string(), handle: z.string(), displayName: z.string(), role: Role }).strict();
-
-/** "requested" = a pending request to a private account. */
-export const FollowState = z.enum(["none", "requested", "following"]);
-/**
- * A person in a list (search, followers, following, requests). The handle and verified badge always; displayName
- * and avatarUrl are null when the account is private and the viewer doesn't follow it (show a generic avatar).
- */
-export const PersonView = z.object({ handle: z.string(), displayName: z.string().nullable(), avatarUrl: z.string().nullable(), verified: z.boolean() }).strict();
-/** A person plus the viewer's follow state toward them (drives Follow / Requested / Following buttons). */
-export const PersonRow = PersonView.extend({ follow: FollowState, isSelf: z.boolean() }).strict();
 export const PlaceRef = z.object({ id: z.string(), slug: z.string(), name: z.string(), neighborhood: z.string(), neighborhoodId: z.string().nullable() }).strict();
-
-// ------------------------------------------------------------------------------------------------
-// Auth and account
-// ------------------------------------------------------------------------------------------------
 
 const EmailAddress = z.string().trim().toLowerCase().email().max(200);
 const VerificationCode = z.string().trim().regex(/^\d{6}$/, "Enter the six-digit code");
 const ChallengeId = z.string().uuid();
 const DisplayName = z.string().trim().min(1).max(60);
-const SignupHandle = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .min(3, "Handle must be at least 3 characters")
-  .max(30, "Handle must be 30 characters or fewer")
-  .regex(/^[a-z0-9._]+$/, "Handle can use lowercase letters, numbers, periods and underscores");
+const SignupHandle = z.string().trim().toLowerCase().min(3, "Handle must be at least 3 characters").max(30, "Handle must be 30 characters or fewer").regex(/^[a-z0-9._]+$/, "Handle can use lowercase letters, numbers, periods and underscores");
+const LoginIdentifier = z.string().trim().toLowerCase().min(1).max(200);
 const Birthdate = z.string().refine((value) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return false;
@@ -75,44 +19,30 @@ const Birthdate = z.string().refine((value) => {
   return probe.getUTCFullYear() === year && probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
 }, "Enter your birthdate as YYYY-MM-DD");
 
-export const EmailChallengeResponse = z
-  .object({ challengeId: ChallengeId, expiresAt: IsoDate, resendAfterSeconds: z.number().int().nonnegative() })
-  .strict();
-
-/** First half of sign-up. All profile fields and age eligibility are checked before any email is sent; birthdate is never stored. */
-export const SignupStartRequest = z
-  .object({ email: EmailAddress, displayName: DisplayName, handle: SignupHandle, birthdate: Birthdate, acceptTerms: z.literal(true) })
-  .strict();
-/** Second half of sign-up after the email code has been verified. */
-export const SignupRequest = z
-  .object({ challengeId: ChallengeId, code: VerificationCode, displayName: DisplayName, handle: SignupHandle, acceptTerms: z.literal(true) })
-  .strict();
-export const LoginStartRequest = z.object({ email: EmailAddress }).strict();
+export const PublicUser = z.object({ id: z.string(), handle: z.string(), displayName: z.string() }).strict();
+export const EmailChallengeResponse = z.object({ challengeId: ChallengeId, expiresAt: IsoDate, resendAfterSeconds: z.number().int().nonnegative() }).strict();
+export const SignupStartRequest = z.object({ email: EmailAddress, displayName: DisplayName, handle: SignupHandle, birthdate: Birthdate, acceptTerms: z.literal(true) }).strict();
+export const SignupRequest = z.object({ challengeId: ChallengeId, code: VerificationCode, displayName: DisplayName, handle: SignupHandle, acceptTerms: z.literal(true) }).strict();
+export const LoginStartRequest = z.union([z.object({ email: EmailAddress }).strict(), z.object({ identifier: LoginIdentifier }).strict()]);
 export const LoginRequest = z.object({ challengeId: ChallengeId, code: VerificationCode }).strict();
-/** POST /api/auth/login and /api/auth/signup with header `X-Client: ios`. */
 export const TokenResponse = z.object({ token: z.string(), expiresAt: IsoDate, user: PublicUser }).strict();
-/** Same endpoints without X-Client (web): the session is set as an httpOnly cookie. */
 export const WebAuthResponse = z.object({ user: PublicUser }).strict();
 export const OkResponse = z.object({ ok: z.literal(true) }).strict();
 export const LogoutAllResponse = z.object({ ok: z.literal(true), revoked: z.number().int() }).strict();
 
-export const MeResponse = z
-  .object({
-    user: z
-      .object({
-        id: z.string(), email: z.string(), handle: z.string(), displayName: z.string(), role: Role, memberSince: IsoDate, reputation: z.number(),
-        isPrivate: z.boolean(), bio: z.string(), avatarUrl: z.string().nullable(), verified: z.boolean(),
-      })
-      .strict(),
-    /** Badge count for the Follow requests entry. */
-    social: z.object({ pendingFollowRequests: z.number().int() }).strict(),
-    /** geofenceExempt: App Review / QA account that can stamp anywhere; its stamps are visible only to itself. */
-    settings: z.object({ geofenceExempt: z.boolean() }).strict(),
-    terms: z
-      .object({ acceptedVersion: z.string().nullable(), acceptedAt: IsoDate.nullable(), currentVersion: z.string(), needsAcceptance: z.boolean() })
-      .strict(),
-  })
-  .strict();
+export const MeResponse = z.object({
+  user: z.object({
+    id: z.string(),
+    email: z.string(),
+    handle: z.string(),
+    displayName: z.string(),
+    memberSince: IsoDate,
+    bio: z.string(),
+    avatarUrl: z.string().nullable(),
+  }).strict(),
+  settings: z.object({ geofenceExempt: z.boolean() }).strict(),
+  terms: z.object({ acceptedVersion: z.string().nullable(), acceptedAt: IsoDate.nullable(), currentVersion: z.string(), needsAcceptance: z.boolean() }).strict(),
+}).strict();
 export const AcceptTermsRequest = z.object({ version: z.string() }).strict();
 export const AcceptTermsResponse = z.object({ acceptedVersion: z.string(), acceptedAt: IsoDate }).strict();
 export const EmailChangeStartRequest = z.object({ email: EmailAddress }).strict();
@@ -121,353 +51,104 @@ export const EmailChangeResponse = z.object({ ok: z.literal(true), email: EmailA
 export const DeleteAccountRequest = z.object({ challengeId: ChallengeId, code: VerificationCode }).strict();
 export const DeleteAccountResponse = z.object({ deleted: z.literal(true) }).strict();
 
-// ------------------------------------------------------------------------------------------------
-// Places
-// ------------------------------------------------------------------------------------------------
-
-/** A place: name, location and geofence. No live data. */
-export const Place = z
-  .object({
-    id: z.string(), slug: z.string(), name: z.string(),
-    /** May be "" for imported places without a mapped street address; show the neighborhood instead. */
-    address: z.string(),
-    neighborhood: z.string(), lat: z.number(), lng: z.number(),
-    /** Radius in meters within which a phone may stamp this place (the server checks it again on every stamp). */
-    geofenceMeters: z.number().int(),
-    /** The NYC neighborhood the place is in, when known. */
-    neighborhoodId: z.string().nullable(),
-    fromOsm: z.boolean(),
-  })
-  .strict();
+export const Place = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  address: z.string(),
+  neighborhood: z.string(),
+  lat: z.number(),
+  lng: z.number(),
+  geofenceMeters: z.number().int(),
+  neighborhoodId: z.string().nullable(),
+  fromOsm: z.boolean(),
+}).strict();
 export const PlacesResponse = z.object({ places: z.array(Place), attribution: Attribution.nullable() }).strict();
 export const PlaceResponse = z.object({ place: Place }).strict();
-/** GET /api/places/nearby?lat=&lng=: nearest first. `inside` = within its geofence right now. The position is never stored. */
 export const NearbyPlacesResponse = z.object({ places: z.array(Place.extend({ distanceM: z.number().int(), inside: z.boolean() }).strict()) }).strict();
 
-// ------------------------------------------------------------------------------------------------
-// Stamps
-// ------------------------------------------------------------------------------------------------
-
-/** Like count (App Review likes excluded) and whether you liked it. */
-export const LikeSummary = z.object({ count: z.number().int(), viewerLiked: z.boolean() }).strict();
-/** Album art only from Apple's artwork CDN, over https (the server enforces the same rule). */
-export const AppleArtUrl = z
-  .string()
-  .trim()
-  .max(500)
-  .refine((u) => {
-    try {
-      const url = new URL(u);
-      return url.protocol === "https:" && /(^|\.)mzstatic\.com$/.test(url.hostname);
-    } catch {
-      return false;
-    }
-  }, "Song art must be an https link from Apple's artwork servers");
-/** Song metadata only (no audio). */
+export const AppleArtUrl = z.string().trim().max(500).refine((u) => {
+  try {
+    const url = new URL(u);
+    return url.protocol === "https:" && /(^|\.)mzstatic\.com$/.test(url.hostname);
+  } catch {
+    return false;
+  }
+}, "Song art must be an https link from Apple's artwork servers");
 export const Song = z.object({ title: z.string(), artist: z.string(), artUrl: z.string().nullable(), sourceId: z.string().nullable() }).strict();
-/**
- * A stamp. Photo URLs are short-lived signed URLs (15-20 min): refetch rather than caching URLs. There are no
- * coordinates, storage keys or user ids anywhere in it. `hidden` / `removed` are true only for staff viewers.
- */
-/** One photo on a stamp. x and y are 0..1 of the page and rotation is degrees: null until the owner lays them out. */
-export const StampPhotoView = z
-  .object({ id: z.string(), url: z.string(), position: z.number().int().min(0).max(5), x: z.number().nullable(), y: z.number().nullable(), rotation: z.number().nullable() })
-  .strict();
-export const StampView = z
-  .object({
-    id: z.string(),
-    /** The first photo, or null. */
-    photoUrl: z.string().nullable(),
-    /** Up to 6 photos in page order. */
-    photos: z.array(StampPhotoView).max(6),
-    caption: z.string(),
-    song: Song.nullable(),
-    /** Page and slot in the owner's passport, oldest first, three slots to a page (src/lib/layout.ts). null if hidden or removed. */
-    page: z.number().int().min(1).nullable(),
-    slot: z.number().int().min(1).max(3).nullable(),
-    createdAt: IsoDate,
-    editedAt: IsoDate.nullable(),
-    place: PlaceRef,
-    author: z.object({ handle: z.string(), displayName: z.string(), avatarUrl: z.string().nullable(), verified: z.boolean() }).strict(),
-    mine: z.boolean(),
-    likes: LikeSummary,
-    hidden: z.boolean(),
-    removed: z.boolean(),
-  })
-  .strict();
+export const StampPhotoView = z.object({
+  id: z.string(),
+  url: z.string(),
+  position: z.number().int().min(0).max(5),
+  x: z.number().nullable(),
+  y: z.number().nullable(),
+  rotation: z.number().nullable(),
+}).strict();
+export const StampView = z.object({
+  id: z.string(),
+  photoUrl: z.string().nullable(),
+  photos: z.array(StampPhotoView).max(6),
+  caption: z.string(),
+  song: Song.nullable(),
+  page: z.number().int().min(1).nullable(),
+  slot: z.number().int().min(1).max(3).nullable(),
+  createdAt: IsoDate,
+  editedAt: IsoDate.nullable(),
+  place: PlaceRef,
+}).strict();
 export const StampResponse = z.object({ stamp: StampView }).strict();
-/**
- * POST /api/places/:id/stamps (multipart/form-data): optional `photo` file, `caption`, `songTitle`, `songArtist`,
- * `songArtUrl`, `songSourceId`, `lat`, `lng` (and an optional `rating` 1-10 that v1 doesn't show). At least one of
- * photo, caption or song. 403 outside the geofence, with a message that says how far away you are.
- */
-/** Progress through a neighborhood: visited places over total, and whether this stamp finished the set (a set is at least 3 places). */
-export const NeighborhoodProgress = z
-  .object({ neighborhoodId: z.string(), name: z.string(), borough: z.string(), visited: z.number().int(), total: z.number().int(), complete: z.boolean(), justCompleted: z.boolean(), newPlace: z.boolean() })
-  .strict();
-/** `progress` is null when the place has no neighborhood (or the stamp is an App Review stamp). */
+export const NeighborhoodProgress = z.object({
+  neighborhoodId: z.string(), name: z.string(), borough: z.string(), visited: z.number().int(), total: z.number().int(), complete: z.boolean(), justCompleted: z.boolean(), newPlace: z.boolean(),
+}).strict();
 export const CreateStampResponse = z.object({ stamp: StampView, progress: NeighborhoodProgress.nullable() }).strict();
-/** GET /api/me/neighborhoods: the passport's index. Started first. Owner only. */
-export const NeighborhoodIndexResponse = z
-  .object({
-    neighborhoods: z.array(z.object({ neighborhoodId: z.string(), name: z.string(), borough: z.string(), visited: z.number().int(), total: z.number().int(), complete: z.boolean(), completedAt: IsoDate.nullable(), percent: z.number().int() }).strict()),
-    totals: z.object({ neighborhoodsStarted: z.number().int(), neighborhoodsComplete: z.number().int() }).strict(),
-  })
-  .strict();
-/** PATCH /api/stamps/:id: caption and song; send only changed fields. `song: null` removes the song. */
-export const StampEditRequest = z
-  .object({
-    caption: z.string().trim().max(280),
-    song: z.object({ title: z.string().trim().min(1).max(200), artist: z.string().trim().min(1).max(200), artUrl: AppleArtUrl.nullish(), sourceId: z.string().trim().min(1).max(100).nullish() }).strict().nullable(),
-  })
-  .partial()
-  .strict()
-  .refine((v) => Object.keys(v).length > 0, "Nothing to change");
-/** PATCH /api/stamps/:id/photos: the scrapbook layout. Owner only. POST rejects later additions (400 for the owner, 404 for foreign/missing stamps); POST .../photos/:photoId/remove removes one. */
-export const PhotoLayoutRequest = z
-  .object({
-    photos: z
-      .array(z.object({ id: z.string().min(1).max(64), position: z.number().int().min(0).max(5).optional(), x: z.number().min(0).max(1).nullable().optional(), y: z.number().min(0).max(1).nullable().optional(), rotation: z.number().min(-45).max(45).nullable().optional() }).strict())
-      .min(1)
-      .max(6),
-  })
-  .strict();
-/** GET and PUT /api/me/pins: your pinned stamps (up to 4), owner only. PUT body is `{ stampIds }`. */
+export const NeighborhoodIndexResponse = z.object({
+  neighborhoods: z.array(z.object({ neighborhoodId: z.string(), name: z.string(), borough: z.string(), visited: z.number().int(), total: z.number().int(), complete: z.boolean(), completedAt: IsoDate.nullable(), percent: z.number().int() }).strict()),
+  totals: z.object({ neighborhoodsStarted: z.number().int(), neighborhoodsComplete: z.number().int() }).strict(),
+}).strict();
+export const StampEditRequest = z.object({
+  caption: z.string().trim().max(280),
+  song: z.object({ title: z.string().trim().min(1).max(200), artist: z.string().trim().min(1).max(200), artUrl: AppleArtUrl.nullish(), sourceId: z.string().trim().min(1).max(100).nullish() }).strict().nullable(),
+}).partial().strict().refine((v) => Object.keys(v).length > 0, "Nothing to change");
+export const PhotoLayoutRequest = z.object({
+  photos: z.array(z.object({ id: z.string().min(1).max(64), position: z.number().int().min(0).max(5).optional(), x: z.number().min(0).max(1).nullable().optional(), y: z.number().min(0).max(1).nullable().optional(), rotation: z.number().min(-45).max(45).nullable().optional() }).strict()).min(1).max(6),
+}).strict();
 export const PinsRequest = z.object({ stampIds: z.array(z.string().min(1).max(64)).max(4) }).strict();
 export const PinsResponse = z.object({ stamps: z.array(StampView).max(4) }).strict();
 export const RemoveStampResponse = z.object({ removed: z.literal(true) }).strict();
-/** PUT/DELETE /api/stamps/:id/like. */
-export const LikeResponse = z.object({ liked: z.boolean(), count: z.number().int(), viewerLiked: z.boolean() }).strict();
-/** Feed and passport grid, newest first. `nextBefore` = an opaque cursor: pass it as ?before= for the next page; null = the end. */
-export const StampsPageResponse = z.object({ stamps: z.array(StampView), nextBefore: z.string().nullable() }).strict();
-export const FeedResponse = StampsPageResponse;
-/** The passport, OLDEST first so page 1 stays page 1. `nextAfter` = pass it as ?after= for the next page; null = the end. */
 export const UserStampsResponse = z.object({ stamps: z.array(StampView), nextAfter: z.string().nullable() }).strict();
-export const UserPlacesResponse = z
-  .object({
-    places: z.array(
-      z
-        .object({
-          place: z.object({ id: z.string(), slug: z.string(), name: z.string(), neighborhood: z.string(), lat: z.number(), lng: z.number() }).strict(),
-          stamps: z.number().int(),
-          latestStamp: z.object({ id: z.string(), createdAt: IsoDate, photoUrl: z.string().nullable(), caption: z.string() }).strict(),
-        })
-        .strict(),
-    ),
-  })
-  .strict();
-
-/** GET /api/songs/search?q= : metadata from Apple's iTunes Search API, proxied. */
+export const UserPlacesResponse = z.object({
+  places: z.array(z.object({
+    place: z.object({ id: z.string(), slug: z.string(), name: z.string(), neighborhood: z.string(), lat: z.number(), lng: z.number() }).strict(),
+    stamps: z.number().int(),
+    latestStamp: z.object({ id: z.string(), createdAt: IsoDate, photoUrl: z.string().nullable(), caption: z.string() }).strict(),
+  }).strict()),
+}).strict();
 export const SongResult = z.object({ title: z.string(), artist: z.string(), album: z.string().nullable(), artUrl: z.string().nullable(), sourceId: z.string() }).strict();
 export const SongSearchResponse = z.object({ songs: z.array(SongResult) }).strict();
+export const MyPlacePageResponse = z.object({
+  place: Place.omit({ fromOsm: true }).extend({ fromOsm: z.boolean() }).strict(),
+  stamps: z.array(StampView),
+  visits: z.array(z.object({ day: z.string(), stamps: z.array(StampView) }).strict()),
+  inside: z.boolean().nullable(),
+  distanceM: z.number().int().nullable(),
+}).strict();
 
-/** GET /api/places/:id/mine?lat=&lng=: your own page for a place. `visits` stack your stamps by night; `inside` is null without a position. */
-export const MyPlacePageResponse = z
-  .object({
-    place: Place.omit({ fromOsm: true }).extend({ fromOsm: z.boolean() }).strict(),
-    stamps: z.array(StampView),
-    visits: z.array(z.object({ day: z.string(), stamps: z.array(StampView) }).strict()),
-    inside: z.boolean().nullable(),
-    distanceM: z.number().int().nullable(),
-  })
-  .strict();
-
-// ------------------------------------------------------------------------------------------------
-// People
-// ------------------------------------------------------------------------------------------------
-
-export const UserSearchResponse = z.object({ users: z.array(PersonRow) }).strict();
-export const Relationship = z
-  .object({
-    isSelf: z.boolean(),
-    /** The viewer's follow state toward this account. */
-    follow: FollowState,
-    followsYou: z.boolean(),
-    mutual: z.boolean(),
-  })
-  .strict();
-/**
- * `access: "limited"`: a private account the viewer doesn't follow. Show the handle, the badge, a generic avatar,
- * "This account is private" and Follow (Request) / Requested. Everything else, including every stamp and place, is
- * only in `access: "full"`.
- */
-export const ProfileResponse = z.discriminatedUnion("access", [
-  z
-    .object({
-      access: z.literal("full"),
-      user: z
-        .object({
-          handle: z.string(), displayName: z.string(), avatarUrl: z.string().nullable(), bio: z.string(), verified: z.boolean(), isPrivate: z.boolean(),
-          memberSince: IsoDate,
-          /** Private: present for yourself and for moderators, otherwise null. */
-          reputation: z.number().nullable(),
-          counts: z.object({ stamps: z.number().int(), places: z.number().int(), followers: z.number().int(), following: z.number().int() }).strict(),
-        })
-        .strict(),
-      relationship: Relationship,
-    })
-    .strict(),
-  z
-    .object({
-      access: z.literal("limited"),
-      user: z.object({ handle: z.string(), verified: z.boolean(), isPrivate: z.literal(true) }).strict(),
-      relationship: Relationship,
-    })
-    .strict(),
-]);
-export const FollowingResponse = z
-  .object({ following: z.array(z.object({ handle: z.string(), displayName: z.string(), avatarUrl: z.string().nullable(), verified: z.boolean(), mutual: z.boolean() }).strict()) })
-  .strict();
-/** PUT follow: public account -> "following"; private account -> "requested". DELETE (unfollow or cancel) -> "none". */
-export const FollowResponse = z.object({ state: FollowState }).strict();
-const StampRef = z.object({ id: z.string(), url: z.string().nullable(), place: z.object({ name: z.string(), slug: z.string() }).strict() }).strict();
-/** GET /api/me/activity: newest first, last 30 days (pending requests of any age). In-app only. */
-export const ActivityResponse = z
-  .object({
-    items: z.array(
-      z.discriminatedUnion("kind", [
-        z.object({ kind: z.literal("follow_request"), at: IsoDate, person: PersonView }).strict(),
-        z.object({ kind: z.literal("new_follower"), at: IsoDate, person: PersonView }).strict(),
-        z.object({ kind: z.literal("like"), at: IsoDate, person: PersonView, stamp: StampRef }).strict(),
-      ]),
-    ),
-  })
-  .strict();
-/** GET /api/users/:handle/followers and /following (403 `private_account` without full access). */
-export const PeopleListResponse = z.object({ people: z.array(PersonRow) }).strict();
-export const FollowRequestsResponse = z.object({ requests: z.array(z.object({ person: PersonView, requestedAt: IsoDate }).strict()) }).strict();
-export const FollowRequestDecisionRequest = z.object({ approve: z.boolean() }).strict();
-export const FollowRequestDecisionResponse = z.object({ approved: z.boolean() }).strict();
-export const ApproveAllResponse = z.object({ approved: z.number().int() }).strict();
-export const RemoveFollowerResponse = z.object({ removed: z.literal(true) }).strict();
-/** PATCH /api/me/profile: send only changed fields. */
-export const ProfileSettingsRequest = z
-  .object({ displayName: z.string().trim().min(1).max(60), bio: z.string().trim().max(150), isPrivate: z.boolean() })
-  .partial()
-  .strict();
-export const ProfileSettingsResponse = z
-  .object({
-    profile: z.object({ handle: z.string(), displayName: z.string(), bio: z.string(), isPrivate: z.boolean(), avatarUrl: z.string().nullable(), verified: z.boolean() }).strict(),
-    /** After switching to public, offer "Approve N pending requests?" when this is above 0. */
-    pendingRequests: z.number().int(),
-  })
-  .strict();
-/** POST /api/me/avatar (multipart `photo`) and DELETE /api/me/avatar. */
+export const ProfileSettingsRequest = z.object({ displayName: z.string().trim().min(1).max(60), bio: z.string().trim().max(150) }).partial().strict();
+export const ProfileSettingsResponse = z.object({
+  profile: z.object({ handle: z.string(), displayName: z.string(), bio: z.string(), avatarUrl: z.string().nullable() }).strict(),
+}).strict();
 export const AvatarResponse = z.object({ avatarUrl: z.string().nullable() }).strict();
-export const BlockResponse = z.object({ blocked: z.boolean() }).strict();
-/** Your blocks, newest first. Unblock with DELETE /api/users/:handle/block. */
-export const BlocksResponse = z.object({ blocks: z.array(z.object({ handle: z.string(), blockedAt: IsoDate }).strict()) }).strict();
-
-// ------------------------------------------------------------------------------------------------
-// Flags and moderation
-// ------------------------------------------------------------------------------------------------
-
-/** targetId: the stamp id; for USER, the account id or handle. */
-export const FlagRequest = z.object({ targetType: TargetType, targetId: z.string().min(1).max(64), reason: z.string().trim().min(3).max(300), category: FlagCategory.default("OTHER") }).strict();
-export const FlagResponse = z.object({ flag: z.object({ id: z.string() }).strict(), autoHidden: z.boolean() }).strict();
-export const ModActionRequest = z
-  .object({ targetType: TargetType, targetId: z.string().min(1).max(64), action: z.enum(["HIDE", "DISMISS", "RESTORE", "SUSPEND", "UNSUSPEND"]), note: z.string().trim().max(300).optional() })
-  .strict();
-export const ModActionResponse = z.object({ target: z.object({ id: z.string(), hidden: z.boolean() }).strict().nullable() }).strict();
-export const ModQueueItem = z
-  .object({
-    targetType: TargetType,
-    targetId: z.string(),
-    /** The place of a stamp; null for USER (account) reports. */
-    venue: z.object({ name: z.string(), slug: z.string() }).strict().nullable(),
-    content: z
-      .object({
-        kind: TargetType,
-        preview: z.string(),
-        /** Signed URL for photos (moderators can see hidden ones). */
-        url: z.string().optional(),
-        author: z.string(),
-        authorRep: z.number(),
-        /** Hidden (stamp) or suspended (account) time. */
-        hiddenAt: IsoDate.nullable(),
-        createdAt: IsoDate,
-      })
-      .strict()
-      .nullable(),
-    flags: z.array(z.object({ id: z.string(), reason: z.string(), category: FlagCategory, createdAt: IsoDate, by: z.string(), byRole: Role }).strict()),
-    history: z.array(z.object({ action: ModerationAction, by: z.string(), note: z.string().nullable(), at: IsoDate }).strict()),
-  })
-  .strict();
-export const ModQueueResponse = z.object({ items: z.array(ModQueueItem) }).strict();
-/** Hidden stamps and suspended accounts (newest first) for the Restore / Unsuspend screen. */
-export const ModHiddenResponse = z
-  .object({
-    items: z.array(
-      z
-        .object({
-          targetType: TargetType, targetId: z.string(), venue: z.object({ name: z.string(), slug: z.string() }).strict().nullable(),
-          preview: z.string(), url: z.string().optional(), author: z.string(), hiddenAt: IsoDate,
-        })
-        .strict(),
-    ),
-  })
-  .strict();
-export const ModLogResponse = z
-  .object({
-    events: z.array(
-      z.object({ id: z.string(), action: ModerationAction, targetType: z.enum(["PHOTO", "COMMENT", "REPORT", "USER"]), targetId: z.string(), by: z.string(), note: z.string().nullable(), createdAt: IsoDate }).strict(),
-    ),
-  })
-  .strict();
-
-// ------------------------------------------------------------------------------------------------
-// Admin (web only; not used by the iOS app)
-// ------------------------------------------------------------------------------------------------
-
-export const AdminUserFlagsResponse = z.object({ user: z.object({ handle: z.string(), geofenceExempt: z.boolean() }).strict() }).strict();
-export const AdminUserSearchResponse = z
-  .object({
-    users: z.array(
-      z
-        .object({
-          handle: z.string(), displayName: z.string(), email: z.string(), role: Role, isPrivate: z.boolean(),
-          verified: z.boolean(), verifiedAt: IsoDate.nullable(), suspended: z.boolean(), memberSince: IsoDate,
-        })
-        .strict(),
-    ),
-  })
-  .strict();
-/** POST /api/admin/users/:handle/verification. The note is required and goes into the append-only log. */
-export const VerificationRequest = z.object({ verified: z.boolean(), note: z.string().trim().min(3).max(300) }).strict();
-export const VerificationResponse = z.object({ user: z.object({ handle: z.string(), verified: z.boolean(), verifiedAt: IsoDate.nullable() }).strict() }).strict();
-export const VerificationLogResponse = z
-  .object({ events: z.array(z.object({ id: z.string(), handle: z.string(), action: z.enum(["GRANT", "REVOKE"]), note: z.string(), by: z.string(), at: IsoDate }).strict()) })
-  .strict();
-
-// ------------------------------------------------------------------------------------------------
-// Ops
-// ------------------------------------------------------------------------------------------------
 
 export const CronResponse = z.object({ ok: z.literal(true), prunedLoginAttempts: z.number().int(), prunedRateEvents: z.number().int(), ms: z.number() }).strict();
-
-export const HealthResponse = z
-  .object({ ok: z.literal(true), db: z.literal("up"), env: z.string(), commit: z.string().nullable(), ms: z.number() })
-  .strict();
-
-// ------------------------------------------------------------------------------------------------
-// Types
-// ------------------------------------------------------------------------------------------------
+export const HealthResponse = z.object({ ok: z.literal(true), db: z.literal("up"), env: z.string(), commit: z.string().nullable(), ms: z.number() }).strict();
 
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
 export type Attribution = z.infer<typeof Attribution>;
 export type PublicUser = z.infer<typeof PublicUser>;
-export type Role = z.infer<typeof Role>;
-export type TargetType = z.infer<typeof TargetType>;
-export type FlagCategory = z.infer<typeof FlagCategory>;
-export type FollowState = z.infer<typeof FollowState>;
-export type PersonView = z.infer<typeof PersonView>;
-export type PersonRow = z.infer<typeof PersonRow>;
-export type Relationship = z.infer<typeof Relationship>;
 export type PlaceRef = z.infer<typeof PlaceRef>;
 export type Place = z.infer<typeof Place>;
 export type PlacesResponse = z.infer<typeof PlacesResponse>;
 export type NearbyPlacesResponse = z.infer<typeof NearbyPlacesResponse>;
-export type LikeSummary = z.infer<typeof LikeSummary>;
 export type Song = z.infer<typeof Song>;
 export type NeighborhoodProgress = z.infer<typeof NeighborhoodProgress>;
 export type NeighborhoodIndexResponse = z.infer<typeof NeighborhoodIndexResponse>;
@@ -476,13 +157,10 @@ export type StampPhotoView = z.infer<typeof StampPhotoView>;
 export type PhotoLayoutRequest = z.infer<typeof PhotoLayoutRequest>;
 export type StampResponse = z.infer<typeof StampResponse>;
 export type StampEditRequest = z.infer<typeof StampEditRequest>;
-export type StampsPageResponse = z.infer<typeof StampsPageResponse>;
+export type UserStampsResponse = z.infer<typeof UserStampsResponse>;
 export type UserPlacesResponse = z.infer<typeof UserPlacesResponse>;
 export type SongResult = z.infer<typeof SongResult>;
 export type SongSearchResponse = z.infer<typeof SongSearchResponse>;
-export type ActivityResponse = z.infer<typeof ActivityResponse>;
-export type PeopleListResponse = z.infer<typeof PeopleListResponse>;
-export type FollowRequestsResponse = z.infer<typeof FollowRequestsResponse>;
 export type ProfileSettingsRequest = z.infer<typeof ProfileSettingsRequest>;
 export type ProfileSettingsResponse = z.infer<typeof ProfileSettingsResponse>;
 export type EmailChallengeResponse = z.infer<typeof EmailChallengeResponse>;
@@ -497,10 +175,6 @@ export type DeleteAccountRequest = z.infer<typeof DeleteAccountRequest>;
 export type DeleteAccountResponse = z.infer<typeof DeleteAccountResponse>;
 export type TokenResponse = z.infer<typeof TokenResponse>;
 export type MeResponse = z.infer<typeof MeResponse>;
-export type ProfileResponse = z.infer<typeof ProfileResponse>;
-export type FollowingResponse = z.infer<typeof FollowingResponse>;
-export type BlocksResponse = z.infer<typeof BlocksResponse>;
-export type UserSearchResponse = z.infer<typeof UserSearchResponse>;
-export type FlagRequest = z.infer<typeof FlagRequest>;
-export type ModQueueItem = z.infer<typeof ModQueueItem>;
-export type ModQueueResponse = z.infer<typeof ModQueueResponse>;
+export type MyPlacePageResponse = z.infer<typeof MyPlacePageResponse>;
+export type PinsResponse = z.infer<typeof PinsResponse>;
+export type CreateStampResponse = z.infer<typeof CreateStampResponse>;
