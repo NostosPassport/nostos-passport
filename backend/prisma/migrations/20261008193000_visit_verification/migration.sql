@@ -47,6 +47,9 @@ BEGIN
     sid := NEW.id;
   END IF;
 
+  -- Serialize edits to the parent and its photo set so concurrent last-content removals cannot both commit.
+  PERFORM 1 FROM photo WHERE id = sid FOR UPDATE;
+
   SELECT btrim(p.caption) <> '' OR p.song_title IS NOT NULL OR EXISTS (
     SELECT 1 FROM stamp_photo sp WHERE sp.stamp_id = p.id AND sp.removed_at IS NULL
   )
