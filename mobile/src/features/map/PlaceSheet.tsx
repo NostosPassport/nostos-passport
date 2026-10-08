@@ -13,7 +13,7 @@ import { type SheetModel, sheetShouldClose } from "./map-model";
 
 const HEIGHT = size.heroHeight;
 
-/** The bottom sheet for the pin you tapped: its name, where it is, whether you've stamped it, and how far you are. Swipe it down to close. */
+/** The bottom sheet for the pin you tapped. Proximity affects Now verification, never whether a memory may be created. */
 export function PlaceSheet({ model, onClose, onStamp, onOpenPlace }: { model: SheetModel | null; onClose: () => void; onStamp: () => void; onOpenPlace?: () => void }) {
   const y = useSharedValue<number>(HEIGHT);
   const startY = useSharedValue(0);
@@ -23,12 +23,8 @@ export function PlaceSheet({ model, onClose, onStamp, onOpenPlace }: { model: Sh
 
   const drag = Gesture.Pan()
     .withTestId("sheet-pan")
-    .onBegin(() => {
-      startY.value = y.value;
-    })
-    .onUpdate((e) => {
-      y.value = Math.max(0, startY.value + e.translationY);
-    })
+    .onBegin(() => { startY.value = y.value; })
+    .onUpdate((e) => { y.value = Math.max(0, startY.value + e.translationY); })
     .onEnd((e) => {
       if (sheetShouldClose(e.translationY, e.velocityY, HEIGHT)) scheduleOnRN(onClose);
       else y.value = withSpring(0, bookMotion.snap);
@@ -42,29 +38,20 @@ export function PlaceSheet({ model, onClose, onStamp, onOpenPlace }: { model: Sh
         <View style={styles.grabber} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
         <View style={styles.headRow}>
           <View style={styles.names}>
-            <Text variant="title2" color="brass" numberOfLines={2} accessibilityRole="header">
-              {model.title}
-            </Text>
-            {model.subtitle ? (
-              <Text variant="typewriterSmall" color="textSecondary">
-                {model.subtitle}
-              </Text>
-            ) : null}
+            <Text variant="title2" color="brass" numberOfLines={2} accessibilityRole="header">{model.title}</Text>
+            {model.subtitle ? <Text variant="typewriterSmall" color="textSecondary">{model.subtitle}</Text> : null}
           </View>
           <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" hitSlop={space.sm} style={styles.close}>
             <Icon name="xmark" color="dimBrass" size={size.iconSmall} />
           </Pressable>
         </View>
-        <Text variant="typewriter" color="textPrimary">
-          {model.status}
+        <Text variant="typewriter" color="textPrimary">{model.status}</Text>
+        {model.distance ? <Text variant="typewriterSmall" color="dimBrass">{model.distance}</Text> : null}
+        <Text variant="footnote" color={model.canVerify ? "accent" : "textTertiary"}>
+          {model.canVerify ? "A Now stamp here can be location verified." : "You can still make an unverified Now stamp or add a Past visit."}
         </Text>
-        {model.distance ? (
-          <Text variant="typewriterSmall" color="dimBrass">
-            {model.distance}
-          </Text>
-        ) : null}
         <View style={styles.actions}>
-          {model.canStamp ? <Button title="Stamp here" icon="seal.fill" block={false} onPress={onStamp} /> : null}
+          <Button title="Stamp this place" icon="seal.fill" block={false} onPress={onStamp} />
           {onOpenPlace ? <Button title="Place page" variant="secondary" block={false} onPress={onOpenPlace} /> : null}
         </View>
       </Animated.View>
