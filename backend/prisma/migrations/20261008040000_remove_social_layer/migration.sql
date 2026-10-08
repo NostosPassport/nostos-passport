@@ -29,18 +29,9 @@ DROP FUNCTION IF EXISTS lastcall_verified_needs_event();
 DROP FUNCTION IF EXISTS lastcall_follow_clears_request();
 DROP FUNCTION IF EXISTS lastcall_like_guard();
 
-CREATE OR REPLACE FUNCTION lastcall_photo_immutable() RETURNS trigger AS $$
-BEGIN
-  IF (NEW.id, NEW.user_id, NEW.venue_id, NEW.storage_key, NEW.mime_type, NEW.lat, NEW.lng, NEW.created_at, NEW.rating, NEW.countable)
-     IS DISTINCT FROM (OLD.id, OLD.user_id, OLD.venue_id, OLD.storage_key, OLD.mime_type, OLD.lat, OLD.lng, OLD.created_at, OLD.rating, OLD.countable) THEN
-    RAISE EXCEPTION 'lastcall: stamps are immutable except caption, song and removal' USING ERRCODE = 'insufficient_privilege';
-  END IF;
-  IF OLD.removed_at IS NOT NULL AND NEW.removed_at IS DISTINCT FROM OLD.removed_at THEN
-    RAISE EXCEPTION 'lastcall: a removed stamp stays removed' USING ERRCODE = 'insufficient_privilege';
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- The existing lastcall_photo_immutable() trigger function remains valid after hidden_at is removed:
+-- it already permits only caption/song/edit metadata and final removed_at changes while protecting
+-- identity, place, coordinates, timestamp, rating, storage identity and countable.
 
 DROP TYPE IF EXISTS "VerificationAction";
 DROP TYPE IF EXISTS "ModerationAction";
