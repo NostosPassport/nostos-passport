@@ -18,8 +18,14 @@ jest.mock("@/api", () => {
 const photos = [0, 1, 2].map((i) => ({ id: `ph${i}`, url: `https://x/${i}.jpg`, position: i, x: null, y: null, rotation: null }));
 const stamp = (over: Partial<StampView> = {}): StampView => ({
   id: "s1", photoUrl: photos[0]!.url, photos, caption: "hello there", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
-  page: 3, slot: 2, createdAt: "2026-10-04T03:41:00.000Z", editedAt: null, place: { id: "p1", slug: "velvet", name: "Velvet", neighborhood: "East Village", neighborhoodId: "n1" },
-  author: { handle: "ava", displayName: "Ava", avatarUrl: null, verified: false }, mine: true, likes: { count: 0, viewerLiked: false }, hidden: false, removed: false, ...over,
+  page: 3, slot: 2,
+  createdAt: "2026-10-08T15:00:00.000Z",
+  visitedAt: "2026-10-04T03:41:00.000Z",
+  verifiedAt: "2026-10-04T03:41:00.000Z",
+  verified: true,
+  editedAt: null,
+  place: { id: "p1", slug: "velvet", name: "Velvet", neighborhood: "East Village", neighborhoodId: "n1" },
+  ...over,
 });
 const wrap = (s: StampView) => render(<QueryClientProvider client={testQueryClient()}><VisaSpread stamp={s} /></QueryClientProvider>);
 
@@ -29,16 +35,23 @@ describe("VisaSpread", () => {
     mockLayout.mockResolvedValue({ stamp: stamp() });
   });
 
-  it("shows the date and time in New York, the place, the neighborhood and the page, the caption and the song as a ticket stub", async () => {
+  it("shows the visit date/time, place, page, memory content and verification state", async () => {
     await wrap(stamp());
     expect(screen.getByText("03 OCT 2026  ·  11:41 PM")).toBeTruthy();
     expect(screen.getByText("Velvet")).toBeTruthy();
     expect(screen.getByText("East Village  ·  page 3")).toBeTruthy();
+    expect(screen.getByText("Nostos visit verified")).toBeTruthy();
     expect(screen.getByText("hello there")).toBeTruthy();
     expect(screen.getByText("David Bowie")).toBeTruthy();
     expect(screen.getByLabelText("Song: Heroes by David Bowie")).toBeTruthy();
     expect(screen.getByLabelText("Stamp, Velvet")).toBeTruthy();
   });
+
+  it("shows subtle unverified copy for an unverified memory", async () => {
+    await wrap(stamp({ verified: false, verifiedAt: null }));
+    expect(screen.getByText("Visit not location verified")).toBeTruthy();
+  });
+
   it("types the caption out: the whole caption is always there for a screen reader", async () => {
     jest.useFakeTimers();
     try {
@@ -53,12 +66,14 @@ describe("VisaSpread", () => {
       jest.useRealTimers();
     }
   });
+
   it("shows no scrapbook photos and says so when there are none, and no caption line when there is none", async () => {
     await wrap(stamp({ photos: [], photoUrl: null, caption: "", song: null }));
     expect(screen.getByText("no photos on this page")).toBeTruthy();
     expect(screen.queryByLabelText(/^Photo \d/)).toBeNull();
     expect(screen.queryByText("SOUNDTRACK")).toBeNull();
   });
+
   it("lists each photo and opens one full screen, with a way to step through them and to go back", async () => {
     await wrap(stamp());
     expect(screen.getAllByLabelText(/^Photo \d of 3$/)).toHaveLength(3);
@@ -71,6 +86,7 @@ describe("VisaSpread", () => {
     await fireEvent.press(screen.getByLabelText("Back"));
     expect(screen.queryByText("3 of 3")).toBeNull();
   });
+
   it("saves the layout when the owner drops a photo: the dragged one on top, where it was left", async () => {
     await wrap(stamp());
     await act(async () => {
@@ -91,11 +107,6 @@ describe("VisaSpread", () => {
       expect(p.y).toBeGreaterThanOrEqual(0);
       expect(p.y).toBeLessThanOrEqual(1);
     }
-  });
-  it("tells you whose stamp it is when it isn't yours, and doesn't offer to move its photos", async () => {
-    await wrap(stamp({ mine: false }));
-    expect(screen.getByText(/@ava · at Velvet/)).toBeTruthy();
-    expect(screen.getAllByLabelText(/^Photo \d of 3$/)[0]!.props.accessibilityHint).toBe("Opens it full screen");
   });
 });
 
