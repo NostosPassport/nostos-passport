@@ -16,7 +16,7 @@ export const profileSettingsSchema = z.object({
 
 async function settingsView(db: Db, userId: string, now: Date) {
   const u = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { handle: true, displayName: true, bio: true, avatarKey: true } });
-  return { profile: { handle: u.handle, displayName: u.displayName, bio: u.bio, isPrivate: true, avatarUrl: await avatarUrl(u.avatarKey, now), verified: false }, pendingRequests: 0 };
+  return { profile: { handle: u.handle, displayName: u.displayName, bio: u.bio, avatarUrl: await avatarUrl(u.avatarKey, now) } };
 }
 
 export async function updateProfile(db: Db, actor: Actor | null, raw: unknown, now = new Date()) {
@@ -49,8 +49,12 @@ export async function setAvatar(db: Db, actor: Actor | null, bytes: Buffer, now 
   const before = await db.user.findUniqueOrThrow({ where: { id: me.userId }, select: { avatarKey: true } });
   const key = newStorageKey("avatars", "jpg");
   await storage.put(key, clean, "image/jpeg");
-  try { await db.user.update({ where: { id: me.userId }, data: { avatarKey: key } }); }
-  catch (err) { await storage.delete(key).catch(() => {}); throw err; }
+  try {
+    await db.user.update({ where: { id: me.userId }, data: { avatarKey: key } });
+  } catch (err) {
+    await storage.delete(key).catch(() => {});
+    throw err;
+  }
   if (before.avatarKey) await storage.delete(before.avatarKey).catch(() => {});
   return { avatarUrl: await avatarUrl(key, now) };
 }
