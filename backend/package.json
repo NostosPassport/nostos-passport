@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.22.0",
-  "engines": { "node": ">=20.11" },
+  "engines": { "node": "22.x" },
   "scripts": {
     "postinstall": "node scripts/ensure-env.mjs && prisma generate",
     "dev": "next dev --port 3001",
