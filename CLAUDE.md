@@ -34,8 +34,7 @@ The active design language is editorial: warm ivory paper, dark ink, and electri
 - Default branch: `main`.
 - `backend/`: Next.js 15, Prisma, Postgres.
 - `mobile/`: Expo SDK 57, Expo Router, React Native.
-- `reviews/` and `deliveries/`: dated historical evidence, not current instructions.
-- `NOSTOS-BUILD-PROMPT*.md`: historical prompts, superseded.
+- Historical review/delivery artifacts and superseded build prompts are retained in git history rather than the working tree.
 
 Current local defaults in committed configuration:
 
