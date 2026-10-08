@@ -14,7 +14,7 @@ import { dayLabel, stampLine, standing, visitSummary } from "@/features/place/pl
 import { formatDistance } from "@/lib/format";
 import { colors, radius, screenPadding, size, space } from "@/theme";
 
-/** Your page for one place: your stamps there, night by night, and whether you are inside its geofence right now. */
+/** Your page for one place: your visit memories and whether a new Now stamp can be verified right now. */
 export default function PlacePage() {
   return (
     <AccountGate title="Place" message="Sign in to see your stamps at this place.">
@@ -38,48 +38,24 @@ function Page() {
         {data ? (
           <>
             <View style={styles.head}>
-              <Text variant="largeTitle" color="brass" accessibilityRole="header">
-                {data.place.name}
-              </Text>
-              <Text variant="typewriterSmall" color="textSecondary">
-                {[data.place.neighborhood, data.place.address].filter(Boolean).join(" · ")}
-              </Text>
+              <Text variant="largeTitle" color="brass" accessibilityRole="header">{data.place.name}</Text>
+              <Text variant="typewriterSmall" color="textSecondary">{[data.place.neighborhood, data.place.address].filter(Boolean).join(" · ")}</Text>
               {stand?.text ? (
-                <Text variant="typewriter" color={stand.canStamp ? "brass" : "dimBrass"} accessibilityLiveRegion="polite">
-                  {stand.text}
-                </Text>
+                <Text variant="typewriter" color={stand.canVerify ? "brass" : "dimBrass"} accessibilityLiveRegion="polite">{stand.text}</Text>
               ) : null}
-              {stand?.canStamp ? <Button title="Stamp here" icon="seal.fill" block={false} onPress={() => router.push("/stamp/new")} /> : null}
+              <Button title="Stamp this place" icon="seal.fill" block={false} onPress={() => router.push("/stamp/new")} />
+              {!stand?.canVerify ? <Text variant="footnote" color="textTertiary">You can still make an unverified Now stamp or add a Past visit.</Text> : null}
             </View>
 
-            {summary ? (
-              <Text variant="typewriterSmall" color="dimBrass">
-                {summary.toUpperCase()}
-              </Text>
-            ) : (
-              <Text variant="callout" color="textSecondary">
-                You haven&apos;t stamped this place yet.
-              </Text>
-            )}
+            {summary ? <Text variant="typewriterSmall" color="dimBrass">{summary.toUpperCase()}</Text> : <Text variant="callout" color="textSecondary">You haven&apos;t stamped this place yet.</Text>}
 
             {data.visits.map((visit) => (
-              <View key={visit.day} style={styles.night}>
-                <Text variant="serifLabel" color="brass" accessibilityRole="header">
-                  {dayLabel(visit.day)}
-                </Text>
+              <View key={visit.day} style={styles.visit}>
+                <Text variant="serifLabel" color="brass" accessibilityRole="header">{dayLabel(visit.day)}</Text>
                 {visit.stamps.map((s) => (
-                  <Pressable
-                    key={s.id}
-                    onPress={() => router.push({ pathname: "/stamp/[id]", params: { id: s.id } })}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Stamp, ${stampLine(s)}`}
-                    accessibilityHint="Opens the stamp"
-                    style={styles.row}
-                  >
+                  <Pressable key={s.id} onPress={() => router.push({ pathname: "/stamp/[id]", params: { id: s.id } })} accessibilityRole="button" accessibilityLabel={`Stamp, ${stampLine(s)}${s.verified ? ", visit verified" : ""}`} accessibilityHint="Opens the stamp" style={styles.row}>
                     <StampMark input={{ placeId: s.place.id, placeName: s.place.name, neighborhoodId: s.place.neighborhoodId, neighborhoodName: s.place.neighborhood }} size={size.avatarLarge} />
-                    <Text variant="typewriter" color="textPrimary" style={styles.line} numberOfLines={3}>
-                      {stampLine(s)}
-                    </Text>
+                    <View style={styles.line}><Text variant="typewriter" color="textPrimary" numberOfLines={3}>{stampLine(s)}</Text>{s.verified ? <Text variant="footnote" color="accent">Nostos verified</Text> : null}</View>
                   </Pressable>
                 ))}
               </View>
@@ -88,10 +64,7 @@ function Page() {
         ) : q.isError ? (
           <InlineError message={errorText(q.error, "Couldn't load this place.")} onRetry={() => void q.refetch()} retrying={q.isFetching} />
         ) : (
-          <View style={styles.head} accessible accessibilityRole="progressbar" accessibilityLabel="Loading this place">
-            <Skeleton width="70%" height={size.iconLarge} />
-            <Skeleton width="45%" />
-          </View>
+          <View style={styles.head} accessible accessibilityRole="progressbar" accessibilityLabel="Loading this place"><Skeleton width="70%" height={size.iconLarge} /><Skeleton width="45%" /></View>
         )}
       </ScrollView>
     </View>
@@ -102,7 +75,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   content: { padding: screenPadding, gap: space.lg, paddingBottom: space.xxxl },
   head: { gap: space.xs },
-  night: { gap: space.xs, padding: space.md, borderRadius: radius.card, backgroundColor: colors.surface },
+  visit: { gap: space.xs, padding: space.md, borderRadius: radius.card, backgroundColor: colors.surface },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: size.hitTarget },
-  line: { flex: 1 },
+  line: { flex: 1, gap: 2 },
 });
