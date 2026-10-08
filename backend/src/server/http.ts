@@ -3,10 +3,8 @@ import { ZodError, type ZodType } from "zod";
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE } from "@/lib/auth/session";
 import { actorFromToken, type Actor } from "@/server/actor";
-import { ServiceError, badRequest, forbidden, notFound, unauthorized } from "@/server/errors";
-import { socialEnabled } from "@/server/social";
+import { ServiceError, badRequest, forbidden, unauthorized } from "@/server/errors";
 
-/** Reads one cookie from a raw Request (works in route handlers and in tests without Next's request scope). */
 export function readCookie(req: Request, name: string): string | undefined {
   const header = req.headers.get("cookie");
   if (!header) return undefined;
@@ -18,24 +16,15 @@ export function readCookie(req: Request, name: string): string | undefined {
   return undefined;
 }
 
-/**
- * Client IP for rate limiting: first hop of X-Forwarded-For (on Vercel that is the real client, set by the
- * edge), then X-Real-IP, else "unknown". Never used for authorization.
- */
 export function clientIp(req: Request): string {
   const xff = req.headers.get("x-forwarded-for");
   const first = xff?.split(",")[0]?.trim();
   return (first || req.headers.get("x-real-ip")?.trim() || "unknown").slice(0, 64);
 }
 
-/**
- * How a request authenticates. If an Authorization header is present it is the only credential considered
- * (a malformed or unknown bearer token is unauthenticated, never a fallback to the cookie).
- */
 export function credentials(req: Request): { kind: "bearer" | "cookie" | "none"; token: string | null } {
   const auth = req.headers.get("authorization");
   if (auth !== null) {
-    // Auth scheme is case-insensitive (RFC 7235); tokens are base64url.
     const m = /^bearer\s+([A-Za-z0-9_-]{20,200})$/i.exec(auth.trim());
     return { kind: "bearer", token: m ? m[1]! : null };
   }
@@ -43,11 +32,6 @@ export function credentials(req: Request): { kind: "bearer" | "cookie" | "none";
   return cookie ? { kind: "cookie", token: cookie } : { kind: "none", token: null };
 }
 
-/**
- * The caller, or null when anonymous. A request that *sends* a bearer token which doesn't resolve (malformed,
- * expired, revoked, or not an iOS session) gets 401 `invalid_token` on every route, public ones included,
- * so the app learns immediately that it must sign in again instead of silently seeing anonymous data.
- */
 export async function getActor(req: Request): Promise<Actor | null> {
   const cred = credentials(req);
   if (cred.kind === "bearer") {
@@ -64,70 +48,29 @@ export async function requireActor(req: Request): Promise<Actor> {
   return actor;
 }
 
-/**
- * CSRF defense for cookie-authenticated mutations: SameSite=Lax cookies plus an Origin check.
- * Browsers always send Origin on cross-site POST/PUT/PATCH/DELETE, so a mismatch is rejected.
- * Bearer-authenticated requests (the iOS app) are exempt: a cross-site page can't attach an Authorization
- * header without a CORS preflight, which this API never grants, and the cookie is ignored when a bearer
- * header is present.
- */
 export function assertSameOrigin(req: Request) {
   if (req.method === "GET" || req.method === "HEAD") return;
   if (credentials(req).kind === "bearer") return;
   const origin = req.headers.get("origin");
-  if (!origin) return; // non-browser clients (tests, curl) don't send Origin; cookies are still SameSite=Lax
+  if (!origin) return;
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   let originHost: string;
-  try {
-    originHost = new URL(origin).host;
-  } catch {
-    throw forbidden("Bad origin");
-  }
+  try { originHost = new URL(origin).host; } catch { throw forbidden("Bad origin"); }
   if (!host || originHost !== host) throw forbidden("Cross-origin request rejected");
 }
 
-/** Reads a JSON body without validating it; the service layer owns validation (and may transform values). */
 export async function readJson(req: Request): Promise<unknown> {
-  try {
-    return await req.json();
-  } catch {
-    throw badRequest("Body must be JSON");
-  }
+  try { return await req.json(); } catch { throw badRequest("Body must be JSON"); }
 }
 
 export async function parseJson<T>(req: Request, schema: ZodType<T>): Promise<T> {
   let raw: unknown;
-  try {
-    raw = await req.json();
-  } catch {
-    throw badRequest("Body must be JSON");
-  }
+  try { raw = await req.json(); } catch { throw badRequest("Body must be JSON"); }
   return schema.parse(raw);
 }
 
 type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
 
-/** A route that exists only when SOCIAL_ENABLED is on; otherwise it is a plain 404, as if it were never built. */
-export function socialRoute<C>(handler: Handler<C>): Handler<C> {
-  return route<C>(async (req, ctx) => {
-    if (!socialEnabled()) throw notFound();
-    return handler(req, ctx);
-  });
-}
-
-/** For `/api/users/:handle/...`: with social off, only your own handle exists. Anyone else's is a 404. */
-export function selfOrSocialRoute<C extends { params: Promise<{ handle: string }> }>(handler: Handler<C>): Handler<C> {
-  return route<C>(async (req, ctx) => {
-    if (!socialEnabled()) {
-      const actor = await getActor(req);
-      const handle = (await ctx.params).handle.toLowerCase();
-      if (!actor || actor.handle.toLowerCase() !== handle) throw notFound();
-    }
-    return handler(req, ctx);
-  });
-}
-
-/** Wraps a route handler: same-origin check for mutations and uniform error mapping. */
 export function route<C>(handler: Handler<C>): Handler<C> {
   return async (req, ctx) => {
     try {
@@ -147,13 +90,8 @@ export function errorResponse(err: unknown): Response {
     return NextResponse.json({ error: err.code, message: err.message }, { status: err.status, headers });
   }
   if (err instanceof ZodError) {
-    return NextResponse.json(
-      { error: "invalid_input", message: err.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; ") },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "invalid_input", message: err.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; ") }, { status: 400 });
   }
-  // A database backstop fired (the service checks first, so this is a race at a boundary, e.g. a rating edit that
-  // commits just after 5am). The triggers' messages start with "lastcall:"; answer 409 with that sentence.
   const guard = err instanceof Error ? /lastcall: ([^\n"]+)/.exec(err.message) : null;
   if (guard) {
     const text = guard[1]!.trim();
