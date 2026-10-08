@@ -56,16 +56,38 @@ describe("creating a stamp", () => {
     expect((await prisma.photo.findUniqueOrThrow({ where: { id: ok.id } })).rating).toBe(9);
   });
 
-  it("enforces each place's geofence on the server", async () => {
+  it("verifies Now stamps only when current coordinates are inside the place geofence", async () => {
     const tight = await makeVenue({ geofenceMeters: 30 });
     const wide = await makeVenue({ geofenceMeters: 400 });
+    const noLocationVenue = await makeVenue();
     const me = await makeActor();
     const near = { lat: INSIDE.lat + 0.0006, lng: INSIDE.lng };
-    await expect(makeStamp(me, tight.id, { at: near })).rejects.toMatchObject({ status: 403, message: expect.stringMatching(/within 30 m/) });
-    await expect(makeStamp(me, wide.id, { at: near })).resolves.toBeTruthy();
-    await expect(makeStamp(me, wide.id, { at: { lat: 91, lng: 0 }, now: new Date(Date.now() + 20 * 60_000) })).rejects.toMatchObject({ status: 400 });
+
+    const outside = await makeStamp(me, tight.id, { at: near });
+    expect(outside).toMatchObject({ verified: false, verifiedAt: null });
+
+    const inside = await makeStamp(me, wide.id, { at: near });
+    expect(inside.verified).toBe(true);
+    expect(inside.verifiedAt).not.toBeNull();
+
+    const noLocation = await createStamp(prisma, me, noLocationVenue.id, { meta: { caption: "no gps", mode: "now" } });
+    expect(noLocation).toMatchObject({ verified: false, verifiedAt: null });
+
+    await expect(makeStamp(me, (await makeVenue()).id, { at: { lat: 91, lng: 0 } })).rejects.toMatchObject({ status: 400 });
     await expect(makeStamp(me, "no-such-place")).rejects.toMatchObject({ status: 404 });
-    await expect(createStamp(prisma, null, wide.id, { meta: { caption: "x", lat: "1", lng: "1" } })).rejects.toMatchObject({ status: 401 });
+    await expect(createStamp(prisma, null, wide.id, { meta: { caption: "x", mode: "now" } })).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("accepts Past stamps from the last year, never verifies them, and rejects future or too-old dates", async () => {
+    const me = await makeActor();
+    const now = new Date("2026-10-08T19:00:00.000Z");
+    const venue = await makeVenue();
+    const visitedAt = new Date("2026-05-04T16:00:00.000Z");
+    const past = await createStamp(prisma, me, venue.id, { meta: { caption: "spring", mode: "past", visitedAt: visitedAt.toISOString() } }, now);
+    expect(past).toMatchObject({ verified: false, verifiedAt: null, visitedAt });
+
+    await expect(createStamp(prisma, me, (await makeVenue()).id, { meta: { caption: "future", mode: "past", visitedAt: "2026-10-10T12:00:00.000Z" } }, now)).rejects.toMatchObject({ status: 400 });
+    await expect(createStamp(prisma, me, (await makeVenue()).id, { meta: { caption: "old", mode: "past", visitedAt: "2025-09-01T12:00:00.000Z" } }, now)).rejects.toMatchObject({ status: 400 });
   });
 
   it("enforces the per-place cooldown and hourly post limit", async () => {
@@ -90,35 +112,44 @@ describe("creating a stamp", () => {
     expect(mem.size).toBe(before);
   });
 
-  it("rejects non-images and never returns visit coordinates or storage keys", async () => {
+  it("rejects non-images, never exposes raw coordinates, and does not retain verification coordinates", async () => {
     const venue = await makeVenue();
     const me = await makeActor();
-    await expect(
-      createStamp(prisma, me, venue.id, {
-        bytes: Buffer.from("not an image at all"),
-        meta: { caption: "x", lat: String(INSIDE.lat), lng: String(INSIDE.lng) },
-      }),
-    ).rejects.toMatchObject({ status: 415 });
+    await expect(createStamp(prisma, me, venue.id, { bytes: Buffer.from("not an image at all"), meta: { caption: "x", mode: "now", lat: String(INSIDE.lat), lng: String(INSIDE.lng) } })).rejects.toMatchObject({ status: 415 });
 
     const stamp = await makeStamp(me, venue.id);
     expect(JSON.stringify(stamp)).not.toMatch(/"(lat|lng|storageKey|userId)"/);
+    expect(await prisma.photo.findUniqueOrThrow({ where: { id: stamp.id } })).toMatchObject({ lat: null, lng: null });
   });
 });
 
 describe("editing and removing a stamp", () => {
-  it("lets only the owner edit caption and song while immutable visit data stays fixed", async () => {
+  it("lets only the owner edit caption and song", async () => {
     const venue = await makeVenue();
     const me = await makeActor();
     const other = await makeActor();
     const stamp = await makeStamp(me, venue.id, { caption: "before" });
 
     const edited = await editStamp(prisma, me, stamp.id, { caption: "after", song: { title: "Song", artist: "Band", artUrl: ART } });
-    expect(edited.stamp).toMatchObject({ caption: "after", song: { title: "Song", artist: "Band", artUrl: ART, sourceId: null }, photoUrl: stamp.photoUrl, createdAt: stamp.createdAt });
+    expect(edited.stamp).toMatchObject({ caption: "after", song: { title: "Song", artist: "Band", artUrl: ART, sourceId: null }, photoUrl: stamp.photoUrl, createdAt: stamp.createdAt, visitedAt: stamp.visitedAt });
     expect(edited.stamp.editedAt).not.toBeNull();
     expect((await editStamp(prisma, me, stamp.id, { song: null })).stamp.song).toBeNull();
     await expect(editStamp(prisma, other, stamp.id, { caption: "mine now" })).rejects.toMatchObject({ status: 404 });
     await expect(editStamp(prisma, null, stamp.id, { caption: "x" })).rejects.toMatchObject({ status: 401 });
     await expect(editStamp(prisma, me, stamp.id, {})).rejects.toThrow(/Nothing to change/);
+  });
+
+  it("allows visit-date edits and removes verification when a verified calendar day changes", async () => {
+    const me = await makeActor();
+    const stamp = await makeStamp(me, (await makeVenue()).id, { now: new Date("2026-10-08T18:00:00.000Z") });
+    expect(stamp.verified).toBe(true);
+
+    const sameDay = await editStamp(prisma, me, stamp.id, { visitedAt: "2026-10-08T22:00:00.000Z" }, new Date("2026-10-08T23:00:00.000Z"));
+    expect(sameDay.stamp.verified).toBe(true);
+
+    const changed = await editStamp(prisma, me, stamp.id, { visitedAt: "2026-10-07T16:00:00.000Z" }, new Date("2026-10-08T23:00:00.000Z"));
+    expect(changed.stamp).toMatchObject({ verified: false, verifiedAt: null });
+    await expect(editStamp(prisma, me, stamp.id, { visitedAt: "2026-10-09T16:00:00.000Z" }, new Date("2026-10-08T23:00:00.000Z"))).rejects.toMatchObject({ status: 400 });
   });
 
   it("does not allow an edit to leave a stamp with no content", async () => {
@@ -170,12 +201,13 @@ describe("owner passport and places", () => {
     expect(places[0]!.latestStamp.id).toBe(last.id);
   });
 
-  it("pages the passport oldest first with an after cursor and no gaps", async () => {
+  it("orders and pages the passport by visit date rather than record creation time", async () => {
     const me = await makeActor();
     const venue = await makeVenue();
     const base = Date.now() - 90 * 60_000;
     for (let i = 0; i < STAMPS_PAGE + 4; i++) {
-      await prisma.photo.create({ data: { userId: me.userId, venueId: venue.id, caption: `s${i}`, ...INSIDE, createdAt: new Date(base + i * 1000) } });
+      const at = new Date(base + i * 1000);
+      await prisma.photo.create({ data: { userId: me.userId, venueId: venue.id, caption: `s${i}`, lat: null, lng: null, createdAt: new Date(base + (STAMPS_PAGE + 4 - i) * 1000), visitedAt: at } });
     }
     const first = await listUserStamps(prisma, me, me.handle);
     const second = await listUserStamps(prisma, me, me.handle, first.nextAfter);
@@ -187,7 +219,7 @@ describe("owner passport and places", () => {
 });
 
 describe("pages and slots", () => {
-  it("numbers live stamps oldest first, three per page, and closes gaps after removal", async () => {
+  it("numbers live stamps oldest-visit first, three per page, and closes gaps after removal", async () => {
     const me = await makeActor();
     const t = Date.now() - 10 * 3600_000;
     const ids: string[] = [];
@@ -216,7 +248,7 @@ describe("places", () => {
     expect(JSON.stringify(near)).not.toMatch(/osmId/);
   });
 
-  it("my place page includes only my stamps and groups them by local day", async () => {
+  it("my place page includes only my stamps and groups them by visit day", async () => {
     const venue = await makeVenue();
     const me = await makeActor();
     const other = await makeActor();

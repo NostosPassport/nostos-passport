@@ -10,9 +10,10 @@ jest.mock("@/api", () => ({ api: {}, mediaUrl: (u: string) => u }));
 
 const progress = (over: Partial<NeighborhoodProgress> = {}): NeighborhoodProgress => ({ neighborhoodId: "n1", name: "East Village", borough: "Manhattan", visited: 4, total: 12, complete: false, justCompleted: false, newPlace: true, ...over });
 const stamp = (over: Partial<StampView> = {}): StampView => ({
-  id: "s9", photoUrl: null, photos: [], caption: "", song: null, page: 3, slot: 2, createdAt: "2026-10-03T00:00:00.000Z", editedAt: null,
+  id: "s9", photoUrl: null, photos: [], caption: "", song: null, page: 3, slot: 2,
+  createdAt: "2026-10-03T00:00:00.000Z", visitedAt: "2026-10-03T00:00:00.000Z", verifiedAt: null, verified: false, editedAt: null,
   place: { id: "p9", slug: "p9", name: "Katz's", neighborhood: "East Village", neighborhoodId: "n1" },
-  author: { handle: "ava", displayName: "Ava", avatarUrl: null, verified: false }, mine: true, likes: { count: 0, viewerLiked: false }, hidden: false, removed: false, ...over,
+  ...over,
 });
 
 describe("landing timeline", () => {

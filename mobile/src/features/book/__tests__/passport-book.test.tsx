@@ -15,15 +15,14 @@ jest.mock("../use-passport",()=>({usePassport:()=>mockData}));
 jest.mock("../../lab3d/Passport3DView",()=>{ const {Pressable}=jest.requireActual("react-native"); return ({Passport3DView:({onTap}:{onTap:()=>void})=><Pressable accessibilityRole="button" accessibilityLabel="Open your passport" onPress={onTap}/> }); });
 jest.mock("../first-run",()=>({useFirstRun:()=>({show:false,dismiss:jest.fn()})}));
 const stamp = (id: string, page: number, slot: number, name: string): StampView => ({
-  id, photoUrl: null, photos: [], caption: "", song: null, page, slot, createdAt: "2026-10-03T00:00:00.000Z", editedAt: null,
+  id, photoUrl: null, photos: [], caption: "", song: null, page, slot,
+  createdAt: "2026-10-08T20:00:00.000Z", visitedAt: "2026-10-03T00:00:00.000Z", verifiedAt: null, verified: false, editedAt: null,
   place: { id: `p-${id}`, slug: id, name, neighborhood: "East Village", neighborhoodId: null },
-  author: { handle: "ava", displayName: "Ava", avatarUrl: null, verified: false }, mine: true, likes: { count: 0, viewerLiked: false }, hidden: false, removed: false,
 });
 const ready = (over: Partial<PassportData> = {}): PassportData => ({
   status: "ready", handle: "ava", displayName: "Ava Lee", avatarUrl: null, bio: "", memberSince: "2026-10-03T04:00:00.000Z", stamps: [], pins: [],
   counts: { stamps: 0, places: 0, neighborhoods: 0 }, neighborhoods: [], retry: jest.fn(), ...over,
 });
-
 
 const tapPage=async(x:number)=>{await act(()=>fireGestureHandler(getByGestureTestId("flip-tap"),[{state:State.BEGAN,x,y:15},{state:State.ACTIVE,x,y:15},{state:State.END,x,y:15}]));};
 describe("PassportBook focused reading",()=>{

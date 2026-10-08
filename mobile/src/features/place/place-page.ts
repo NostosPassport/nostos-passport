@@ -17,23 +17,23 @@ export function dayLabel(day: string): string {
   return month ? `${m[3]} ${month} ${m[1]}` : day;
 }
 
-/** "3 stamps over 2 nights", "1 stamp, 1 night", or null when there are none. */
+/** "3 stamps over 2 visits", "1 stamp, 1 visit", or null when there are none. */
 export function visitSummary(visits: MyPlacePageResponse["visits"]): string | null {
   const stamps = visits.reduce((n, v) => n + v.stamps.length, 0);
   if (stamps === 0) return null;
-  return `${plural(stamps, "stamp")} over ${plural(visits.length, "night")}`.replace("1 stamp over 1 night", "1 stamp, 1 night");
+  return `${plural(stamps, "stamp")} over ${plural(visits.length, "visit")}`.replace("1 stamp over 1 visit", "1 stamp, 1 visit");
 }
 
-/** How you stand to the place right now: inside, so you can stamp; or how far; or nothing without a position. */
-export function standing(data: Pick<MyPlacePageResponse, "inside" | "distanceM">, format: (m: number) => string): { text: string | null; canStamp: boolean } {
-  if (data.inside === null) return { text: null, canStamp: false };
-  if (data.inside) return { text: "You're here", canStamp: true };
-  return { text: data.distanceM === null ? "Not here yet" : `${format(data.distanceM)} away`, canStamp: false };
+/** Current proximity is useful for verification, but it never controls whether a stamp can be created. */
+export function standing(data: Pick<MyPlacePageResponse, "inside" | "distanceM">, format: (m: number) => string): { text: string | null; canVerify: boolean } {
+  if (data.inside === null) return { text: null, canVerify: false };
+  if (data.inside) return { text: "Visit can be verified", canVerify: true };
+  return { text: data.distanceM === null ? null : `${format(data.distanceM)} away`, canVerify: false };
 }
 
-/** One line for a stamp in the list: its time, then its caption or song if it has one. */
+/** One line for a stamp in the list: visit time, then caption/song/photo count. */
 export function stampLine(s: MyPlacePageResponse["stamps"][number]): string {
-  const { time } = visaStamp(s.createdAt);
+  const { time } = visaStamp(s.visitedAt);
   const what = s.caption.trim() || (s.song ? `${s.song.title}, ${s.song.artist}` : s.photos.length > 0 ? `${plural(s.photos.length, "photo")}` : "");
   return [time, what].filter(Boolean).join("  ·  ");
 }

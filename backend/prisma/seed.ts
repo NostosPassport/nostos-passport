@@ -65,7 +65,6 @@ export async function seed(db: PrismaClient, opts: SeedOptions = {}): Promise<Se
 
   let stampCount = 0;
   const created: { id: string; userId: string; countable: boolean }[] = [];
-  const near = (p: { lat: number; lng: number }) => ({ lat: p.lat + (rng.next() - 0.5) * 0.0005, lng: p.lng + (rng.next() - 0.5) * 0.0006 });
 
   for (const person of PEOPLE) {
     const count = person.handle === "appreview" ? 2 : rng.int(3, 7);
@@ -89,8 +88,11 @@ export async function seed(db: PrismaClient, opts: SeedOptions = {}): Promise<Se
         }
       }
       const exempt = person.exempt === true;
-      const pos = exempt ? { lat: place.lat + 0.02, lng: place.lng } : near(place);
       const createdAt = ago(age);
+      const visitedAt = createdAt;
+      // Mix verified and unverified memories so both treatments are visible in local development.
+      // App Review/QA accounts stay unverified by definition.
+      const verifiedAt = !exempt && rng.chance(0.65) ? createdAt : null;
       await db.$transaction(async (tx) => {
         await tx.photo.create({
           data: {
@@ -102,9 +104,11 @@ export async function seed(db: PrismaClient, opts: SeedOptions = {}): Promise<Se
             caption: hasCaption ? rng.pick(CAPTIONS) : "",
             songTitle: song?.title ?? null,
             songArtist: song?.artist ?? null,
-            lat: pos.lat,
-            lng: pos.lng,
+            lat: null,
+            lng: null,
             createdAt,
+            visitedAt,
+            verifiedAt,
             countable: !exempt,
           },
         });

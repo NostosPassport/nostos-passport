@@ -3,11 +3,9 @@ import type { ZodTypeAny } from "zod";
 import * as C from "@/contracts/api";
 import { loginSchema, loginStartSchema, signupSchema, signupStartSchema } from "@/server/services/auth";
 import { changeEmailSchema, startEmailChangeSchema } from "@/server/services/email";
-import { flagSchema, moderateSchema } from "@/server/services/moderation";
 import { deleteAccountSchema } from "@/server/services/account";
 import { stampEditSchema } from "@/server/services/stamps";
 
-/** The app validates with the contract's request schemas; they must accept and reject exactly what the server does. */
 function agree(contract: ZodTypeAny, server: ZodTypeAny, samples: unknown[]) {
   for (const s of samples) expect(contract.safeParse(s).success, JSON.stringify(s)).toBe(server.safeParse(s).success);
 }
@@ -46,9 +44,7 @@ describe("contract request schemas agree with server validation", () => {
 
   it("login", () => {
     agree(C.LoginStartRequest, loginStartSchema, [
-      { email: "a@b.co" },
-      { email: "nope" },
-      { email: "a@b.co", extra: true },
+      { email: "a@b.co" }, { identifier: "ava" }, { email: "nope" }, { email: "a@b.co", extra: true },
     ]);
     agree(C.LoginRequest, loginSchema, [
       { challengeId: CHALLENGE, code: "123456" },
@@ -71,26 +67,13 @@ describe("contract request schemas agree with server validation", () => {
     ]);
   });
 
-  it("flags and moderation", () => {
-    agree(C.FlagRequest, flagSchema, [
-      { targetType: "STAMP", targetId: "p1", reason: "fake photo" }, { targetType: "USER", targetId: "someone", reason: "abuse" },
-      { targetType: "STAMP", targetId: "p1", reason: "no" }, { targetType: "PHOTO", targetId: "p1", reason: "fake photo" }, { targetType: "COMMENT", targetId: "c", reason: "hmm hmm" },
-      { targetType: "STAMP", targetId: "", reason: "fake" },
-      { targetType: "STAMP", targetId: "p1", reason: "not here", category: "NOT_AT_PLACE" }, { targetType: "USER", targetId: "u", reason: "too young", category: "UNDERAGE" },
-      { targetType: "USER", targetId: "u", reason: "follows me", category: "STALKING" }, { targetType: "USER", targetId: "u", reason: "nope nope", category: "BORING" },
-    ]);
-    agree(C.ModActionRequest, moderateSchema.innerType(), [
-      { targetType: "STAMP", targetId: "p", action: "HIDE" }, { targetType: "USER", targetId: "u", action: "SUSPEND", note: "abuse" }, { targetType: "STAMP", targetId: "p", action: "DELETE" },
-      { targetType: "PHOTO", targetId: "p", action: "HIDE" },
-    ]);
-  });
-
-  it("stamp edits", () =>
+  it("stamp edits, including visit dates", () =>
     agree(C.StampEditRequest, stampEditSchema, [
       { caption: "new caption" }, { caption: "x".repeat(280) }, { caption: "x".repeat(281) }, {}, { caption: "ok", extra: 1 },
       { song: null }, { song: { title: "T", artist: "A" } }, { song: { title: "T" } }, { song: { title: "", artist: "A" } },
       { song: { title: "T", artist: "A", artUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music/x/300x300bb.jpg", sourceId: "123" } },
       { song: { title: "T", artist: "A", artUrl: "https://evil.example/pixel.gif" } }, { song: { title: "T", artist: "A", artUrl: "http://a.mzstatic.com/x.jpg" } },
       { song: { title: "T", artist: "A", artUrl: null } },
+      { visitedAt: "2026-10-08T16:00:00.000Z" }, { visitedAt: "not-a-date" },
     ]));
 });

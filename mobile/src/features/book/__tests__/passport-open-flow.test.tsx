@@ -21,9 +21,9 @@ jest.mock("../../lab3d/Passport3DView", () => {
 jest.mock("../first-run", () => ({ useFirstRun: () => ({ show: false, dismiss: jest.fn() }) }));
 
 const stamp = (id: string, page: number, slot: number, name: string): StampView => ({
-  id, photoUrl: null, photos: [], caption: "", song: null, page, slot, createdAt: "2026-10-03T00:00:00.000Z", editedAt: null,
+  id, photoUrl: null, photos: [], caption: "", song: null, page, slot,
+  createdAt: "2026-10-08T20:00:00.000Z", visitedAt: "2026-10-03T00:00:00.000Z", verifiedAt: null, verified: false, editedAt: null,
   place: { id: `p-${id}`, slug: id, name, neighborhood: "East Village", neighborhoodId: null },
-  author: { handle: "ava", displayName: "Ava", avatarUrl: null, verified: false }, mine: true, likes: { count: 0, viewerLiked: false }, hidden: false, removed: false,
 });
 const ready = (over: Partial<PassportData> = {}): PassportData => ({
   status: "ready", handle: "ava", displayName: "Ava Lee", avatarUrl: null, bio: "", memberSince: "2026-10-03T04:00:00.000Z", stamps: [], pins: [],
@@ -76,7 +76,7 @@ describe("tapping the 3D passport: the cover opens, then the reader takes over",
     expect(screen.getByLabelText("Close passport")).toBeTruthy();
   });
 
-  it("without a live model (still loading, failed, or no GPU) a tap goes straight to the pages as before", async () => {
+  it("without a live model a tap goes straight to the pages", async () => {
     mockData = ready();
     await render(<PassportBook />);
     await fireEvent.press(screen.getByLabelText("Open your passport"));

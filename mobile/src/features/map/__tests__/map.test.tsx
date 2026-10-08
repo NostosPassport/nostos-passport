@@ -48,7 +48,9 @@ jest.mock("@/features/location/location-store", () => ({ useUserCoords: () => mo
 
 const place = (id: string, over: Partial<Place> = {}): Place => ({ id, slug: id, name: `Place ${id}`, address: "", neighborhood: "East Village", lat: 40.7222, lng: -73.9855, geofenceMeters: 100, neighborhoodId: "n1", fromOsm: false, ...over });
 const mineRow = (p: Place, stamps = 1): UserPlacesResponse["places"][number] => ({
-  place: { id: p.id, slug: p.slug, name: p.name, neighborhood: p.neighborhood, lat: p.lat, lng: p.lng }, stamps, latestStamp: { id: "s", createdAt: "2026-10-04T03:41:00.000Z", photoUrl: null, caption: "" },
+  place: { id: p.id, slug: p.slug, name: p.name, neighborhood: p.neighborhood, lat: p.lat, lng: p.lng },
+  stamps,
+  latestStamp: { id: "s", createdAt: "2026-10-04T03:41:00.000Z", visitedAt: "2026-10-04T03:41:00.000Z", photoUrl: null, caption: "" },
 });
 const region: MapRegion = { latitude: 40.7222, longitude: -73.9855, latitudeDelta: 0.02, longitudeDelta: 0.02 };
 
@@ -70,15 +72,15 @@ describe("map model", () => {
     expect(visiblePlaces(near, region, stats, null, 4)).toHaveLength(4);
     expect(visiblePlaces([], region, stats, null)).toEqual([]);
   });
-  it("describes the sheet in words: stamped or not, how far, and whether you are inside the geofence", () => {
+  it("describes proximity as verification eligibility without blocking stamp creation", () => {
     const p = place("a", { name: "Katz's", address: "205 E Houston St", geofenceMeters: 100 });
     const inside = sheetModel(p, { stamps: 1, latestAt: "2026-10-04T03:41:00.000Z" }, { lat: p.lat, lng: p.lng }, formatDistance);
-    expect(inside).toMatchObject({ title: "Katz's", subtitle: "East Village · 205 E Houston St", status: "Stamped once. Last on 03 OCT 2026.", canStamp: true });
+    expect(inside).toMatchObject({ title: "Katz's", subtitle: "East Village · 205 E Houston St", status: "Stamped once. Last on 03 OCT 2026.", canVerify: true });
     const far = sheetModel(p, undefined, { lat: p.lat + 0.02, lng: p.lng }, formatDistance);
     expect(far.status).toBe("Not stamped yet.");
-    expect(far.canStamp).toBe(false);
+    expect(far.canVerify).toBe(false);
     expect(far.distance).toMatch(/^2\.2 km away$/);
-    expect(sheetModel(p, { stamps: 4, latestAt: "2026-10-04T03:41:00.000Z" }, null, formatDistance)).toMatchObject({ distance: null, canStamp: false, status: "Stamped 4 times. Last on 03 OCT 2026." });
+    expect(sheetModel(p, { stamps: 4, latestAt: "2026-10-04T03:41:00.000Z" }, null, formatDistance)).toMatchObject({ distance: null, canVerify: false, status: "Stamped 4 times. Last on 03 OCT 2026." });
   });
   it("closes the sheet when it is dragged far enough down or flicked", () => {
     expect(sheetShouldClose(100, 0, 220)).toBe(true);
@@ -93,27 +95,28 @@ describe("pins and sheet", () => {
     const input = { placeId: "a", placeName: "A", neighborhoodId: null, neighborhoodName: "" };
     await render(<View><PinMarker kind="lit" selected={false} input={input} /><PinMarker kind="lit" selected input={input} /><PinMarker kind="dim" selected={false} input={input} /><PinMarker kind="dim" selected input={input} /></View>);
   });
-  it("shows nothing without a place, and the place's words with one; Stamp here only when you can", async () => {
+  it("always offers Stamp this place, while the note explains verification eligibility", async () => {
     const onStamp = jest.fn();
     const onClose = jest.fn();
-    const base = { title: "Katz's", subtitle: "East Village", status: "Not stamped yet.", distance: "30 m away", canStamp: false };
+    const base = { title: "Katz's", subtitle: "East Village", status: "Not stamped yet.", distance: "30 m away", canVerify: false };
     const none = await render(<PlaceSheet model={null} onClose={onClose} onStamp={onStamp} />);
     expect(none.toJSON()).toBeNull();
     await none.unmount();
     const a = await render(<PlaceSheet model={base} onClose={onClose} onStamp={onStamp} />);
     expect(screen.getByText("Katz's")).toBeTruthy();
     expect(screen.getByText("Not stamped yet.")).toBeTruthy();
-    expect(screen.queryByText("Stamp here")).toBeNull();
-    await a.unmount();
-    await render(<PlaceSheet model={{ ...base, canStamp: true }} onClose={onClose} onStamp={onStamp} />);
-    await fireEvent.press(screen.getByRole("button", { name: "Stamp here" }));
+    expect(screen.getByText(/unverified Now stamp or add a Past visit/)).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Stamp this place" }));
     expect(onStamp).toHaveBeenCalledTimes(1);
+    await a.unmount();
+    await render(<PlaceSheet model={{ ...base, canVerify: true }} onClose={onClose} onStamp={onStamp} />);
+    expect(screen.getByText(/can be location verified/)).toBeTruthy();
     await fireEvent.press(screen.getByLabelText("Close"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
   it("closes when swiped down", async () => {
     const onClose = jest.fn();
-    await render(<PlaceSheet model={{ title: "A", subtitle: "", status: "Not stamped yet.", distance: null, canStamp: false }} onClose={onClose} onStamp={jest.fn()} />);
+    await render(<PlaceSheet model={{ title: "A", subtitle: "", status: "Not stamped yet.", distance: null, canVerify: false }} onClose={onClose} onStamp={jest.fn()} />);
     await fireGestureHandler(getByGestureTestId("sheet-pan"), [
       { state: State.BEGAN, translationY: 0, velocityY: 0 },
       { state: State.ACTIVE, translationY: 120, velocityY: 200 },
@@ -138,11 +141,11 @@ describe("MapScreen", () => {
     expect(screen.getByLabelText("Cafe, not stamped yet")).toBeTruthy();
     expect(screen.getByLabelText("You are here")).toBeTruthy();
   });
-  it("opens the sheet for a pin, offers Stamp here when you are inside, and goes to the composer", async () => {
+  it("opens the sheet for a pin and goes to the composer whether or not verification is available", async () => {
     await render(<MapScreen />);
     await fireEvent.press(screen.getByLabelText("Katz's, stamped"));
     expect(screen.getByText("Stamped 2 times. Last on 03 OCT 2026.")).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: "Stamp here" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Stamp this place" }));
     expect(mockPush).toHaveBeenCalledWith("/stamp/new");
   });
   it("closes the sheet when the map is tapped", async () => {

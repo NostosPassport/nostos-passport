@@ -100,32 +100,36 @@ model Venue {
 }
 
 model Photo {
-  creationTransaction String   @default(dbgenerated("txid_current()::text")) @map("creation_transaction")
-  id                  String   @id @default(cuid())
-  userId              String   @map("user_id")
-  venueId             String   @map("venue_id")
-  storageKey          String?  @unique @map("storage_key")
-  mimeType            String?  @map("mime_type")
+  creationTransaction String    @default(dbgenerated("txid_current()::text")) @map("creation_transaction")
+  id                  String    @id @default(cuid())
+  userId              String    @map("user_id")
+  venueId             String    @map("venue_id")
+  storageKey          String?   @unique @map("storage_key")
+  mimeType            String?   @map("mime_type")
   caption             String
-  songTitle           String?  @map("song_title")
-  songArtist          String?  @map("song_artist")
-  songArtUrl          String?  @map("song_art_url")
-  songSourceId        String?  @map("song_source_id")
-  lat                 Float
-  lng                 Float
-  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  rating              Int?     @db.SmallInt
+  songTitle           String?   @map("song_title")
+  songArtist          String?   @map("song_artist")
+  songArtUrl          String?   @map("song_art_url")
+  songSourceId        String?   @map("song_source_id")
+  lat                 Float?
+  lng                 Float?
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  visitedAt           DateTime  @default(now()) @map("visited_at") @db.Timestamptz(3)
+  verifiedAt          DateTime? @map("verified_at") @db.Timestamptz(3)
+  rating              Int?      @db.SmallInt
   editedAt            DateTime? @map("edited_at") @db.Timestamptz(3)
   removedAt           DateTime? @map("removed_at") @db.Timestamptz(3)
-  countable           Boolean  @default(true)
-  user                User     @relation(fields: [userId], references: [id])
-  venue               Venue    @relation(fields: [venueId], references: [id])
+  countable           Boolean   @default(true)
+  user                User      @relation(fields: [userId], references: [id])
+  venue               Venue     @relation(fields: [venueId], references: [id])
   photos              StampPhoto[]
   pins                PinnedStamp[]
 
   @@index([venueId, createdAt])
   @@index([userId, createdAt])
   @@index([createdAt, id])
+  @@index([venueId, visitedAt])
+  @@index([userId, visitedAt])
   @@map("photo")
 }
 

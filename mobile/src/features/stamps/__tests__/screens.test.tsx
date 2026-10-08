@@ -1,7 +1,4 @@
-/**
- * No screen renders blank: every state of the feed, a memory and the song picker shows something a person can read
- * or act on (a skeleton, a message, an error with Try again), never an empty view.
- */
+/** Core stamp detail and song-picker screen states. */
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 
@@ -11,102 +8,54 @@ import { songDraft } from "@/features/stamps/song-draft";
 import { ApiError } from "@/api/client";
 import type { StampView } from "@/api/contracts";
 import { testQueryClient } from "@/test/query-client";
-import Home from "@/app/(app)/(tabs)/index";
 import StampDetail from "@/app/(app)/stamp/[id]";
 import SongPicker from "@/app/(app)/stamp/song";
 
 type Query = { data?: unknown; isPending?: boolean; isError?: boolean; isFetching?: boolean; error?: unknown; refetch?: () => void; [k: string]: unknown };
-let mockAuth = "signedIn";
-let mockFeed: Query;
 let mockStamp: Query;
 let mockSongs: Query;
 let mockLocalId = "s1";
 let mockSongQueries: string[] = [];
 
-jest.mock("@shopify/flash-list", () => ({ FlashList: jest.requireActual("react-native").FlatList }));
 jest.mock("expo-router", () => ({
   router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() },
   Stack: { Screen: () => null },
   useLocalSearchParams: () => ({ id: mockLocalId }),
   useFocusEffect: jest.fn(),
 }));
-jest.mock("@/auth/auth-context", () => ({ useAuth: () => ({ status: mockAuth, signIn: jest.fn(), signOut: jest.fn(), forget: jest.fn() }) }));
-jest.mock("@/auth/account-state", () => ({ useAccountState: () => ({ state: mockAuth === "signedIn" ? "ready" : "checking", retry: jest.fn(), retrying: false }) }));
 jest.mock("@/api/queries", () => ({
   qk: jest.requireActual("@/api/keys").qk,
-  useFeed: () => mockFeed,
   useStamp: () => mockStamp,
   usePins: () => ({ data: { stamps: [] } }),
   useSongSearch: (query: string) => { mockSongQueries.push(query); return mockSongs; },
-  useMe: () => ({ data: { user: { handle: "me" } } }),
 }));
 jest.mock("@/api", () => {
   const client = jest.requireActual("@/api/client");
-  return { api: {}, mediaUrl: (u: string) => u, ApiError: client.ApiError, errorText: client.errorText };
+  return { api: { pins: { set: jest.fn() }, stamps: { remove: jest.fn() } }, mediaUrl: (u: string) => u, ApiError: client.ApiError, errorText: client.errorText };
 });
-jest.mock("@/features/moderation/content-actions", () => ({
-  ...jest.requireActual("@/features/moderation/content-actions"),
-  useStampActions: () => () => [],
-}));
-jest.mock("@/features/moderation/flagged-store", () => ({ useFlaggedIds: () => new Set<string>() }));
 
 const stamp: StampView = {
-  id: "s1", photoUrl: null, photos: [], page: 1, slot: 1, caption: "hello there", song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
-  createdAt: "2026-09-24T02:00:00.000Z", editedAt: null, place: { id: "p1", slug: "velvet", name: "Velvet", neighborhood: "East Village", neighborhoodId: null },
-  author: { handle: "sam", displayName: "Sam", avatarUrl: null, verified: false }, mine: false, likes: { count: 2, viewerLiked: false }, hidden: false, removed: false,
+  id: "s1",
+  photoUrl: null,
+  photos: [],
+  page: 1,
+  slot: 1,
+  caption: "hello there",
+  song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
+  createdAt: "2026-10-08T20:00:00.000Z",
+  visitedAt: "2026-09-24T02:00:00.000Z",
+  verifiedAt: "2026-09-24T02:00:00.000Z",
+  verified: true,
+  editedAt: null,
+  place: { id: "p1", slug: "velvet", name: "Velvet", neighborhood: "East Village", neighborhoodId: null },
 };
 const wrap = async (ui: React.ReactElement) => render(<QueryClientProvider client={testQueryClient()}>{ui}</QueryClientProvider>);
 const quiet = () => jest.spyOn(console, "error").mockImplementation(() => undefined);
 
-describe("Home feed", () => {
-  beforeEach(() => (mockAuth = "signedIn"));
-
-  it("loading: a skeleton, not nothing", async () => {
-    mockFeed = { isPending: true };
-    await wrap(<Home />);
-    expect(screen.toJSON()).not.toBeNull();
-    expect(screen.queryByText("Nothing here yet")).toBeNull();
-  });
-
-  it("empty: offers a direct path to stamp a place", async () => {
-    mockFeed = { isPending: false, data: { pages: [{ stamps: [], nextBefore: null }] }, hasNextPage: false };
-    await wrap(<Home />);
-    expect(screen.getByText("Nothing here yet")).toBeTruthy();
-    expect(screen.getByText("There are no stamps to show here yet.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Stamp a place" })).toBeTruthy();
-    expect(screen.queryByText("Find people")).toBeNull();
-  });
-
-  it("failed: the server's reason and Try again", async () => {
-    mockFeed = { isPending: false, isError: true, error: new ApiError(0, "offline", "You're offline."), refetch: jest.fn() };
-    await wrap(<Home />);
-    expect(screen.getByText("You're offline.")).toBeTruthy();
-    expect(screen.getByText("Try again")).toBeTruthy();
-  });
-
-  it("with stamps: shows where, the caption and the song", async () => {
-    mockFeed = { isPending: false, data: { pages: [{ stamps: [stamp], nextBefore: null }] }, hasNextPage: false };
-    await wrap(<Home />);
-    expect(screen.getByText("hello there")).toBeTruthy();
-    expect(screen.getByText("Heroes")).toBeTruthy();
-    expect(screen.getByText(/Velvet/)).toBeTruthy();
-    expect(screen.getByLabelText("Like, 2 likes")).toBeTruthy();
-  });
-
-  it("signed-out state never exposes the removed preview experience", async () => {
-    mockAuth = "signedOut";
-    mockFeed = { isPending: true };
-    await wrap(<Home />);
-    expect(screen.getByText("Checking your account")).toBeTruthy();
-    expect(screen.queryByText("A passport for New York")).toBeNull();
-    expect(screen.queryByText("Find people")).toBeNull();
-  });
-});
-
 describe("Stamp detail", () => {
   beforeEach(() => {
-    mockAuth = "signedIn";
     mockLocalId = "s1";
+    jest.clearAllMocks();
   });
 
   it("loading, gone, failed and loaded all show something", async () => {
@@ -132,14 +81,22 @@ describe("Stamp detail", () => {
     expect(screen.getByText("hello there")).toBeTruthy();
     expect(screen.getByText("David Bowie")).toBeTruthy();
     expect(screen.getByText(/East Village, NEW YORK/)).toBeTruthy();
+    expect(screen.getByText("VISIT VERIFIED")).toBeTruthy();
+    expect(screen.getByText(/confirmed this device was near the venue/)).toBeTruthy();
   });
 
-  it("a private account's memory reads as unavailable, with no author, place or caption leaked", async () => {
+  it("shows unverified only as fine-print metadata", async () => {
+    mockStamp = { data: { stamp: { ...stamp, verified: false, verifiedAt: null } } };
+    await wrap(<StampDetail />);
+    expect(screen.queryByText("VISIT VERIFIED")).toBeNull();
+    expect(screen.getByText("VISIT NOT LOCATION VERIFIED")).toBeTruthy();
+  });
+
+  it("unavailable owner data does not leak memory content", async () => {
     mockStamp = { isError: true, error: new ApiError(404, "not_found", "Stamp not found"), refetch: jest.fn() };
     await wrap(<StampDetail />);
     expect(screen.getByText("This memory isn't available")).toBeTruthy();
-    expect(screen.queryByText(/Sam|sam|Velvet|hello there/)).toBeNull();
-    expect(screen.queryByText("Anonymous")).toBeNull();
+    expect(screen.queryByText(/Velvet|hello there/)).toBeNull();
   });
 });
 

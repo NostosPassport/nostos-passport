@@ -1,4 +1,4 @@
-import { autoPlace, hasContent, stampChanges, orderPlaces, placeDistanceLabel, stampFields, stampProblem, CAPTION_MAX } from "../composer";
+import { hasContent, stampChanges, orderPlaces, placeDistanceLabel, stampFields, stampProblem, CAPTION_MAX } from "../composer";
 import { formatDistance } from "@/lib/format";
 
 const song = { title: "Heroes", artist: "David Bowie", artUrl: "https://is1-ssl.mzstatic.com/a.jpg", sourceId: "1" };
@@ -16,7 +16,7 @@ describe("stamp content rule", () => {
 
   it("says what's missing, in order: place first, then content, then length", () => {
     const empty = { photoUris: [], caption: "", song: null };
-    expect(stampProblem(empty, null)).toBe("Choose where you are.");
+    expect(stampProblem(empty, null)).toBe("Choose a place.");
     expect(stampProblem(empty, "p1")).toBe("Add a photo, a caption or a song.");
     expect(stampProblem({ ...empty, caption: "x".repeat(CAPTION_MAX + 1) }, "p1")).toMatch(/280 characters/);
     expect(stampProblem({ ...empty, caption: "ok" }, "p1")).toBeNull();
@@ -24,44 +24,53 @@ describe("stamp content rule", () => {
 });
 
 describe("stampFields", () => {
-  it("sends coordinates always, and only the parts that exist", () => {
-    expect(stampFields({ caption: "", song: null }, { lat: 40.7, lng: -73.9 })).toEqual([["lat", "40.7"], ["lng", "-73.9"]]);
-    expect(stampFields({ caption: "  hello  ", song }, { lat: 1, lng: 2 })).toEqual([
-      ["lat", "1"], ["lng", "2"], ["caption", "hello"], ["songTitle", "Heroes"], ["songArtist", "David Bowie"],
+  const visit = new Date("2026-10-08T16:00:00.000Z");
+  it("sends optional coordinates only for Now, and visit date only for Past", () => {
+    expect(stampFields({ caption: "", song: null }, "now", visit, { lat: 40.7, lng: -73.9 })).toEqual([
+      ["mode", "now"], ["lat", "40.7"], ["lng", "-73.9"],
+    ]);
+    expect(stampFields({ caption: "", song: null }, "now", visit, null)).toEqual([["mode", "now"]]);
+    expect(stampFields({ caption: "", song: null }, "past", visit, { lat: 1, lng: 2 })).toEqual([
+      ["mode", "past"], ["visitedAt", visit.toISOString()],
+    ]);
+  });
+
+  it("includes only optional memory fields that exist", () => {
+    expect(stampFields({ caption: "  hello  ", song }, "now", visit, { lat: 1, lng: 2 })).toEqual([
+      ["mode", "now"], ["lat", "1"], ["lng", "2"], ["caption", "hello"], ["songTitle", "Heroes"], ["songArtist", "David Bowie"],
       ["songArtUrl", "https://is1-ssl.mzstatic.com/a.jpg"], ["songSourceId", "1"],
     ]);
-    expect(stampFields({ caption: "", song: { ...song, artUrl: null, sourceId: null } }, { lat: 1, lng: 2 }).map((f) => f[0])).toEqual(["lat", "lng", "songTitle", "songArtist"]);
+    expect(stampFields({ caption: "", song: { ...song, artUrl: null, sourceId: null } }, "now", visit, null).map((f) => f[0])).toEqual(["mode", "songTitle", "songArtist"]);
   });
 });
 
 describe("choosing a place", () => {
-  it("picks a place for you only when exactly one geofence has you inside", () => {
-    expect(autoPlace([place({ id: "a" })])?.id).toBe("a");
-    expect(autoPlace([place({ id: "a" }), place({ id: "b" })])).toBeNull();
-    expect(autoPlace([place({ id: "a", inside: false })])).toBeNull();
-    expect(autoPlace([])).toBeNull();
-  });
-
   it("lists places you're inside first, then the nearest ones", () => {
     const ordered = orderPlaces([place({ id: "far", inside: false, distanceM: 250 }), place({ id: "near", inside: false, distanceM: 150 }), place({ id: "here", inside: true, distanceM: 30 })]);
     expect(ordered.map((p) => p.id)).toEqual(["here", "near", "far"]);
   });
 
-  it("says how far away, in km from 1000 m up", () => {
-    expect(placeDistanceLabel(place({ inside: true }), formatDistance)).toBe("You're here");
-    expect(placeDistanceLabel(place({ inside: false, distanceM: 140, geofenceMeters: 100 }), formatDistance)).toBe("140 m away, need to be within 100 m");
-    expect(placeDistanceLabel(place({ inside: false, distanceM: 1815, geofenceMeters: 100 }), formatDistance)).toBe("1.8 km away, need to be within 100 m");
+  it("uses verification-positive language without blocking distant places", () => {
+    expect(placeDistanceLabel(place({ inside: true }), formatDistance)).toBe("Visit can be verified");
+    expect(placeDistanceLabel(place({ inside: false, distanceM: 140 }), formatDistance)).toBe("140 m away");
+    expect(placeDistanceLabel(place({ inside: false, distanceM: 1815 }), formatDistance)).toBe("1.8 km away");
   });
 });
 
 describe("stampChanges (editing)", () => {
-  const before = { caption: "before", song };
+  const original = new Date("2026-10-08T16:00:00.000Z");
+  const before = { caption: "before", song, visitedAt: original.toISOString() };
   it("sends nothing when nothing changed, and only what did", () => {
-    expect(stampChanges(before, "before", song)).toEqual({});
-    expect(stampChanges(before, "  before  ", { ...song })).toEqual({});
-    expect(stampChanges(before, "after", song)).toEqual({ caption: "after" });
-    expect(stampChanges(before, "before", null)).toEqual({ song: null });
-    expect(stampChanges({ caption: "", song: null }, "", { ...song, title: "New" })).toEqual({ song: { title: "New", artist: "David Bowie", artUrl: song.artUrl, sourceId: "1" } });
-    expect(stampChanges(before, "", null)).toEqual({ caption: "", song: null });
+    expect(stampChanges(before, "before", song, original)).toEqual({});
+    expect(stampChanges(before, "  before  ", { ...song }, original)).toEqual({});
+    expect(stampChanges(before, "after", song, original)).toEqual({ caption: "after" });
+    expect(stampChanges(before, "before", null, original)).toEqual({ song: null });
+    expect(stampChanges({ caption: "", song: null, visitedAt: original.toISOString() }, "", { ...song, title: "New" }, original)).toEqual({ song: { title: "New", artist: "David Bowie", artUrl: song.artUrl, sourceId: "1" } });
+    expect(stampChanges(before, "", null, original)).toEqual({ caption: "", song: null });
+  });
+
+  it("sends a visit-date edit independently", () => {
+    const changed = new Date("2026-10-07T16:00:00.000Z");
+    expect(stampChanges(before, "before", song, changed)).toEqual({ visitedAt: changed.toISOString() });
   });
 });

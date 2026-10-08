@@ -1,0 +1,38 @@
+name: Visit verification check
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  static-and-mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+      - name: Install backend
+        working-directory: backend
+        run: pnpm install --frozen-lockfile
+      - name: Backend typecheck
+        working-directory: backend
+        run: pnpm typecheck
+      - name: Backend lint
+        working-directory: backend
+        run: pnpm lint
+      - name: Install mobile
+        working-directory: mobile
+        run: npm ci
+      - name: Mobile check
+        working-directory: mobile
+        run: npm run check
+      - name: Contract sync
+        working-directory: mobile
+        run: npx jest src/api/__tests__/contracts-sync.test.ts --silent
