@@ -1,7 +1,3 @@
-/**
- * Account deletion (App Store Guideline 5.1.1(v)). User content can never be deleted (invariant 5), so
- * deleting an account anonymizes it after a fresh code is verified against the account's current email.
- */
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
@@ -11,12 +7,8 @@ import type { Actor } from "@/server/actor";
 import { notFound } from "@/server/errors";
 import { requireSignedIn } from "@/server/permissions";
 import { consumeEmailChallenge, startEmailChallenge } from "@/server/services/email-code";
-import { lockVerification } from "@/server/services/verification";
 
-export const deleteAccountSchema = z
-  .object({ challengeId: z.string().uuid(), code: z.string().trim().regex(/^\d{6}$/, "Enter the six-digit code") })
-  .strict();
-
+export const deleteAccountSchema = z.object({ challengeId: z.string().uuid(), code: z.string().trim().regex(/^\d{6}$/, "Enter the six-digit code") }).strict();
 export const DELETED_DISPLAY_NAME = "Deleted user";
 
 export async function startDeleteAccount(db: Db, actor: Actor | null, meta: { ip: string; now?: Date }) {
@@ -32,13 +24,7 @@ export async function deleteAccount(db: Db, actor: Actor | null, raw: unknown, n
   const user = await db.user.findUnique({ where: { id: me.userId } });
   if (!user || user.deletedAt) throw notFound("Account not found");
 
-  await consumeEmailChallenge(db, {
-    challengeId: data.challengeId,
-    code: data.code,
-    purpose: "DELETE_ACCOUNT",
-    expectedEmail: user.email,
-    now,
-  });
+  await consumeEmailChallenge(db, { challengeId: data.challengeId, code: data.code, purpose: "DELETE_ACCOUNT", expectedEmail: user.email, now });
 
   const tag = randomBytes(8).toString("hex");
   let photoKeys: string[] = [];
@@ -47,25 +33,11 @@ export async function deleteAccount(db: Db, actor: Actor | null, raw: unknown, n
     const photos = await tx.photo.findMany({ where: { userId: user.id }, select: { id: true, storageKey: true } });
     const extra = await tx.stampPhoto.findMany({ where: { stampId: { in: photos.map((p) => p.id) } }, select: { storageKey: true } });
     photoKeys = [...new Set([...photos.flatMap((p) => (p.storageKey ? [p.storageKey] : [])), ...extra.map((e) => e.storageKey)])];
-    if (photos.length) {
-      await tx.photo.updateMany({ where: { userId: user.id, hiddenAt: null }, data: { hiddenAt: now } });
-      await tx.moderationEvent.createMany({
-        data: photos.map((p) => ({ action: "ACCOUNT_DELETED" as const, targetType: "PHOTO" as const, targetId: p.id, actorId: null, note: "Author deleted their account", createdAt: now })),
-      });
-    }
+    await tx.photo.updateMany({ where: { userId: user.id, removedAt: null }, data: { removedAt: now } });
     await tx.session.deleteMany({ where: { userId: user.id } });
-    await tx.follow.deleteMany({ where: { OR: [{ followerId: user.id }, { followeeId: user.id }] } });
-    await tx.followRequest.deleteMany({ where: { OR: [{ requesterId: user.id }, { targetId: user.id }] } });
-    await tx.photoLike.deleteMany({ where: { userId: user.id } });
     await tx.pinnedStamp.deleteMany({ where: { userId: user.id } });
     await tx.neighborhoodCompletion.deleteMany({ where: { userId: user.id } });
     await tx.rateEvent.deleteMany({ where: { userId: user.id } });
-    await lockVerification(tx, user.id);
-    const { verifiedAt } = await tx.user.findUniqueOrThrow({ where: { id: user.id }, select: { verifiedAt: true } });
-    if (verifiedAt) {
-      await tx.verificationEvent.create({ data: { userId: user.id, action: "REVOKE", note: "Account deleted", actorId: null, createdAt: now } });
-    }
-    await tx.block.deleteMany({ where: { OR: [{ blockerId: user.id }, { blockedId: user.id }] } });
     await tx.loginAttempt.deleteMany({ where: { email: user.email } });
     await tx.emailChallenge.deleteMany({ where: { email: user.email } });
     await tx.user.update({
@@ -77,12 +49,9 @@ export async function deleteAccount(db: Db, actor: Actor | null, raw: unknown, n
         passwordHash: null,
         emailVerifiedAt: null,
         ageVerifiedAt: null,
-        role: "USER",
         geofenceExempt: false,
         bio: "",
         avatarKey: null,
-        verifiedAt: null,
-        isPrivate: true,
         deletedAt: now,
       },
     });

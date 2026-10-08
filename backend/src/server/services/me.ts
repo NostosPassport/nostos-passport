@@ -8,13 +8,11 @@ import { avatarUrl } from "@/server/services/people";
 export async function getMe(db: Db, actor: Actor | null, now = new Date()) {
   const me = requireSignedIn(actor);
   const user = await db.user.findUnique({ where: { id: me.userId }, select: {
-    id: true, email: true, handle: true, displayName: true, role: true, createdAt: true, reputation: true,
-    termsAcceptedAt: true, termsVersion: true, geofenceExempt: true, bio: true, avatarKey: true,
+    id: true, email: true, handle: true, displayName: true, createdAt: true, termsAcceptedAt: true, termsVersion: true, geofenceExempt: true, bio: true, avatarKey: true,
   } });
   if (!user) throw notFound("Account not found");
   return {
-    user: { id: user.id, email: user.email, handle: user.handle, displayName: user.displayName, role: user.role, memberSince: user.createdAt, reputation: user.reputation, isPrivate: true, bio: user.bio, avatarUrl: await avatarUrl(user.avatarKey, now), verified: false },
-    social: { pendingFollowRequests: 0 },
+    user: { id: user.id, email: user.email, handle: user.handle, displayName: user.displayName, memberSince: user.createdAt, bio: user.bio, avatarUrl: await avatarUrl(user.avatarKey, now) },
     settings: { geofenceExempt: user.geofenceExempt },
     terms: { acceptedVersion: user.termsVersion, acceptedAt: user.termsAcceptedAt, currentVersion: CURRENT_TERMS_VERSION, needsAcceptance: user.termsVersion !== CURRENT_TERMS_VERSION },
   };
