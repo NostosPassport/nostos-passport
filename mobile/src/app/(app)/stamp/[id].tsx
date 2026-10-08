@@ -31,7 +31,7 @@ export default function StampDetail() {
   const s = stamp.data?.stamp;
   const actions = useActions(s);
   const gone = stamp.error instanceof ApiError && (stamp.error.status === 404 || stamp.error.status === 403);
-  return <View style={styles.root}><Stack.Screen options={{ headerShown: false }} />{s ? <Memory stamp={s} actions={actions} /> : gone ? <View style={styles.centerState}><Text variant="title2">This memory isn't available</Text><Button title="Close" variant="secondary" compact block={false} onPress={() => router.back()} /></View> : stamp.isError ? <View style={styles.centerState}><InlineError message={errorText(stamp.error, "Couldn't load this memory.")} onRetry={() => void stamp.refetch()} retrying={stamp.isFetching} /></View> : <View style={styles.centerState}><Skeleton width="100%" height={size.postPhotoSkeleton} /></View>}<ToastHost bottom={space.xxl} /></View>;
+  return <View style={styles.root}><Stack.Screen options={{ headerShown: false }} />{s ? <Memory stamp={s} actions={actions} /> : gone ? <View style={styles.centerState}><Text variant="title2">This memory isn&apos;t available</Text><Button title="Close" variant="secondary" compact block={false} onPress={() => router.back()} /></View> : stamp.isError ? <View style={styles.centerState}><InlineError message={errorText(stamp.error, "Couldn't load this memory.")} onRetry={() => void stamp.refetch()} retrying={stamp.isFetching} /></View> : <View style={styles.centerState}><Skeleton width="100%" height={size.postPhotoSkeleton} /></View>}<ToastHost bottom={space.xxl} /></View>;
 }
 
 function showActions(actions: StampAction[]) {
