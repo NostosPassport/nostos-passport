@@ -22,7 +22,6 @@ const bboxOf = (rings: Ring[]) => {
   return { minLat: Math.min(...pts.map((p) => p[1])), maxLat: Math.max(...pts.map((p) => p[1])), minLng: Math.min(...pts.map((p) => p[0])), maxLng: Math.max(...pts.map((p) => p[0])) };
 };
 
-/** Load (or refresh) the neighborhoods table from the boundaries file. Idempotent. */
 export async function importNeighborhoods(db: Db, file: NeighborhoodFile | string = path.resolve(process.cwd(), "prisma/data/neighborhoods.json")) {
   const data: NeighborhoodFile = typeof file === "string" ? (JSON.parse(readFileSync(file, "utf8")) as NeighborhoodFile) : file;
   for (const n of data) {
@@ -37,7 +36,6 @@ export async function loadNeighborhoods(db: Db): Promise<Loaded[]> {
   return (await db.neighborhood.findMany()).map((n) => ({ id: n.id, name: n.name, rings: n.boundary as unknown as Ring[], minLat: n.minLat, maxLat: n.maxLat, minLng: n.minLng, maxLng: n.maxLng }));
 }
 
-/** The neighborhood containing a point, or null (a point on water, or outside the city). */
 export function locate(list: readonly Loaded[], lat: number, lng: number): Loaded | null {
   for (const n of list) {
     if (lat < n.minLat || lat > n.maxLat || lng < n.minLng || lng > n.maxLng) continue;
@@ -46,7 +44,6 @@ export function locate(list: readonly Loaded[], lat: number, lng: number): Loade
   return null;
 }
 
-/** Give every place without a neighborhood the one that contains it (also refreshes the display name). Returns how many were assigned. */
 export async function assignNeighborhoods(db: Db, list?: Loaded[]) {
   const hoods = list ?? (await loadNeighborhoods(db));
   if (!hoods.length) return 0;
@@ -66,7 +63,7 @@ async function progressRows(db: Db, userId: string, neighborhoodIds?: string[]):
   const where = neighborhoodIds ? { id: { in: neighborhoodIds } } : { places: { some: {} } };
   const hoods = await db.neighborhood.findMany({ where, select: { id: true, name: true, borough: true, _count: { select: { places: true } } } });
   const visited = await db.photo.findMany({
-    where: { userId, hiddenAt: null, removedAt: null, countable: true, venue: { neighborhoodId: neighborhoodIds ? { in: neighborhoodIds } : { not: null } } },
+    where: { userId, removedAt: null, countable: true, venue: { neighborhoodId: neighborhoodIds ? { in: neighborhoodIds } : { not: null } } },
     distinct: ["venueId"],
     select: { venueId: true, venue: { select: { neighborhoodId: true } } },
   });
@@ -81,7 +78,6 @@ async function progressRows(db: Db, userId: string, neighborhoodIds?: string[]):
   });
 }
 
-/** Run inside the stamp's transaction: record a completion if this stamp finished the set. Returns the progress for that neighborhood. */
 export async function recordProgress(tx: Prisma.TransactionClient, userId: string, venueId: string, stampId: string, now: Date) {
   const venue = await tx.venue.findUnique({ where: { id: venueId }, select: { neighborhoodId: true } });
   if (!venue?.neighborhoodId) return null;
@@ -99,14 +95,13 @@ export async function recordProgress(tx: Prisma.TransactionClient, userId: strin
 async function db_progress(tx: Prisma.TransactionClient, userId: string, neighborhoodId: string, exceptStamp?: string) {
   const h = await tx.neighborhood.findUniqueOrThrow({ where: { id: neighborhoodId }, select: { id: true, name: true, borough: true, _count: { select: { places: true } } } });
   const visited = await tx.photo.findMany({
-    where: { userId, hiddenAt: null, removedAt: null, countable: true, venue: { neighborhoodId }, ...(exceptStamp ? { id: { not: exceptStamp } } : {}) },
+    where: { userId, removedAt: null, countable: true, venue: { neighborhoodId }, ...(exceptStamp ? { id: { not: exceptStamp } } : {}) },
     distinct: ["venueId"],
     select: { venueId: true },
   });
   return { neighborhoodId: h.id, name: h.name, borough: h.borough, visited: visited.length, total: h._count.places };
 }
 
-/** The passport's index: every neighborhood that has places, with your progress. Started ones first, then by name. Owner only. */
 export async function neighborhoodIndex(db: Db, actor: Actor | null) {
   const me = requireSignedIn(actor);
   const rows = await progressRows(db, me.userId);
