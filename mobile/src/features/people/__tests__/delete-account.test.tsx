@@ -55,7 +55,7 @@ describe("Delete account", () => {
 
   it("explains what happens and starts with an email confirmation step", async () => {
     await renderScreen();
-    expect(screen.getByText("Your stamps are removed from every passport, and so are your follows and likes.")).toBeTruthy();
+    expect(screen.getByText("Your stamps and their image files are permanently removed.")).toBeTruthy();
     expect(screen.getByLabelText("Email confirmation code")).toBeTruthy();
     expect(screen.queryByTestId("delete-code")).toBeNull();
   });
@@ -83,10 +83,12 @@ describe("Delete account", () => {
     expect(mockForget).toHaveBeenCalledTimes(1);
   });
 
-  it("says nothing about venues or plans", async () => {
+  it("says nothing about venues, plans, or social features", async () => {
     await renderScreen();
     expect(screen.queryByText(/venue/i)).toBeNull();
     expect(screen.queryByText(/plans/i)).toBeNull();
+    expect(screen.queryByText(/follow/i)).toBeNull();
+    expect(screen.queryByText(/like/i)).toBeNull();
   });
 
   it("shows a wrong code inline and stays signed in", async () => {
