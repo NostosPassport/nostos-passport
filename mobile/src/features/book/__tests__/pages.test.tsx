@@ -9,10 +9,20 @@ import { Spread } from "../Spread";
 import { groupByPage, pageCountFor, spreadAt, spreadCountFor, spreadIndexForPage } from "../spreads";
 import { boxOf, overlapShare, slotPlacement } from "../slots";
 
-const stamp = (id: string, page: number | null, slot: number | null, name = "Place"): StampView => ({
-  id, photoUrl: null, photos: [], caption: "", song: null, page, slot, createdAt: "2026-10-03T00:00:00.000Z", editedAt: null,
+const stamp = (id: string, page: number | null, slot: number | null, name = "Place", verified = false): StampView => ({
+  id,
+  photoUrl: null,
+  photos: [],
+  caption: "",
+  song: null,
+  page,
+  slot,
+  createdAt: "2026-10-03T00:00:00.000Z",
+  visitedAt: "2026-10-03T00:00:00.000Z",
+  verifiedAt: verified ? "2026-10-03T00:00:00.000Z" : null,
+  verified,
+  editedAt: null,
   place: { id: `p-${id}`, slug: id, name, neighborhood: "East Village", neighborhoodId: null },
-  author: { handle: "me", displayName: "Me", avatarUrl: null, verified: false }, mine: true, likes: { count: 0, viewerLiked: false }, hidden: false, removed: false,
 });
 
 describe("spreads", () => {
@@ -30,14 +40,14 @@ describe("spreads", () => {
   });
   it("always shows the page the next stamp lands on, in whole spreads, at least one", () => {
     expect(pageCountFor(0)).toBe(2);
-    expect(pageCountFor(5)).toBe(2); // the next stamp is the 6th: page 2
-    expect(pageCountFor(6)).toBe(4); // the 7th starts page 3, so page 4 shows too
+    expect(pageCountFor(5)).toBe(2);
+    expect(pageCountFor(6)).toBe(4);
     expect(pageCountFor(9)).toBe(4);
     expect(pageCountFor(12)).toBe(6);
     expect(spreadCountFor(0)).toBe(2);
     expect(spreadCountFor(6)).toBe(3);
   });
-  it("groups stamps by page in slot order and leaves out hidden and removed ones", () => {
+  it("groups stamps by page in slot order and leaves out stamps without placement", () => {
     const m = groupByPage([stamp("c", 1, 3), stamp("a", 1, 1), stamp("b", 1, 2), stamp("d", 2, 1), stamp("x", null, null)]);
     expect(m.get(1)!.map((s) => s.id)).toEqual(["a", "b", "c"]);
     expect(m.get(2)!.map((s) => s.id)).toEqual(["d"]);
@@ -85,7 +95,7 @@ describe("guilloche", () => {
     expect(d).not.toBe(rosettePath("page:2", 150, 200, 100));
     expect(d.endsWith("Z")).toBe(true);
     const pts = [...d.matchAll(/[ML]([\d.-]+) ([\d.-]+)/g)].map((m) => [Number(m[1]), Number(m[2])] as const);
-    expect(pts[0]).toEqual(pts[pts.length - 1]); // closed
+    expect(pts[0]).toEqual(pts[pts.length - 1]);
     for (const [x, y] of pts) expect(Math.hypot(x - 150, y - 200)).toBeLessThanOrEqual(100.05);
   });
   it("draws interlocking waves inside their band", () => {
@@ -120,10 +130,10 @@ describe("edges and ribbons", () => {
 });
 
 describe("PageView and Spread", () => {
-  it("shows the page number and one button per stamp, saying which are pinned", async () => {
-    await render(<PageView page={4} side="right" width={300} height={426} stamps={[stamp("a", 4, 1, "Katz's"), stamp("b", 4, 2, "Cafe")]} pinnedIds={["b"]} />);
+  it("shows the page number, verification accessibility, and pinned state", async () => {
+    await render(<PageView page={4} side="right" width={300} height={426} stamps={[stamp("a", 4, 1, "Katz's", true), stamp("b", 4, 2, "Cafe")]} pinnedIds={["b"]} />);
     expect(screen.getByLabelText("Page 4")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Stamp, Katz's, page 4, slot 1" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Stamp, Katz's, page 4, slot 1, visit verified" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Stamp, Cafe, page 4, slot 2, pinned" })).toBeTruthy();
   });
   it("shows an empty page with only its number", async () => {
