@@ -63,7 +63,8 @@ function near(over: Record<string, unknown> = {}) {
   return { id: "p1", slug: "p1", name: "Katz's", address: "205 E Houston St", neighborhood: "East Village", lat: 40.7222, lng: -73.9874, geofenceMeters: 100, neighborhoodId: "n1", fromOsm: false, distanceM: 20, inside: true, ...over };
 }
 const wrap = async (ui: React.ReactElement) => render(<QueryClientProvider client={testQueryClient()}>{ui}</QueryClientProvider>);
-const chooseKatz = () => fireEvent.press(screen.getAllByText("Katz's")[0]!);
+const chooseKatz = () => fireEvent.press(screen.getAllByRole("button", { name: /^Katz's, East Village/ })[0]!);
+const choosePast = () => fireEvent.press(screen.getByRole("button", { name: /PAST/ }));
 const flatStamp = {
   id: "s1", photoUrl: null, photos: [], caption: "hi", song: null, page: 1, slot: 1,
   createdAt: "2026-10-08T19:41:00.000Z", visitedAt: "2026-10-08T19:41:00.000Z", verifiedAt: "2026-10-08T19:41:00.000Z", verified: true, editedAt: null,
@@ -134,7 +135,7 @@ describe("the composer", () => {
     const appended: [string, unknown][] = [];
     const appendSpy = jest.spyOn(FormData.prototype, "append").mockImplementation((k: string, v: unknown) => void appended.push([k, v]));
     await wrap(<NewStamp />);
-    fireEvent.press(screen.getByText("PAST"));
+    choosePast();
     fireEvent.changeText(screen.getByLabelText("Visit date"), "09/20/2026");
     chooseKatz();
     expect(screen.getByText(/KATZ'S · 09\/20\/2026/)).toBeTruthy();
@@ -149,7 +150,7 @@ describe("the composer", () => {
 
   it("rejects future Past dates before upload", async () => {
     await wrap(<NewStamp />);
-    fireEvent.press(screen.getByText("PAST"));
+    choosePast();
     fireEvent.changeText(screen.getByLabelText("Visit date"), "12/31/2099");
     chooseKatz();
     fireEvent.changeText(screen.getByLabelText("A few words"), "future");
