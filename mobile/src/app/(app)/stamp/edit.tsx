@@ -23,6 +23,7 @@ import { CAPTION_MAX, stampChanges } from "@/features/stamps/composer";
 import { patchStamp } from "@/features/stamps/cache";
 import { songDraft } from "@/features/stamps/song-draft";
 import { SongRow } from "@/features/stamps/song-row";
+import { formatBirthdateInput } from "@/lib/age";
 import { haptics } from "@/lib/haptics";
 import { useConfirmDiscard } from "@/lib/use-confirm-discard";
 import { colors, radius, size, space } from "@/theme";
@@ -125,7 +126,7 @@ function EditForm({ stamp }: { stamp: StampView }) {
       <Stack.Screen options={{ title: "Edit memory", headerLeft: () => <HeaderButton label="Cancel" onPress={() => router.back()} />, headerRight: () => <HeaderButton label="Save" bold onPress={doSave} disabled={!dirty || invalidDate || empty || save.isPending} /> }} />
 
       <FieldGroup footer="Visit date, up to one year ago" errors={[invalidDate ? "Use MM/DD/YYYY, within the last year and not in the future." : null]}>
-        <TextInput value={dateValue} onChangeText={setDateValue} keyboardType="numbers-and-punctuation" placeholder="MM/DD/YYYY" placeholderTextColor={colors.textTertiary} style={styles.dateInput} accessibilityLabel="Visit date" />
+        <TextInput value={dateValue} onChangeText={(value) => setDateValue(formatBirthdateInput(value))} keyboardType="number-pad" maxLength={10} placeholder="MM/DD/YYYY" placeholderTextColor={colors.textTertiary} style={styles.dateInput} accessibilityLabel="Visit date" />
         {stamp.verified ? <Text variant="footnote" color="accent">Nostos verified this visit. Changing the day removes verification.</Text> : <Text variant="footnote" color="textTertiary">Visit not location verified.</Text>}
       </FieldGroup>
 
