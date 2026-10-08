@@ -1,12 +1,12 @@
 # Nostos current handoff
 
-Updated 2026-10-07.
+Updated 2026-10-08.
 
 ## Current state
 
 Nostos is an iPhone-only personal passport for New York. The normal product experience requires an account. The previous guest `Look around first` preview flow has been removed from scope.
 
-Primary app navigation is Passport, Stamp, and Map. Social routes/code may remain behind feature flags, but social behavior is not part of the current personal product.
+Primary app navigation is Passport, Stamp, and Map. Feed, follows, likes, Activity, public profiles, moderation, verification, and other social architecture have been removed from the active codebase. Passport, stamp, pin, place-history, profile, and neighborhood-progress data are owner-only.
 
 The repository default branch is `main`. Ignore old handoff instructions that refer to `build`, `build-codex`, leaving a merge uncommitted, or a specific local checkout path.
 
@@ -21,7 +21,8 @@ The current stamp photo flow no longer uses the old custom in-app camera preview
 - Accepted uploads are prepared with EXIF/GPS removed.
 - Native camera captures receive the Nostos watermark.
 - The app attempts to save accepted camera captures to Photos when add permission is available.
-- Photos can be viewed, removed, and added up to the six-photo maximum.
+- Photos can be viewed, removed, and added up to the six-photo maximum before stamp creation.
+- Photos cannot be appended remotely after a stamp has been created. Layout and final photo removal remain editable owner actions.
 
 Relevant files:
 
@@ -31,6 +32,14 @@ Relevant files:
 - `mobile/src/features/photos/prepare.ts`
 - `mobile/src/features/photos/save-camera-photo.ts`
 - `mobile/src/features/stamps/photo-draft.ts`
+
+## Backend and database
+
+The current backend exposes only account/auth, owner profile/passport/stamp/pin/neighborhood endpoints, places, songs, media, health, and maintenance routes.
+
+The Prisma schema no longer contains follows, follow requests, blocks, likes, reports, moderation events, verification events, staff roles, reputation, suspension state, private-account state, or stamp moderation state. A forward migration removes those objects from existing databases while retaining historical migration files.
+
+`geofenceExempt` remains for App Review/QA accounts. Those stamps are accepted outside the geofence but are written `countable=false`.
 
 ## Design
 
@@ -50,10 +59,8 @@ Committed defaults currently use:
 
 Do not copy old LAN IPs, process status, or QR codes from dated deliveries. They were valid only for those sessions.
 
-## Documentation status
-
-Current docs have been reconciled with the current code. Historical build prompts and old Figma onboarding docs are explicitly superseded. Dated reviews, deliveries, ledgers, and logs remain unchanged as historical evidence.
-
 ## Verification note
 
-This handoff describes the current committed source. Documentation cleanup itself does not prove native camera behavior, Photo Library validation on every asset type, device permissions, animation performance, VoiceOver, or real-world geofence behavior. Use `mobile/DEVICE-CHECKLIST.md` for current physical-device checks.
+The social-removal migration has been rehearsed successfully on an isolated Neon temporary branch. Production database application is a separate explicit step.
+
+This handoff describes committed source structure, not proof of every runtime/device behavior. Use `mobile/DEVICE-CHECKLIST.md` for physical-device checks, and run the repository gate after pulling the branch locally.

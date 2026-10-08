@@ -19,10 +19,10 @@ The default branch is `main`. Do not treat old `build`, `build-codex`, local che
 
 - iPhone only.
 - Account required for the product experience. The old `Look around first` guest/preview flow is no longer in scope.
-- Main navigation is Passport, Stamp, and Map. Social Feed and Activity code may remain behind feature flags, but they are not part of the current personal product.
+- Main navigation is Passport, Stamp, and Map. Feed, follows, likes, Activity, public profiles, moderation, and other social architecture are not part of the current codebase.
 - Stamp photos: up to six. Camera capture opens the native iOS camera through `expo-image-picker`. Photo Library selection is also supported and validated locally using available metadata before the prepared upload has EXIF/GPS stripped.
 - Camera captures are watermarked and the app attempts to save an accepted copy to Photos when permission allows.
-- The server still owns geofence acceptance and content validation.
+- The server owns geofence acceptance, ownership enforcement, and content validation.
 
 ## Design authority
 

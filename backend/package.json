@@ -4,9 +4,7 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.22.0",
-  "engines": {
-    "node": ">=20.11"
-  },
+  "engines": { "node": ">=20.11" },
   "scripts": {
     "postinstall": "node scripts/ensure-env.mjs && prisma generate",
     "dev": "next dev --port 3001",
@@ -25,12 +23,10 @@
     "vercel-build": "pnpm deploy:check && prisma generate && prisma migrate deploy && next build",
     "test:pooled": "node scripts/test-pooled.mjs",
     "venues:import": "tsx scripts/import-osm-venues.ts",
-    "user:role": "tsx scripts/set-role.ts",
+    "user:geofence-exempt": "tsx scripts/set-geofence-exempt.ts",
     "neighborhoods:import": "tsx scripts/import-neighborhoods.ts"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
+  "prisma": { "seed": "tsx prisma/seed.ts" },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1139.0",
     "@aws-sdk/s3-request-presigner": "3.1139.0",

@@ -3,12 +3,10 @@ import { SymbolView } from "expo-symbols";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "@/components/ui/icon";
-import { SOCIAL_ENABLED } from "@/config";
 import { mapRecenter } from "@/features/map/recenter";
 import { colors } from "@/theme";
 
 export default function TabsLayout() {
-  const social = SOCIAL_ENABLED ? undefined : null;
   return (
     <Tabs
       initialRouteName="passport"
@@ -22,7 +20,6 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.textPrimary,
       }}
     >
-      <Tabs.Screen name="index" options={{ href: social, title: "Feed", tabBarIcon: ({ color }) => <SymbolView name="house" tintColor={color} size={22} /> }} />
       <Tabs.Screen name="passport" options={{ title: "Passport", tabBarAccessibilityLabel: "Passport", tabBarIcon: ({ color }) => <SymbolView name="book.closed" tintColor={color} size={23} /> }} />
       <Tabs.Screen
         name="stamp"
@@ -43,7 +40,6 @@ export default function TabsLayout() {
         listeners={{ tabPress: () => mapRecenter.request() }}
         options={{ title: "Map", tabBarAccessibilityLabel: "Map", tabBarIcon: ({ color }) => <SymbolView name="map" tintColor={color} size={23} /> }}
       />
-      <Tabs.Screen name="activity" options={{ href: social, title: "Activity", tabBarIcon: ({ color }) => <SymbolView name="bell" tintColor={color} size={22} /> }} />
     </Tabs>
   );
 }

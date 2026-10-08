@@ -17,7 +17,6 @@ export default function Settings() {
   const { signOut } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const user = me.data?.user;
-  const staff = user?.role === "MODERATOR" || user?.role === "ADMIN";
 
   const refresh = async () => {
     setRefreshing(true);
@@ -53,7 +52,6 @@ export default function Settings() {
         <SettingsRow title="Privacy policy" subtitle="Opens in your browser" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.privacy)} />
         <SettingsRow title="Terms" subtitle="Opens in your browser" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.terms)} />
         <SettingsRow title="Support" subtitle="Get help" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.support)} />
-        {staff ? <SettingsRow title="Moderation" subtitle="Staff tools" trailing="chevron.right" onPress={() => router.push("/moderation")} /> : null}
         {__DEV__ ? <SettingsRow title="Design gallery" subtitle="Development" trailing="chevron.right" onPress={() => router.push("/design")} /> : null}
         <View style={styles.actions}>
           <Button title="Sign out" variant="plain" onPress={confirmSignOut} />

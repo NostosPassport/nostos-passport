@@ -28,7 +28,6 @@ export const PLACES: PlaceFixture[] = [
   { slug: "broome-bells", name: "Broome Street Bells", address: "302 Broome St", neighborhood: "Lower East Side", lat: 40.71838, lng: -73.99192 },
   { slug: "norfolk-night-owl", name: "Norfolk Night Owl", address: "130 Norfolk St", neighborhood: "Lower East Side", lat: 40.71932, lng: -73.98619 },
   { slug: "grand-and-ghost", name: "Grand & Ghost", address: "385 Grand St", neighborhood: "Lower East Side", lat: 40.71588, lng: -73.98556 },
-  // Landmarks, to show that a place is anywhere in the city (all public spaces).
   { slug: "tompkins-square-park", name: "Tompkins Square Park", address: "Avenue A at E 9th St", neighborhood: "East Village", lat: 40.72654, lng: -73.98179 },
   { slug: "washington-square-park", name: "Washington Square Park", address: "Washington Square", neighborhood: "Greenwich Village", lat: 40.73082, lng: -73.99733 },
   { slug: "union-square", name: "Union Square", address: "E 14th St at Broadway", neighborhood: "Union Square", lat: 40.7359, lng: -73.9906 },
@@ -40,33 +39,24 @@ export const PLACES: PlaceFixture[] = [
 export type SeedPerson = {
   handle: string;
   name: string;
-  role?: "USER" | "MODERATOR" | "ADMIN";
-  isPrivate: boolean;
   bio?: string;
-  verified?: boolean;
   exempt?: boolean;
   ageDays: number;
 };
 
-/** The demo cast. Passwords come from DEV_SEED_PASSWORD (or lastcall-dev); emails are handle@lastcall.dev. */
 export const PEOPLE: SeedPerson[] = [
-  { handle: "admin", name: "Admin", role: "ADMIN", isPrivate: true, ageDays: 200 },
-  { handle: "mod_morgan", name: "Morgan (moderator)", role: "MODERATOR", isPrivate: true, ageDays: 190 },
-  { handle: "appreview", name: "App Review", isPrivate: false, exempt: true, ageDays: 150, bio: "The App Review account. Stamps from anywhere, visible only to itself." },
-  { handle: "maya_r", name: "Maya Rao", isPrivate: false, verified: true, bio: "Parks, pizza, vinyl.", ageDays: 120 },
-  { handle: "avaa", name: "Ava Alvarez", isPrivate: true, bio: "Mostly the East Village.", ageDays: 110 },
-  { handle: "theo_k", name: "Theo Kim", isPrivate: false, bio: "Cheap beer, long walks.", ageDays: 100 },
-  { handle: "kofi_b", name: "Kofi Boateng", isPrivate: true, ageDays: 95 },
-  { handle: "nia_s", name: "Nia Sato", isPrivate: false, bio: "I stamp everything.", ageDays: 90 },
-  { handle: "sol_m", name: "Sol Marin", isPrivate: false, ageDays: 80 },
-  { handle: "pia_l", name: "Pia Lindqvist", isPrivate: true, ageDays: 70 },
-  { handle: "rowan_k", name: "Rowan Kell", isPrivate: true, ageDays: 40 },
-  { handle: "jules_v", name: "Jules Vega", isPrivate: false, ageDays: 35 },
-  { handle: "ines_p", name: "Ines Pires", isPrivate: true, ageDays: 30 },
-  { handle: "omar_q", name: "Omar Qadir", isPrivate: false, ageDays: 28 },
-  { handle: "moth_hopeful", name: "Moth Hopeful", isPrivate: true, ageDays: 25, bio: "Follows no one yet." },
-  { handle: "blocker_blake", name: "Blake Ward", isPrivate: false, ageDays: 60 },
-  { handle: "blocked_bea", name: "Bea Fontaine", isPrivate: false, ageDays: 55 },
+  { handle: "appreview", name: "App Review", exempt: true, ageDays: 150, bio: "App Review account." },
+  { handle: "maya_r", name: "Maya Rao", bio: "Parks, pizza, vinyl.", ageDays: 120 },
+  { handle: "avaa", name: "Ava Alvarez", bio: "Mostly the East Village.", ageDays: 110 },
+  { handle: "theo_k", name: "Theo Kim", bio: "Cheap beer, long walks.", ageDays: 100 },
+  { handle: "kofi_b", name: "Kofi Boateng", ageDays: 95 },
+  { handle: "nia_s", name: "Nia Sato", bio: "I stamp everything.", ageDays: 90 },
+  { handle: "sol_m", name: "Sol Marin", ageDays: 80 },
+  { handle: "pia_l", name: "Pia Lindqvist", ageDays: 70 },
+  { handle: "rowan_k", name: "Rowan Kell", ageDays: 40 },
+  { handle: "jules_v", name: "Jules Vega", ageDays: 35 },
+  { handle: "ines_p", name: "Ines Pires", ageDays: 30 },
+  { handle: "omar_q", name: "Omar Qadir", ageDays: 28 },
 ];
 
 export const CAPTIONS = [

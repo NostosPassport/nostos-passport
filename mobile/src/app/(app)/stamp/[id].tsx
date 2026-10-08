@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text as NativeText, useWindowDimensions, View } from "react-native";
+import { ActionSheetIOS, Alert, Pressable, ScrollView, StyleSheet, Text as NativeText, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, ApiError, errorText, mediaUrl } from "@/api";
@@ -17,14 +17,12 @@ import { Text } from "@/components/ui/text";
 import { toast, ToastHost } from "@/components/ui/toast";
 import { PhotoViewer } from "@/features/book/PhotoViewer";
 import { pinChange } from "@/features/book/pin-change";
-import { a11yActions, showActions, useStampActions, type ContentAction } from "@/features/moderation/content-actions";
 import { dropStamp } from "@/features/stamps/cache";
-import { LikeButton } from "@/features/stamps/like-button";
 import { SongRow } from "@/features/stamps/song-row";
-import { useLike } from "@/features/stamps/use-like";
-import { SOCIAL_ENABLED } from "@/config";
 import { haptics } from "@/lib/haptics";
 import { colors, fonts, screenPadding, size, space } from "@/theme";
+
+type StampAction = { label: string; destructive?: boolean; onPress: () => void };
 
 export default function StampDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,7 +39,7 @@ export default function StampDetail() {
       ) : gone ? (
         <View style={styles.centerState}>
           <Text variant="title2">This memory isn&apos;t available</Text>
-          <Text color="textSecondary">It may have been removed, or the account may be private.</Text>
+          <Text color="textSecondary">It may have been removed.</Text>
           <Button title="Close" variant="secondary" compact block={false} onPress={() => router.back()} />
         </View>
       ) : stamp.isError ? (
@@ -58,12 +56,22 @@ export default function StampDetail() {
   );
 }
 
-function Memory({ stamp, actions }: { stamp: StampView; actions: ContentAction[] }) {
+function showActions(actions: StampAction[]) {
+  const options = [...actions.map((action) => action.label), "Cancel"];
+  const destructiveButtonIndex = actions.findIndex((action) => action.destructive);
+  ActionSheetIOS.showActionSheetWithOptions(
+    { options, cancelButtonIndex: options.length - 1, destructiveButtonIndex: destructiveButtonIndex >= 0 ? destructiveButtonIndex : undefined },
+    (index) => {
+      if (index < actions.length) actions[index]?.onPress();
+    },
+  );
+}
+
+function Memory({ stamp, actions }: { stamp: StampView; actions: StampAction[] }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [activePhoto, setActivePhoto] = useState(0);
   const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
-  const like = useLike();
   const pins = usePins();
   const pinned = pins.data?.stamps.some((p) => p.id === stamp.id) ?? false;
   const pinAction = actions.find((action) => action.label === "Pin to passport" || action.label === "Unpin from passport");
@@ -75,14 +83,16 @@ function Memory({ stamp, actions }: { stamp: StampView; actions: ContentAction[]
 
   return (
     <>
-      <ScrollView contentContainerStyle={[styles.memory, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 20 }]} {...a11yActions(actions)}>
+      <ScrollView contentContainerStyle={[styles.memory, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 20 }]}>
         <View style={styles.memoryTopbar}>
           <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back" style={styles.hitTarget}>
             <Icon name="chevron.left" color="textPrimary" size={22} />
           </Pressable>
-          <Pressable onPress={() => showActions(actions)} accessibilityRole="button" accessibilityLabel="More options" style={styles.hitTarget}>
-            <NativeText style={styles.more}>•••</NativeText>
-          </Pressable>
+          {actions.length ? (
+            <Pressable onPress={() => showActions(actions)} accessibilityRole="button" accessibilityLabel="More options" style={styles.hitTarget}>
+              <NativeText style={styles.more}>•••</NativeText>
+            </Pressable>
+          ) : null}
         </View>
         <Kicker>NO. {number} / {dateLabel}</Kicker>
         <NativeText style={styles.memoryTitle}>{stamp.place.name}</NativeText>
@@ -90,22 +100,14 @@ function Memory({ stamp, actions }: { stamp: StampView; actions: ContentAction[]
 
         <View style={styles.heroFrame}>
           {stamp.photos.length ? (
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              bounces={stamp.photos.length > 1}
-              onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}
-            >
+            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} bounces={stamp.photos.length > 1} onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}>
               {stamp.photos.map((photo, index) => (
                 <Pressable key={photo.id} onPress={() => setViewingPhoto(index)} accessibilityRole="button" accessibilityLabel={`Open photo ${index + 1} of ${stamp.photos.length}`} style={[styles.photoPage, { width: photoWidth }]}>
                   <Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} accessibilityLabel={`Photo ${index + 1} of ${stamp.photos.length}`} />
                 </Pressable>
               ))}
             </ScrollView>
-          ) : (
-            <View style={styles.emptyPhoto} />
-          )}
+          ) : <View style={styles.emptyPhoto} />}
           <View style={styles.travelStamp} pointerEvents="none">
             <Kicker>BEEN HERE</Kicker>
             <NativeText style={styles.stampCity}>NYC</NativeText>
@@ -119,20 +121,16 @@ function Memory({ stamp, actions }: { stamp: StampView; actions: ContentAction[]
 
         <View style={styles.photoMeta}>
           <Kicker>{stamp.photos.length === 0 ? "NO PHOTOS" : `${activePhoto + 1} OF ${stamp.photos.length} ${stamp.photos.length === 1 ? "PHOTO" : "PHOTOS"}`}</Kicker>
-          <View style={styles.dots}>
-            {stamp.photos.slice(0, 6).map((photo, index) => <View key={photo.id} style={[styles.dot, index === activePhoto && styles.dotActive]} />)}
-          </View>
+          <View style={styles.dots}>{stamp.photos.slice(0, 6).map((photo, index) => <View key={photo.id} style={[styles.dot, index === activePhoto && styles.dotActive]} />)}</View>
         </View>
-        {stamp.mine ? <EditorialButton label={pinned ? "Pinned to passport" : "Pin to passport"} outline onPress={() => pinAction?.onPress()} /> : null}
-        {SOCIAL_ENABLED ? <LikeButton likes={stamp.likes} disabled={stamp.mine} onPress={() => like.toggle(stamp.id, stamp.likes)} /> : null}
+        <EditorialButton label={pinned ? "Pinned to passport" : "Pin to passport"} outline onPress={() => pinAction?.onPress()} />
       </ScrollView>
       <PhotoViewer photos={stamp.photos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
     </>
   );
 }
 
-function useActions(stamp: StampView | undefined): ContentAction[] {
-  const build = useStampActions();
+function useActions(stamp: StampView | undefined): StampAction[] {
   const queryClient = useQueryClient();
   const pins = usePins();
   const setPins = useMutation({
@@ -153,8 +151,6 @@ function useActions(stamp: StampView | undefined): ContentAction[] {
       haptics.success();
       toast.show("Deleted from your profile.");
       dropStamp(queryClient, id);
-      void queryClient.invalidateQueries({ queryKey: qk.feed });
-      void queryClient.invalidateQueries({ queryKey: ["user"] });
       void queryClient.invalidateQueries({ queryKey: qk.neighborhoods });
       void queryClient.invalidateQueries({ queryKey: qk.pins });
       router.back();
@@ -165,28 +161,25 @@ function useActions(stamp: StampView | undefined): ContentAction[] {
     },
   });
   if (!stamp) return [];
-  const extra: ContentAction[] = stamp.mine
-    ? [
-        {
-          label: pins.data?.stamps.some((p) => p.id === stamp.id) ? "Unpin from passport" : "Pin to passport",
-          onPress: () => {
-            const change = pinChange((pins.data?.stamps ?? []).map((p) => p.id), stamp.id);
-            if (change.kind === "full") Alert.alert("Four stamps are pinned", "Unpin one first, then pin this one.");
-            else setPins.mutate(change.ids);
-          },
-        },
-        { label: "Edit", onPress: () => router.push({ pathname: "/stamp/edit", params: { id: stamp.id } }) },
-        {
-          label: "Delete from profile",
-          destructive: true,
-          onPress: () => Alert.alert("Delete from your profile?", "It's removed from your passport and everyone's feed for good.", [
-            { text: "Cancel", style: "cancel" },
-            { text: "Delete", style: "destructive", onPress: () => remove.mutate(stamp.id) },
-          ]),
-        },
-      ]
-    : [];
-  return build({ id: stamp.id, authorHandle: stamp.author.handle, mine: stamp.mine, extra });
+  return [
+    {
+      label: pins.data?.stamps.some((p) => p.id === stamp.id) ? "Unpin from passport" : "Pin to passport",
+      onPress: () => {
+        const change = pinChange((pins.data?.stamps ?? []).map((p) => p.id), stamp.id);
+        if (change.kind === "full") Alert.alert("Four stamps are pinned", "Unpin one first, then pin this one.");
+        else setPins.mutate(change.ids);
+      },
+    },
+    { label: "Edit", onPress: () => router.push({ pathname: "/stamp/edit", params: { id: stamp.id } }) },
+    {
+      label: "Delete from profile",
+      destructive: true,
+      onPress: () => Alert.alert("Delete from your profile?", "It's removed from your passport for good.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => remove.mutate(stamp.id) },
+      ]),
+    },
+  ];
 }
 
 const styles = StyleSheet.create({

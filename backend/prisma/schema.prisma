@@ -1,7 +1,7 @@
 // Nostos data model.
 // Conventions: snake_case tables/columns, all timestamps stored in UTC (timestamptz).
 // A stamp is a row in `photo` (the table name is kept to avoid migration churn; API and UI say "stamp").
-// A place is a row in `venue` (same reason). There is deliberately NO accuracy or ranking data anywhere.
+// A place is a row in `venue` (same reason).
 
 generator client {
   provider = "prisma-client-js"
@@ -9,16 +9,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  /// Pooled connection for the app (Neon: the "-pooler" host with ?pgbouncer=true). Local: same as DIRECT_URL.
   url       = env("DATABASE_URL")
-  /// Direct (unpooled) connection, used by `prisma migrate`.
   directUrl = env("DIRECT_URL")
-}
-
-enum Role {
-  USER
-  MODERATOR
-  ADMIN
 }
 
 enum SessionClient {
@@ -33,109 +25,34 @@ enum EmailChallengePurpose {
   DELETE_ACCOUNT
 }
 
-enum ContentType {
-  PHOTO
-  COMMENT
-  REPORT
-  /// A user account (profile reports; suspension decisions).
-  USER
-}
-
-/// Why something was reported. UNDERAGE and STALKING are read first by moderators.
-enum FlagCategory {
-  SPAM
-  HARASSMENT
-  SEXUAL_OR_VIOLENT
-  NOT_AT_PLACE
-  STALKING
-  UNDERAGE
-  PRIVATE_INFO
-  OTHER
-}
-
-enum FlagStatus {
-  OPEN
-  RESOLVED
-}
-
-enum ModerationAction {
-  FLAGGED
-  AUTO_HIDE
-  HIDE
-  DISMISS
-  /// Moderator reviewed hidden content (e.g. auto-hidden after 3 flags) and restored it.
-  RESTORE
-  /// System: the author deleted their account, so their personal photos were hidden.
-  ACCOUNT_DELETED
-  /// Moderator removed an abusive account (can't sign in; sessions revoked).
-  SUSPEND
-  UNSUSPEND
-}
-
-enum VerificationAction {
-  GRANT
-  REVOKE
-}
-
 model User {
   id              String    @id @default(cuid())
   email           String    @unique
   handle          String    @unique
   displayName     String    @map("display_name")
-  /// Legacy/dev fixture support only. Production accounts authenticate with email codes, Apple, or passkeys.
   passwordHash    String?   @map("password_hash")
   emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
-  /// The eligibility check is recorded, but the birthdate itself is never stored.
   ageVerifiedAt   DateTime? @map("age_verified_at") @db.Timestamptz(3)
-  role            Role      @default(USER)
-  /// Moderation reputation in [0.2, 1.5]; new accounts start at 0.5. Visible only to the user and moderators.
-  reputation      Float     @default(0.5)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  /// Set when the account was deleted (anonymized). The row stays so stamps and the moderation log keep their history.
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
   termsAcceptedAt DateTime? @map("terms_accepted_at") @db.Timestamptz(3)
   termsVersion    String?   @map("terms_version")
-  /// App Review / QA accounts: may stamp from anywhere. Their stamps are stored but visible only to themselves.
-  /// Settable only by an admin or the seed.
   geofenceExempt  Boolean   @default(false) @map("geofence_exempt")
-  /// Set by a moderator for abusive accounts: can't sign in, all sessions revoked. Content stays until moderated.
-  suspendedAt     DateTime? @map("suspended_at") @db.Timestamptz(3)
-  /// Private accounts (the default for every account): only approved followers see the profile, stamps and places.
-  /// See src/server/privacy.ts.
-  isPrivate       Boolean   @default(true) @map("is_private")
-  /// Max 150 characters, content-filtered.
   bio             String    @default("")
-  /// Profile photo (re-encoded square JPEG). Shown only to viewers allowed to see the full profile.
   avatarKey       String?   @map("avatar_key")
-  /// Verified badge, handpicked by an admin. Every grant and revoke is in the append-only verification_event log.
-  /// Badge only: it never changes visibility, ordering or anything else.
-  verifiedAt      DateTime? @map("verified_at") @db.Timestamptz(3)
 
-  sessions               Session[]
-  photos                 Photo[]
-  following              Follow[]                 @relation("follower")
-  followers              Follow[]                 @relation("followee")
-  flags                  Flag[]
-  moderationEvents       ModerationEvent[]
-  blocking               Block[]                  @relation("blocker")
-  blockedBy              Block[]                  @relation("blocked")
-  followRequestsSent     FollowRequest[]          @relation("requester")
-  followRequestsReceived FollowRequest[]          @relation("requestTarget")
-  likes                  PhotoLike[]
-  verificationEvents     VerificationEvent[]      @relation("verifiedUser")
-  verificationActions    VerificationEvent[]      @relation("verifier")
-  rateEvents             RateEvent[]
-  pinned                 PinnedStamp[]
-  completions            NeighborhoodCompletion[]
+  sessions    Session[]
+  photos      Photo[]
+  rateEvents  RateEvent[]
+  pinned      PinnedStamp[]
+  completions NeighborhoodCompletion[]
 
   @@map("app_user")
 }
 
 model Session {
-  /// sha256 of the random token stored in the cookie; the raw token never touches the DB.
   id        String        @id
   userId    String        @map("user_id")
-  /// WEB sessions ride in an httpOnly cookie; IOS sessions are bearer tokens kept in the iOS keychain.
   client    SessionClient @default(WEB)
   expiresAt DateTime      @map("expires_at") @db.Timestamptz(3)
   createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -145,7 +62,6 @@ model Session {
   @@map("session")
 }
 
-/// Short-lived one-time email codes. Only a keyed digest is stored, never the six-digit code itself.
 model EmailChallenge {
   id         String                @id
   email      String
@@ -163,7 +79,6 @@ model EmailChallenge {
   @@map("email_challenge")
 }
 
-/// A place (the table keeps its old name). Name, location and geofence only: no live data.
 model Venue {
   id             String        @id @default(cuid())
   slug           String        @unique
@@ -172,57 +87,41 @@ model Venue {
   neighborhood   String
   lat            Float
   lng            Float
-  /// Radius in meters within which a phone may stamp this place (server-checked).
   geofenceMeters Int           @default(100) @map("geofence_meters")
-  /// The NYC neighborhood the place is in (assigned from the boundaries), for the passport's collections.
   neighborhoodId String?       @map("neighborhood_id")
   hood           Neighborhood? @relation(fields: [neighborhoodId], references: [id])
-  /// OpenStreetMap element ("node/123", "way/456") for imported places (ODbL: attribute "© OpenStreetMap contributors").
   osmId          String?       @unique @map("osm_id")
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   photos Photo[]
-  flags  Flag[]
 
   @@map("venue")
 }
 
-/// A stamp: one visit to a place, with a photo, a caption, a song, or any mix (a CHECK requires at least one).
-/// Stamps are immutable except caption, song, moderation state (hidden_at) and removed_at (final); a trigger enforces it.
 model Photo {
-  /// Immutable database transaction of creation; photos may only be inserted in that transaction.
-  creationTransaction String @default(dbgenerated("txid_current()::text")) @map("creation_transaction")
-  id           String        @id @default(cuid())
-  userId       String        @map("user_id")
-  venueId      String        @map("venue_id")
-  /// null = a stamp without a photo.
-  storageKey   String?       @unique @map("storage_key")
-  mimeType     String?       @map("mime_type")
-  /// Up to 280 characters (CHECK). Empty string when there is no caption.
-  caption      String
-  /// Song metadata only (no audio): from Apple's iTunes Search API, via our backend.
-  songTitle    String?       @map("song_title")
-  songArtist   String?       @map("song_artist")
-  songArtUrl   String?       @map("song_art_url")
-  songSourceId String?       @map("song_source_id")
-  /// Where the phone was when it stamped (kept for auditing the geofence check; never sent to viewers).
-  lat          Float
-  lng          Float
-  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  hiddenAt     DateTime?     @map("hidden_at") @db.Timestamptz(3)
-  /// Optional 1 to 10 (CHECK). Not shown in the UI for v1. Immutable.
-  rating       Int?          @db.SmallInt
-  editedAt     DateTime?     @map("edited_at") @db.Timestamptz(3)
-  /// The author removed it from their profile ("delete" means hide). Final: a trigger refuses to clear it.
-  removedAt    DateTime?     @map("removed_at") @db.Timestamptz(3)
-  /// Snapshot at write time: false when stamped by a geofence-exempt (App Review / QA) account: visible to its author only.
-  countable    Boolean       @default(true)
-  user         User          @relation(fields: [userId], references: [id])
-  venue        Venue         @relation(fields: [venueId], references: [id])
-  likes        PhotoLike[]
-  photos       StampPhoto[]
-  pins         PinnedStamp[]
+  creationTransaction String   @default(dbgenerated("txid_current()::text")) @map("creation_transaction")
+  id                  String   @id @default(cuid())
+  userId              String   @map("user_id")
+  venueId             String   @map("venue_id")
+  storageKey          String?  @unique @map("storage_key")
+  mimeType            String?  @map("mime_type")
+  caption             String
+  songTitle           String?  @map("song_title")
+  songArtist          String?  @map("song_artist")
+  songArtUrl          String?  @map("song_art_url")
+  songSourceId        String?  @map("song_source_id")
+  lat                 Float
+  lng                 Float
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  rating              Int?     @db.SmallInt
+  editedAt            DateTime? @map("edited_at") @db.Timestamptz(3)
+  removedAt           DateTime? @map("removed_at") @db.Timestamptz(3)
+  countable           Boolean  @default(true)
+  user                User     @relation(fields: [userId], references: [id])
+  venue               Venue    @relation(fields: [venueId], references: [id])
+  photos              StampPhoto[]
+  pins                PinnedStamp[]
 
   @@index([venueId, createdAt])
   @@index([userId, createdAt])
@@ -230,8 +129,6 @@ model Photo {
   @@map("photo")
 }
 
-/// A neighborhood (NYC Neighborhood Tabulation Area, 2020; public NYC Open Data). `boundary` is an array of outer rings,
-/// each an array of [lng, lat]; the bbox columns make point lookups cheap. Loaded by `pnpm neighborhoods:import`.
 model Neighborhood {
   id          String                   @id
   name        String
@@ -247,8 +144,6 @@ model Neighborhood {
   @@map("neighborhood")
 }
 
-/// Earned once, when a person has stamped every place in a neighborhood (a set of at least 3). Never taken back, even if
-/// places are added later. Owner only.
 model NeighborhoodCompletion {
   userId         String       @map("user_id")
   neighborhoodId String       @map("neighborhood_id")
@@ -261,9 +156,6 @@ model NeighborhoodCompletion {
   @@map("neighborhood_completion")
 }
 
-/// One photo on a stamp (up to 6 live ones, CHECK position 0 to 5 and a trigger). The scrapbook layout (x, y as 0..1 of the
-/// page, rotation in degrees) is the owner's to change; the file itself never changes. Removing a photo sets removed_at
-/// (final); rows are never deleted (trigger).
 model StampPhoto {
   id         String    @id @default(cuid())
   stampId    String    @map("stamp_id")
@@ -281,8 +173,6 @@ model StampPhoto {
   @@map("stamp_photo")
 }
 
-/// The owner's pinned stamps (up to 4), shown as ribbons on the first spread of the passport. Owner only: nothing
-/// outside /api/me reads this table. Unpinning deletes the row (a pin is a layout choice, not content).
 model PinnedStamp {
   userId   String   @map("user_id")
   stampId  String   @map("stamp_id")
@@ -296,65 +186,6 @@ model PinnedStamp {
   @@map("pinned_stamp")
 }
 
-model Follow {
-  followerId String   @map("follower_id")
-  followeeId String   @map("followee_id")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  follower   User     @relation("follower", fields: [followerId], references: [id])
-  followee   User     @relation("followee", fields: [followeeId], references: [id])
-
-  @@id([followerId, followeeId])
-  @@index([followeeId])
-  @@map("follow")
-}
-
-/// A pending request to follow a private account. Approving it creates the follow row (every follow row is an
-/// approved follow), declining or cancelling deletes the request.
-model FollowRequest {
-  requesterId String   @map("requester_id")
-  targetId    String   @map("target_id")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  requester   User     @relation("requester", fields: [requesterId], references: [id])
-  target      User     @relation("requestTarget", fields: [targetId], references: [id])
-
-  @@id([requesterId, targetId])
-  @@index([targetId, createdAt])
-  @@map("follow_request")
-}
-
-/// One like per user per stamp. Likes are reactions, not content: unliking deletes the row. Likes never affect anything else.
-model PhotoLike {
-  userId    String   @map("user_id")
-  photoId   String   @map("photo_id")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  /// Write-time snapshot: false for geofence-exempt (App Review / QA) accounts, whose likes never count.
-  countable Boolean  @default(true)
-  user      User     @relation(fields: [userId], references: [id])
-  photo     Photo    @relation(fields: [photoId], references: [id])
-
-  @@id([userId, photoId])
-  @@index([photoId, createdAt])
-  @@map("photo_like")
-}
-
-/// Append-only log of verified-badge grants and revokes (trigger rejects UPDATE and DELETE). A note is required.
-model VerificationEvent {
-  id        String             @id @default(cuid())
-  userId    String             @map("user_id")
-  action    VerificationAction
-  note      String
-  /// null = system (e.g. the account was deleted).
-  actorId   String?            @map("actor_id")
-  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  user      User               @relation("verifiedUser", fields: [userId], references: [id])
-  actor     User?              @relation("verifier", fields: [actorId], references: [id], onDelete: Restrict)
-
-  @@index([userId, createdAt])
-  @@map("verification_event")
-}
-
-/// Rate-limit ledger for social actions (follows and requests, likes, posts). Counted under a per-user advisory
-/// lock; rows older than a day are pruned by the cron job.
 model RateEvent {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
@@ -367,43 +198,6 @@ model RateEvent {
   @@map("rate_event")
 }
 
-model Flag {
-  id         String       @id @default(cuid())
-  targetType ContentType  @map("target_type")
-  targetId   String       @map("target_id")
-  /// null for USER targets (profile reports).
-  venueId    String?      @map("venue_id")
-  flaggerId  String       @map("flagger_id")
-  reason     String
-  category   FlagCategory @default(OTHER)
-  status     FlagStatus   @default(OPEN)
-  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  flagger    User         @relation(fields: [flaggerId], references: [id])
-  venue      Venue?       @relation(fields: [venueId], references: [id])
-
-  /// One OPEN flag per user per item (partial unique index in migration 3); after a review you may flag again.
-  @@index([targetType, targetId, flaggerId])
-  @@index([status, createdAt])
-  @@map("flag")
-}
-
-/// Append-only audit log. UPDATE and DELETE are rejected by a database trigger (see migration).
-model ModerationEvent {
-  id         String           @id @default(cuid())
-  action     ModerationAction
-  targetType ContentType      @map("target_type")
-  targetId   String           @map("target_id")
-  /// null = system action (e.g. auto-hide after 3 distinct flags)
-  actorId    String?          @map("actor_id")
-  note       String?
-  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
-  actor      User?            @relation(fields: [actorId], references: [id], onDelete: Restrict)
-
-  @@index([targetType, targetId])
-  @@map("moderation_event")
-}
-
-/// Failed legacy/dev password-login attempts. Production sign-in uses email challenges instead.
 model LoginAttempt {
   id        String   @id @default(cuid())
   email     String
@@ -413,17 +207,4 @@ model LoginAttempt {
   @@index([email, ip, createdAt])
   @@index([createdAt])
   @@map("login_attempt")
-}
-
-/// A blocks B. Symmetric in effect: neither sees the other's stamps or profile, and neither can follow the other.
-model Block {
-  blockerId String   @map("blocker_id")
-  blockedId String   @map("blocked_id")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  blocker   User     @relation("blocker", fields: [blockerId], references: [id])
-  blocked   User     @relation("blocked", fields: [blockedId], references: [id])
-
-  @@id([blockerId, blockedId])
-  @@index([blockedId])
-  @@map("block")
 }

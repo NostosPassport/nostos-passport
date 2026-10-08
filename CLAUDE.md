@@ -6,7 +6,7 @@ Read `README.md`, `AGENTS.md`, `ENGINE.md`, `DESIGN.md`, and `HANDOFF.md` before
 
 Nostos is an iPhone-only personal passport for New York. A signed-in user visits a place and creates a stamp. A stamp can contain up to six photos, a caption, a song, or a combination. The server verifies the submitted location against the place geofence.
 
-Current product scope is owner-only. Social code may remain behind feature flags for historical compatibility, but Feed, follows, likes, Activity, other-user passports, and guest preview are not part of the current product experience.
+Current product scope is owner-only. Feed, follows, likes, Activity, other-user passports, moderation/admin social tooling, and guest preview are not part of the product or active architecture.
 
 The old `Look around first` guest flow is removed. Signed-out users are routed to sign in or sign up.
 
@@ -45,11 +45,11 @@ Current local defaults in committed configuration:
 
 Preserve these unless the user explicitly changes product behavior and the corresponding tests/contracts are updated:
 
-1. Stamp geofence acceptance is enforced server-side.
-2. Personal mode does not expose another person's passport data.
-3. Hidden/removed content follows existing retention and moderation rules rather than being silently hard-deleted.
+1. Stamp geofence acceptance is enforced server-side. `geofenceExempt` is the App Review/QA exception.
+2. One account never receives another account's passport, stamp, pin, place-history, or profile data.
+3. Removing a stamp is final and retained as `removed_at`; user content is not silently hard-deleted.
 4. Uploaded images are re-encoded so EXIF/GPS does not survive the upload.
-5. Sensitive coordinates, raw storage keys, and internal user identifiers are not exposed in normal viewer payloads.
+5. Sensitive visit coordinates, raw storage keys, and internal user identifiers are not exposed in normal API payloads.
 6. Under-age signup handling must remain consistent with the current age-gate implementation and legal review requirements.
 7. Contract copies between backend and mobile must stay synchronized.
 

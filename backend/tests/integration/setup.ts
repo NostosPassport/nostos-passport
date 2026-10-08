@@ -3,12 +3,20 @@ import { afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 
 const TABLES = [
-  "rate_event", "verification_event", "photo_like", "follow_request", "block", "login_attempt",
-  "moderation_event", "flag", "follow", "neighborhood_completion", "pinned_stamp", "stamp_photo", "photo", "venue", "neighborhood", "session", "app_user",
+  "rate_event",
+  "login_attempt",
+  "pinned_stamp",
+  "neighborhood_completion",
+  "stamp_photo",
+  "photo",
+  "venue",
+  "neighborhood",
+  "session",
+  "email_challenge",
+  "app_user",
 ];
 
 beforeEach(async () => {
-  // TRUNCATE does not fire the row-level no-delete triggers, so tests start from a clean slate.
   await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${TABLES.map((t) => `"${t}"`).join(", ")} RESTART IDENTITY CASCADE`);
 });
 

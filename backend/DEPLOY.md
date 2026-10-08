@@ -78,8 +78,9 @@ Before any non-local migration:
 1. inspect the pending migrations
 2. confirm the database target
 3. confirm the provider backup or restore strategy
-4. use `prisma migrate deploy` only
-5. never run `pnpm db:reset` or `prisma migrate reset` against preview or production
+4. rehearse destructive schema changes on an isolated Neon branch when possible
+5. use `prisma migrate deploy` only for the intended environment
+6. never run `pnpm db:reset` or `prisma migrate reset` against preview or production
 
 Do not seed development accounts into production.
 
@@ -106,7 +107,7 @@ R2_SECRET_ACCESS_KEY=<R2 S3 secret>
 R2_BUCKET=<environment bucket name>
 ```
 
-Photos stay private. The backend generates short-lived S3-compatible presigned GET URLs for authorized viewers.
+Photos stay private. The backend generates short-lived S3-compatible presigned GET URLs for authorized owners.
 
 ## Resend
 
@@ -175,7 +176,6 @@ AUTH_COMPANY_ADDRESS=<complete mailing address>
 RESEND_VERIFY_EMAIL_TEMPLATE_ID=email-otp
 AUTH_CODE_SECRET=<unique random secret>
 CRON_SECRET=<unique random secret>
-SOCIAL_ENABLED=0
 ```
 
 Preview should use the same variable names with its own Neon database, R2 bucket, Resend key, and unique secrets, plus:
@@ -193,7 +193,13 @@ Do not seed fake or demo data into production. Import the approved real place an
 
 ## Preview and App Review
 
-The current mobile app requires sign-in. If preview is used for App Review, create the designated review account through the supported operational flow and verify that any geofence exemption is limited to that account.
+The current mobile app requires sign-in. If preview is used for App Review, create the designated review account through the supported operational flow and set the exemption explicitly:
+
+```bash
+pnpm user:geofence-exempt <email> true
+```
+
+Use `false` to clear it. `geofenceExempt` is not a staff role and grants no access to another account's data. It only bypasses stamp geofence acceptance for that account, and those stamps are written `countable=false`.
 
 ## Verification after deployment
 
@@ -206,9 +212,10 @@ Verify, in order:
 5. a test photo can be uploaded to the correct R2 bucket
 6. the returned photo URL is signed and expires
 7. the maintenance cron authenticates successfully
-8. the mobile preview build talks only to `preview-api.nostospassport.com`
-9. the mobile production build talks only to `api.nostospassport.com`
-10. `https://nostospassport.com/privacy`, `/terms`, and `/support` resolve before App Store submission
+8. an account cannot read another account's passport, stamp, or place-history data
+9. the mobile preview build talks only to `preview-api.nostospassport.com`
+10. the mobile production build talks only to `api.nostospassport.com`
+11. `https://nostospassport.com/privacy`, `/terms`, and `/support` resolve before App Store submission
 
 ## Local development
 
