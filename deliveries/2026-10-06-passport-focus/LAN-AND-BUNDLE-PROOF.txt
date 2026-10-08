@@ -1,4 +1,0 @@
-QR decoded with macOS Vision: exp://10.19.108.26:8081
-Backend LAN /api/health: HTTP 200, {"ok":true,"db":"up","env":"development","commit":null,"ms":68}
-Final iOS bundle: HTTP 200, 17729544 bytes, SHA256 7af15ba7104caa0c9638f3e0727a588cf8466cb93a338d277083bd46140b5e4a
-Native phone runtime unverified.

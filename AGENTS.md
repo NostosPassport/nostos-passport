@@ -1,6 +1,6 @@
 # Repository agent guidance
 
-This file is current. Dated reviews, deliveries, old build prompts, and old `build-codex` instructions are historical unless the user explicitly asks to reproduce that state.
+This file is current. Historical reviews, deliveries, old build prompts, and old `build-codex` instructions live in git history and are not current instructions.
 
 ## Before changing anything
 
@@ -19,7 +19,7 @@ Use the current repository state as the source of truth. Check code and package 
 ## Working rules
 
 - Follow explicit current user instructions over historical session notes.
-- Do not rewrite dated files in `reviews/`, `deliveries/`, or `LEDGER.md` to make them look current.
+- Do not recreate historical review/delivery artifacts as current instructions; use git history when that evidence is needed.
 - Do not edit generated native `ios/` or `android/` directories. Configure Expo native behavior through `app.json` and config plugins.
 - For Expo/React Native APIs, inspect the installed package version and use the matching Expo SDK 57 documentation rather than memory.
 - Use `npx expo install` for native Expo dependencies.
