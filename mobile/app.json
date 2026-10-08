@@ -12,7 +12,7 @@
       "ios"
     ],
     "ios": {
-      "bundleIdentifier": "com.nostos.ios",
+      "bundleIdentifier": "com.nostospassport.nostos",
       "supportsTablet": false,
       "config": {
         "usesNonExemptEncryption": false
