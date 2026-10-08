@@ -15,9 +15,10 @@ import { haptics } from "@/lib/haptics";
 import { colors, radius, size, space } from "@/theme";
 
 const WHAT_HAPPENS = [
-  "Your name, handle and email are erased.",
-  "Your stamps are removed from every passport, and so are your follows and likes.",
-  "You’re signed out on every device. This can’t be undone.",
+  "Your email and handle are replaced, your name is reset, and your bio and profile photo are removed.",
+  "Your stamps and their image files are permanently removed.",
+  "Your saved passport progress is removed, and you’re signed out on every device.",
+  "This can’t be undone.",
 ];
 
 const FAREWELL = "Your account is deleted.";
