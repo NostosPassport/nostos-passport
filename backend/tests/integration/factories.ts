@@ -1,9 +1,12 @@
+import { createHmac, randomUUID } from "node:crypto";
+import type { EmailChallengePurpose } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { loadActor, type Actor } from "@/server/actor";
 import { DAY_MS } from "@/lib/time";
 
 let n = 0;
 const FAKE_HASH = "scrypt$32768$8$1$AAAA$AAAA";
+const TEST_CODE_SECRET = "nostos-development-auth-code-secret-change-before-production";
 
 export async function makeUser(opts: { ageDays?: number; handle?: string; geofenceExempt?: boolean } = {}) {
   n++;
@@ -18,6 +21,24 @@ export async function makeUser(opts: { ageDays?: number; handle?: string; geofen
       createdAt: new Date(Date.now() - (opts.ageDays ?? 30) * DAY_MS),
     },
   });
+}
+
+export async function seedEmailChallenge(email: string, purpose: EmailChallengePurpose, code = "123456", now = new Date()) {
+  const id = randomUUID();
+  const secret = process.env.AUTH_CODE_SECRET?.trim() || TEST_CODE_SECRET;
+  const codeHash = createHmac("sha256", secret).update(`${id}:${code}`).digest("hex");
+  await prisma.emailChallenge.create({
+    data: {
+      id,
+      email: email.trim().toLowerCase(),
+      codeHash,
+      purpose,
+      ip: "integration-test",
+      expiresAt: new Date(now.getTime() + 10 * 60_000),
+      createdAt: now,
+    },
+  });
+  return { challengeId: id, code };
 }
 
 export const VENUE_POS = { lat: 40.7265, lng: -73.9845 };
