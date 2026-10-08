@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
-import { makeUser, makeVenue, INSIDE } from "./factories";
+import { makeUser, makeVenue } from "./factories";
 
 describe("database guards", () => {
   async function stampRow(extra: Record<string, unknown> = {}) {
@@ -13,28 +13,34 @@ describe("database guards", () => {
         storageKey: `photos/${Math.random().toString(36).slice(2)}.png`,
         mimeType: "image/png",
         caption: "x",
-        ...INSIDE,
+        lat: null,
+        lng: null,
         ...extra,
       },
     });
     return { user, venue, photo };
   }
 
-  it("rejects DELETE of a stamp and refuses rewriting immutable visit data", async () => {
+  it("rejects DELETE, raw coordinate retention, and rewrites of immutable creation data", async () => {
     const { photo } = await stampRow();
     await expect(prisma.photo.delete({ where: { id: photo.id } })).rejects.toThrow();
     await expect(prisma.photo.update({ where: { id: photo.id }, data: { createdAt: new Date() } })).rejects.toThrow(/immutable/);
-    await expect(prisma.photo.update({ where: { id: photo.id }, data: { lat: 1 } })).rejects.toThrow(/immutable/);
+    await expect(prisma.photo.update({ where: { id: photo.id }, data: { lat: 1 } })).rejects.toThrow(/raw visit coordinates|check constraint/);
     await expect(prisma.photo.update({ where: { id: photo.id }, data: { storageKey: "photos/other.png" } })).rejects.toThrow(/immutable/);
     await expect(prisma.photo.update({ where: { id: photo.id }, data: { rating: 9 } })).rejects.toThrow(/immutable/);
     await expect(prisma.photo.update({ where: { id: photo.id }, data: { countable: false } })).rejects.toThrow(/immutable/);
+    await expect(prisma.photo.create({ data: { userId: photo.userId, venueId: photo.venueId, caption: "coords", lat: 40.7, lng: -73.9 } })).rejects.toThrow();
+  });
+
+  it("allows visit-date edits but never lets an edit manufacture verification", async () => {
+    const { photo } = await stampRow({ visitedAt: new Date("2026-10-08T16:00:00Z") });
+    await expect(prisma.photo.update({ where: { id: photo.id }, data: { visitedAt: new Date("2026-10-07T16:00:00Z") } })).resolves.toBeTruthy();
+    await expect(prisma.photo.update({ where: { id: photo.id }, data: { verifiedAt: new Date() } })).rejects.toThrow(/verification can only be established/);
   });
 
   it("caption and song remain editable and captions stay within 280 characters", async () => {
     const { photo } = await stampRow();
-    await expect(
-      prisma.photo.update({ where: { id: photo.id }, data: { caption: "edited", editedAt: new Date(), songTitle: "Song", songArtist: "Artist" } }),
-    ).resolves.toBeTruthy();
+    await expect(prisma.photo.update({ where: { id: photo.id }, data: { caption: "edited", editedAt: new Date(), songTitle: "Song", songArtist: "Artist" } })).resolves.toBeTruthy();
     await expect(prisma.photo.update({ where: { id: photo.id }, data: { caption: "x".repeat(281) } })).rejects.toThrow(/caption_length/);
   });
 
@@ -44,15 +50,15 @@ describe("database guards", () => {
     await expect(prisma.photo.update({ where: { id: photo.id }, data: { removedAt: null } })).rejects.toThrow(/stays removed/);
   });
 
-  it("a stamp needs a photo, a caption or a song", async () => {
+  it("a stamp needs a live photo, a caption or a song", async () => {
     const user = await makeUser();
     const venue = await makeVenue();
-    const base = { userId: user.id, venueId: venue.id, ...INSIDE };
-    await expect(prisma.photo.create({ data: { ...base, caption: "" } })).rejects.toThrow(/photo_has_content/);
-    await expect(prisma.photo.create({ data: { ...base, caption: "   " } })).rejects.toThrow(/photo_has_content/);
+    const base = { userId: user.id, venueId: venue.id, lat: null, lng: null };
+    await expect(prisma.photo.create({ data: { ...base, caption: "" } })).rejects.toThrow(/needs a photo, a caption or a song/);
+    await expect(prisma.photo.create({ data: { ...base, caption: "   " } })).rejects.toThrow(/needs a photo, a caption or a song/);
     await expect(prisma.photo.create({ data: { ...base, caption: "hello" } })).resolves.toBeTruthy();
     await expect(prisma.photo.create({ data: { ...base, caption: "", songTitle: "T", songArtist: "A" } })).resolves.toBeTruthy();
-    await expect(prisma.photo.create({ data: { ...base, caption: "", storageKey: "photos/stale.png", mimeType: "image/png" } })).rejects.toThrow(/photo_has_content/);
+    await expect(prisma.photo.create({ data: { ...base, caption: "", storageKey: "photos/stale.png", mimeType: "image/png" } })).rejects.toThrow(/needs a photo, a caption or a song/);
     await expect(
       prisma.$transaction(async (tx) => {
         const p = await tx.photo.create({ data: { ...base, caption: "", storageKey: "photos/p.png", mimeType: "image/png" } });
@@ -61,9 +67,7 @@ describe("database guards", () => {
     ).resolves.toBeUndefined();
     await expect(prisma.photo.create({ data: { ...base, caption: "x", storageKey: "photos/q.png" } })).rejects.toThrow(/photo_storage_pair/);
     await expect(prisma.photo.create({ data: { ...base, caption: "x", songTitle: "T" } })).rejects.toThrow(/photo_song_shape/);
-    await expect(
-      prisma.photo.create({ data: { ...base, caption: "x", songTitle: "T", songArtist: "A", songArtUrl: "http://x.test/a.jpg" } }),
-    ).rejects.toThrow(/photo_song_shape/);
+    await expect(prisma.photo.create({ data: { ...base, caption: "x", songTitle: "T", songArtist: "A", songArtUrl: "http://x.test/a.jpg" } })).rejects.toThrow(/photo_song_shape/);
   });
 
   it("allows only current rate-limit kinds", async () => {
