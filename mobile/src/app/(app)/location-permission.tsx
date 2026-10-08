@@ -24,21 +24,21 @@ export default function LocationPermission() {
     <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.md }]}>
       <View style={styles.body}>
         <Text style={styles.title} accessibilityRole="header">
-          {denied ? "Location is off" : "Find your way"}
+          {denied ? "Location is off" : "Verify where you've been"}
         </Text>
         <Text color="textSecondary">
           {denied
-            ? "Nostos can't see your location. Turn it on in Settings to find nearby places and confirm you're there when you stamp one."
-            : "Nostos uses location while you're using the app to find nearby places and confirm you're there when you stamp one. Your position isn't shown to anyone."}
+            ? "You can still use Nostos and make stamps without location. Turn it on in Settings when you want nearby places and location-verified Now stamps."
+            : "Location is optional. Nostos can use it while you're in the app to show nearby places and verify a Now stamp when you're at the venue. Without it, your stamps still work and are simply unverified."}
         </Text>
       </View>
       <View style={styles.actions}>
         {denied ? (
           <Button title="Open Settings" onPress={() => void Linking.openSettings()} />
         ) : (
-          <Button title="Continue" onPress={() => void ask()} loading={asking} />
+          <Button title="Use my location" onPress={() => void ask()} loading={asking} />
         )}
-        <Button title="Not now" variant="secondary" onPress={() => router.back()} />
+        <Button title="Continue without location" variant="secondary" onPress={() => router.back()} />
       </View>
     </View>
   );
