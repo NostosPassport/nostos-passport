@@ -19,6 +19,7 @@
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Nostos uses your location to find the places near you and to confirm you're there when you stamp one. Your position isn't shown to anyone.",
+        "NSMotionUsageDescription": "Nostos uses motion-related system services to support location features that help find nearby places and verify stamps.",
         "NSCameraUsageDescription": "Take a photo for your stamp.",
         "NSPhotoLibraryUsageDescription": "Choose a photo for your stamp.",
         "NSPhotoLibraryAddUsageDescription": "Save photos you take in Nostos to your photo library."
@@ -72,7 +73,7 @@
           "isIosBackgroundLocationEnabled": false,
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false,
-          "motionUsagePermission": false
+          "motionUsagePermission": "Nostos uses motion-related system services to support location features that help find nearby places and verify stamps."
         }
       ],
       [
