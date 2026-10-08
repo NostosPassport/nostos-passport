@@ -6,44 +6,36 @@ import { makeActor, makeStamp, makeVenue, pngBytes } from "./factories";
 
 const mem = installMemoryStorage();
 
-describe("creation-only stamp photos", () => {
-  it("a remote later append is refused before processing or storage", async () => {
+describe("editable stamp photos", () => {
+  it("lets the owner append photos after creation, processes them, and enforces the six-photo cap", async () => {
     const me = await makeActor();
     const s = await makeStamp(me, (await makeVenue()).id);
     const before = mem.size;
-    await expect(addStampPhotos(prisma, me, s.id, [pngBytes()], new Date(Date.now() + 86_400_000))).rejects.toMatchObject({
-      status: 400,
-      message: "Photos can only be attached when creating a stamp",
-    });
-    await expect(addStampPhotos(prisma, me, s.id, [Buffer.from("invalid photo")])).rejects.toMatchObject({
-      status: 400,
-      message: "Photos can only be attached when creating a stamp",
-    });
-    expect(mem.size).toBe(before);
-    expect(await prisma.stampPhoto.count({ where: { stampId: s.id } })).toBe(1);
+    const appended = await addStampPhotos(prisma, me, s.id, [pngBytes(), pngBytes(90)]);
+    expect(appended.stamp.photos).toHaveLength(3);
+    expect(mem.size).toBe(before + 2);
+
+    await expect(addStampPhotos(prisma, me, s.id, [Buffer.from("invalid photo")])).rejects.toMatchObject({ status: 415 });
+    await expect(addStampPhotos(prisma, me, s.id, [pngBytes(), pngBytes(), pngBytes(), pngBytes()])).rejects.toMatchObject({ status: 400 });
+    expect((await addStampPhotos(prisma, me, s.id, [pngBytes(), pngBytes(), pngBytes()])).stamp.photos).toHaveLength(6);
   });
 
-  it("direct database append is refused even after updating the parent in the same transaction", async () => {
+  it("later append is owner-only and creation metadata remains immutable", async () => {
     const me = await makeActor();
+    const other = await makeActor();
     const s = await makeStamp(me, (await makeVenue()).id);
-    const row = { stampId: s.id, storageKey: "photos/later.png", mimeType: "image/png", position: 1 };
-    await expect(prisma.stampPhoto.create({ data: row })).rejects.toThrow(/only be attached when creating/);
-    await expect(
-      prisma.$transaction(async (tx) => {
-        await tx.photo.update({ where: { id: s.id }, data: { caption: "changed" } });
-        await tx.stampPhoto.create({ data: row });
-      }),
-    ).rejects.toThrow(/only be attached when creating/);
+    await expect(addStampPhotos(prisma, other, s.id, [pngBytes()])).rejects.toMatchObject({ status: 404 });
+    await expect(addStampPhotos(prisma, null, s.id, [pngBytes()])).rejects.toMatchObject({ status: 401 });
     await expect(prisma.photo.update({ where: { id: s.id }, data: { creationTransaction: "spoofed" } })).rejects.toThrow(/immutable/);
-    expect((await prisma.photo.findUniqueOrThrow({ where: { id: s.id } })).caption).toBe("hello");
   });
 
-  it("layout and final removal remain permitted without reopening the photo set", async () => {
+  it("layout, removal, replacement, and final-removal rules continue to work", async () => {
     const me = await makeActor();
-    const s = await makeStamp(me, (await makeVenue()).id);
+    const s = await makeStamp(me, (await makeVenue()).id, { caption: "keeps content valid" });
     expect((await setPhotoLayout(prisma, me, s.id, { photos: [{ id: s.photos[0]!.id, x: 0.3, rotation: -5 }] })).stamp.photos[0]).toMatchObject({ x: 0.3, rotation: -5 });
     await removeStampPhoto(prisma, me, s.id, s.photos[0]!.id);
-    await expect(prisma.stampPhoto.create({ data: { stampId: s.id, storageKey: "photos/replacement.png", mimeType: "image/png", position: 0 } })).rejects.toThrow(/only be attached when creating/);
+    const replacement = await addStampPhotos(prisma, me, s.id, [pngBytes()]);
+    expect(replacement.stamp.photos).toHaveLength(1);
     await expect(prisma.stampPhoto.update({ where: { id: s.photos[0]!.id }, data: { removedAt: null } })).rejects.toThrow(/stays removed/);
   });
 });
