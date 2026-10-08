@@ -63,8 +63,14 @@ function near(over: Record<string, unknown> = {}) {
   return { id: "p1", slug: "p1", name: "Katz's", address: "205 E Houston St", neighborhood: "East Village", lat: 40.7222, lng: -73.9874, geofenceMeters: 100, neighborhoodId: "n1", fromOsm: false, distanceM: 20, inside: true, ...over };
 }
 const wrap = async (ui: React.ReactElement) => render(<QueryClientProvider client={testQueryClient()}>{ui}</QueryClientProvider>);
-const chooseKatz = () => fireEvent.press(screen.getAllByRole("button", { name: /^Katz's, East Village/ })[0]!);
-const choosePast = () => fireEvent.press(screen.getByRole("button", { name: /PAST/ }));
+const chooseKatz = async () => {
+  await fireEvent.press(screen.getAllByRole("button", { name: /^Katz's, East Village/ })[0]!);
+  await screen.findByText(/Make it/);
+};
+const choosePast = async () => {
+  await fireEvent.press(screen.getByRole("button", { name: /PAST/ }));
+  await screen.findByLabelText("Visit date");
+};
 const flatStamp = {
   id: "s1", photoUrl: null, photos: [], caption: "hi", song: null, page: 1, slot: 1,
   createdAt: "2026-10-08T19:41:00.000Z", visitedAt: "2026-10-08T19:41:00.000Z", verifiedAt: "2026-10-08T19:41:00.000Z", verified: true, editedAt: null,
@@ -95,21 +101,21 @@ describe("the composer", () => {
 
   it("shows verification as a positive Now-state but only requires content to stamp", async () => {
     await wrap(<NewStamp />);
-    chooseKatz();
+    await chooseKatz();
     expect(screen.getByText(/Make it/)).toBeTruthy();
     expect(screen.getByText("KATZ'S · TODAY")).toBeTruthy();
     expect(screen.getByText("Visit eligible for Nostos verification")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Stamp this place" }).props.accessibilityState.disabled).toBe(true);
-    fireEvent.changeText(screen.getByLabelText("A few words"), "good pastrami");
+    await fireEvent.changeText(screen.getByLabelText("A few words"), "good pastrami");
     expect(screen.getByRole("button", { name: "Stamp this place" }).props.accessibilityState.disabled).toBe(false);
   });
 
   it("allows a Now stamp outside the geofence and simply treats it as unverified", async () => {
     mockNearby = [near({ inside: false, distanceM: 1815 })];
     await wrap(<NewStamp />);
-    chooseKatz();
+    await chooseKatz();
     expect(screen.getByText(/This visit will be unverified/)).toBeTruthy();
-    fireEvent.changeText(screen.getByLabelText("A few words"), "still my memory");
+    await fireEvent.changeText(screen.getByLabelText("A few words"), "still my memory");
     expect(screen.getByRole("button", { name: "Stamp this place" }).props.accessibilityState.disabled).toBe(false);
   });
 
@@ -121,8 +127,8 @@ describe("the composer", () => {
     const appendSpy = jest.spyOn(FormData.prototype, "append").mockImplementation((k: string, v: unknown) => void appended.push([k, v]));
     await wrap(<NewStamp />);
     expect(screen.getByText(/You can stamp without sharing location/)).toBeTruthy();
-    chooseKatz();
-    fireEvent.changeText(screen.getByLabelText("A few words"), "no location");
+    await chooseKatz();
+    await fireEvent.changeText(screen.getByLabelText("A few words"), "no location");
     await act(async () => void fireEvent.press(screen.getByRole("button", { name: "Stamp this place" })));
     await waitFor(() => expect(mockUpload).toHaveBeenCalledTimes(1));
     expect(appended.map(([k]) => k)).toContain("mode");
@@ -135,11 +141,11 @@ describe("the composer", () => {
     const appended: [string, unknown][] = [];
     const appendSpy = jest.spyOn(FormData.prototype, "append").mockImplementation((k: string, v: unknown) => void appended.push([k, v]));
     await wrap(<NewStamp />);
-    choosePast();
-    fireEvent.changeText(screen.getByLabelText("Visit date"), "09/20/2026");
-    chooseKatz();
+    await choosePast();
+    await fireEvent.changeText(screen.getByLabelText("Visit date"), "09/20/2026");
+    await chooseKatz();
     expect(screen.getByText(/KATZ'S · 09\/20\/2026/)).toBeTruthy();
-    fireEvent.changeText(screen.getByLabelText("A few words"), "from September");
+    await fireEvent.changeText(screen.getByLabelText("A few words"), "from September");
     await act(async () => void fireEvent.press(screen.getByRole("button", { name: "Stamp this place" })));
     await waitFor(() => expect(mockUpload).toHaveBeenCalledTimes(1));
     expect(appended).toContainEqual(["mode", "past"]);
@@ -150,18 +156,18 @@ describe("the composer", () => {
 
   it("rejects future Past dates before upload", async () => {
     await wrap(<NewStamp />);
-    choosePast();
-    fireEvent.changeText(screen.getByLabelText("Visit date"), "12/31/2099");
-    chooseKatz();
-    fireEvent.changeText(screen.getByLabelText("A few words"), "future");
+    await choosePast();
+    await fireEvent.changeText(screen.getByLabelText("Visit date"), "12/31/2099");
+    await chooseKatz();
+    await fireEvent.changeText(screen.getByLabelText("A few words"), "future");
     expect(screen.getByRole("button", { name: "Stamp this place" }).props.accessibilityState.disabled).toBe(true);
     expect(screen.getByText(/Choose a date from the last year/)).toBeTruthy();
   });
 
   it("opens the photo manager without venue-authentication parameters", async () => {
     await wrap(<NewStamp />);
-    chooseKatz();
-    fireEvent.press(screen.getByLabelText("Add a photo"));
+    await chooseKatz();
+    await fireEvent.press(screen.getByLabelText("Add a photo"));
     expect(mockPush).toHaveBeenCalledWith("/stamp/camera");
   });
 
@@ -171,8 +177,8 @@ describe("the composer", () => {
     const appended: [string, unknown][] = [];
     const appendSpy = jest.spyOn(FormData.prototype, "append").mockImplementation((k: string, v: unknown) => void appended.push([k, v]));
     await wrap(<NewStamp />);
-    chooseKatz();
-    fireEvent.press(screen.getByLabelText("Remove photo 1"));
+    await chooseKatz();
+    await fireEvent.press(screen.getByLabelText("Remove photo 1"));
     await act(async () => void photoDraft.add("file://c.jpg"));
     await act(async () => void fireEvent.press(screen.getByRole("button", { name: "Stamp this place" })));
     await waitFor(() => expect(mockUpload).toHaveBeenCalledTimes(1));
@@ -187,7 +193,7 @@ describe("the composer", () => {
   it("stops offering another photo action at six photos", async () => {
     for (let i = 0; i < 6; i++) photoDraft.add(`file://${i}.jpg`);
     await wrap(<NewStamp />);
-    chooseKatz();
+    await chooseKatz();
     expect(screen.getByText("6 / 6")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Add another photo/ })).toBeNull();
   });
@@ -206,7 +212,7 @@ describe("the photo source flow", () => {
 
   it("watermarks a native-camera photo and adds it to the draft", async () => {
     await wrap(<StampCamera />);
-    fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
     await waitFor(() => expect(mockTakePhoto).toHaveBeenCalledTimes(1));
     expect(mockPrepareImage).toHaveBeenCalledWith("file://shot.jpg", { watermark: true });
     await waitFor(() => expect(photoDraft.get()).toEqual(["prepared:file://shot.jpg"]));
@@ -216,7 +222,7 @@ describe("the photo source flow", () => {
   it("accepts a Photo Library image without EXIF/source/time/location validation", async () => {
     mockSourceIndex = 1;
     await wrap(<StampCamera />);
-    fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
     await waitFor(() => expect(mockPickFromLibrary).toHaveBeenCalledTimes(1));
     expect(mockPrepareImage).toHaveBeenCalledWith("file://library.jpg");
     await waitFor(() => expect(photoDraft.get()).toEqual(["prepared:file://library.jpg"]));
@@ -225,7 +231,7 @@ describe("the photo source flow", () => {
   it("leaves the photo screen unchanged when the chooser or camera is cancelled", async () => {
     mockSourceIndex = 2;
     await wrap(<StampCamera />);
-    fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Add a photo" }));
     expect(photoDraft.get()).toEqual([]);
     expect(mockBack).not.toHaveBeenCalled();
   });
@@ -244,7 +250,7 @@ describe("the photo source flow", () => {
     photoDraft.add("file://x.jpg");
     mockTakePhoto.mockResolvedValue("failed");
     await wrap(<StampCamera />);
-    fireEvent.press(screen.getByRole("button", { name: "Add another photo" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Add another photo" }));
     await waitFor(() => expect(screen.getByText("Couldn't open the camera. Try again.")).toBeTruthy());
     expect(photoDraft.get()).toEqual(["file://x.jpg"]);
   });
