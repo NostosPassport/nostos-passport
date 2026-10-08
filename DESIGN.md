@@ -4,7 +4,7 @@
 
 Only Figma pages **9 and 10** in the Nostos UI exploration are current design references. Earlier Figma pages, including the black/silver exploration and the original black/brass passport direction, are historical and must not be treated as implementation authority.
 
-The app is being migrated screen by screen to the current editorial system. Existing behavior and data contracts should be preserved while layouts are updated.
+The app is being migrated screen by screen to the current editorial system. Existing behavior and data contracts should be preserved while layouts are updated, except where current approved product decisions explicitly replace older behavior.
 
 ## Editorial visual language
 
@@ -37,34 +37,48 @@ Important current routes include:
 - `mobile/src/app/(app)/stamp/camera.tsx`
 - `mobile/src/app/(app)/stamp/landed.tsx`
 - `mobile/src/app/(app)/stamp/[id].tsx`
+- `mobile/src/app/(app)/stamp/edit.tsx`
 - `mobile/src/app/(app)/place/[id].tsx`
 - settings and account routes
 
 The old guest preview route is no longer part of the app's root navigation.
 
+## Stamp trust hierarchy
+
+Nostos verifies **visits, not photographs**.
+
+- `Now` means the user is adding a current visit. If current device location is available and the server confirms proximity to the venue, the visit receives the Nostos verification seal.
+- A Now stamp still works without location or outside the verification radius; it is simply unverified.
+- `Past` means a historical memory from the previous year. Past stamps are always unverified.
+- Verified status is a positive treatment. Use the Nostos mark prominently enough to feel collectible and trustworthy.
+- Unverified is neutral, not a warning state. It should be absent from the Passport stamp face and appear only as low-emphasis fine print where explanation is useful.
+- Changing the calendar day on a verified stamp removes verification.
+
 ## Photo flow
 
-The `stamp/camera` route is now a photo-management screen, not a custom live camera preview.
+The `stamp/camera` route is a photo-management screen, not a custom live camera preview.
 
 - Add Photo opens a native iOS action sheet.
 - Take Photo launches the Apple/system camera through `expo-image-picker`.
 - Choose from Photo Library is supported.
-- Selected library photos must pass local validation using available capture/source/time/location metadata.
+- Photo Library images are memories attached to the visit. Do not reject them based on EXIF GPS, timestamp, source application, screenshot status, or editing software.
 - Accepted photos are prepared for upload, and upload preparation strips EXIF/GPS.
-- Camera captures receive the Nostos watermark and may be saved to Photos when permission allows.
-- Users can open, remove, and add photos until the six-photo limit.
+- Camera captures receive a subtle Nostos watermark and may be saved to Photos when permission allows.
+- Users can open, add, remove, and reorder photos up to six, including after stamp creation.
+- The camera watermark indicates a photo was captured through Nostos. It does not mean Nostos authenticated the content of the image.
 
-Do not use historical references to `CameraView`, a custom shutter, or camera-only stamp photos as current design requirements.
+Do not use historical references to `CameraView`, a custom shutter, camera-only stamp photos, or EXIF-gated Photo Library selection as current design requirements.
 
 ## Implementation principles
 
 - Current Figma pages 9 and 10 control visual direction.
-- Existing hooks, server contracts, accessibility behavior, geofence logic, photo rules, and navigation semantics should survive visual migrations.
 - Use theme tokens rather than one-off colors.
 - Respect iOS safe areas, Dynamic Type, VoiceOver, keyboard avoidance, and minimum touch targets.
 - Reduced Motion must remain functional where motion exists.
 - The map must use real runtime map/location data, not schematic design artwork.
 - Design screenshots are references, not proof that native behavior works.
+- Location permission is optional. UI must never imply that the app is unusable without it.
+- Passport chronology follows the user's visit date, not the time the database record was created.
 
 ## Historical material
 
