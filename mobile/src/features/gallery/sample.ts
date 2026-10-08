@@ -17,11 +17,22 @@ export const SAMPLE_PLACES = [
 export function sampleStamp(i: number, over: Partial<StampView> = {}): StampView {
   const [name, hood, hoodId] = SAMPLE_PLACES[i % SAMPLE_PLACES.length]!;
   const { page, slot } = pageAndSlot(i);
+  const at = new Date(Date.UTC(2026, 5, 1 + i, 2, 30)).toISOString();
   return {
-    id: `sample-${i}`, photoUrl: null, photos: [], caption: "", song: null, page, slot, createdAt: new Date(Date.UTC(2026, 5, 1 + i, 2, 30)).toISOString(), editedAt: null,
+    id: `sample-${i}`,
+    photoUrl: null,
+    photos: [],
+    caption: "",
+    song: null,
+    page,
+    slot,
+    createdAt: at,
+    visitedAt: at,
+    verifiedAt: i % 3 === 0 ? at : null,
+    verified: i % 3 === 0,
+    editedAt: null,
     place: { id: `place-${i % SAMPLE_PLACES.length}`, slug: `place-${i}`, name, neighborhood: hood, neighborhoodId: hoodId },
-    author: { handle: SAMPLE_USER.handle, displayName: SAMPLE_USER.displayName, avatarUrl: null, verified: false },
-    mine: true, likes: { count: 0, viewerLiked: false }, hidden: false, removed: false, ...over,
+    ...over,
   };
 }
 
