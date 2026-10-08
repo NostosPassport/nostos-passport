@@ -1,3 +1,6 @@
+/**
+ * COPIED VERBATIM from backend/src/contracts/api.ts.
+ */
 import { z } from "zod";
 
 export const IsoDate = z.string().datetime({ offset: true });
