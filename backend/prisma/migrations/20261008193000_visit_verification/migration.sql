@@ -9,6 +9,16 @@ DROP FUNCTION IF EXISTS lastcall_photo_immutable();
 DROP TRIGGER IF EXISTS stamp_photo_creation_only ON "stamp_photo";
 DROP FUNCTION IF EXISTS nostos_stamp_photo_creation_only();
 
+-- The previous live-content migration replaced the old photo_has_content CHECK with
+-- deferred constraint triggers. Remove those triggers before installing the new editable-photo
+-- content guard below. A PostgreSQL constraint trigger is dropped with DROP TRIGGER, not
+-- ALTER TABLE ... DROP CONSTRAINT, even though it has an associated constraint entry.
+DROP TRIGGER IF EXISTS photo_has_content ON "photo";
+DROP TRIGGER IF EXISTS stamp_photo_has_content ON "stamp_photo";
+DROP TRIGGER IF EXISTS stamp_photo_lock_parent ON "stamp_photo";
+DROP FUNCTION IF EXISTS nostos_check_stamp_content();
+DROP FUNCTION IF EXISTS nostos_lock_stamp_photo_parent();
+
 ALTER TABLE "photo"
   ADD COLUMN "visited_at" TIMESTAMPTZ(3),
   ADD COLUMN "verified_at" TIMESTAMPTZ(3),
@@ -33,10 +43,7 @@ ALTER TABLE "photo" ADD CONSTRAINT photo_no_raw_coordinates CHECK (lat IS NULL A
 CREATE INDEX "photo_user_id_visited_at_idx" ON "photo"("user_id", "visited_at");
 CREATE INDEX "photo_venue_id_visited_at_idx" ON "photo"("venue_id", "visited_at");
 
--- The old parent-row CHECK could not see appended stamp_photo rows. Replace it with deferred
--- cross-table checks so a stamp can be photo-only even when photos are added after creation.
-ALTER TABLE "photo" DROP CONSTRAINT IF EXISTS photo_has_content;
-
+-- Cross-table checks allow a stamp to be photo-only while photos remain editable after creation.
 CREATE OR REPLACE FUNCTION nostos_stamp_has_content() RETURNS trigger AS $$
 DECLARE sid text;
 DECLARE ok boolean;
