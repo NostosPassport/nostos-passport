@@ -2,7 +2,6 @@
 -- A stamp may represent a visit from the last year. Only a "now" stamp can be verified,
 -- and the raw coordinates used for the geofence check are not retained.
 
--- Visit identity is changing, so replace the old immutability guard after the shape migration.
 DROP TRIGGER IF EXISTS photo_immutable ON "photo";
 DROP FUNCTION IF EXISTS lastcall_photo_immutable();
 
@@ -28,6 +27,9 @@ ALTER TABLE "photo"
   ALTER COLUMN "visited_at" SET NOT NULL,
   ALTER COLUMN "visited_at" SET DEFAULT CURRENT_TIMESTAMP;
 
+-- Verification coordinates are deliberately ephemeral. Enforce that invariant below the service layer too.
+ALTER TABLE "photo" ADD CONSTRAINT photo_no_raw_coordinates CHECK (lat IS NULL AND lng IS NULL);
+
 CREATE INDEX "photo_user_id_visited_at_idx" ON "photo"("user_id", "visited_at");
 CREATE INDEX "photo_venue_id_visited_at_idx" ON "photo"("venue_id", "visited_at");
 
@@ -40,9 +42,9 @@ DECLARE sid text;
 DECLARE ok boolean;
 BEGIN
   IF TG_TABLE_NAME = 'stamp_photo' THEN
-    sid := COALESCE(NEW.stamp_id, OLD.stamp_id);
+    sid := NEW.stamp_id;
   ELSE
-    sid := COALESCE(NEW.id, OLD.id);
+    sid := NEW.id;
   END IF;
 
   SELECT btrim(p.caption) <> '' OR p.song_title IS NOT NULL OR EXISTS (
@@ -55,7 +57,7 @@ BEGIN
   IF ok IS FALSE THEN
     RAISE EXCEPTION 'lastcall: a stamp needs a photo, a caption or a song' USING ERRCODE = 'check_violation';
   END IF;
-  RETURN COALESCE(NEW, OLD);
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
