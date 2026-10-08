@@ -47,7 +47,10 @@ const stamp = {
   photos: [{ id: "ph1", url: "https://cdn.example.test/s1.jpg", position: 0, x: null, y: null, rotation: null }],
   caption: "hi",
   song: { title: "Heroes", artist: "David Bowie", artUrl: null, sourceId: "1" },
-  createdAt: "2026-09-24T02:00:00.000Z",
+  createdAt: "2026-10-08T20:00:00.000Z",
+  visitedAt: "2026-09-24T02:00:00.000Z",
+  verifiedAt: "2026-09-24T02:00:00.000Z",
+  verified: true,
   editedAt: null,
   place: { id: "v1", slug: "velvet", name: "Velvet", neighborhood: "East Village", neighborhoodId: null },
 };
@@ -78,11 +81,11 @@ describe("api client", () => {
   });
 
   it("surfaces server error messages and codes", async () => {
-    const message = "You need to be within 100 m of this place to stamp it (you're 140 m away)";
-    const { api } = setup(() => jsonResponse(403, { error: "forbidden", message }));
+    const message = "That visit date is outside the allowed range.";
+    const { api } = setup(() => jsonResponse(400, { error: "bad_request", message }));
     const err = await api.stamps.get("s1").catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
-    expect(err).toMatchObject({ status: 403, code: "forbidden", message });
+    expect(err).toMatchObject({ status: 400, code: "bad_request", message });
     expect(err.isClientError).toBe(true);
   });
 
@@ -97,9 +100,7 @@ describe("api client", () => {
   });
 
   it("maps network failures to offline and hung requests to timeout", async () => {
-    const offline = setup(() => {
-      throw new TypeError("Network request failed");
-    });
+    const offline = setup(() => { throw new TypeError("Network request failed"); });
     await expect(offline.api.places.list()).rejects.toMatchObject({ status: 0, code: "offline", message: OFFLINE_MESSAGE });
 
     const api = createApi({
@@ -107,8 +108,7 @@ describe("api client", () => {
       getToken: () => null,
       onInvalidToken: jest.fn(),
       timeoutMs: 20,
-      fetch: ((_url: string, init: RequestInit) =>
-        new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new Error("aborted"))))) as unknown as typeof fetch,
+      fetch: ((_url: string, init: RequestInit) => new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new Error("aborted"))))) as unknown as typeof fetch,
     });
     await expect(api.places.list()).rejects.toMatchObject({ code: "timeout" });
   });
@@ -154,27 +154,32 @@ describe("api client", () => {
 });
 
 describe("stamp endpoints", () => {
-  it("parses the current owner-only stamp shape", async () => {
+  it("parses visit chronology and verification in the owner-only stamp shape", async () => {
     const { api } = setup(() => jsonResponse(200, { stamp }));
     const res = await api.stamps.get("s1");
     expect(res.stamp.song?.title).toBe("Heroes");
     expect(res.stamp.place.slug).toBe("velvet");
+    expect(res.stamp.visitedAt).toBe("2026-09-24T02:00:00.000Z");
+    expect(res.stamp.verified).toBe(true);
+    expect(res.stamp.verifiedAt).toBe("2026-09-24T02:00:00.000Z");
     expect(res.stamp).not.toHaveProperty("author");
     expect(res.stamp).not.toHaveProperty("likes");
+    expect(res.stamp).not.toHaveProperty("lat");
+    expect(res.stamp).not.toHaveProperty("lng");
   });
 
-  it("edits only supplied fields and removes stamps with POST /remove", async () => {
+  it("edits only supplied fields, including visit date, and removes stamps with POST /remove", async () => {
     const edit = setup(() => jsonResponse(200, { stamp }));
-    await edit.api.stamps.edit("s1", { song: null });
+    await edit.api.stamps.edit("s1", { visitedAt: "2026-09-23T12:00:00.000Z" });
     expect(edit.calls[0].init.method).toBe("PATCH");
-    expect(JSON.parse(String(edit.calls[0].init.body))).toEqual({ song: null });
+    expect(JSON.parse(String(edit.calls[0].init.body))).toEqual({ visitedAt: "2026-09-23T12:00:00.000Z" });
 
     const remove = setup(() => jsonResponse(200, { removed: true }));
     await remove.api.stamps.remove("s1");
     expect([remove.calls[0].init.method, remove.calls[0].url]).toEqual(["POST", "https://api.example.test/api/stamps/s1/remove"]);
   });
 
-  it("pages the owner passport with the opaque after cursor", async () => {
+  it("pages the owner passport with the opaque visit-date after cursor", async () => {
     const { api, calls } = setup(() => jsonResponse(200, { stamps: [], nextAfter: null }));
     await api.users.stamps("sam");
     await api.users.stamps("sam", "2026-09-24T02:00:00.000Z_s1");
@@ -207,9 +212,7 @@ describe("forward compatibility", () => {
 
 describe("hardening", () => {
   it("recognizes invalid_token from WWW-Authenticate when the body is unreadable", async () => {
-    const { api, onInvalidToken } = setup(
-      () => new Response("nope", { status: 401, headers: { "WWW-Authenticate": 'Bearer realm="nostos", error="invalid_token"' } }),
-    );
+    const { api, onInvalidToken } = setup(() => new Response("nope", { status: 401, headers: { "WWW-Authenticate": 'Bearer realm="nostos", error="invalid_token"' } }));
     await expect(api.me.get()).rejects.toMatchObject({ code: "invalid_token" });
     expect(onInvalidToken).toHaveBeenCalledTimes(1);
   });
