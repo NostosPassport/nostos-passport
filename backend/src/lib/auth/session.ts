@@ -37,7 +37,7 @@ export async function getSessionUser(
   const session = await db.session.findUnique({ where: { id: hashToken(token) }, include: { user: true } });
   if (!session) return null;
   if (opts.client && session.client !== opts.client) return null;
-  if (session.user.deletedAt || session.user.suspendedAt) return null;
+  if (session.user.deletedAt) return null;
   if (session.expiresAt.getTime() <= now.getTime()) {
     await db.session.deleteMany({ where: { id: session.id } });
     return null;
