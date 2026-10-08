@@ -2,16 +2,17 @@
 
 The backend is the Next.js/Prisma/Postgres API and web shell for Nostos.
 
-Current product mode is personal and owner-only. Social implementation may remain behind `SOCIAL_ENABLED`, but social behavior is not part of the current mobile product.
+The current product is personal and owner-only. Feed, follows, likes, public/private profiles, reporting, moderation, verification, staff roles, and the old social feature flag are not part of the active backend architecture.
 
 ## Core responsibilities
 
-- authentication and sessions
+- passwordless authentication and sessions
 - server-side stamp geofence verification
 - stamp creation with up to six photos, caption, and/or song metadata
 - image processing and EXIF/GPS stripping
-- personal passport/stamp/place data
-- neighborhoods, pins, place history, moderation/data-retention behavior
+- owner-only passport, stamp, pin, profile, and place-history data
+- neighborhoods and completion progress
+- account deletion and retained-content rules
 - legal/support web pages and operational endpoints
 
 The database keeps historical table names such as `photo` and `venue`; API/UI terminology is stamp and place.
@@ -53,15 +54,15 @@ pnpm db:seed
 | `pnpm bundle` | regenerate backend review bundle |
 | `pnpm venues:import` | import places |
 | `pnpm neighborhoods:import` | import neighborhood boundaries |
-| `pnpm user:role` | update a development/operational account role |
+| `pnpm user:geofence-exempt` | set or clear the App Review/QA geofence exemption for an account |
 
 ## Contracts
 
-`src/contracts/api.ts` is the backend contract source. The mobile copy must be synchronized after contract changes.
+`src/contracts/api.ts` is the backend contract source. The mobile copy must remain byte-for-byte synchronized after contract changes.
 
 ## Privacy
 
-In personal mode, another user's passport data must not be exposed. Stamp coordinates used for geofence verification are not normal viewer-facing fields. Uploaded photos are re-encoded so EXIF/GPS does not survive.
+Another account's passport, stamp, pin, place-history, and profile data must not be exposed. Stamp coordinates used for geofence verification are not normal response fields. Uploaded photos are re-encoded so EXIF/GPS does not survive.
 
 Open policy questions, including coordinate retention and legal copy, are tracked in `../OPEN-QUESTIONS.md`.
 
