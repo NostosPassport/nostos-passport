@@ -15,8 +15,8 @@ export default function PrivacyPage() {
       <ul>
         <li><b>Account information:</b> your verified email address, handle, display name, bio, optional profile photo, account settings, and records showing when you accepted our Terms.</li>
         <li><b>Age eligibility:</b> when you sign up, you provide your birthdate so Nostos can confirm that you meet the minimum age requirement. The birthdate is checked and is not stored after the eligibility check.</li>
-        <li><b>Location when you use location features:</b> when you request nearby places or create a stamp, the app sends your current coordinates so we can find places near you and verify that you are within the place&apos;s geofence. Nostos does not track your location in the background.</li>
-        <li><b>Stamp content:</b> places you stamp, photos, captions, ratings, song metadata, photo layout information, and related timestamps. Uploaded photos are re-encoded and embedded metadata such as EXIF and camera GPS metadata is removed.</li>
+        <li><b>Location when you choose to use location features:</b> Nostos may use your current location to show nearby places and, for a Now stamp, determine whether your device is close enough to the selected place for the visit to be marked verified. You can create unverified stamps without sharing location. Nostos does not track your location in the background.</li>
+        <li><b>Stamp content:</b> places you stamp, visit dates, verification status, photos, captions, ratings, song metadata, photo layout information, and related timestamps. Uploaded photos are re-encoded and embedded metadata such as EXIF and camera GPS metadata is removed.</li>
         <li><b>Authentication and security information:</b> session information, hashed or keyed representations of authentication credentials and email codes, limited IP-address data used for abuse prevention and rate limiting, and technical records needed to keep the service secure and reliable.</li>
         <li><b>Support communications:</b> if you contact us, we receive the information you choose to include in your message.</li>
       </ul>
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
       <ul>
         <li>To create and operate your account, authenticate you, and deliver sign-in or verification emails.</li>
         <li>To show your passport, nearby places, neighborhood progress, and the stamps you have created.</li>
-        <li>To verify that a stamp is created while you are physically near the place.</li>
+        <li>When you choose to share location for a Now stamp, to determine whether the visit qualifies for location verification.</li>
         <li>To process account changes, support requests, account deletion, and other actions you request.</li>
         <li>To prevent abuse, enforce our Terms, troubleshoot problems, protect the service, and comply with legal obligations.</li>
       </ul>
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
       <h2>Who can see your information</h2>
       <p>
         In the current personal mode, your passport, stamps, and visited places are available only to you while signed in.
-        Your email address and exact location information are not displayed publicly. Authorized personnel and service providers
+        Your email address and precise device location are not displayed publicly. Authorized personnel and service providers
         may process information when reasonably necessary to operate, secure, support, or maintain Nostos, or when required by law.
       </p>
 
@@ -47,9 +47,17 @@ export default function PrivacyPage() {
 
       <h2>Location information</h2>
       <p>
-        Nearby-place requests use the location you send for that request and do not require background tracking. When you create
-        a stamp, Nostos verifies your coordinates against the place&apos;s geofence. Location-related records may be retained when
-        needed to verify the integrity of a created stamp, investigate abuse, or protect the service.
+        Nearby-place requests use the location you provide for that request and do not require background tracking. For a Now stamp,
+        Nostos can compare your current coordinates with the selected place&apos;s geofence to decide whether the visit is verified.
+        Nostos stores the resulting verification status and time with the stamp, not the raw coordinates used for that check.
+        Past stamps are not location verified.
+      </p>
+
+      <h2>Photos</h2>
+      <p>
+        Photos attached to a stamp are memories associated with that visit. Nostos does not claim that each attached photo was taken
+        at the venue or independently authenticate a photo&apos;s origin. Photos taken through Nostos may include a small Nostos watermark.
+        Photos selected from your library are re-encoded before storage and embedded metadata is removed.
       </p>
 
       <h2>Retention</h2>
@@ -69,9 +77,9 @@ export default function PrivacyPage() {
 
       <h2>Your choices</h2>
       <p>
-        You can deny location permission, although location-verified stamping will not work without it. You can edit supported
-        account information, remove stamps, and delete your account. Depending on where you live, applicable law may also give you
-        rights to request access to, correction of, or deletion of personal information. Contact us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+        You can deny location permission and continue using Nostos with unverified stamps. You can edit supported stamp and account
+        information, remove stamps, and delete your account. Depending on where you live, applicable law may also give you rights to
+        request access to, correction of, or deletion of personal information. Contact us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
 
       <h2>Children</h2>
