@@ -77,5 +77,5 @@ const styles = StyleSheet.create({
   head: { gap: space.xs },
   visit: { gap: space.xs, padding: space.md, borderRadius: radius.card, backgroundColor: colors.surface },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: size.hitTarget },
-  line: { flex: 1, gap: 2 },
+  line: { flex: 1, gap: space.xxs },
 });
