@@ -123,7 +123,7 @@ function Memory({ stamp, actions }: { stamp: StampView; actions: StampAction[] }
           <Kicker>{stamp.photos.length === 0 ? "NO PHOTOS" : `${activePhoto + 1} OF ${stamp.photos.length} ${stamp.photos.length === 1 ? "PHOTO" : "PHOTOS"}`}</Kicker>
           <View style={styles.dots}>{stamp.photos.slice(0, 6).map((photo, index) => <View key={photo.id} style={[styles.dot, index === activePhoto && styles.dotActive]} />)}</View>
         </View>
-        {stamp.mine ? <EditorialButton label={pinned ? "Pinned to passport" : "Pin to passport"} outline onPress={() => pinAction?.onPress()} /> : null}
+        <EditorialButton label={pinned ? "Pinned to passport" : "Pin to passport"} outline onPress={() => pinAction?.onPress()} />
       </ScrollView>
       <PhotoViewer photos={stamp.photos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
     </>
@@ -160,7 +160,7 @@ function useActions(stamp: StampView | undefined): StampAction[] {
       toast.show(errorText(e, "Couldn't delete that. Try again."), "neutral");
     },
   });
-  if (!stamp?.mine) return [];
+  if (!stamp) return [];
   return [
     {
       label: pins.data?.stamps.some((p) => p.id === stamp.id) ? "Unpin from passport" : "Pin to passport",
