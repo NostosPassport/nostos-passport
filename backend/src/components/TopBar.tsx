@@ -31,16 +31,6 @@ export function NavLinks({ actor }: { actor: Actor | null }) {
   }
   return (
     <nav className="flex items-center gap-1.5 whitespace-nowrap text-sm">
-      {(actor.role === "MODERATOR" || actor.role === "ADMIN") && (
-        <Link href="/mod" className="rounded-full border border-line px-2.5 py-1 text-warn">
-          Mod
-        </Link>
-      )}
-      {actor.role === "ADMIN" && (
-        <Link href="/admin" className="rounded-full border border-line px-2.5 py-1 text-warn">
-          Admin
-        </Link>
-      )}
       <span className="rounded-full bg-panel-2 px-2.5 py-1">@{actor.handle}</span>
       <LogoutButton />
     </nav>
