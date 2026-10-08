@@ -3,9 +3,9 @@ import { File, Paths } from "expo-file-system";
 import { FilterMode, ImageFormat, MipmapMode, Skia, rect, type SkImage } from "@shopify/react-native-skia";
 
 const WATERMARK_ASSET = require("../../../assets/images/nostos-watermark.png");
-const WATERMARK_SHARE = 0.11;
+const WATERMARK_SHARE = 0.095;
 const WATERMARK_INSET_SHARE = 0.03;
-const WATERMARK_OPACITY = 0.8;
+const WATERMARK_OPACITY = 0.35;
 const JPEG_QUALITY = 80;
 
 let watermarkImagePromise: Promise<SkImage> | null = null;
