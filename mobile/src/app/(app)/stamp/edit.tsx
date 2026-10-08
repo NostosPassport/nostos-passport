@@ -52,9 +52,9 @@ function EditForm({ stamp }: { stamp: StampView }) {
   const [dateValue, setDateValue] = useState(initialDateText);
   const [saved, setSaved] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [now] = useState(Date.now);
   const busyRef = useRef(false);
   const parsed = parseDate(dateValue);
-  const now = Date.now();
   const invalidDate = !parsed || parsed.getTime() > now || parsed.getTime() < now - YEAR_MS;
   const visitDate = dateValue === initialDateText ? new Date(stamp.visitedAt) : (parsed ?? new Date(stamp.visitedAt));
   const change = stampChanges(stamp, caption, song, visitDate);
