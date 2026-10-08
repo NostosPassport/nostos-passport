@@ -24,7 +24,16 @@ export function visiblePlaces(places: readonly Place[], region: MapRegion, stats
   return ranked.slice(0, max).map((r) => r.p);
 }
 
-export type SheetModel = { title: string; subtitle: string; status: string; distance: string | null; canVerify: boolean };
+export type SheetModel = {
+  title: string;
+  subtitle: string;
+  status: string;
+  distance: string | null;
+  canVerify?: boolean;
+  /** @deprecated Gallery compatibility only. Stamp creation itself is never geofence-gated. */
+  canStamp?: boolean;
+};
+
 export function sheetModel(place: Place, stat: PlaceStat | undefined, here: Coords | null, format: (m: number) => string): SheetModel {
   const meters = here ? distanceMeters(here, { lat: place.lat, lng: place.lng }) : null;
   const status = stat ? `Stamped ${stat.stamps === 1 ? "once" : `${stat.stamps} times`}. Last on ${visaStamp(stat.latestAt).date}.` : "Not stamped yet.";
