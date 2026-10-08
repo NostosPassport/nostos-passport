@@ -21,7 +21,7 @@ describe("the demo seed", () => {
     const snap = async () =>
       JSON.stringify([
         await prisma.user.findMany({ orderBy: { id: "asc" }, select: { id: true, handle: true, bio: true, geofenceExempt: true, createdAt: true } }),
-        await prisma.photo.findMany({ orderBy: { id: "asc" }, select: { id: true, userId: true, venueId: true, caption: true, songTitle: true, storageKey: true, createdAt: true, removedAt: true, countable: true } }),
+        await prisma.photo.findMany({ orderBy: { id: "asc" }, select: { id: true, userId: true, venueId: true, caption: true, songTitle: true, storageKey: true, createdAt: true, visitedAt: true, verifiedAt: true, removedAt: true, countable: true } }),
         await prisma.stampPhoto.findMany({ orderBy: [{ stampId: "asc" }, { position: "asc" }], select: { stampId: true, storageKey: true, position: true, x: true, y: true, rotation: true } }),
       ]);
     const first = await snap();
@@ -59,21 +59,13 @@ describe("the demo seed", () => {
     expect(stamps.some((s) => s.removedAt !== null)).toBe(true);
   });
 
-  it("keeps real stamps inside their geofence and App Review stamps outside but non-countable", async () => {
+  it("never stores raw visit coordinates and mixes verified/unverified memories", async () => {
     await run();
-    const places = new Map((await prisma.venue.findMany()).map((p) => [p.id, p]));
-    const { distanceMeters } = await import("@/lib/geo");
-    for (const stamp of await prisma.photo.findMany()) {
-      const place = places.get(stamp.venueId)!;
-      const distance = distanceMeters({ lat: stamp.lat, lng: stamp.lng }, place);
-      if (stamp.userId === id("appreview")) {
-        expect(stamp.countable).toBe(false);
-        expect(distance).toBeGreaterThan(place.geofenceMeters);
-      } else {
-        expect(stamp.countable).toBe(true);
-        expect(distance).toBeLessThanOrEqual(place.geofenceMeters);
-      }
-    }
+    const stamps = await prisma.photo.findMany();
+    expect(stamps.every((s) => s.lat === null && s.lng === null)).toBe(true);
+    expect(stamps.some((s) => s.verifiedAt !== null)).toBe(true);
+    expect(stamps.some((s) => s.verifiedAt === null && s.userId !== id("appreview"))).toBe(true);
+    expect(stamps.filter((s) => s.userId === id("appreview")).every((s) => !s.countable && s.verifiedAt === null)).toBe(true);
 
     const reviewStamp = await prisma.photo.findFirstOrThrow({ where: { userId: id("appreview"), removedAt: null } });
     await expect(getStamp(prisma, await actor("maya_r"), reviewStamp.id)).rejects.toMatchObject({ status: 404 });
