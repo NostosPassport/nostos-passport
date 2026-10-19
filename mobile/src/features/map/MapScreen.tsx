@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
@@ -19,6 +20,7 @@ import { PlaceSheet } from "./PlaceSheet";
 type Filter = "nearby" | "visited";
 
 const mapRadius = (region: MapRegion) => Math.max(500, Math.min(5_000, Math.round(Math.max(region.latitudeDelta, region.longitudeDelta) * 111_195 * 0.7)));
+const mapProvider = Constants.appOwnership === "expo" ? undefined : PROVIDER_GOOGLE;
 
 export function MapScreen() {
   const me = useMe();
@@ -118,7 +120,7 @@ export function MapScreen() {
         <View style={styles.mapFrame}>
           <MapView
             ref={mapRef}
-            provider={PROVIDER_GOOGLE}
+            provider={mapProvider}
             style={StyleSheet.absoluteFill}
             initialRegion={start}
             userInterfaceStyle="light"
