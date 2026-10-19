@@ -30,6 +30,7 @@ function Page() {
   const data = q.data;
   const stand = data ? standing(data, formatDistance) : null;
   const summary = data ? visitSummary(data.visits) : null;
+  const cuisines = data?.place.cuisines ?? [];
 
   return (
     <View style={styles.root}>
@@ -39,6 +40,7 @@ function Page() {
           <>
             <View style={styles.head}>
               <Text variant="largeTitle" color="brass" accessibilityRole="header">{data.place.name}</Text>
+              {cuisines.length > 0 ? <Text variant="typewriterSmall" color="brass">{cuisines.join(" · ")}</Text> : null}
               <Text variant="typewriterSmall" color="textSecondary">{[data.place.neighborhood, data.place.address].filter(Boolean).join(" · ")}</Text>
               {stand?.text ? (
                 <Text variant="typewriter" color={stand.canVerify ? "brass" : "dimBrass"} accessibilityLiveRegion="polite">{stand.text}</Text>
