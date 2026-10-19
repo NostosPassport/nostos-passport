@@ -2,7 +2,7 @@ import type { NearbyPlacesResponse } from "@/api/contracts";
 import { HONESTY, MAX_STAMP_PHOTOS, addPhoto, photoCount, photosLeft, placeRowText, placeSections, removePhotoAt, stampReadiness } from "../stamp-flow";
 
 type Nearby = NearbyPlacesResponse["places"][number];
-const place = (over: Partial<Nearby> = {}): Nearby => ({ id: "p", slug: "p", name: "Katz's", address: "", neighborhood: "East Village", lat: 1, lng: 2, geofenceMeters: 100, neighborhoodId: null, fromOsm: false, distanceM: 20, inside: true, ...over });
+const place = (over: Partial<Nearby> = {}): Nearby => ({ id: "p", slug: "p", name: "Katz's", address: "", neighborhood: "East Village", lat: 1, lng: 2, geofenceMeters: 100, neighborhoodId: null, fromOsm: false, googlePlaceId: null, category: null, cuisines: [], primaryType: null, businessStatus: null, distanceM: 20, inside: true, ...over });
 
 describe("photos", () => {
   it("holds six at most, and a seventh leaves the list as it was", () => {
