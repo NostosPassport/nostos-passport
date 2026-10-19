@@ -1,4 +1,5 @@
 /** Query keys and shared hooks for server state. */
+import { useEffect, useState } from "react";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { api } from "./index";
@@ -17,9 +18,10 @@ export function usePlaces() {
   return useQuery({ queryKey: qk.places, queryFn: api.places.list, staleTime: 5 * 60_000 });
 }
 
-export function useNearbyPlaces(pos: { lat: number; lng: number } | null, radiusM = 750) {
-  const lat = pos ? Math.round(pos.lat * 10_000) / 10_000 : 0;
-  const lng = pos ? Math.round(pos.lng * 10_000) / 10_000 : 0;
+export function useNearbyPlaces(pos: { lat: number; lng: number } | null, radiusM = 750, precision = 4) {
+  const factor = 10 ** Math.max(2, Math.min(5, precision));
+  const lat = pos ? Math.round(pos.lat * factor) / factor : 0;
+  const lng = pos ? Math.round(pos.lng * factor) / factor : 0;
   const radius = Math.max(100, Math.min(5_000, Math.round(radiusM / 50) * 50));
   return useQuery({
     queryKey: qk.nearby(lat, lng, radius),
@@ -30,10 +32,21 @@ export function useNearbyPlaces(pos: { lat: number; lng: number } | null, radius
   });
 }
 
+function useDebouncedText(raw: string, delayMs = 350) {
+  const next = raw.trim();
+  const [value, setValue] = useState(next);
+  useEffect(() => {
+    if (next.length === 0) { setValue(""); return; }
+    const timer = setTimeout(() => setValue(next), delayMs);
+    return () => clearTimeout(timer);
+  }, [delayMs, next]);
+  return value;
+}
+
 export function usePlaceSearch(rawQuery: string, pos: { lat: number; lng: number } | null) {
-  const q = rawQuery.trim();
-  const lat = pos ? Math.round(pos.lat * 10_000) / 10_000 : null;
-  const lng = pos ? Math.round(pos.lng * 10_000) / 10_000 : null;
+  const q = useDebouncedText(rawQuery);
+  const lat = pos ? Math.round(pos.lat * 1_000) / 1_000 : null;
+  const lng = pos ? Math.round(pos.lng * 1_000) / 1_000 : null;
   return useQuery({
     queryKey: qk.placeSearch(q, lat, lng),
     queryFn: () => api.places.search(q, lat !== null && lng !== null ? { lat, lng } : undefined),
