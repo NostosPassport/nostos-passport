@@ -37,16 +37,35 @@ jest.mock("react-native-maps", () => {
   const Marker = ({ children, onPress, accessibilityLabel }: { children?: ReactNode; onPress?: () => void; accessibilityLabel?: string }) => (
     <P onPress={onPress} accessibilityLabel={accessibilityLabel} accessibilityRole="button">{children}</P>
   );
-  return { __esModule: true, default: MapView, Marker };
+  return { __esModule: true, default: MapView, Marker, PROVIDER_GOOGLE: "google" };
 });
 jest.mock("@/api/queries", () => ({
   useMe: () => ({ data: { user: { handle: "ava" } } }),
   usePlaces: () => ({ data: { places: mockPlaces, attribution: mockAttribution } }),
+  useNearbyPlaces: () => ({ data: { places: mockPlaces } }),
+  usePlaceSearch: () => ({ data: { places: mockPlaces } }),
   useUserPlaces: () => ({ data: { places: mockMine } }),
 }));
 jest.mock("@/features/location/location-store", () => ({ useUserCoords: () => mockHere }));
 
-const place = (id: string, over: Partial<Place> = {}): Place => ({ id, slug: id, name: `Place ${id}`, address: "", neighborhood: "East Village", lat: 40.7222, lng: -73.9855, geofenceMeters: 100, neighborhoodId: "n1", fromOsm: false, ...over });
+const place = (id: string, over: Partial<Place> = {}): Place => ({
+  id,
+  slug: id,
+  name: `Place ${id}`,
+  address: "",
+  neighborhood: "East Village",
+  lat: 40.7222,
+  lng: -73.9855,
+  geofenceMeters: 100,
+  neighborhoodId: "n1",
+  fromOsm: false,
+  googlePlaceId: null,
+  category: null,
+  cuisines: [],
+  primaryType: null,
+  businessStatus: null,
+  ...over,
+});
 const mineRow = (p: Place, stamps = 1): UserPlacesResponse["places"][number] => ({
   place: { id: p.id, slug: p.slug, name: p.name, neighborhood: p.neighborhood, lat: p.lat, lng: p.lng },
   stamps,
@@ -72,10 +91,10 @@ describe("map model", () => {
     expect(visiblePlaces(near, region, stats, null, 4)).toHaveLength(4);
     expect(visiblePlaces([], region, stats, null)).toEqual([]);
   });
-  it("describes proximity as verification eligibility without blocking stamp creation", () => {
-    const p = place("a", { name: "Katz's", address: "205 E Houston St", geofenceMeters: 100 });
+  it("shows cuisine and describes proximity as verification eligibility without blocking stamp creation", () => {
+    const p = place("a", { name: "Katz's", address: "205 E Houston St", geofenceMeters: 100, cuisines: ["Deli", "Jewish"] });
     const inside = sheetModel(p, { stamps: 1, latestAt: "2026-10-04T03:41:00.000Z" }, { lat: p.lat, lng: p.lng }, formatDistance);
-    expect(inside).toMatchObject({ title: "Katz's", subtitle: "East Village · 205 E Houston St", status: "Stamped once. Last on 03 OCT 2026.", canVerify: true });
+    expect(inside).toMatchObject({ title: "Katz's", subtitle: "Deli · Jewish · East Village · 205 E Houston St", status: "Stamped once. Last on 03 OCT 2026.", canVerify: true });
     const far = sheetModel(p, undefined, { lat: p.lat + 0.02, lng: p.lng }, formatDistance);
     expect(far.status).toBe("Not stamped yet.");
     expect(far.canVerify).toBe(false);
@@ -129,14 +148,15 @@ describe("pins and sheet", () => {
 describe("MapScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockPlaces = [place("a", { name: "Katz's" }), place("b", { name: "Cafe", lat: 40.7226 })];
+    mockPlaces = [place("a", { name: "Katz's", cuisines: ["Deli"] }), place("b", { name: "Cafe", lat: 40.7226 })];
     mockMine = [mineRow(mockPlaces[0]!, 2)];
     mockHere = { lat: 40.7222, lng: -73.9855 };
     mockAttribution = null;
   });
 
-  it("labels lit and dim pins in words, and marks where you are", async () => {
+  it("uses Google Maps, labels lit and dim pins in words, and marks where you are", async () => {
     await render(<MapScreen />);
+    expect(screen.getByTestId("map").props.provider).toBe("google");
     expect(screen.getByLabelText("Katz's, stamped")).toBeTruthy();
     expect(screen.getByLabelText("Cafe, not stamped yet")).toBeTruthy();
     expect(screen.getByLabelText("You are here")).toBeTruthy();
@@ -145,6 +165,7 @@ describe("MapScreen", () => {
     await render(<MapScreen />);
     await fireEvent.press(screen.getByLabelText("Katz's, stamped"));
     expect(screen.getByText("Stamped 2 times. Last on 03 OCT 2026.")).toBeTruthy();
+    expect(screen.getByText(/Deli · East Village/)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Stamp this place" }));
     expect(mockPush).toHaveBeenCalledWith("/stamp/new");
   });
@@ -158,31 +179,29 @@ describe("MapScreen", () => {
   it("clears search with the x button and dismisses the keyboard when the map is tapped", async () => {
     const dismiss = jest.spyOn(Keyboard, "dismiss").mockImplementation(() => undefined);
     await render(<MapScreen />);
-    const search = screen.getByLabelText("Find a place");
+    const search = screen.getByLabelText("Find a restaurant or bar");
     await fireEvent.changeText(search, "Cafe");
     expect(screen.getByLabelText("Clear search")).toBeTruthy();
     await fireEvent.press(screen.getByLabelText("Clear search"));
-    expect(screen.getByLabelText("Find a place").props.value).toBe("");
+    expect(screen.getByLabelText("Find a restaurant or bar").props.value).toBe("");
     await fireEvent.changeText(search, "Katz");
     await fireEvent.press(screen.getByTestId("map-background"));
     expect(dismiss).toHaveBeenCalled();
     dismiss.mockRestore();
   });
-  it("shows the OpenStreetMap credit when the data carries one, and not otherwise", async () => {
+  it("shows legacy OpenStreetMap credit only while viewing stored visited data", async () => {
     mockAttribution = { text: "© OpenStreetMap contributors" };
-    const a = await render(<MapScreen />);
-    expect(screen.getByText("© OpenStreetMap contributors")).toBeTruthy();
-    await a.unmount();
-    mockAttribution = null;
     await render(<MapScreen />);
     expect(screen.queryByText(/OpenStreetMap/)).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "VISITED" }));
+    expect(screen.getByText("© OpenStreetMap contributors")).toBeTruthy();
   });
-  it("is still a map with no places and no position", async () => {
+  it("is still a Google map with no places and no position", async () => {
     mockPlaces = [];
     mockMine = [];
     mockHere = null;
     await render(<MapScreen />);
-    expect(screen.getByTestId("map")).toBeTruthy();
+    expect(screen.getByTestId("map").props.provider).toBe("google");
     expect(screen.queryByLabelText("You are here")).toBeNull();
   });
 });
