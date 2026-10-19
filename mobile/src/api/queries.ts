@@ -36,8 +36,7 @@ function useDebouncedText(raw: string, delayMs = 350) {
   const next = raw.trim();
   const [value, setValue] = useState(next);
   useEffect(() => {
-    if (next.length === 0) { setValue(""); return; }
-    const timer = setTimeout(() => setValue(next), delayMs);
+    const timer = setTimeout(() => setValue(next), next.length === 0 ? 0 : delayMs);
     return () => clearTimeout(timer);
   }, [delayMs, next]);
   return value;
