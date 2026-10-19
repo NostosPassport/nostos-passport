@@ -41,13 +41,13 @@ npx expo start --go
 
 The app defaults to the current local backend configuration on port 3001 in development. Use `EXPO_PUBLIC_API_URL` when you intentionally target another backend.
 
-## Google Maps
+## Maps and Places
 
-The Map tab uses the Google Maps provider from `react-native-maps`. Native builds need `GOOGLE_MAPS_IOS_API_KEY` at Expo config/build time; `app.config.js` passes it to the `react-native-maps` config plugin. Enable the Google Maps SDK for iOS and restrict this key to the Nostos bundle identifier `com.nostospassport.nostos`.
+The Map tab uses the default iOS map provider from `react-native-maps`, which is Apple Maps on iOS. It displays only Nostos-owned visited venues and does not call Google Places while panning, zooming, filtering, or recentering.
 
-This key is separate from the backend `GOOGLE_PLACES_API_KEY`. The Places key stays server-side and should never be exposed as an `EXPO_PUBLIC_*` variable.
+Google Places is used only by the backend for restaurant/bar discovery, text search, and resolving a selected Google place into a durable Nostos venue. Configure `GOOGLE_PLACES_API_KEY` on the backend only. The Places key must never be exposed as an `EXPO_PUBLIC_*` mobile variable.
 
-Changing the native map provider requires a new development/preview/production build; it is not an OTA-only change.
+No Google Maps SDK for iOS key is required.
 
 ## Checks
 
