@@ -1,9 +1,9 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 
-import { useMe, usePlaces, useUserPlaces } from "@/api/queries";
+import { useMe, useNearbyPlaces, usePlaces, usePlaceSearch, useUserPlaces } from "@/api/queries";
 import { Body, DisplayTitle, EditorialHeader, EditorialSafeContent, EditorialScreen, GearButton, Kicker, Rule } from "@/components/editorial/editorial";
 import { Icon } from "@/components/ui/icon";
 import { useUserCoords } from "@/features/location/location-store";
@@ -18,9 +18,11 @@ import { PlaceSheet } from "./PlaceSheet";
 
 type Filter = "nearby" | "visited";
 
+const mapRadius = (region: MapRegion) => Math.max(500, Math.min(5_000, Math.round(Math.max(region.latitudeDelta, region.longitudeDelta) * 111_195 * 0.7)));
+
 export function MapScreen() {
   const me = useMe();
-  const places = usePlaces();
+  const storedPlaces = usePlaces();
   const mine = useUserPlaces(me.data?.user.handle ?? "", !!me.data);
   const here = useUserCoords();
   const stats = useMemo(() => statsByPlace(mine.data?.places ?? []), [mine.data]);
@@ -33,6 +35,9 @@ export function MapScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("nearby");
+  const centre = useMemo(() => ({ lat: region.latitude, lng: region.longitude }), [region.latitude, region.longitude]);
+  const nearby = useNearbyPlaces(centre, mapRadius(region));
+  const search = usePlaceSearch(query, centre);
 
   const dismissSearch = useCallback(() => {
     searchRef.current?.blur();
@@ -55,17 +60,22 @@ export function MapScreen() {
     recenter();
   }, [here, recenter]);
 
-  const all = useMemo(() => places.data?.places ?? [], [places.data]);
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return all.filter((place) => {
-      if (filter === "visited" && !stats.has(place.id)) return false;
-      return !q || place.name.toLowerCase().includes(q) || place.neighborhood.toLowerCase().includes(q);
-    });
-  }, [all, filter, query, stats]);
-  const drawn = useMemo(() => visiblePlaces(filtered, region, stats, selectedId), [filtered, region, stats, selectedId]);
+  const searching = query.trim().length >= 2;
+  const all = useMemo(() => {
+    if (filter === "visited") {
+      const q = query.trim().toLowerCase();
+      return (storedPlaces.data?.places ?? []).filter((place) => stats.has(place.id) && (!q || place.name.toLowerCase().includes(q) || place.neighborhood.toLowerCase().includes(q) || place.cuisines.some((cuisine) => cuisine.toLowerCase().includes(q))));
+    }
+    if (searching) return search.data?.places ?? [];
+    return nearby.data?.places ?? [];
+  }, [filter, nearby.data?.places, query, search.data?.places, searching, stats, storedPlaces.data?.places]);
+  const drawn = useMemo(() => visiblePlaces(all, region, stats, selectedId), [all, region, stats, selectedId]);
   const selected = all.find((p) => p.id === selectedId) ?? null;
   const model = selected ? sheetModel(selected, stats.get(selected.id), here, formatDistance) : null;
+
+  useEffect(() => {
+    if (selectedId && !all.some((place) => place.id === selectedId)) setSelectedId(null);
+  }, [all, selectedId]);
 
   return (
     <EditorialScreen>
@@ -82,12 +92,12 @@ export function MapScreen() {
             value={query}
             onChangeText={setQuery}
             onSubmitEditing={dismissSearch}
-            placeholder="Find a place"
+            placeholder={filter === "visited" ? "Search visited places" : "Find a restaurant or bar"}
             placeholderTextColor={colors.textSecondary}
             style={styles.searchInput}
             autoCapitalize="none"
             returnKeyType="search"
-            accessibilityLabel="Find a place"
+            accessibilityLabel={filter === "visited" ? "Search visited places" : "Find a restaurant or bar"}
           />
           {query ? (
             <Pressable
@@ -105,12 +115,13 @@ export function MapScreen() {
           ) : null}
         </View>
         <View style={styles.filters}>
-          <FilterButton label="NEARBY" active={filter === "nearby"} onPress={() => { dismissSearch(); setFilter("nearby"); }} />
-          <FilterButton label="VISITED" active={filter === "visited"} onPress={() => { dismissSearch(); setFilter("visited"); }} />
+          <FilterButton label="NEARBY" active={filter === "nearby"} onPress={() => { dismissSearch(); setFilter("nearby"); setSelectedId(null); }} />
+          <FilterButton label="VISITED" active={filter === "visited"} onPress={() => { dismissSearch(); setFilter("visited"); setSelectedId(null); }} />
         </View>
         <View style={styles.mapFrame}>
           <MapView
             ref={mapRef}
+            provider={PROVIDER_GOOGLE}
             style={StyleSheet.absoluteFill}
             initialRegion={start}
             userInterfaceStyle="light"
@@ -127,7 +138,7 @@ export function MapScreen() {
               dismissSearch();
               setSelectedId(null);
             }}
-            accessibilityLabel="Map of your places"
+            accessibilityLabel="Map of restaurants, bars and your stamped places"
           >
             {drawn.map((p) => {
               const kind = pinKind(p.id, stats);
@@ -150,9 +161,9 @@ export function MapScreen() {
               );
             })}
           </MapView>
-          {places.data?.attribution ? (
+          {filter === "visited" && storedPlaces.data?.attribution ? (
             <View style={styles.attribution} pointerEvents="none">
-              <Body muted size={10}>{places.data.attribution.text}</Body>
+              <Body muted size={10}>{storedPlaces.data.attribution.text}</Body>
             </View>
           ) : null}
         </View>
