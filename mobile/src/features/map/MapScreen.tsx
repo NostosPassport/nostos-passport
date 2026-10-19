@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 
 import { useMe, useNearbyPlaces, usePlaces, usePlaceSearch, useUserPlaces } from "@/api/queries";
@@ -11,7 +11,7 @@ import { useUserCoords } from "@/features/location/location-store";
 import { placesRegion } from "@/features/people/places";
 import { formatDistance } from "@/lib/format";
 import { distanceMeters, HOME_REGION } from "@/lib/geo";
-import { colors, size } from "@/theme";
+import { colors, fonts, size } from "@/theme";
 import { type MapRegion, pinKind, sheetModel, statsByPlace, visiblePlaces } from "./map-model";
 import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
@@ -194,7 +194,7 @@ export function MapScreen() {
           {showSearchArea ? (
             <Pressable style={styles.searchArea} onPress={searchThisArea} accessibilityRole="button" accessibilityLabel="Search restaurants and bars in this map area">
               <Icon name="magnifyingglass" color="onAccent" size={15} />
-              <Body size={13} style={styles.searchAreaText}>Search this area</Body>
+              <NativeText style={styles.searchAreaText}>Search this area</NativeText>
             </Pressable>
           ) : null}
           {filter === "visited" && storedPlaces.data?.attribution ? (
@@ -235,6 +235,6 @@ const styles = StyleSheet.create({
   filterActive: { borderBottomColor: colors.accent },
   mapFrame: { flex: 1, minHeight: 300, overflow: "hidden", marginBottom: 4 },
   searchArea: { position: "absolute", alignSelf: "center", top: 12, minHeight: 40, paddingHorizontal: 16, borderRadius: 20, flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: colors.accent },
-  searchAreaText: { color: colors.onAccent },
+  searchAreaText: { color: colors.onAccent, fontFamily: fonts.sans, fontSize: 13, lineHeight: 18 },
   attribution: { position: "absolute", left: 6, top: 6, paddingHorizontal: 4, paddingVertical: 2, backgroundColor: colors.background, opacity: 0.85 },
 });
