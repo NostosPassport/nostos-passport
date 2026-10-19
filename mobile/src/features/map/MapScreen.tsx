@@ -1,11 +1,11 @@
 import Constants from "expo-constants";
 import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 
-import { useMe, useUserPlaces } from "@/api/queries";
-import { Body, DisplayTitle, EditorialHeader, EditorialSafeContent, EditorialScreen, GearButton, Rule } from "@/components/editorial/editorial";
+import { useMe, usePlaces, useUserPlaces } from "@/api/queries";
+import { Body, DisplayTitle, EditorialHeader, EditorialSafeContent, EditorialScreen, GearButton, Kicker, Rule } from "@/components/editorial/editorial";
 import { Icon } from "@/components/ui/icon";
 import { useUserCoords } from "@/features/location/location-store";
 import { placesRegion } from "@/features/people/places";
@@ -15,16 +15,27 @@ import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
 
 const mapProvider = Constants.appOwnership === "expo" ? undefined : PROVIDER_GOOGLE;
+type MapFilter = "all" | "restaurant" | "bar";
 
 export function MapScreen() {
   const me = useMe();
+  const storedPlaces = usePlaces();
   const mine = useUserPlaces(me.data?.user.handle ?? "", !!me.data);
   const here = useUserCoords();
   const mapRef = useRef<MapView>(null);
   const regionRef = useRef<Region>(HOME_REGION);
   const centeredOnUserOnce = useRef(false);
   const fittedVisitedOnce = useRef(false);
+  const [filter, setFilter] = useState<MapFilter>("all");
   const visited = mine.data?.places ?? [];
+  const categoryByPlace = useMemo(
+    () => new Map((storedPlaces.data?.places ?? []).map((place) => [place.id, place.category] as const)),
+    [storedPlaces.data?.places],
+  );
+  const filteredVisited = useMemo(
+    () => filter === "all" ? visited : visited.filter(({ place }) => categoryByPlace.get(place.id) === filter),
+    [categoryByPlace, filter, visited],
+  );
   const visitedRegion = useMemo(() => placesRegion(visited), [visited]);
 
   const recenter = useCallback(() => {
@@ -60,6 +71,11 @@ export function MapScreen() {
         <Rule />
         <DisplayTitle size={52} style={styles.title}>Where you&apos;ve been.</DisplayTitle>
         <Body muted size={13}>Tap a place to open your most recent stamp there.</Body>
+        <View style={styles.filters}>
+          <FilterButton label="ALL" active={filter === "all"} onPress={() => setFilter("all")} />
+          <FilterButton label="RESTAURANTS" active={filter === "restaurant"} onPress={() => setFilter("restaurant")} />
+          <FilterButton label="BARS" active={filter === "bar"} onPress={() => setFilter("bar")} />
+        </View>
         <View style={styles.mapFrame}>
           <MapView
             ref={mapRef}
@@ -77,7 +93,7 @@ export function MapScreen() {
             }}
             accessibilityLabel="Map of places you have stamped"
           >
-            {visited.map(({ place, latestStamp }) => (
+            {filteredVisited.map(({ place, latestStamp }) => (
               <Marker
                 key={place.id}
                 coordinate={{ latitude: place.lat, longitude: place.lng }}
@@ -115,9 +131,25 @@ export function MapScreen() {
   );
 }
 
+function FilterButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      style={[styles.filter, active && styles.filterActive]}
+    >
+      <Kicker muted={!active}>{label}</Kicker>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   title: { marginTop: 8, marginBottom: 4 },
-  mapFrame: { flex: 1, minHeight: 300, overflow: "hidden", marginTop: 14, marginBottom: 4 },
+  filters: { height: 48, flexDirection: "row", gap: 8, marginTop: 6 },
+  filter: { flex: 1, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
+  filterActive: { borderBottomColor: colors.accent },
+  mapFrame: { flex: 1, minHeight: 300, overflow: "hidden", marginTop: 4, marginBottom: 4 },
   recenter: {
     position: "absolute",
     right: 14,
