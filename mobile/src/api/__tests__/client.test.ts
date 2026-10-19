@@ -139,10 +139,10 @@ describe("api client", () => {
     ]);
   });
 
-  it("sends nearby position only as a query", async () => {
+  it("sends nearby position and Google search radius only as a query", async () => {
     const { api, calls } = setup(() => jsonResponse(200, { places: [] }));
     await api.places.nearby({ lat: 40.7265, lng: -73.9845 });
-    expect(calls[0].url).toBe("https://api.example.test/api/places/nearby?lat=40.7265&lng=-73.9845");
+    expect(calls[0].url).toBe("https://api.example.test/api/places/nearby?lat=40.7265&lng=-73.9845&radius=750");
     expect(calls[0].init.method).toBe("GET");
   });
 
