@@ -12,14 +12,36 @@ export function useMe() {
   return useQuery({ queryKey: qk.me, queryFn: () => api.me.get(), enabled: status === "signedIn", staleTime: 60_000 });
 }
 
+/** Stored Nostos venues only. Kept for historical/admin-compatible surfaces; discovery should use nearby/search. */
 export function usePlaces() {
   return useQuery({ queryKey: qk.places, queryFn: api.places.list, staleTime: 5 * 60_000 });
 }
 
-export function useNearbyPlaces(pos: { lat: number; lng: number } | null) {
+export function useNearbyPlaces(pos: { lat: number; lng: number } | null, radiusM = 750) {
   const lat = pos ? Math.round(pos.lat * 10_000) / 10_000 : 0;
   const lng = pos ? Math.round(pos.lng * 10_000) / 10_000 : 0;
-  return useQuery({ queryKey: qk.nearby(lat, lng), queryFn: () => api.places.nearby({ lat, lng }), enabled: pos !== null, staleTime: 30_000 });
+  const radius = Math.max(100, Math.min(5_000, Math.round(radiusM / 50) * 50));
+  return useQuery({
+    queryKey: qk.nearby(lat, lng, radius),
+    queryFn: () => api.places.nearby({ lat, lng }, radius),
+    enabled: pos !== null,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function usePlaceSearch(rawQuery: string, pos: { lat: number; lng: number } | null) {
+  const q = rawQuery.trim();
+  const lat = pos ? Math.round(pos.lat * 10_000) / 10_000 : null;
+  const lng = pos ? Math.round(pos.lng * 10_000) / 10_000 : null;
+  return useQuery({
+    queryKey: qk.placeSearch(q, lat, lng),
+    queryFn: () => api.places.search(q, lat !== null && lng !== null ? { lat, lng } : undefined),
+    enabled: q.length >= 2,
+    staleTime: 2 * 60_000,
+    retry: false,
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useUserStamps(handle: string, enabled = true) {
