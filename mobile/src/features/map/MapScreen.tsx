@@ -71,7 +71,7 @@ export function MapScreen() {
   }, [filter, nearby.data?.places, query, search.data?.places, searching, stats, storedPlaces.data?.places]);
   const selected = all.find((p) => p.id === selectedId) ?? null;
   const effectiveSelectedId = selected?.id ?? null;
-  const drawn = useMemo(() => visiblePlaces(all, region, stats, effectiveSelectedId), [all, effectiveSelectedId, region, stats]);
+  const drawn = visiblePlaces(all, region, stats, effectiveSelectedId);
   const model = selected ? sheetModel(selected, stats.get(selected.id), here, formatDistance) : null;
 
   return (
