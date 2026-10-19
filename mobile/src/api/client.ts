@@ -10,6 +10,7 @@ export type ApiErrorCode =
   | "bad_request"
   | "objectionable_content"
   | "song_search_unavailable"
+  | "places_unavailable"
   | "forbidden"
   | "not_found"
   | "conflict"
@@ -162,7 +163,8 @@ export function createApi(config: ApiConfig) {
       list: () => request("GET", "/api/places", C.PlacesResponse),
       get: (idOrSlug: string) => request("GET", `/api/places/${enc(idOrSlug)}`, C.PlaceResponse),
       mine: (idOrSlug: string, pos?: { lat: number; lng: number }) => request("GET", `/api/places/${enc(idOrSlug)}/mine${pos ? `?lat=${pos.lat}&lng=${pos.lng}` : ""}`, C.MyPlacePageResponse),
-      nearby: (pos: { lat: number; lng: number }) => request("GET", `/api/places/nearby?lat=${pos.lat}&lng=${pos.lng}`, C.NearbyPlacesResponse),
+      nearby: (pos: { lat: number; lng: number }, radiusM = 750) => request("GET", `/api/places/nearby?lat=${pos.lat}&lng=${pos.lng}&radius=${Math.round(radiusM)}`, C.NearbyPlacesResponse),
+      search: (q: string, pos?: { lat: number; lng: number }) => request("GET", `/api/places/search?q=${enc(q)}${pos ? `&lat=${pos.lat}&lng=${pos.lng}` : ""}`, C.PlacesResponse),
     },
 
     stamps: {
