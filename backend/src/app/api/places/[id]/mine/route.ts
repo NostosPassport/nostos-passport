@@ -13,5 +13,6 @@ export const GET = route<Ctx>(async (req, { params }) => {
   const pos = lat !== null && lng !== null ? { lat: Number(lat), lng: Number(lng) } : null;
   const actor = await getActor(req);
   const place = await getPlace(prisma, (await params).id);
-  return ok(await getMyPlacePage(prisma, actor, place.id, pos));
+  const page = await getMyPlacePage(prisma, actor, place.id, pos);
+  return ok({ ...page, place });
 });
