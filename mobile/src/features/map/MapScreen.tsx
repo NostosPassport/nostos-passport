@@ -1,8 +1,7 @@
-import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
+import MapView, { Marker, type Region } from "react-native-maps";
 
 import { useMe, usePlaces, useUserPlaces } from "@/api/queries";
 import { Body, DisplayTitle, EditorialHeader, EditorialSafeContent, EditorialScreen, GearButton, Kicker, Rule } from "@/components/editorial/editorial";
@@ -14,7 +13,6 @@ import { colors } from "@/theme";
 import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
 
-const mapProvider = Constants.appOwnership === "expo" ? undefined : PROVIDER_GOOGLE;
 type MapFilter = "all" | "restaurant" | "bar";
 
 export function MapScreen() {
@@ -79,7 +77,6 @@ export function MapScreen() {
         <View style={styles.mapFrame}>
           <MapView
             ref={mapRef}
-            provider={mapProvider}
             style={StyleSheet.absoluteFill}
             initialRegion={visitedRegion ?? HOME_REGION}
             userInterfaceStyle="light"
