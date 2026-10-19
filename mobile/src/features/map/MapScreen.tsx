@@ -50,6 +50,14 @@ export function MapScreen() {
     );
   }, [here]);
 
+  const handleRecenter = useCallback(() => {
+    if (!here) {
+      router.push("/location-permission");
+      return;
+    }
+    recenter();
+  }, [here, recenter]);
+
   useEffect(() => mapRecenter.subscribe(recenter), [recenter]);
   useEffect(() => {
     if (!here || centeredOnUserOnce.current) return;
@@ -113,12 +121,10 @@ export function MapScreen() {
             ))}
           </MapView>
           <Pressable
-            onPress={recenter}
-            disabled={!here}
+            onPress={handleRecenter}
             accessibilityRole="button"
-            accessibilityLabel="Recenter map on my location"
-            accessibilityState={{ disabled: !here }}
-            style={({ pressed }) => [styles.recenter, !here && styles.recenterDisabled, pressed && here && styles.recenterPressed]}
+            accessibilityLabel={here ? "Recenter map on my location" : "Share location to recenter map"}
+            style={({ pressed }) => [styles.recenter, pressed && styles.recenterPressed]}
           >
             <Icon name="location.fill" color="accent" size={20} />
           </Pressable>
@@ -160,6 +166,5 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
   },
-  recenterDisabled: { opacity: 0.4 },
   recenterPressed: { opacity: 0.75 },
 });
