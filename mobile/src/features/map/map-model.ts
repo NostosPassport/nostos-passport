@@ -37,7 +37,8 @@ export type SheetModel = {
 export function sheetModel(place: Place, stat: PlaceStat | undefined, here: Coords | null, format: (m: number) => string): SheetModel {
   const meters = here ? distanceMeters(here, { lat: place.lat, lng: place.lng }) : null;
   const status = stat ? `Stamped ${stat.stamps === 1 ? "once" : `${stat.stamps} times`}. Last on ${visaStamp(stat.latestAt).date}.` : "Not stamped yet.";
-  return { title: place.name, subtitle: [place.neighborhood, place.address].filter(Boolean).join(" · "), status, distance: meters === null ? null : `${format(meters)} away`, canVerify: meters !== null && meters <= place.geofenceMeters };
+  const cuisine = place.cuisines.slice(0, 2).join(" · ");
+  return { title: place.name, subtitle: [cuisine, place.neighborhood, place.address].filter(Boolean).join(" · "), status, distance: meters === null ? null : `${format(meters)} away`, canVerify: meters !== null && meters <= place.geofenceMeters };
 }
 
 export function sheetShouldClose(translationY: number, velocityY: number, sheetHeight: number): boolean {
