@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { useUserCoords } from "@/features/location/location-store";
 import { placesRegion } from "@/features/people/places";
 import { formatDistance } from "@/lib/format";
-import { HOME_REGION } from "@/lib/geo";
+import { distanceMeters, HOME_REGION } from "@/lib/geo";
 import { colors, size } from "@/theme";
 import { type MapRegion, pinKind, sheetModel, statsByPlace, visiblePlaces } from "./map-model";
 import { mapRecenter } from "./recenter";
@@ -21,6 +21,19 @@ type Filter = "nearby" | "visited";
 
 const mapRadius = (region: MapRegion) => Math.max(500, Math.min(5_000, Math.round(Math.max(region.latitudeDelta, region.longitudeDelta) * 111_195 * 0.7)));
 const mapProvider = Constants.appOwnership === "expo" ? undefined : PROVIDER_GOOGLE;
+
+function regionNeedsSearch(region: MapRegion, searched: MapRegion | null) {
+  if (!searched) return true;
+  const moved = distanceMeters(
+    { lat: region.latitude, lng: region.longitude },
+    { lat: searched.latitude, lng: searched.longitude },
+  );
+  const searchedRadius = mapRadius(searched);
+  const currentRadius = mapRadius(region);
+  const movedEnough = moved >= Math.max(150, Math.min(1_000, searchedRadius * 0.35));
+  const zoomChangedEnough = currentRadius / searchedRadius >= 1.35 || currentRadius / searchedRadius <= 0.75;
+  return movedEnough || zoomChangedEnough;
+}
 
 export function MapScreen() {
   const me = useMe();
@@ -33,12 +46,18 @@ export function MapScreen() {
   const searchRef = useRef<TextInput>(null);
   const regionRef = useRef<MapRegion>(HOME_REGION);
   const centeredOnce = useRef(false);
+  const autoSearchNextRegion = useRef(false);
   const [region, setRegion] = useState<MapRegion>(HOME_REGION);
+  const [searchedRegion, setSearchedRegion] = useState<MapRegion | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("nearby");
   const centre = useMemo(() => ({ lat: region.latitude, lng: region.longitude }), [region.latitude, region.longitude]);
-  const nearby = useNearbyPlaces(centre, mapRadius(region));
+  const searchedCentre = useMemo(
+    () => searchedRegion ? { lat: searchedRegion.latitude, lng: searchedRegion.longitude } : null,
+    [searchedRegion],
+  );
+  const nearby = useNearbyPlaces(searchedCentre, searchedRegion ? mapRadius(searchedRegion) : 750);
   const search = usePlaceSearch(query, centre);
 
   const dismissSearch = useCallback(() => {
@@ -49,6 +68,7 @@ export function MapScreen() {
   const recenter = useCallback(() => {
     if (!here) return;
     const current = regionRef.current;
+    autoSearchNextRegion.current = true;
     mapRef.current?.animateToRegion(
       { latitude: here.lat, longitude: here.lng, latitudeDelta: current.latitudeDelta, longitudeDelta: current.longitudeDelta },
       300,
@@ -75,6 +95,13 @@ export function MapScreen() {
   const effectiveSelectedId = selected?.id ?? null;
   const drawn = visiblePlaces(all, region, stats, effectiveSelectedId);
   const model = selected ? sheetModel(selected, stats.get(selected.id), here, formatDistance) : null;
+  const showSearchArea = filter === "nearby" && !searching && regionNeedsSearch(region, searchedRegion);
+
+  const searchThisArea = useCallback(() => {
+    dismissSearch();
+    setSelectedId(null);
+    setSearchedRegion(regionRef.current);
+  }, [dismissSearch]);
 
   return (
     <EditorialScreen>
@@ -132,6 +159,10 @@ export function MapScreen() {
             onRegionChangeComplete={(next) => {
               regionRef.current = next;
               setRegion(next);
+              if (autoSearchNextRegion.current) {
+                autoSearchNextRegion.current = false;
+                setSearchedRegion(next);
+              }
             }}
             onPress={() => {
               dismissSearch();
@@ -160,6 +191,12 @@ export function MapScreen() {
               );
             })}
           </MapView>
+          {showSearchArea ? (
+            <Pressable style={styles.searchArea} onPress={searchThisArea} accessibilityRole="button" accessibilityLabel="Search restaurants and bars in this map area">
+              <Icon name="magnifyingglass" color="onAccent" size={15} />
+              <Body size={13} style={styles.searchAreaText}>Search this area</Body>
+            </Pressable>
+          ) : null}
           {filter === "visited" && storedPlaces.data?.attribution ? (
             <View style={styles.attribution} pointerEvents="none">
               <Body muted size={10}>{storedPlaces.data.attribution.text}</Body>
@@ -197,5 +234,7 @@ const styles = StyleSheet.create({
   filter: { width: "47.5%", alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
   filterActive: { borderBottomColor: colors.accent },
   mapFrame: { flex: 1, minHeight: 300, overflow: "hidden", marginBottom: 4 },
+  searchArea: { position: "absolute", alignSelf: "center", top: 12, minHeight: 40, paddingHorizontal: 16, borderRadius: 20, flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: colors.accent },
+  searchAreaText: { color: colors.onAccent },
   attribution: { position: "absolute", left: 6, top: 6, paddingHorizontal: 4, paddingVertical: 2, backgroundColor: colors.background, opacity: 0.85 },
 });
