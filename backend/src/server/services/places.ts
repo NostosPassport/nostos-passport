@@ -196,7 +196,13 @@ export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise
 
   if (old) return toView(await db.venue.update({ where: { id: old.id }, data, select: placeSelect }));
   const slug = await uniqueSlug(db, google.name, google.googlePlaceId);
-  return toView(await db.venue.create({ data: { ...data, slug, geofenceMeters: 100 }, select: placeSelect }));
+  try {
+    return toView(await db.venue.create({ data: { ...data, slug, geofenceMeters: 100 }, select: placeSelect }));
+  } catch (error) {
+    const raced = await db.venue.findUnique({ where: { googlePlaceId }, select: placeSelect });
+    if (raced) return toView(raced);
+    throw error;
+  }
 }
 
 /** A durable place by Nostos id/slug, or a Google place_id that should be resolved on demand. */
