@@ -69,13 +69,10 @@ export function MapScreen() {
     if (searching) return search.data?.places ?? [];
     return nearby.data?.places ?? [];
   }, [filter, nearby.data?.places, query, search.data?.places, searching, stats, storedPlaces.data?.places]);
-  const drawn = useMemo(() => visiblePlaces(all, region, stats, selectedId), [all, region, stats, selectedId]);
   const selected = all.find((p) => p.id === selectedId) ?? null;
+  const effectiveSelectedId = selected?.id ?? null;
+  const drawn = useMemo(() => visiblePlaces(all, region, stats, effectiveSelectedId), [all, effectiveSelectedId, region, stats]);
   const model = selected ? sheetModel(selected, stats.get(selected.id), here, formatDistance) : null;
-
-  useEffect(() => {
-    if (selectedId && !all.some((place) => place.id === selectedId)) setSelectedId(null);
-  }, [all, selectedId]);
 
   return (
     <EditorialScreen>
@@ -142,7 +139,7 @@ export function MapScreen() {
           >
             {drawn.map((p) => {
               const kind = pinKind(p.id, stats);
-              const isSelected = p.id === selectedId;
+              const isSelected = p.id === effectiveSelectedId;
               return (
                 <Marker
                   key={`${p.id}-${kind}-${isSelected}`}
