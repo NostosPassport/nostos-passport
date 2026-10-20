@@ -1,6 +1,6 @@
 # Nostos iOS app
 
-Nostos is an iPhone-only Expo SDK 57 app. The current product is a personal owner-only passport for New York. Signed-out users sign in or create an account; the old guest preview flow is no longer part of the root navigation.
+Nostos is an iPhone-only Expo SDK 57 app. The current product is a personal owner-only passport for the places a user goes. Signed-out users sign in or create an account; the old guest preview flow is no longer part of the root navigation.
 
 ## Current navigation
 
@@ -18,8 +18,7 @@ Feed and Activity routes may remain in the source behind the social feature flag
 
 - **Take Photo** uses `expo-image-picker` to open the native iOS camera.
 - **Choose from Photo Library** uses the native library picker.
-- Library selections are validated using available metadata and the current stamp/place context.
-- Screenshots, photos too far from the place, photos outside the allowed time window, or sufficiently low-confidence selections can be rejected.
+- Photo Library images are memories attached to the visit. They are not rejected based on EXIF GPS, timestamp, source application, screenshot status, or editing software.
 - Accepted photos are prepared before upload and EXIF/GPS is stripped from the uploaded image.
 - Native camera captures receive the Nostos watermark and the app attempts to save a copy to Photos when permission allows.
 - Up to six photos may be attached.
@@ -43,9 +42,9 @@ The app defaults to the current local backend configuration on port 3001 in deve
 
 ## Maps and Places
 
-The Map tab uses the default iOS map provider from `react-native-maps`, which is Apple Maps on iOS. It displays only Nostos-owned visited venues and does not call Google Places while panning, zooming, filtering, or recentering.
+The Map tab uses the default iOS map provider from `react-native-maps`, which is Apple Maps on iOS. It displays Nostos-owned visited venues and does not call Google Places while panning, zooming, filtering, or recentering.
 
-Google Places is used only by the backend for restaurant/bar discovery, text search, and resolving a selected Google place into a durable Nostos venue. Configure `GOOGLE_PLACES_API_KEY` on the backend only. The Places key must never be exposed as an `EXPO_PUBLIC_*` mobile variable.
+Google Places is used by the backend for worldwide restaurant/bar discovery, text search, and resolving a selected Google place into a durable Nostos venue. Durable place locality may include area, city, region, country, and country code. NYC neighborhood data is optional legacy enrichment and does not gate whether a place may be stamped. Configure `GOOGLE_PLACES_API_KEY` on the backend only. The Places key must never be exposed as an `EXPO_PUBLIC_*` mobile variable.
 
 No Google Maps SDK for iOS key is required.
 
@@ -69,7 +68,7 @@ npm run sync:contracts
 |---|---|
 | `src/app/` | Expo Router screens |
 | `src/api/` | API client, contracts, and queries |
-| `src/features/photos/` | camera/library picking, validation, preparation, watermarking, Photos save |
+| `src/features/photos/` | camera/library picking, preparation, watermarking, Photos save |
 | `src/features/stamps/` | composer, drafts, stamp flow |
 | `src/features/book/` | passport/book runtime |
 | `src/features/map/` | map UI/model |
