@@ -47,7 +47,8 @@ describe("the Design gallery", () => {
       expect(s.title.length).toBeGreaterThan(2);
       expect(s.note.length).toBeGreaterThan(10);
     }
-    for (const needed of ["palette", "type", "cover", "open", "bearer", "pages", "flip", "stamps", "completion", "landing", "visa", "viewer", "map"]) expect(ids).toContain(needed);
+    for (const needed of ["palette", "type", "cover", "open", "bearer", "pages", "flip", "stamps", "landing", "visa", "viewer", "map"]) expect(ids).toContain(needed);
+    expect(ids).not.toContain("completion");
   });
 
   it.each(GALLERY_SECTIONS.map((s) => [s.id, s.title] as const))("renders the %s section (%s) on made-up data without a server", async (id) => {
@@ -89,10 +90,11 @@ describe("the Design gallery", () => {
     expect(screen.getByText("inside the gallery")).toBeTruthy();
   });
 
-  it("has made-up data that is deterministic and fills pages from the app's own layout", () => {
+  it("has made-up worldwide data that is deterministic and fills pages from the app's own layout", () => {
     expect(sampleStamps(7)).toEqual(sampleStamps(7));
     expect(sampleStamps(7).map((s) => `${s.page}.${s.slot}`)).toEqual(["1.1", "1.2", "1.3", "2.1", "2.2", "2.3", "3.1"]);
     expect(SAMPLE_PLACES.length).toBeGreaterThanOrEqual(12);
+    expect(SAMPLE_PLACES.some((place) => place.countryCode && place.countryCode !== "US")).toBe(true);
     expect(SAMPLE_VISA_STAMP.photos).toHaveLength(4);
   });
   it("uses placeholder photos that are embedded, so it needs no network", () => {
