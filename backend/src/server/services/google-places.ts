@@ -31,6 +31,7 @@ const DETAIL_FIELD_MASK = [
   "primaryType",
   "types",
   "businessStatus",
+  "priceLevel",
 ].join(",");
 
 const addressComponentSchema = z.object({
@@ -44,6 +45,16 @@ const timeZoneSchema = z.union([
   z.object({ id: z.string().min(1), version: z.string().optional() }).passthrough(),
 ]);
 
+export const googlePriceLevelSchema = z.enum([
+  "PRICE_LEVEL_UNSPECIFIED",
+  "PRICE_LEVEL_FREE",
+  "PRICE_LEVEL_INEXPENSIVE",
+  "PRICE_LEVEL_MODERATE",
+  "PRICE_LEVEL_EXPENSIVE",
+  "PRICE_LEVEL_VERY_EXPENSIVE",
+]);
+export type GooglePriceLevel = z.infer<typeof googlePriceLevelSchema>;
+
 const googlePlaceSchema = z.object({
   id: z.string().min(1),
   displayName: z.object({ text: z.string().min(1) }).passthrough(),
@@ -54,6 +65,7 @@ const googlePlaceSchema = z.object({
   primaryType: z.string().optional(),
   types: z.array(z.string()).optional().default([]),
   businessStatus: z.string().optional(),
+  priceLevel: googlePriceLevelSchema.optional(),
 }).passthrough();
 
 const googleListSchema = z.object({ places: z.array(googlePlaceSchema).optional().default([]) }).passthrough();
@@ -78,6 +90,7 @@ export type GooglePlace = PlaceLocality & {
   primaryType: string | null;
   types: string[];
   businessStatus: string | null;
+  priceLevel: GooglePriceLevel | null;
   category: "restaurant" | "bar";
   cuisines: string[];
 };
@@ -228,6 +241,7 @@ function normalize(raw: z.infer<typeof googlePlaceSchema>): GooglePlace | null {
     primaryType,
     types: [...new Set(raw.types)].slice(0, 32),
     businessStatus: raw.businessStatus ?? null,
+    priceLevel: raw.priceLevel ?? null,
     category,
     cuisines: cuisineTags(primaryType, raw.types),
   };
