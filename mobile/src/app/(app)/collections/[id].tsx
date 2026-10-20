@@ -25,6 +25,15 @@ export default function CollectionPassportScreen() {
         <Icon name="chevron.left" color="textPrimary" size={size.icon} />
       </Pressable>
       <Pressable
+        onPress={() => router.push({ pathname: "/collections/[id]/share", params: { id } })}
+        accessibilityRole="button"
+        accessibilityLabel="Share collection"
+        hitSlop={space.xs}
+        style={[styles.share, { top: insets.top + space.xs }]}
+      >
+        <Icon name="square.and.arrow.up" color="textPrimary" size={size.icon} />
+      </Pressable>
+      <Pressable
         onPress={() => router.push({ pathname: "/collections/[id]/edit", params: { id } })}
         accessibilityRole="button"
         accessibilityLabel="Edit collection"
@@ -40,5 +49,6 @@ export default function CollectionPassportScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   back: { position: "absolute", left: space.md, minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
+  share: { position: "absolute", right: space.md + size.hitTarget + space.xs, minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
   edit: { position: "absolute", right: space.md, minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
 });
