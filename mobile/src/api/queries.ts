@@ -92,6 +92,16 @@ export function useNeighborhoodIndex() {
   return useQuery({ queryKey: qk.neighborhoods, queryFn: () => api.neighborhoods(), enabled: status === "signedIn", staleTime: 60_000 });
 }
 
+export function useCollections() {
+  const { status } = useAuth();
+  return useQuery({ queryKey: qk.collections, queryFn: api.collections.list, enabled: status === "signedIn", staleTime: 30_000 });
+}
+
+export function useCollection(id: string, enabled = true) {
+  const { status } = useAuth();
+  return useQuery({ queryKey: qk.collection(id), queryFn: () => api.collections.get(id), enabled: status === "signedIn" && enabled && id !== "", staleTime: 30_000 });
+}
+
 export function useProfileSettings() {
   return useQuery({ queryKey: qk.profileSettings, queryFn: api.me.profile });
 }
