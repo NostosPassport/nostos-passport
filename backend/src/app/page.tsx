@@ -3,21 +3,21 @@ import Link from "next/link";
 
 import styles from "./LandingPage.module.css";
 
-const neighborhoods = [
-  "West Village",
-  "Chinatown",
-  "Greenpoint",
-  "Lower East Side",
-  "Nolita",
-  "Astoria",
-  "SoHo",
-  "Williamsburg",
+const destinations = [
+  "New York",
+  "Rome",
+  "Florence",
+  "Paris",
+  "London",
+  "Tokyo",
+  "Chicago",
+  "Barcelona",
 ];
 
 const stampAngle = (angle: string) => ({ "--stamp-angle": angle } as CSSProperties);
 
-function NeighborhoodTicker() {
-  const items = [...neighborhoods, ...neighborhoods];
+function DestinationTicker() {
+  const items = [...destinations, ...destinations];
   return (
     <div className={styles.ticker} aria-hidden="true">
       <div className={styles.tickerTrack}>
@@ -60,7 +60,7 @@ function HeroPassport() {
         </div>
         <div className={styles.floatingTicket}>
           Visit memory
-          <strong>New York, NY</strong>
+          <strong>Rome, Italy</strong>
         </div>
         <div className={styles.floatingPin} />
       </div>
@@ -84,10 +84,10 @@ export default function Home() {
 
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <p className={styles.kicker}>A passport for New York</p>
+          <p className={styles.kicker}>A passport for the places you go</p>
           <h1 className={styles.heroTitle}>Go somewhere. <em>Keep the story.</em></h1>
           <p className={styles.heroBody}>
-            Nostos turns the places you actually visit into a personal passport. Stamp the moment, add the memory, and watch your New York take shape page by page.
+            Nostos turns the places you actually visit into a personal passport. Stamp the moment, add the memory, and watch the places you have been take shape page by page.
           </p>
           <div className={styles.heroActions}>
             <a className={styles.primaryCta} href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
@@ -98,7 +98,7 @@ export default function Home() {
         <HeroPassport />
       </section>
 
-      <NeighborhoodTicker />
+      <DestinationTicker />
 
       <section id="how-it-works" className={styles.sectionWide}>
         <header className={styles.sectionHeader}>
@@ -106,7 +106,7 @@ export default function Home() {
             <p className={styles.sectionKicker}>How Nostos works</p>
           </div>
           <div>
-            <h2 className={styles.sectionTitle}>Your city, printed into pages.</h2>
+            <h2 className={styles.sectionTitle}>Your travels, printed into pages.</h2>
             <p className={styles.sectionLead}>
               Nostos is built around the visit itself. No feed to perform for, no follower count to chase. Just places, memories, and a passport that becomes more yours every time you go somewhere.
             </p>
@@ -145,9 +145,9 @@ export default function Home() {
                 <span className={styles.mapDemoPinThree} />
               </div>
             </div>
-            <h3 className={styles.stepTitle}>See your New York.</h3>
+            <h3 className={styles.stepTitle}>See where you have been.</h3>
             <p className={styles.stepBody}>
-              Return to the places behind the pages through the map. Your passport remembers the city the way you experienced it, not as a recommendation feed.
+              Return to the places behind the pages through the map. Your passport remembers places the way you experienced them, not as a recommendation feed.
             </p>
           </article>
         </div>
@@ -175,9 +175,9 @@ export default function Home() {
 
       <section className={styles.quoteSection}>
         <div className={styles.quoteMark}>N</div>
-        <h2 className={styles.quote}>A memory app for the city you <em>actually lived in.</em></h2>
+        <h2 className={styles.quote}>A memory app for the places you <em>actually went.</em></h2>
         <p className={styles.quoteSub}>
-          Save the dinner you still talk about, the bar you stumbled into, the coffee you kept coming back for, and the ordinary afternoons that made New York feel like yours.
+          Save the dinner you still talk about, the bar you stumbled into, the coffee you kept coming back for, and the ordinary afternoons that made a place feel like yours.
         </p>
       </section>
 
@@ -185,7 +185,7 @@ export default function Home() {
         <div className={styles.footerTop}>
           <div>
             <div className={styles.footerWordmark}>Nostos</div>
-            <p className={styles.footerTagline}>A passport for New York. Go somewhere, get a stamp.</p>
+            <p className={styles.footerTagline}>A passport for the places you go. Go somewhere, get a stamp.</p>
           </div>
           <nav className={styles.footerLinks} aria-label="Legal and support">
             <Link href="/privacy">Privacy Policy</Link>
@@ -195,7 +195,7 @@ export default function Home() {
           </nav>
         </div>
         <div className={styles.footerBottom}>
-          <span>Designed for iPhone · New York</span>
+          <span>Designed for iPhone</span>
           <span>© {new Date().getFullYear()} Nostos</span>
         </div>
       </footer>
