@@ -4,10 +4,9 @@ import { useWindowDimensions } from "react-native";
 
 import { useMe, useUserStamps } from "@/api/queries";
 import { LandingScene } from "@/features/book/LandingScene";
-import { landingDraft } from "@/features/stamps/landing-draft";
 import { BOOK_ASPECT } from "@/features/book/dimensions";
+import { landingDraft } from "@/features/stamps/landing-draft";
 
-/** A new stamp lands on its page. Reached only from the composer; with nothing to show it goes back to the passport. */
 export default function Landed() {
   const landed = landingDraft.peek();
   const { width, height } = useWindowDimensions();
@@ -25,7 +24,6 @@ export default function Landed() {
     <LandingScene
       stamp={landed.stamp}
       others={others}
-      progress={landed.progress}
       pageWidth={pageWidth}
       pageHeight={Math.floor(pageWidth * BOOK_ASPECT)}
       onDone={() => {
