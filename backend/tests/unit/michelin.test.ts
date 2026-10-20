@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { michelinStarsFromHit } from "@/server/services/michelin";
-import { michelinMarkCenters } from "../../../shared/michelin-stamp";
+import { michelinMarkCenters, michelinStarPath } from "../../../shared/michelin-stamp";
 
 describe("Michelin metadata", () => {
   it("parses one, two and three-star awards while ignoring Green Star and Bib Gourmand", () => {
@@ -13,13 +13,14 @@ describe("Michelin metadata", () => {
     expect(michelinStarsFromHit({ michelin_award: "1 Star", distinction: { slug: "green-star" } })).toBe(1);
   });
 
-  it("lays out exactly one to three Michelin marks inside the restaurant border", () => {
+  it("lays out one to three six-lobed outlined Michelin marks inside the restaurant border", () => {
     const mark = { cx: 297, cy: 26, r: 5 };
-    expect(michelinMarkCenters(mark, 1)).toEqual([{ cx: 289, cy: 26, r: 5 }]);
+    expect(michelinMarkCenters(mark, 1)).toEqual([{ cx: 289, cy: 26, r: 3.5999999999999996 }]);
     expect(michelinMarkCenters(mark, 2)).toHaveLength(2);
-    expect(michelinMarkCenters(mark, 3)).toHaveLength(3);
     const three = michelinMarkCenters(mark, 3);
-    expect(three.map((item) => item.cx)).toEqual([278, 289, 300]);
-    expect(Math.max(...three.map((item) => item.cx + item.r))).toBeLessThanOrEqual(306.5);
+    expect(three).toHaveLength(3);
+    expect(three.map((item) => item.cx)).toEqual([277.5, 289, 300.5]);
+    expect(Math.max(...three.map((item) => item.cx + item.r * 1.52))).toBeLessThanOrEqual(306.5);
+    expect((michelinStarPath(three[0]!).match(/M /g) ?? [])).toHaveLength(6);
   });
 });
