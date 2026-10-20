@@ -3,7 +3,18 @@ import { z } from "zod";
 export const IsoDate = z.string().datetime({ offset: true });
 export const ErrorResponse = z.object({ error: z.string(), message: z.string() }).strict();
 export const Attribution = z.object({ text: z.literal("© OpenStreetMap contributors"), url: z.string().url(), license: z.literal("ODbL-1.0") }).strict();
-export const PlaceRef = z.object({ id: z.string(), slug: z.string(), name: z.string(), neighborhood: z.string(), neighborhoodId: z.string().nullable() }).strict();
+export const PlaceRef = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  neighborhood: z.string(),
+  neighborhoodId: z.string().nullable(),
+  area: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  region: z.string().nullable().optional(),
+  country: z.string().nullable().optional(),
+  countryCode: z.string().nullable().optional(),
+}).strict();
 
 const EmailAddress = z.string().trim().toLowerCase().email().max(200);
 const VerificationCode = z.string().trim().regex(/^\d{6}$/, "Enter the six-digit code");
