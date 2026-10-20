@@ -25,7 +25,7 @@ export function MapScreen() {
   const centeredOnUserOnce = useRef(false);
   const fittedVisitedOnce = useRef(false);
   const [filter, setFilter] = useState<MapFilter>("all");
-  const visited = mine.data?.places ?? [];
+  const visited = useMemo(() => mine.data?.places ?? [], [mine.data?.places]);
   const categoryByPlace = useMemo(
     () => new Map((storedPlaces.data?.places ?? []).map((place) => [place.id, place.category] as const)),
     [storedPlaces.data?.places],
