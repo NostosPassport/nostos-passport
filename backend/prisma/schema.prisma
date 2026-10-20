@@ -91,6 +91,7 @@ model Venue {
   region               String?
   country              String?
   countryCode          String?       @map("country_code")
+  timeZone             String?       @map("time_zone")
   lat                  Float
   lng                  Float
   geofenceMeters       Int           @default(100) @map("geofence_meters")
