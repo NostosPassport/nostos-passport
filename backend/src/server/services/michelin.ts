@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Prisma as PrismaTypes } from "@prisma/client";
 import { z } from "zod";
 
@@ -9,9 +10,11 @@ const ALGOLIA_URL = "https://8nvhrd7onv-dsn.algolia.net/1/indexes/*/queries?x-al
 const MICHELIN_REFERRER = "https://guide.michelin.com/us/en/restaurants/3-stars-michelin";
 const MICHELIN_ORIGIN = "https://guide.michelin.com";
 const MICHELIN_TIMEOUT_MS = 2_500;
+const PREVIEW_TTL_MS = 60 * 60 * 1000;
+const PREVIEW_PATTERN = /^mp1\.([0-3])\.(\d{13})\.([A-Za-z0-9_-]{43})$/;
 
 type MichelinDb = Db | PrismaTypes.TransactionClient;
-type MichelinPlace = {
+export type MichelinPlace = {
   id: string;
   name: string;
   lat: number;
@@ -38,6 +41,37 @@ function logMichelin(message: string, details?: unknown) {
   if (process.env.NODE_ENV === "production") return;
   if (details === undefined) console.info(`[michelin] ${message}`);
   else console.info(`[michelin] ${message}`, details);
+}
+
+function previewSecret() {
+  const value = process.env.SHARE_TOKEN_SECRET?.trim();
+  if (!value || value.length < 32) throw new Error("SHARE_TOKEN_SECRET must be at least 32 characters");
+  return value;
+}
+
+function previewSignature(venueId: string, stars: number, expiresAt: number) {
+  return createHmac("sha256", previewSecret())
+    .update(`michelin-preview:v1:${venueId}:${stars}:${expiresAt}`)
+    .digest("base64url");
+}
+
+function createPreviewProof(venueId: string, stars: MichelinStars | null, now = Date.now()) {
+  const encodedStars = stars ?? 0;
+  const expiresAt = now + PREVIEW_TTL_MS;
+  return `mp1.${encodedStars}.${expiresAt}.${previewSignature(venueId, encodedStars, expiresAt)}`;
+}
+
+export function verifyMichelinPreviewProof(venueId: string, proof: string | null | undefined, now = Date.now()): MichelinStars | null | undefined {
+  if (!proof) return undefined;
+  const match = PREVIEW_PATTERN.exec(proof);
+  if (!match) return undefined;
+  const stars = Number(match[1]);
+  const expiresAt = Number(match[2]);
+  if (!Number.isFinite(expiresAt) || expiresAt < now) return undefined;
+  const actual = Buffer.from(match[3]!, "utf8");
+  const expected = Buffer.from(previewSignature(venueId, stars, expiresAt), "utf8");
+  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return undefined;
+  return stars === 1 || stars === 2 || stars === 3 ? stars : null;
 }
 
 const normalizeName = (value: string) => value
@@ -152,46 +186,63 @@ export async function cachedMichelinStars(db: MichelinDb, venueId: string): Prom
   return stars === 1 || stars === 2 || stars === 3 ? stars : null;
 }
 
-export async function ensureMichelinForStamp(db: Db, place: MichelinPlace): Promise<void> {
+export async function previewMichelinForPlace(db: Db, place: MichelinPlace) {
   if (place.category !== "restaurant") {
-    logMichelin("skip", { venueId: place.id, name: place.name, reason: `category=${place.category ?? "null"}` });
-    return;
+    logMichelin("preview skip", { venueId: place.id, name: place.name, reason: `category=${place.category ?? "null"}` });
+    return { venueId: place.id, stars: null, proof: null };
   }
+
+  const rows = await db.$queryRaw<CacheRow[]>`
+    SELECT michelin_stars, michelin_checked_at
+    FROM venue
+    WHERE id = ${place.id}
+    LIMIT 1
+  `;
+  const row = rows[0];
+  if (!row) return { venueId: place.id, stars: null, proof: null };
+  if (row.michelin_checked_at) {
+    const stars = row.michelin_stars === 1 || row.michelin_stars === 2 || row.michelin_stars === 3 ? row.michelin_stars : null;
+    logMichelin("cache hit", { venueId: place.id, name: place.name, stars, checkedAt: row.michelin_checked_at.toISOString() });
+    return { venueId: place.id, stars, proof: null };
+  }
+
   try {
-    await db.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<CacheRow[]>`
-        SELECT michelin_stars, michelin_checked_at
-        FROM venue
-        WHERE id = ${place.id}
-        FOR UPDATE
-      `;
-      const row = rows[0];
-      if (!row) {
-        logMichelin("skip", { venueId: place.id, name: place.name, reason: "venue row missing" });
-        return;
-      }
-      if (row.michelin_checked_at) {
-        logMichelin("cache hit", {
-          venueId: place.id,
-          name: place.name,
-          stars: row.michelin_stars,
-          checkedAt: row.michelin_checked_at.toISOString(),
-        });
-        return;
-      }
-      const stars = await lookupMichelinStars(place);
-      await tx.$executeRaw`
-        UPDATE venue
-        SET michelin_stars = ${stars}, michelin_checked_at = CURRENT_TIMESTAMP
-        WHERE id = ${place.id} AND michelin_checked_at IS NULL
-      `;
-      logMichelin("cached", { venueId: place.id, name: place.name, stars });
-    });
+    const stars = await lookupMichelinStars(place);
+    const proof = createPreviewProof(place.id, stars);
+    logMichelin("preview ready", { venueId: place.id, name: place.name, stars });
+    return { venueId: place.id, stars, proof };
   } catch (error) {
-    logMichelin("failed", {
+    logMichelin("preview failed", {
       venueId: place.id,
       name: place.name,
       error: error instanceof Error ? error.message : String(error),
     });
+    return { venueId: place.id, stars: null, proof: null };
   }
+}
+
+export async function cacheMichelinPreviewForStamp(db: Db, place: MichelinPlace, proof: string | null | undefined): Promise<void> {
+  if (place.category !== "restaurant") return;
+  const stars = verifyMichelinPreviewProof(place.id, proof);
+  if (stars === undefined) {
+    logMichelin("stamp cache skip", { venueId: place.id, name: place.name, reason: proof ? "invalid or expired preview proof" : "no preview proof" });
+    return;
+  }
+
+  await db.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw<CacheRow[]>`
+      SELECT michelin_stars, michelin_checked_at
+      FROM venue
+      WHERE id = ${place.id}
+      FOR UPDATE
+    `;
+    const row = rows[0];
+    if (!row || row.michelin_checked_at) return;
+    await tx.$executeRaw`
+      UPDATE venue
+      SET michelin_stars = ${stars}, michelin_checked_at = CURRENT_TIMESTAMP
+      WHERE id = ${place.id} AND michelin_checked_at IS NULL
+    `;
+    logMichelin("cached on stamp", { venueId: place.id, name: place.name, stars });
+  });
 }
