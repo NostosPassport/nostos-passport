@@ -29,7 +29,7 @@ describe("the Editorial palette", () => {
   const allowed = new Set(Object.values(palette).map((h) => key(toRgb(h))));
 
   it("matches the refined paper, ink and blue Figma direction with a semantic error red", () => {
-    expect(Object.values(palette).map((h) => h.toUpperCase())).toEqual(["#F7F4EE", "#F3EFE5", "#EEE9DD", "#123BFF", "#5A5A55", "#171714", "#5A5A55", "#74746E", "#B3261E"]);
+    expect(Object.values(palette).map((h) => h.toUpperCase())).toEqual(["#F7F4EE", "#F3EFE5", "#EEE9DD", "#123BFF", "#5F84D7", "#5A5A55", "#171714", "#5A5A55", "#74746E", "#B3261E"]);
     expect(midnight.name).toBe("Editorial");
   });
 
