@@ -68,6 +68,7 @@ export const Place = z.object({
   region: z.string().nullable().optional(),
   country: z.string().nullable().optional(),
   countryCode: z.string().nullable().optional(),
+  timeZone: z.string().nullable().optional(),
   lat: z.number(),
   lng: z.number(),
   geofenceMeters: z.number().int(),
