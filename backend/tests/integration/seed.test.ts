@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { devLogin } from "@/server/services/auth";
 import { getStamp } from "@/server/services/stamps";
@@ -74,15 +74,13 @@ describe("the demo seed", () => {
 
   it("keeps dev-password login only for seeded development accounts", async () => {
     await run();
-    const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
     try {
       for (const handle of ["avaa", "maya_r", "appreview"]) {
         await expect(devLogin(prisma, { email: `${handle}@lastcall.dev`, password: "seed password 123" })).resolves.toBeTruthy();
       }
     } finally {
-      if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
-      else process.env.NODE_ENV = originalNodeEnv;
+      vi.unstubAllEnvs();
     }
   });
 
