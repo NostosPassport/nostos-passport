@@ -1,12 +1,30 @@
 export const PASSPORT_PAGE_ASPECT = 1.42;
 export const STAMP_BOX = 120;
-export const STAMP_MAX_TILT_DEG = 11;
 export const STAMP_SHARE = 0.4;
 
+export const SHAPES = ["circle", "oval", "rounded", "octagon", "hexagon"] as const;
+export const MOTIFS = ["star", "diamond", "crescent", "door", "compass", "sun"] as const;
+export const BORDERS = ["plain", "double", "dotted", "ticks", "dashed", "heavy"] as const;
+
+export type Shape = (typeof SHAPES)[number];
+export type Motif = (typeof MOTIFS)[number];
+export type Border = (typeof BORDERS)[number];
+
+export const STAMP_ARTWORK_STYLE = {
+  strokes: { ring: 3, hair: 1.2, text: 2 },
+  text: {
+    name: 11,
+    area: 6.5,
+    arcTrack: 1.2,
+    bannerTrack: 1,
+    completeWord: 13,
+    completeTrack: 2,
+    completeArea: 7,
+  },
+  maxTiltDeg: 11,
+} as const;
+
 export type Placement = { cx: number; cy: number; size: number; rotation: number };
-export type Shape = "circle" | "oval" | "rounded" | "octagon" | "hexagon";
-export type Motif = "star" | "diamond" | "crescent" | "door" | "compass" | "sun";
-export type Border = "plain" | "double" | "dotted" | "ticks" | "dashed" | "heavy";
 export type Speckle = { cx: number; cy: number; r: number };
 export type StampInput = { placeId: string; placeName: string; neighborhoodId: string | null; neighborhoodName: string };
 export type StampDesign = {
@@ -24,9 +42,6 @@ export type StampDesign = {
 export type RingSpec = { inset: number; width: number; dash: number[] | null; round: boolean };
 export type CompletionDesign = { rays: number; label: string; area: string };
 
-const SHAPES: readonly Shape[] = ["circle", "oval", "rounded", "octagon", "hexagon"];
-const MOTIFS: readonly Motif[] = ["star", "diamond", "crescent", "door", "compass", "sun"];
-const BORDERS: readonly Border[] = ["plain", "double", "dotted", "ticks", "dashed", "heavy"];
 const MID = STAMP_BOX / 2;
 const SLOT_X = [0.34, 0.66, 0.4] as const;
 const SLOT_TOP = 0.13;
@@ -70,7 +85,7 @@ export function slotPlacement(seed: string, slot: number, width: number, height:
     cx: SLOT_X[slot - 1]! * width + jx,
     cy: SLOT_TOP * height + pitch * (slot - 0.5) + jy,
     size: STAMP_SHARE * width,
-    rotation: rng.range(-STAMP_MAX_TILT_DEG, STAMP_MAX_TILT_DEG),
+    rotation: rng.range(-STAMP_ARTWORK_STYLE.maxTiltDeg, STAMP_ARTWORK_STYLE.maxTiltDeg),
   };
 }
 
