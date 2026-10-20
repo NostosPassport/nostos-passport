@@ -1,8 +1,9 @@
-import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { Prisma as PrismaTypes } from "@prisma/client";
 
+import type { PriceTier } from "@/lib/category-stamp-design";
 import type { Db } from "@/lib/db";
 import type { GooglePriceLevel } from "@/server/services/google-places";
-import type { PriceTier } from "../../../../shared/category-stamp-design";
 
 type CacheDb = Db | PrismaTypes.TransactionClient;
 type CacheRow = { venue_id: string; price_level: string };
