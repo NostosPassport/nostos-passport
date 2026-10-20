@@ -6,6 +6,8 @@ export const COLLECTION_NAME_MAX = 32;
 export const MAX_COLLECTIONS_PER_STAMP = 20;
 export const CollectionColor = z.enum(["blue", "navy", "green", "burgundy", "sand", "plum"]);
 export const CollectionStampIds = z.array(z.string().min(1).max(64)).max(1000);
+export const StampCollectionsRequest = z.object({ collectionIds: z.array(z.string().min(1).max(64)).max(MAX_COLLECTIONS_PER_STAMP) }).strict();
+export const StampCollectionsResponse = z.object({ collectionIds: z.array(z.string()) }).strict();
 
 export const CollectionCreateRequest = z.object({
   name: z.string().trim().min(1, "Give this collection a name").max(COLLECTION_NAME_MAX),
