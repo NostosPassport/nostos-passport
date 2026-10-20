@@ -102,6 +102,8 @@ model Venue {
   googleBusinessStatus String?  @map("google_business_status")
   googlePriceLevel     String?  @map("google_price_level")
   googlePriceCheckedAt DateTime? @map("google_price_checked_at") @db.Timestamptz(3)
+  michelinStars        Int?     @map("michelin_stars") @db.SmallInt
+  michelinCheckedAt    DateTime? @map("michelin_checked_at") @db.Timestamptz(3)
   googleSyncedAt       DateTime? @map("google_synced_at") @db.Timestamptz(3)
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
