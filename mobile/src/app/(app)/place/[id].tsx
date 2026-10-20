@@ -12,9 +12,9 @@ import { StampMark } from "@/features/book/StampMark";
 import { useUserCoords } from "@/features/location/location-store";
 import { dayLabel, stampLine, standing, visitSummary } from "@/features/place/place-page";
 import { formatDistance } from "@/lib/format";
+import { localityKey, localityLabel } from "@/lib/place";
 import { colors, radius, screenPadding, size, space } from "@/theme";
 
-/** Your page for one place: your visit memories and whether a new Now stamp can be verified right now. */
 export default function PlacePage() {
   return (
     <AccountGate title="Place" message="Sign in to see your stamps at this place.">
@@ -41,7 +41,7 @@ function Page() {
             <View style={styles.head}>
               <Text variant="largeTitle" color="brass" accessibilityRole="header">{data.place.name}</Text>
               {cuisines.length > 0 ? <Text variant="typewriterSmall" color="brass">{cuisines.join(" · ")}</Text> : null}
-              <Text variant="typewriterSmall" color="textSecondary">{[data.place.neighborhood, data.place.address].filter(Boolean).join(" · ")}</Text>
+              <Text variant="typewriterSmall" color="textSecondary">{[localityLabel(data.place), data.place.address].filter(Boolean).join(" · ")}</Text>
               {stand?.text ? (
                 <Text variant="typewriter" color={stand.canVerify ? "brass" : "dimBrass"} accessibilityLiveRegion="polite">{stand.text}</Text>
               ) : null}
@@ -56,7 +56,7 @@ function Page() {
                 <Text variant="serifLabel" color="brass" accessibilityRole="header">{dayLabel(visit.day)}</Text>
                 {visit.stamps.map((s) => (
                   <Pressable key={s.id} onPress={() => router.push({ pathname: "/stamp/[id]", params: { id: s.id } })} accessibilityRole="button" accessibilityLabel={`Stamp, ${stampLine(s)}${s.verified ? ", visit verified" : ""}`} accessibilityHint="Opens the stamp" style={styles.row}>
-                    <StampMark input={{ placeId: s.place.id, placeName: s.place.name, neighborhoodId: s.place.neighborhoodId, neighborhoodName: s.place.neighborhood }} size={size.avatarLarge} />
+                    <StampMark input={{ placeId: s.place.id, placeName: s.place.name, localityKey: localityKey(s.place), localityName: localityLabel(s.place) }} size={size.avatarLarge} />
                     <View style={styles.line}><Text variant="typewriter" color="textPrimary" numberOfLines={3}>{stampLine(s)}</Text>{s.verified ? <Text variant="footnote" color="accent">Nostos verified</Text> : null}</View>
                   </Pressable>
                 ))}

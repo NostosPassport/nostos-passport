@@ -2,13 +2,12 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import type { Db } from "@/lib/db";
 import { distanceMeters, isValidLatLng, withinGeofence } from "@/lib/geo";
-import { localParts } from "@/lib/time";
+import { calendarDayKey, NIGHT_TZ } from "@/lib/time";
 import { pageAndSlot } from "@/lib/layout";
 import { getStorage, newStorageKey, type BlobStorage } from "@/lib/storage";
 import type { Actor } from "@/server/actor";
 import { livePhotoCoverSelect, uploadUrl } from "@/server/media";
 import { appendStampToCollections } from "@/server/services/collection-membership";
-import { recordProgress } from "@/server/services/neighborhoods";
 import { assertCleanText, badRequest, notFound } from "@/server/errors";
 import { assertCanEditOwnContent, requireSignedIn } from "@/server/permissions";
 import { consumeRate } from "@/server/rate-limit";
@@ -78,13 +77,16 @@ function assertEditableVisitDate(d: Date, now: Date) {
   if (d.getTime() < now.getTime() - YEAR_MS) throw badRequest("Visit dates can only go back one year");
 }
 
-const sameNyDay = (a: Date, b: Date) => stampDay(a) === stampDay(b);
+const samePlaceDay = (a: Date, b: Date, timeZone: string) => stampDay(a, timeZone) === stampDay(b, timeZone);
 
 type StampRow = {
   id: string; userId: string; caption: string; songTitle: string | null; songArtist: string | null; songArtUrl: string | null; songSourceId: string | null;
   createdAt: Date; visitedAt: Date; verifiedAt: Date | null; editedAt: Date | null; removedAt: Date | null;
   user: { deletedAt: Date | null };
-  venue: { id: string; slug: string; name: string; neighborhood: string; neighborhoodId: string | null };
+  venue: {
+    id: string; slug: string; name: string;
+    area: string | null; city: string | null; region: string | null; country: string | null; countryCode: string | null; timeZone: string;
+  };
   photos: { id: string; storageKey: string; position: number; x: number | null; y: number | null; rotation: number | null }[];
 };
 
@@ -92,7 +94,7 @@ const stampSelect = {
   id: true, userId: true, caption: true, songTitle: true, songArtist: true, songArtUrl: true, songSourceId: true,
   createdAt: true, visitedAt: true, verifiedAt: true, editedAt: true, removedAt: true,
   user: { select: { deletedAt: true } },
-  venue: { select: { id: true, slug: true, name: true, neighborhood: true, neighborhoodId: true } },
+  venue: { select: { id: true, slug: true, name: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true } },
   photos: { where: { removedAt: null }, orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }], select: { id: true, storageKey: true, position: true, x: true, y: true, rotation: true } },
 };
 
@@ -126,15 +128,21 @@ async function toStampViews(db: Db, rows: readonly StampRow[], now: Date) {
     verifiedAt: r.verifiedAt,
     verified: r.verifiedAt !== null,
     editedAt: r.editedAt,
-    place: { id: r.venue.id, slug: r.venue.slug, name: r.venue.name, neighborhood: r.venue.neighborhood, neighborhoodId: r.venue.neighborhoodId },
+    place: {
+      id: r.venue.id,
+      slug: r.venue.slug,
+      name: r.venue.name,
+      area: r.venue.area,
+      city: r.venue.city,
+      region: r.venue.region,
+      country: r.venue.country,
+      countryCode: r.venue.countryCode,
+      timeZone: r.venue.timeZone,
+    },
   })));
 }
 
 export async function createStamp(db: Db, actor: Actor | null, venueId: string, input: CreateStampInput, now = new Date(), storage: BlobStorage = getStorage()) {
-  return (await createStampWithProgress(db, actor, venueId, input, now, storage)).stamp;
-}
-
-export async function createStampWithProgress(db: Db, actor: Actor | null, venueId: string, input: CreateStampInput, now = new Date(), storage: BlobStorage = getStorage()) {
   const me = requireSignedIn(actor);
   const meta = stampMetaSchema.parse(input.meta);
   const buffers = [...(input.bytes ? [input.bytes] : []), ...(input.photos ?? [])].filter((b) => b.length > 0);
@@ -153,7 +161,6 @@ export async function createStampWithProgress(db: Db, actor: Actor | null, venue
   const images = await Promise.all(buffers.map((b) => processImage(b)));
   const keys = images.map((img) => newStorageKey("photos", img.kind.ext));
   const written: string[] = [];
-  let progress: Awaited<ReturnType<typeof recordProgress>> = null;
   try {
     const row = await db.$transaction(async (tx) => {
       await lockAndCheckCooldown(tx, { userId: me.userId, venueId }, now);
@@ -167,11 +174,10 @@ export async function createStampWithProgress(db: Db, actor: Actor | null, venue
       });
       for (const [i, img] of images.entries()) await tx.stampPhoto.create({ data: { stampId: created.id, storageKey: keys[i]!, mimeType: img.kind.mime, position: i, createdAt: now } });
       await appendStampToCollections(tx, me.userId, created.id, input.collectionIds ?? [], now);
-      if (!me.geofenceExempt) progress = await recordProgress(tx, me.userId, venueId, created.id, now);
       for (const [i, img] of images.entries()) { await storage.put(keys[i]!, img.bytes, img.kind.mime); written.push(keys[i]!); }
       return tx.photo.findUniqueOrThrow({ where: { id: created.id }, select: stampSelect });
     });
-    return { stamp: (await toStampViews(db, [row], now))[0]!, progress };
+    return (await toStampViews(db, [row], now))[0]!;
   } catch (err) {
     await Promise.all(written.map((k) => storage.delete(k).catch(() => {})));
     throw err;
@@ -266,7 +272,7 @@ export async function editStamp(db: Db, actor: Actor | null, stampId: string, ra
   assertCleanText({ caption: input.caption, "song title": input.song?.title, "song artist": input.song?.artist });
   await db.$transaction(async (tx) => {
     await lockStamp(tx, stampId);
-    const stamp = await tx.photo.findUnique({ where: { id: stampId } });
+    const stamp = await tx.photo.findUnique({ where: { id: stampId }, include: { venue: { select: { timeZone: true } } } });
     if (!stamp || stamp.removedAt) throw notFound("Stamp not found");
     assertCanEditOwnContent(me, stamp);
     const caption = input.caption ?? stamp.caption;
@@ -275,7 +281,7 @@ export async function editStamp(db: Db, actor: Actor | null, stampId: string, ra
     if (input.visitedAt) assertEditableVisitDate(visitedAt, now);
     const livePhotos = await tx.stampPhoto.count({ where: { stampId, removedAt: null } });
     if (livePhotos === 0 && !caption.trim() && !song) throw badRequest("A stamp needs a photo, a caption or a song");
-    const verifiedAt = stamp.verifiedAt && sameNyDay(stamp.visitedAt, visitedAt) ? stamp.verifiedAt : null;
+    const verifiedAt = stamp.verifiedAt && samePlaceDay(stamp.visitedAt, visitedAt, stamp.venue.timeZone) ? stamp.verifiedAt : null;
     await tx.photo.update({ where: { id: stamp.id }, data: { caption, visitedAt, verifiedAt, songTitle: song?.title ?? null, songArtist: song?.artist ?? null, songArtUrl: song?.artUrl ?? null, songSourceId: song?.sourceId ?? null, editedAt: now } });
   });
   return getStamp(db, me, stampId, now);
@@ -316,25 +322,41 @@ export async function listUserStamps(db: Db, actor: Actor | null, handle: string
 
 export async function listUserPlaces(db: Db, actor: Actor | null, handle: string, now = new Date()) {
   const user = await ownProfile(db, actor, handle);
-  const rows = await db.photo.findMany({ where: { userId: user.id, removedAt: null }, orderBy: [{ visitedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }], select: { id: true, createdAt: true, visitedAt: true, ...livePhotoCoverSelect, caption: true, venue: { select: { id: true, slug: true, name: true, neighborhood: true, lat: true, lng: true } } } });
+  const rows = await db.photo.findMany({
+    where: { userId: user.id, removedAt: null },
+    orderBy: [{ visitedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+    select: {
+      id: true, createdAt: true, visitedAt: true, ...livePhotoCoverSelect, caption: true,
+      venue: { select: { id: true, slug: true, name: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true, lat: true, lng: true } },
+    },
+  });
   const places = new Map<string, { place: (typeof rows)[number]["venue"]; stamps: number; latest: (typeof rows)[number] }>();
   for (const r of rows) { const p = places.get(r.venue.id); if (p) p.stamps++; else places.set(r.venue.id, { place: r.venue, stamps: 1, latest: r }); }
   return { places: await Promise.all([...places.values()].map(async ({ place, stamps, latest }) => ({ place, stamps, latestStamp: { id: latest.id, createdAt: latest.createdAt, visitedAt: latest.visitedAt, photoUrl: latest.photos[0] ? await uploadUrl(latest.photos[0].storageKey, now) : null, caption: latest.caption } }))) };
 }
 
-export const stampDay = (d: Date) => {
-  const p = localParts(d);
-  return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
-};
+export const stampDay = (d: Date, timeZone: string = NIGHT_TZ) => calendarDayKey(d, timeZone);
 
 export async function getMyPlacePage(db: Db, actor: Actor | null, idOrSlug: string, pos?: { lat: number; lng: number } | null, now = new Date()) {
   const me = requireSignedIn(actor);
-  const place = await db.venue.findFirst({ where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] }, select: { id: true, slug: true, name: true, address: true, neighborhood: true, neighborhoodId: true, lat: true, lng: true, geofenceMeters: true, osmId: true } });
+  const place = await db.venue.findFirst({
+    where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+    select: {
+      id: true, slug: true, name: true, address: true,
+      area: true, city: true, region: true, country: true, countryCode: true, timeZone: true,
+      lat: true, lng: true, geofenceMeters: true, osmId: true,
+    },
+  });
   if (!place) throw notFound("Place not found");
   const rows = await db.photo.findMany({ where: { userId: me.userId, venueId: place.id, removedAt: null }, orderBy: [{ visitedAt: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: stampSelect });
   const stamps = await toStampViews(db, rows, now);
   const visits: { day: string; stamps: typeof stamps }[] = [];
-  for (const st of stamps) { const day = stampDay(st.visitedAt); const last = visits[visits.length - 1]; if (last && last.day === day) last.stamps.push(st); else visits.push({ day, stamps: [st] }); }
+  for (const st of stamps) {
+    const day = stampDay(st.visitedAt, place.timeZone);
+    const last = visits[visits.length - 1];
+    if (last && last.day === day) last.stamps.push(st);
+    else visits.push({ day, stamps: [st] });
+  }
   const here = pos && isValidLatLng(pos) ? Math.round(distanceMeters(pos, place)) : null;
   const { osmId, ...rest } = place;
   return { place: { ...rest, fromOsm: osmId !== null }, stamps, visits, inside: here === null ? null : here <= place.geofenceMeters, distanceM: here };

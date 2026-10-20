@@ -1,14 +1,11 @@
 /**
 * pnpm venues:import [--dry-run] [--file overpass.json] [--allow-demo] [--bbox S,W,N,E]
- * Pulls places (bars, restaurants, cafes, theatres, museums, parks and more; default area: Manhattan up to 59th St) from the OpenStreetMap Overpass API and upserts them
- * (idempotent on osm_id). Data © OpenStreetMap contributors, ODbL. Uses DATABASE_URL (run against production with
- * the production env loaded; see DEPLOY.md).
+ * Pulls places from the OpenStreetMap Overpass API and upserts them idempotently on osm_id.
  */
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { DEFAULT_BBOX, overpassQuery, parseOverpass, type OverpassElement } from "../src/lib/osm";
 import { importOsmVenues } from "../src/server/services/osm-import";
-import { loadNeighborhoods, locate } from "../src/server/services/neighborhoods";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
 const args = process.argv.slice(2);
@@ -32,10 +29,8 @@ async function fetchElements(): Promise<OverpassElement[]> {
   try {
     body = JSON.parse(text) as typeof body;
   } catch {
-    // Overload/rate limiting comes back as an XML/HTML error page.
-    throw new Error(`Overpass returned a non-JSON response (busy or rate-limited?): ${text.slice(0, 160).replace(/\s+/g, " ")}`);
+    throw new Error(`Overpass returned a non-JSON response: ${text.slice(0, 160).replace(/\s+/g, " ")}`);
   }
-  // Overpass reports timeouts/overload as HTTP 200 with a "remark" and partial (or empty) elements.
   if (body.remark && /error|timed out|out of memory|runtime/i.test(body.remark)) throw new Error(`Overpass failed: ${body.remark}`);
   if (!Array.isArray(body.elements)) throw new Error("Overpass returned no elements array");
   return body.elements;
@@ -44,19 +39,14 @@ async function fetchElements(): Promise<OverpassElement[]> {
 const elements = await fetchElements();
 const db = new PrismaClient();
 try {
-  // With neighborhood boundaries loaded (pnpm neighborhoods:import), places are kept when inside NYC and filed under their neighborhood.
-  const hoods = await loadNeighborhoods(db);
-  const locateFn = hoods.length ? (lat: number, lng: number) => locate(hoods, lat, lng) : undefined;
-  const parsed = parseOverpass(elements, locateFn);
-  // Sanity check: the default area has thousands of mapped places. A tiny result means a bad response.
+  const parsed = parseOverpass(elements);
   const MIN_EXPECTED = Number(process.env.OSM_MIN_EXPECTED ?? 50);
   if (fileIdx < 0 && parsed.length < MIN_EXPECTED) throw new Error(`Only ${parsed.length} places parsed (expected >= ${MIN_EXPECTED}); refusing to import a partial result`);
   if (dryRun) {
     console.log(`[venues:import] dry run: ${elements.length} elements -> ${parsed.length} named places`);
-    for (const v of parsed.slice(0, 15)) console.log(`  ${v.osmId.padEnd(16)} ${v.kind.padEnd(12)} ${v.neighborhood.padEnd(24)} ${v.name} (${v.address})`);
+    for (const v of parsed.slice(0, 15)) console.log(`  ${v.osmId.padEnd(16)} ${v.kind.padEnd(12)} ${(v.area ?? "").padEnd(24)} ${v.name} (${v.address})`);
     if (parsed.length > 15) console.log(`  ... ${parsed.length - 15} more`);
   } else {
-    // Real places belong in production (and local experiments), not next to the fictional demo seed.
     const demo = await db.venue.count({ where: { id: { startsWith: "seed_v_" } } });
     if (demo > 0 && !args.includes("--allow-demo")) {
       throw new Error(`This database has ${demo} demo-seed places. Import real places into a database without the demo seed, or pass --allow-demo.`);

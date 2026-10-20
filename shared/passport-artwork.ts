@@ -17,16 +17,13 @@ export const STAMP_ARTWORK_STYLE = {
     area: 6.5,
     arcTrack: 1.2,
     bannerTrack: 1,
-    completeWord: 13,
-    completeTrack: 2,
-    completeArea: 7,
   },
   maxTiltDeg: 11,
 } as const;
 
 export type Placement = { cx: number; cy: number; size: number; rotation: number };
 export type Speckle = { cx: number; cy: number; r: number };
-export type StampInput = { placeId: string; placeName: string; neighborhoodId: string | null; neighborhoodName: string };
+export type StampInput = { placeId: string; placeName: string; localityKey: string; localityName: string };
 export type StampDesign = {
   shape: Shape;
   motif: Motif;
@@ -40,7 +37,6 @@ export type StampDesign = {
   speckles: Speckle[];
 };
 export type RingSpec = { inset: number; width: number; dash: number[] | null; round: boolean };
-export type CompletionDesign = { rays: number; label: string; area: string };
 
 const MID = STAMP_BOX / 2;
 const SLOT_X = [0.34, 0.66, 0.4] as const;
@@ -130,9 +126,8 @@ export function fitName(name: string, maxLine = 12, maxLines = 3): string[] {
   return kept;
 }
 
-export function borderFor(neighborhoodId: string | null): Border {
-  if (!neighborhoodId) return "plain";
-  return BORDERS[seeded(`border:${neighborhoodId}`).int(BORDERS.length)]!;
+export function borderFor(localityKey: string): Border {
+  return BORDERS[seeded(`border:${localityKey}`).int(BORDERS.length)]!;
 }
 
 export function stampDesign(input: StampInput): StampDesign {
@@ -149,12 +144,12 @@ export function stampDesign(input: StampInput): StampDesign {
   return {
     shape,
     motif,
-    border: borderFor(input.neighborhoodId),
+    border: borderFor(input.localityKey),
     layout: shape === "circle" ? "arc" : "banner",
     arcText: clip(input.placeName.trim().toUpperCase(), 20),
     lines,
     nameScale: Math.min(1, Math.max(0.55, 10 / longest)),
-    area: clip(input.neighborhoodName.trim().toUpperCase(), 18),
+    area: clip(input.localityName.trim().toUpperCase(), 18),
     ink: round(rng.range(0.82, 1)),
     speckles,
   };
@@ -231,18 +226,6 @@ export function motifPath(motif: Motif, radius: number): string {
       return points.join(" ") + " Z";
     }
   }
-}
-
-export function completionDesign(neighborhoodId: string, name: string): CompletionDesign {
-  const rng = seeded(`complete:${neighborhoodId}`);
-  return { rays: 12 + rng.int(7) * 2, label: "COMPLETE", area: clip(name.trim().toUpperCase(), 18) };
-}
-
-export function rayPath(rays: number, inner: number, outer: number): string {
-  return Array.from({ length: rays }, (_, index) => {
-    const angle = (index / rays) * Math.PI * 2;
-    return `M${f(Math.cos(angle) * inner)} ${f(Math.sin(angle) * inner)} L${f(Math.cos(angle) * outer)} ${f(Math.sin(angle) * outer)}`;
-  }).join(" ");
 }
 
 const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);

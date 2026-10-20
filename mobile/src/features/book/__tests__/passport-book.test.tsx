@@ -17,11 +17,11 @@ jest.mock("../first-run",()=>({useFirstRun:()=>({show:false,dismiss:jest.fn()})}
 const stamp = (id: string, page: number, slot: number, name: string): StampView => ({
   id, photoUrl: null, photos: [], caption: "", song: null, page, slot,
   createdAt: "2026-10-08T20:00:00.000Z", visitedAt: "2026-10-03T00:00:00.000Z", verifiedAt: null, verified: false, editedAt: null,
-  place: { id: `p-${id}`, slug: id, name, neighborhood: "East Village", neighborhoodId: null },
+  place: { id: `p-${id}`, slug: id, name, area: "East Village", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York" },
 });
 const ready = (over: Partial<PassportData> = {}): PassportData => ({
   status: "ready", handle: "ava", displayName: "Ava Lee", avatarUrl: null, bio: "", memberSince: "2026-10-03T04:00:00.000Z", stamps: [], pins: [],
-  counts: { stamps: 0, places: 0, neighborhoods: 0 }, neighborhoods: [], retry: jest.fn(), ...over,
+  counts: { stamps: 0, places: 0 }, retry: jest.fn(), ...over,
 });
 
 const tapPage=async(x:number)=>{await act(()=>fireGestureHandler(getByGestureTestId("flip-tap"),[{state:State.BEGAN,x,y:15},{state:State.ACTIVE,x,y:15},{state:State.END,x,y:15}]));};
@@ -35,13 +35,13 @@ describe("PassportBook focused reading",()=>{
   expect(screen.getByText("Try again")).toBeTruthy();expect(screen.queryByLabelText("Open your passport")).toBeNull();
  });
  it("main model opens a full-screen modal; Close has a 44pt target and restores main counts",async()=>{
-  mockData=ready({counts:{stamps:7,places:5,neighborhoods:2}});await render(<PassportBook/>);
-  expect(screen.getByLabelText("7 stamps, 5 places, 2 neighborhoods")).toBeVisible();
+  mockData=ready({counts:{stamps:7,places:5}});await render(<PassportBook/>);
+  expect(screen.getByLabelText("7 stamps, 5 places")).toBeVisible();
   await fireEvent.press(screen.getByLabelText("Open your passport"));
-  expect(screen.queryByLabelText("7 stamps, 5 places, 2 neighborhoods")).toBeNull();
+  expect(screen.queryByLabelText("7 stamps, 5 places")).toBeNull();
   const close=screen.getByLabelText("Close passport");expect(close).toHaveStyle({minWidth:44,minHeight:44});
   expect(screen.queryByLabelText("Next page")).toBeNull();expect(screen.queryByLabelText("Previous page")).toBeNull();expect(screen.queryByLabelText("Index")).toBeNull();
-  await fireEvent.press(close);expect(screen.getByLabelText("7 stamps, 5 places, 2 neighborhoods")).toBeVisible();
+  await fireEvent.press(close);expect(screen.getByLabelText("7 stamps, 5 places")).toBeVisible();
  });
  it("an empty passport holds on the bearer spread instead of adding an empty spread",async()=>{
   mockData=ready();await render(<PassportBook/>);await fireEvent.press(screen.getByLabelText("Open your passport"));
@@ -51,7 +51,7 @@ describe("PassportBook focused reading",()=>{
  });
  it.each([false,true])("four stamps: both boundary faces and final right stamp work with Reduce Motion=%s",async(reduced)=>{
   mockReduced=reduced;
-  mockData=ready({stamps:[stamp("s1",1,1,"First"),stamp("s2",1,2,"Second"),stamp("s3",1,3,"Third"),stamp("s4",2,1,"Fourth")],counts:{stamps:4,places:4,neighborhoods:1}});
+  mockData=ready({stamps:[stamp("s1",1,1,"First"),stamp("s2",1,2,"Second"),stamp("s3",1,3,"Third"),stamp("s4",2,1,"Fourth")],counts:{stamps:4,places:4}});
   await render(<PassportBook/>);await fireEvent.press(screen.getByLabelText("Open your passport"));
   expect(screen.getByLabelText("Nostos. The longing to return home.")).toBeVisible();expect(screen.getByText("NOSTOS PASSPORT")).toBeVisible();
   await tapPage(300);

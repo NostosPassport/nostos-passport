@@ -7,7 +7,6 @@ export const qk = {
   profileSettings: ["me", "profile"] as const,
   placePage: (id: string, lat: number | null, lng: number | null) => ["places", "mine", id, lat, lng] as const,
   pins: ["me", "pins"] as const,
-  neighborhoods: ["me", "neighborhoods"] as const,
   collections: ["collections"] as const,
   collection: (id: string) => ["collections", id] as const,
   collectionShare: (id: string) => ["collections", id, "share"] as const,

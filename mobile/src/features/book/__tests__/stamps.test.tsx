@@ -1,9 +1,9 @@
-import { render, screen } from "@testing-library/react-native";
+import { render } from "@testing-library/react-native";
 
-import { BORDERS, MOTIFS, SHAPES, borderFor, completionDesign, fitName, motifPath, rayPath, ringsFor, shapePath, stampDesign, STAMP_BOX } from "../stamp-design";
-import { CompletionStamp, StampMark } from "../StampMark";
+import { BORDERS, MOTIFS, SHAPES, borderFor, fitName, motifPath, ringsFor, shapePath, stampDesign, STAMP_BOX } from "../stamp-design";
+import { StampMark } from "../StampMark";
 
-const input = (id: string, name = "Katz's Delicatessen", hood: string | null = "n-east-village", hoodName = "East Village") => ({ placeId: id, placeName: name, neighborhoodId: hood, neighborhoodName: hoodName });
+const input = (id: string, name = "Katz's Delicatessen", localityKey = "East Village", localityName = "East Village") => ({ placeId: id, placeName: name, localityKey, localityName });
 
 describe("stamp design", () => {
   it("is the same for the same place, every time, and different places differ", () => {
@@ -25,15 +25,16 @@ describe("stamp design", () => {
   it("carries no color: variety is shape and design, ink is the theme's brass", () => {
     expect(JSON.stringify(stampDesign(input("p1")))).not.toMatch(/#|rgb|hsl/i);
   });
-  it("gives every place in a neighborhood the same border family, and different neighborhoods a spread of them", () => {
-    const borders = new Set(Array.from({ length: 30 }, (_, i) => stampDesign(input(`a${i}`, "X", "hood-1")).border));
+  it("gives every place in a locality the same border family, and different localities a spread of them", () => {
+    const borders = new Set(Array.from({ length: 30 }, (_, i) => stampDesign(input(`a${i}`, "X", "Trastevere", "Trastevere")).border));
     expect(borders.size).toBe(1);
-    const across = new Set(Array.from({ length: 60 }, (_, i) => borderFor(`hood-${i}`)));
+    const across = new Set(Array.from({ length: 60 }, (_, i) => borderFor(`locality-${i}`)));
     expect(across.size).toBeGreaterThanOrEqual(4);
     for (const b of across) expect(BORDERS).toContain(b);
   });
-  it("gives a place with no neighborhood a plain ring", () => {
-    expect(stampDesign(input("p1", "Nowhere", null, "")).border).toBe("plain");
+  it("supports city or country fallback locality keys", () => {
+    expect(BORDERS).toContain(stampDesign(input("rome", "Roscioli", "Rome", "Rome")).border);
+    expect(BORDERS).toContain(stampDesign(input("italy", "Remote Place", "IT", "Italy")).border);
   });
   it("sets circle stamps on an arc and the rest in lines", () => {
     for (let i = 0; i < 100; i++) {
@@ -82,7 +83,6 @@ describe("shapes, borders and motifs", () => {
       expect(d.endsWith("Z")).toBe(true);
       expect(d.match(/M/g)).toHaveLength(1);
       for (const m of d.matchAll(/-?\d+(?:\.\d+)?/g)) {
-        // Arc flags and radii are small; every coordinate stays in the box.
         expect(Number(m[0])).toBeGreaterThanOrEqual(-0.001);
         expect(Number(m[0])).toBeLessThanOrEqual(STAMP_BOX);
       }
@@ -104,22 +104,10 @@ describe("shapes, borders and motifs", () => {
     }
     expect(motifPath("star", 10).match(/L/g)).toHaveLength(9);
   });
-  it("makes a completion stamp from the neighborhood alone", () => {
-    expect(completionDesign("hood-1", "East Village")).toEqual(completionDesign("hood-1", "East Village"));
-    const d = completionDesign("hood-1", "East Village");
-    expect(d.label).toBe("COMPLETE");
-    expect(d.area).toBe("EAST VILLAGE");
-    expect(d.rays % 2).toBe(0);
-    expect(rayPath(d.rays, 47, 56).match(/M/g)).toHaveLength(d.rays);
-  });
 });
 
 describe("drawing", () => {
   it("renders a stamp for every shape without crashing", async () => {
     for (let i = 0; i < 12; i++) await render(<StampMark input={input(`draw-${i}`)} size={100} />);
-  });
-  it("renders the completion stamp with a spoken label", async () => {
-    await render(<CompletionStamp neighborhoodId="hood-1" name="East Village" size={140} />);
-    expect(screen.getByLabelText("East Village complete")).toBeTruthy();
   });
 });

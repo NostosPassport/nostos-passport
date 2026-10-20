@@ -28,12 +28,21 @@ const place = {
   slug: "velvet",
   name: "Velvet",
   address: "1 Ave A",
-  neighborhood: "East Village",
+  area: "East Village",
+  city: "New York",
+  region: "New York",
+  country: "United States",
+  countryCode: "US",
+  timeZone: "America/New_York",
   lat: 40.72,
   lng: -73.98,
   geofenceMeters: 100,
-  neighborhoodId: null,
   fromOsm: true,
+  googlePlaceId: null,
+  category: "bar" as const,
+  cuisines: [],
+  primaryType: "bar",
+  businessStatus: null,
 };
 const placesBody = {
   places: [place],
@@ -52,7 +61,7 @@ const stamp = {
   verifiedAt: "2026-09-24T02:00:00.000Z",
   verified: true,
   editedAt: null,
-  place: { id: "v1", slug: "velvet", name: "Velvet", neighborhood: "East Village", neighborhoodId: null },
+  place: { id: "v1", slug: "velvet", name: "Velvet", area: "East Village", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York" },
 };
 
 describe("api client", () => {
@@ -60,6 +69,7 @@ describe("api client", () => {
     const { api, calls } = setup(() => jsonResponse(200, placesBody));
     const res = await api.places.list();
     expect(res.places[0].name).toBe("Velvet");
+    expect(res.places[0].city).toBe("New York");
     expect(calls[0].url).toBe("https://api.example.test/api/places");
     const headers = calls[0].init.headers as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer tok_abcdefghijklmnopqrstuvwxyz");
@@ -154,11 +164,13 @@ describe("api client", () => {
 });
 
 describe("stamp endpoints", () => {
-  it("parses visit chronology and verification in the owner-only stamp shape", async () => {
+  it("parses visit chronology, locality, time zone and verification in the owner-only stamp shape", async () => {
     const { api } = setup(() => jsonResponse(200, { stamp }));
     const res = await api.stamps.get("s1");
     expect(res.stamp.song?.title).toBe("Heroes");
     expect(res.stamp.place.slug).toBe("velvet");
+    expect(res.stamp.place.area).toBe("East Village");
+    expect(res.stamp.place.timeZone).toBe("America/New_York");
     expect(res.stamp.visitedAt).toBe("2026-09-24T02:00:00.000Z");
     expect(res.stamp.verified).toBe(true);
     expect(res.stamp.verifiedAt).toBe("2026-09-24T02:00:00.000Z");

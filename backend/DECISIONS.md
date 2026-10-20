@@ -20,13 +20,22 @@ This file summarizes current backend decisions. Earlier build-session detail rem
 - Normal and shared viewer payloads must not expose raw storage keys, precise verification coordinates, or internal user identifiers.
 - Removed content follows the existing retention rules rather than being silently hard-deleted.
 
+## Places and locality
+
+- Google Places is the primary discovery source for restaurants and bars and is not restricted to NYC or the United States.
+- A durable `venue` stores optional `area`, `city`, `region`, `country`, and `countryCode` plus an IANA `timeZone`.
+- `area` is descriptive only. It may represent a neighborhood, district, sublocality, quartiere, or similar label, and may be null.
+- Nostos does not maintain a universal neighborhood hierarchy or polygon membership system. The former NYC `Neighborhood` / `NeighborhoodCompletion` models and `/api/me/neighborhoods` endpoint are removed.
+- Google `addressComponents` and `timeZone` are requested in the existing Places calls, so worldwide locality does not require a second reverse-geocoding request.
+- Existing NYC venue rows are migrated to New York / United States / `America/New_York`, using the former neighborhood label as `area` where available.
+
 ## Data model
 
 - Historical table names such as `photo` and `venue` remain for migration stability; API/UI terminology is stamp and place.
 - A `collection_share` row has a one-to-one relationship with a persisted `collection`. There is intentionally no nullable collection reference, generic passport share, or special master-Passport identifier.
 - Public share URLs use a stable share-row ID plus an HMAC signature. The database does not store a reusable bearer URL/token in plaintext.
 - `created_at` is the database creation time. `visited_at` is the user-facing visit chronology and controls Passport ordering/page placement.
-- `verified_at` is non-null only when a Now visit was verified at creation. Editing the stamp to a different New York calendar day clears verification.
+- `verified_at` is non-null only when a Now visit was verified at creation. Editing the stamp to a different calendar day in that venue's local time zone clears verification.
 - Legacy `lat` and `lng` columns remain nullable for migration stability, but a database constraint requires them to be null.
 - Schema changes use forward migrations.
 - Destructive reset commands are only for disposable local development databases.

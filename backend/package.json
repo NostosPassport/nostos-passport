@@ -23,8 +23,7 @@
     "vercel-build": "pnpm deploy:check && prisma generate && prisma migrate deploy && next build",
     "test:pooled": "node scripts/test-pooled.mjs",
     "venues:import": "tsx scripts/import-osm-venues.ts",
-    "user:geofence-exempt": "tsx scripts/set-geofence-exempt.ts",
-    "neighborhoods:import": "tsx scripts/import-neighborhoods.ts"
+    "user:geofence-exempt": "tsx scripts/set-geofence-exempt.ts"
   },
   "prisma": { "seed": "tsx prisma/seed.ts" },
   "dependencies": {

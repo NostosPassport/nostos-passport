@@ -20,7 +20,7 @@ export default async function DeleteAccountPage() {
       <ul>
         <li>Your email and handle are replaced, your display name is reset, and your bio and profile photo are removed.</li>
         <li>Your stamps are permanently removed and their stored image files are deleted.</li>
-        <li>Your saved passport data, including pins and neighborhood progress, is removed.</li>
+        <li>Your saved passport data, including pins and collection access, is removed.</li>
         <li>You are signed out on every device.</li>
         <li>This can&apos;t be undone.</li>
       </ul>

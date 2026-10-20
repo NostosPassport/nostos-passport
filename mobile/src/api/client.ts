@@ -192,7 +192,6 @@ export function createApi(config: ApiConfig) {
       get: () => request("GET", "/api/me/pins", C.PinsResponse),
       set: (stampIds: string[]) => request("PUT", "/api/me/pins", C.PinsResponse, { stampIds }),
     },
-    neighborhoods: () => request("GET", "/api/me/neighborhoods", C.NeighborhoodIndexResponse),
     songs: { search: (q: string) => request("GET", `/api/songs/search?q=${enc(q)}`, C.SongSearchResponse) },
     users: {
       stamps: (handle: string, after?: string | null) => request("GET", `/api/users/${enc(handle)}/stamps${after ? `?after=${enc(after)}` : ""}`, C.UserStampsResponse),

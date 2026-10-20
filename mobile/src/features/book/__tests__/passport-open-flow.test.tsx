@@ -23,13 +23,13 @@ jest.mock("../first-run", () => ({ useFirstRun: () => ({ show: false, dismiss: j
 const stamp = (id: string, page: number, slot: number, name: string): StampView => ({
   id, photoUrl: null, photos: [], caption: "", song: null, page, slot,
   createdAt: "2026-10-08T20:00:00.000Z", visitedAt: "2026-10-03T00:00:00.000Z", verifiedAt: null, verified: false, editedAt: null,
-  place: { id: `p-${id}`, slug: id, name, neighborhood: "East Village", neighborhoodId: null },
+  place: { id: `p-${id}`, slug: id, name, area: "East Village", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York" },
 });
 const ready = (over: Partial<PassportData> = {}): PassportData => ({
   status: "ready", handle: "ava", displayName: "Ava Lee", avatarUrl: null, bio: "", memberSince: "2026-10-03T04:00:00.000Z", stamps: [], pins: [],
-  counts: { stamps: 7, places: 5, neighborhoods: 2 }, neighborhoods: [], retry: jest.fn(), ...over,
+  counts: { stamps: 7, places: 5 }, retry: jest.fn(), ...over,
 });
-const COUNTS = "7 stamps, 5 places, 2 neighborhoods";
+const COUNTS = "7 stamps, 5 places";
 const tapPage = async (x: number) => { await act(() => fireGestureHandler(getByGestureTestId("flip-tap"), [{ state: State.BEGAN, x, y: 15 }, { state: State.ACTIVE, x, y: 15 }, { state: State.END, x, y: 15 }])); };
 
 describe("tapping the 3D passport: the cover opens, then the reader takes over", () => {
@@ -104,7 +104,7 @@ describe("tapping the 3D passport: the cover opens, then the reader takes over",
   });
 
   it("opening a stamp keeps the 3D passport open behind it, and coming back restores the reader on the same spread", async () => {
-    mockData = ready({ stamps: [stamp("s1", 1, 1, "First"), stamp("s2", 1, 2, "Second"), stamp("s3", 1, 3, "Third"), stamp("s4", 2, 1, "Fourth")], counts: { stamps: 4, places: 4, neighborhoods: 1 } });
+    mockData = ready({ stamps: [stamp("s1", 1, 1, "First"), stamp("s2", 1, 2, "Second"), stamp("s3", 1, 3, "Third"), stamp("s4", 2, 1, "Fourth")], counts: { stamps: 4, places: 4 } });
     await render(<PassportBook />);
     await act(() => mockView.onReady({}));
     await fireEvent.press(screen.getByLabelText("Open your passport"));

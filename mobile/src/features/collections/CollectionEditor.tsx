@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { localityLabel } from "@/lib/place";
 import { colors, hairlineWidth, radius, size, space, type as typeScale } from "@/theme";
 import { COLLECTION_COLORS } from "./colors";
 import { useMyStamps } from "./use-my-stamps";
@@ -26,7 +27,8 @@ type Props = {
   deleting?: boolean;
 };
 
-const stampDate = (stamp: StampView) => new Date(stamp.visitedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+const stampDate = (stamp: StampView) => new Date(stamp.visitedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: stamp.place.timeZone });
+const stampSubtitle = (stamp: StampView) => [localityLabel(stamp.place), stampDate(stamp)].filter(Boolean).join(" · ");
 
 export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, onDelete, deleting }: Props) {
   const source = useMyStamps();
@@ -98,7 +100,7 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
           <View key={stamp.id} style={styles.stampRow}>
             <View style={styles.stampText}>
               <Text variant="body" weight="semibold" numberOfLines={1}>{stamp.place.name}</Text>
-              <Text variant="footnote" color="textSecondary" numberOfLines={1}>{stamp.place.neighborhood} · {stampDate(stamp)}</Text>
+              <Text variant="footnote" color="textSecondary" numberOfLines={1}>{stampSubtitle(stamp)}</Text>
             </View>
             <View style={styles.rowActions}>
               <Pressable disabled={index === 0} onPress={() => move(index, -1)} accessibilityRole="button" accessibilityLabel={`Move ${stamp.place.name} up`} style={[styles.iconButton, index === 0 && styles.disabled]}><Icon name="chevron.up" size={size.iconSmall} /></Pressable>
@@ -117,7 +119,7 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
             <Pressable key={stamp.id} onPress={() => add(stamp.id)} accessibilityRole="button" accessibilityLabel={`Add ${stamp.place.name} to collection`} style={styles.addRow}>
               <View style={styles.stampText}>
                 <Text variant="body" weight="semibold" numberOfLines={1}>{stamp.place.name}</Text>
-                <Text variant="footnote" color="textSecondary" numberOfLines={1}>{stamp.place.neighborhood} · {stampDate(stamp)}</Text>
+                <Text variant="footnote" color="textSecondary" numberOfLines={1}>{stampSubtitle(stamp)}</Text>
               </View>
               <Icon name="plus" color="accent" size={size.iconSmall} />
             </Pressable>

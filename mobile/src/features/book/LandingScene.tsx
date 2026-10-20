@@ -4,38 +4,33 @@ import { StyleSheet, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { mediaUrl } from "@/api";
-import type { NeighborhoodProgress, StampView } from "@/api/contracts";
+import type { StampView } from "@/api/contracts";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { haptics } from "@/lib/haptics";
+import { localityKey, localityLabel } from "@/lib/place";
 import { colors, radius, shadows, size, space } from "@/theme";
 import { LANDING, landingFrame } from "./landing";
 import { landingCopy, photoPins } from "./landing-copy";
 import { PageView } from "./PageView";
 import { slotPlacement } from "./slots";
-import { CompletionStamp, StampMark } from "./StampMark";
+import { StampMark } from "./StampMark";
 
 type Props = {
   stamp: StampView;
-  /** The other stamps already on the page. */
   others: StampView[];
-  progress: NeighborhoodProgress | null;
   pageWidth: number;
   pageHeight: number;
   onDone: () => void;
 };
 
-/**
- * A new stamp lands on its page: it slams into its slot, the ink spreads, the page shakes, there is a haptic knock and a flare of
- * brass, then the photos pin on and the page says where it went. A finished neighborhood earns the foil stamp.
- */
-export function LandingScene({ stamp, others, progress, pageWidth: pw, pageHeight: ph, onDone }: Props) {
+export function LandingScene({ stamp, others, pageWidth: pw, pageHeight: ph, onDone }: Props) {
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
   const page = stamp.page ?? 1;
   const slot = stamp.slot ?? 1;
   const place = slotPlacement(stamp.id, slot, pw, ph);
-  const copy = landingCopy(stamp.page, progress);
+  const copy = landingCopy(stamp.page);
   const pins = photoPins(stamp.photos.length, pw, stamp.id);
 
   useEffect(() => {
@@ -67,7 +62,7 @@ export function LandingScene({ stamp, others, progress, pageWidth: pw, pageHeigh
         <Animated.View pointerEvents="none" style={[spot, styles.glow, { borderRadius: place.size / 2 }, glow$]} />
         <Animated.View pointerEvents="none" style={[spot, styles.ink, { borderRadius: place.size / 2 }, ink$]} />
         <Animated.View style={[spot, stamp$]} accessible accessibilityLabel={`New stamp, ${stamp.place.name}, page ${page}, slot ${slot}`}>
-          <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, neighborhoodId: stamp.place.neighborhoodId, neighborhoodName: stamp.place.neighborhood }} size={place.size} />
+          <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey: localityKey(stamp.place), localityName: localityLabel(stamp.place) }} size={place.size} />
         </Animated.View>
         <Animated.View pointerEvents="none" style={[styles.pins, pin$]}>
           {pins.map((p, i) => (
@@ -79,15 +74,7 @@ export function LandingScene({ stamp, others, progress, pageWidth: pw, pageHeigh
         </Animated.View>
       </Animated.View>
       <View style={styles.words} accessibilityLiveRegion="polite">
-        <Text variant="title2" color="brass" align="center">
-          {copy.added}
-        </Text>
-        {copy.progress ? (
-          <Text variant="typewriter" color="textSecondary" align="center">
-            {copy.progress}
-          </Text>
-        ) : null}
-        {copy.completed && progress ? <CompletionStamp neighborhoodId={progress.neighborhoodId} name={progress.name} size={pw * 0.5} /> : null}
+        <Text variant="title2" color="brass" align="center">{copy}</Text>
       </View>
       <View style={styles.done}>
         <Button title="Done" onPress={onDone} />

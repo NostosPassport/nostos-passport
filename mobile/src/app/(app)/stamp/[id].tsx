@@ -20,6 +20,7 @@ import { pinChange } from "@/features/book/pin-change";
 import { dropStamp } from "@/features/stamps/cache";
 import { SongRow } from "@/features/stamps/song-row";
 import { haptics } from "@/lib/haptics";
+import { localityLabel } from "@/lib/place";
 import { colors, fonts, screenPadding, size, space } from "@/theme";
 
 const NOSTOS_MARK = require("../../../../assets/images/nostos-watermark.png");
@@ -49,13 +50,13 @@ function Memory({ stamp, actions }: { stamp: StampView; actions: StampAction[] }
   const pinned = pins.data?.stamps.some((p) => p.id === stamp.id) ?? false;
   const pinAction = actions.find((action) => action.label === "Pin to passport" || action.label === "Unpin from passport");
   const date = new Date(stamp.visitedAt);
-  const dateLabel = date.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
+  const dateLabel = date.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric", timeZone: stamp.place.timeZone }).toUpperCase();
   const memoryNumber = stamp.page !== null && stamp.slot !== null ? (stamp.page - 1) * 3 + stamp.slot : 1;
   const number = String(memoryNumber).padStart(3, "0");
   const photoWidth = Math.max(1, width - 48);
   return <><ScrollView contentContainerStyle={[styles.memory, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 20 }]}>
     <View style={styles.memoryTopbar}><Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back" style={styles.hitTarget}><Icon name="chevron.left" color="textPrimary" size={22} /></Pressable>{actions.length ? <Pressable onPress={() => showActions(actions)} accessibilityRole="button" accessibilityLabel="More options" style={styles.hitTarget}><NativeText style={styles.more}>•••</NativeText></Pressable> : null}</View>
-    <Kicker>NO. {number} / {dateLabel}</Kicker><NativeText style={styles.memoryTitle}>{stamp.place.name}</NativeText><Kicker>{stamp.place.neighborhood}, NEW YORK</Kicker>
+    <Kicker>NO. {number} / {dateLabel}</Kicker><NativeText style={styles.memoryTitle}>{stamp.place.name}</NativeText>{localityLabel(stamp.place) ? <Kicker>{localityLabel(stamp.place).toUpperCase()}</Kicker> : null}
     {stamp.verified ? <View style={styles.verified}><View style={styles.verifiedSeal}><Image source={NOSTOS_MARK} style={styles.verifiedLogo} contentFit="contain" /></View><View><NativeText style={styles.verifiedTitle}>VISIT VERIFIED</NativeText><Text variant="footnote" color="textSecondary">Nostos confirmed this device was near the venue when the stamp was created.</Text></View></View> : null}
     <View style={styles.heroFrame}>{stamp.photos.length ? <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} bounces={stamp.photos.length > 1} onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}>{stamp.photos.map((photo, index) => <Pressable key={photo.id} onPress={() => setViewingPhoto(index)} style={[styles.photoPage, { width: photoWidth }]}><Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" /></Pressable>)}</ScrollView> : <View style={styles.emptyPhoto} />}</View>
     {stamp.caption ? <NativeText style={styles.caption}>{stamp.caption}</NativeText> : null}{stamp.song ? <SongRow song={stamp.song} /> : null}
@@ -69,7 +70,7 @@ function useActions(stamp: StampView | undefined): StampAction[] {
   const queryClient = useQueryClient();
   const pins = usePins();
   const setPins = useMutation({ mutationFn: (ids: string[]) => api.pins.set(ids), onSuccess: (r) => { haptics.success(); queryClient.setQueryData(qk.pins, r); toast.show("Updated your pinned stamps."); }, onError: (e) => { haptics.warning(); toast.show(errorText(e, "Couldn't change that. Try again."), "neutral"); } });
-  const remove = useMutation({ mutationFn: (id: string) => api.stamps.remove(id), onSuccess: (_r, id) => { haptics.success(); dropStamp(queryClient, id); void queryClient.invalidateQueries({ queryKey: qk.neighborhoods }); void queryClient.invalidateQueries({ queryKey: qk.pins }); router.back(); }, onError: (e) => { haptics.warning(); toast.show(errorText(e, "Couldn't delete that. Try again."), "neutral"); } });
+  const remove = useMutation({ mutationFn: (id: string) => api.stamps.remove(id), onSuccess: (_r, id) => { haptics.success(); dropStamp(queryClient, id); void queryClient.invalidateQueries({ queryKey: qk.pins }); router.back(); }, onError: (e) => { haptics.warning(); toast.show(errorText(e, "Couldn't delete that. Try again."), "neutral"); } });
   if (!stamp) return [];
   return [
     { label: pins.data?.stamps.some((p) => p.id === stamp.id) ? "Unpin from passport" : "Pin to passport", onPress: () => { const change = pinChange((pins.data?.stamps ?? []).map((p) => p.id), stamp.id); if (change.kind === "full") Alert.alert("Four stamps are pinned", "Unpin one first, then pin this one."); else setPins.mutate(change.ids); } },

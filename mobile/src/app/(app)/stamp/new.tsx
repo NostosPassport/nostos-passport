@@ -25,8 +25,9 @@ import { songDraft } from "@/features/stamps/song-draft";
 import { MAX_STAMP_PHOTOS, stampReadiness } from "@/features/stamps/stamp-flow";
 import { SongRow } from "@/features/stamps/song-row";
 import { formatBirthdateInput } from "@/lib/age";
-import { haptics } from "@/lib/haptics";
 import { formatDistance } from "@/lib/format";
+import { haptics } from "@/lib/haptics";
+import { localityLabel } from "@/lib/place";
 import { useConfirmDiscard } from "@/lib/use-confirm-discard";
 import { colors, fonts, size, space } from "@/theme";
 
@@ -43,7 +44,7 @@ function parseDate(value: string): Date | null {
 
 const providerKey = (place: Place) => place.googlePlaceId ?? place.id;
 const cuisineText = (place: Place) => place.cuisines.slice(0, 2).join(" · ");
-const placeSubtitle = (place: Place) => [cuisineText(place), place.neighborhood].filter(Boolean).join(" · ");
+const placeSubtitle = (place: Place) => [cuisineText(place), localityLabel(place)].filter(Boolean).join(" · ");
 
 export default function NewStamp() { return <Composer />; }
 
@@ -96,9 +97,8 @@ function Composer() {
       return api.upload(`/api/places/${encodeURIComponent(place.id)}/stamps`, CreateStampResponse, form, { onProgress: setProgress });
     },
     onSuccess: (res) => {
-      haptics.success(); setDone(true); photoDraft.clear(); landingDraft.set(res.stamp, res.progress);
+      haptics.success(); setDone(true); photoDraft.clear(); landingDraft.set(res.stamp);
       void queryClient.invalidateQueries({ queryKey: ["user"] });
-      void queryClient.invalidateQueries({ queryKey: qk.neighborhoods });
       void queryClient.invalidateQueries({ queryKey: qk.pins });
       void queryClient.invalidateQueries({ queryKey: qk.collections });
       requestAnimationFrame(() => router.replace("/stamp/landed"));

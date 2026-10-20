@@ -3,7 +3,17 @@ import { z } from "zod";
 export const IsoDate = z.string().datetime({ offset: true });
 export const ErrorResponse = z.object({ error: z.string(), message: z.string() }).strict();
 export const Attribution = z.object({ text: z.literal("© OpenStreetMap contributors"), url: z.string().url(), license: z.literal("ODbL-1.0") }).strict();
-export const PlaceRef = z.object({ id: z.string(), slug: z.string(), name: z.string(), neighborhood: z.string(), neighborhoodId: z.string().nullable() }).strict();
+export const PlaceRef = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  area: z.string().nullable(),
+  city: z.string().nullable(),
+  region: z.string().nullable(),
+  country: z.string().nullable(),
+  countryCode: z.string().nullable(),
+  timeZone: z.string(),
+}).strict();
 
 const EmailAddress = z.string().trim().toLowerCase().email().max(200);
 const VerificationCode = z.string().trim().regex(/^\d{6}$/, "Enter the six-digit code");
@@ -48,11 +58,15 @@ export const Place = z.object({
   slug: z.string(),
   name: z.string(),
   address: z.string(),
-  neighborhood: z.string(),
+  area: z.string().nullable(),
+  city: z.string().nullable(),
+  region: z.string().nullable(),
+  country: z.string().nullable(),
+  countryCode: z.string().nullable(),
+  timeZone: z.string(),
   lat: z.number(),
   lng: z.number(),
   geofenceMeters: z.number().int(),
-  neighborhoodId: z.string().nullable(),
   fromOsm: z.boolean(),
   googlePlaceId: z.string().nullable().default(null),
   category: z.enum(["restaurant", "bar"]).nullable().default(null),
@@ -88,9 +102,7 @@ export const StampView = z.object({
   place: PlaceRef,
 }).strict();
 export const StampResponse = z.object({ stamp: StampView }).strict();
-export const NeighborhoodProgress = z.object({ neighborhoodId: z.string(), name: z.string(), borough: z.string(), visited: z.number().int(), total: z.number().int(), complete: z.boolean(), justCompleted: z.boolean(), newPlace: z.boolean() }).strict();
-export const CreateStampResponse = z.object({ stamp: StampView, progress: NeighborhoodProgress.nullable() }).strict();
-export const NeighborhoodIndexResponse = z.object({ neighborhoods: z.array(z.object({ neighborhoodId: z.string(), name: z.string(), borough: z.string(), visited: z.number().int(), total: z.number().int(), complete: z.boolean(), completedAt: IsoDate.nullable(), percent: z.number().int() }).strict()), totals: z.object({ neighborhoodsStarted: z.number().int(), neighborhoodsComplete: z.number().int() }).strict() }).strict();
+export const CreateStampResponse = z.object({ stamp: StampView }).strict();
 export const StampEditRequest = z.object({
   caption: z.string().trim().max(280),
   song: z.object({ title: z.string().trim().min(1).max(200), artist: z.string().trim().min(1).max(200), artUrl: AppleArtUrl.nullish(), sourceId: z.string().trim().min(1).max(100).nullish() }).strict().nullable(),
@@ -101,7 +113,7 @@ export const PinsRequest = z.object({ stampIds: z.array(z.string().min(1).max(64
 export const PinsResponse = z.object({ stamps: z.array(StampView).max(4) }).strict();
 export const RemoveStampResponse = z.object({ removed: z.literal(true) }).strict();
 export const UserStampsResponse = z.object({ stamps: z.array(StampView), nextAfter: z.string().nullable() }).strict();
-export const UserPlacesResponse = z.object({ places: z.array(z.object({ place: z.object({ id: z.string(), slug: z.string(), name: z.string(), neighborhood: z.string(), lat: z.number(), lng: z.number() }).strict(), stamps: z.number().int(), latestStamp: z.object({ id: z.string(), createdAt: IsoDate, visitedAt: IsoDate, photoUrl: z.string().nullable(), caption: z.string() }).strict() }).strict()) }).strict();
+export const UserPlacesResponse = z.object({ places: z.array(z.object({ place: z.object({ id: z.string(), slug: z.string(), name: z.string(), area: z.string().nullable(), city: z.string().nullable(), region: z.string().nullable(), country: z.string().nullable(), countryCode: z.string().nullable(), timeZone: z.string(), lat: z.number(), lng: z.number() }).strict(), stamps: z.number().int(), latestStamp: z.object({ id: z.string(), createdAt: IsoDate, visitedAt: IsoDate, photoUrl: z.string().nullable(), caption: z.string() }).strict() }).strict()) }).strict();
 export const SongResult = z.object({ title: z.string(), artist: z.string(), album: z.string().nullable(), artUrl: z.string().nullable(), sourceId: z.string() }).strict();
 export const SongSearchResponse = z.object({ songs: z.array(SongResult) }).strict();
 export const MyPlacePageResponse = z.object({ place: Place.omit({ fromOsm: true }).extend({ fromOsm: z.boolean() }).strict(), stamps: z.array(StampView), visits: z.array(z.object({ day: z.string(), stamps: z.array(StampView) }).strict()), inside: z.boolean().nullable(), distanceM: z.number().int().nullable() }).strict();
@@ -121,8 +133,6 @@ export type Place = z.infer<typeof Place>;
 export type PlacesResponse = z.infer<typeof PlacesResponse>;
 export type NearbyPlacesResponse = z.infer<typeof NearbyPlacesResponse>;
 export type Song = z.infer<typeof Song>;
-export type NeighborhoodProgress = z.infer<typeof NeighborhoodProgress>;
-export type NeighborhoodIndexResponse = z.infer<typeof NeighborhoodIndexResponse>;
 export type StampView = z.infer<typeof StampView>;
 export type StampPhotoView = z.infer<typeof StampPhotoView>;
 export type PhotoLayoutRequest = z.infer<typeof PhotoLayoutRequest>;

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 
-import type { NeighborhoodProgress, StampView } from "@/api/contracts";
+import type { StampView } from "@/api/contracts";
 import * as Haptics from "expo-haptics";
 import { LANDING, landingFrame } from "../landing";
 import { landingCopy, photoPins } from "../landing-copy";
@@ -8,11 +8,10 @@ import { LandingScene } from "../LandingScene";
 
 jest.mock("@/api", () => ({ api: {}, mediaUrl: (u: string) => u }));
 
-const progress = (over: Partial<NeighborhoodProgress> = {}): NeighborhoodProgress => ({ neighborhoodId: "n1", name: "East Village", borough: "Manhattan", visited: 4, total: 12, complete: false, justCompleted: false, newPlace: true, ...over });
 const stamp = (over: Partial<StampView> = {}): StampView => ({
   id: "s9", photoUrl: null, photos: [], caption: "", song: null, page: 3, slot: 2,
   createdAt: "2026-10-03T00:00:00.000Z", visitedAt: "2026-10-03T00:00:00.000Z", verifiedAt: null, verified: false, editedAt: null,
-  place: { id: "p9", slug: "p9", name: "Katz's", neighborhood: "East Village", neighborhoodId: "n1" },
+  place: { id: "p9", slug: "p9", name: "Katz's", area: "Lower East Side", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York" },
   ...over,
 });
 
@@ -62,15 +61,9 @@ describe("landing timeline", () => {
 });
 
 describe("what the landing says", () => {
-  it("names the page and neighborhood without exposing dataset-size counts", () => {
-    expect(landingCopy(3, progress())).toEqual({ added: "Added to page 3", progress: "New place in East Village.", completed: false });
-  });
-  it("says so when it is another visit, and when the neighborhood is finished", () => {
-    expect(landingCopy(3, progress({ newPlace: false })).progress).toBe("Another visit in East Village.");
-    expect(landingCopy(3, progress({ justCompleted: true, complete: true, visited: 12 }))).toMatchObject({ completed: true, progress: "East Village is complete." });
-  });
-  it("copes with no neighborhood and with no page", () => {
-    expect(landingCopy(null, null)).toEqual({ added: "Stamped", progress: null, completed: false });
+  it("names the page without progress counters", () => {
+    expect(landingCopy(3)).toBe("Added to page 3");
+    expect(landingCopy(null)).toBe("Stamped");
   });
   it("pins up to six photos in a row inside the page, tilted a little, the same way every time", () => {
     expect(photoPins(0, 300, "s")).toEqual([]);
@@ -93,24 +86,22 @@ describe("LandingScene", () => {
   });
   afterEach(() => jest.useRealTimers());
 
-  it("says which page the stamp went on and names the neighborhood without dataset-size counts, and gives a haptic knock on impact", async () => {
-    await render(<LandingScene stamp={stamp()} others={[]} progress={progress()} pageWidth={300} pageHeight={426} onDone={jest.fn()} />);
+  it("says which page the stamp went on and gives a haptic knock on impact", async () => {
+    await render(<LandingScene stamp={stamp()} others={[]} pageWidth={300} pageHeight={426} onDone={jest.fn()} />);
     expect(screen.getByText("Added to page 3")).toBeTruthy();
-    expect(screen.getByText("New place in East Village.")).toBeTruthy();
-    expect(screen.queryByText(/4 of 12/)).toBeNull();
     expect(screen.getByLabelText("New stamp, Katz's, page 3, slot 2")).toBeTruthy();
     expect(Haptics.notificationAsync).not.toHaveBeenCalled();
     await act(async () => jest.advanceTimersByTime(LANDING.impact));
     expect(Haptics.notificationAsync).toHaveBeenCalledTimes(1);
   });
-  it("pins the photos it was given and shows the foil stamp when the neighborhood is finished", async () => {
+  it("renders attached photos without a completion overlay", async () => {
     const photos = [0, 1].map((i) => ({ id: `ph${i}`, url: `https://x/${i}.jpg`, position: i, x: null, y: null, rotation: null }));
-    await render(<LandingScene stamp={stamp({ photos })} others={[]} progress={progress({ justCompleted: true, complete: true, visited: 12 })} pageWidth={300} pageHeight={426} onDone={jest.fn()} />);
-    expect(screen.getByLabelText("East Village complete")).toBeTruthy();
+    await render(<LandingScene stamp={stamp({ photos })} others={[]} pageWidth={300} pageHeight={426} onDone={jest.fn()} />);
+    expect(screen.queryByText(/complete/i)).toBeNull();
   });
   it("calls Done", async () => {
     const onDone = jest.fn();
-    await render(<LandingScene stamp={stamp()} others={[]} progress={null} pageWidth={300} pageHeight={426} onDone={onDone} />);
+    await render(<LandingScene stamp={stamp()} others={[]} pageWidth={300} pageHeight={426} onDone={onDone} />);
     await fireEvent.press(screen.getByText("Done"));
     expect(onDone).toHaveBeenCalledTimes(1);
   });

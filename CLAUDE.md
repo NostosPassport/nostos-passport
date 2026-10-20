@@ -4,9 +4,11 @@ Read `README.md`, `AGENTS.md`, `ENGINE.md`, `DESIGN.md`, and `HANDOFF.md` before
 
 ## Product
 
-Nostos is an iPhone-only personal passport for New York. A signed-in user saves a place visit as a stamp. A stamp can contain up to six photos, a caption, a song, or a combination.
+Nostos is an iPhone-only personal passport for the places a user goes. A signed-in user saves a place visit as a stamp. A stamp can contain up to six photos, a caption, a song, or a combination.
 
 Users choose `Now` or `Past` when creating a stamp. A Now stamp may be location verified when the server confirms the current device position is inside the selected place geofence. Location is optional: missing location or an out-of-geofence position produces a normal unverified stamp instead of blocking creation. Past stamps are unverified, may be dated up to one year back, and cannot use a future date. Visit dates can be edited later; changing the calendar day of a verified stamp removes verification.
+
+Google-backed restaurant and bar discovery is worldwide. Durable place locality uses optional `area`, `city`, `region`, `country`, and `countryCode` metadata from Google Places plus an IANA `timeZone`. `area` is descriptive and may represent a neighborhood, district, sublocality, quartiere, or similar label; it is not a required hierarchy. The old NYC neighborhood polygon tables, completion records, API, and required venue neighborhood fields have been removed.
 
 The product is private by default. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared. Feed, follows, likes, Activity, other-user passports, public profiles, moderation/admin social tooling, and guest preview are not part of the product or active architecture.
 
@@ -57,6 +59,7 @@ Preserve these unless the user explicitly changes product behavior and the corre
 8. Under-age signup handling must remain consistent with the current age-gate implementation and legal review requirements.
 9. Contract copies between backend and mobile must stay synchronized.
 10. Passport chronology and page/slot assignment use `visited_at`, not database creation time.
+11. Place discovery is worldwide. A place does not need an `area`, city hierarchy, or membership in a Nostos-maintained geographic polygon to be discovered, persisted, or stamped.
 
 ## Engineering rules
 
