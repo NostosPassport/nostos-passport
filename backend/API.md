@@ -2,7 +2,7 @@
 
 The Zod schemas in [`src/contracts/api.ts`](src/contracts/api.ts) and [`src/contracts/collections.ts`](src/contracts/collections.ts) are the API source of truth. The mobile app keeps matching contract copies under `mobile/src/api/`, and contract changes must remain synchronized.
 
-Nostos is private by default. A signed-in account can read and mutate its own passport, stamps, pins, place history, profile, neighborhood progress, and collections. A user-created collection may be explicitly shared through the dedicated share endpoints; the resulting signed web link exposes only that collection in a read-only view. The master Passport cannot be shared. There is no feed, follow graph, likes, people search, public/private passport mode, reporting, moderation, or staff-role API.
+Nostos is private by default. A signed-in account can read and mutate its own passport, stamps, pins, place history, profile, and collections. A user-created collection may be explicitly shared through the dedicated share endpoints; the resulting signed web link exposes only that collection in a read-only view. The master Passport cannot be shared. There is no feed, follow graph, likes, people search, public/private passport mode, reporting, moderation, or staff-role API.
 
 A **stamp** is one visit to a **place**. It can contain up to six photos, a caption, a song, or any combination of those, with at least one kind of content. In the database, stamps remain rows in `photo` and places remain rows in `venue` for migration continuity.
 
@@ -36,7 +36,7 @@ The client must not duplicate these as security checks:
 
 - **Visit verification:** `mode=now` stamps are marked verified only when valid current coordinates are supplied and fall within the selected place's `geofenceMeters`, normally 100 m. Missing location or an out-of-geofence position does not reject the stamp; it creates an unverified visit. `geofenceExempt` is reserved for App Review/QA accounts; those stamps are `countable=false` and unverified.
 - **Past visits:** `mode=past` requires `visitedAt`, never receives visit verification, must not be in the future, and may be at most one year old.
-- **Visit-date edits:** a user may edit `visitedAt` within the same one-year/future bounds. Moving a verified visit to another New York calendar day clears verification.
+- **Visit-date edits:** a user may edit `visitedAt` within the same one-year/future bounds. Moving a verified visit to another calendar day in the venue's local time zone clears verification.
 - **Coordinate minimization:** coordinates submitted for verification are used for the server-side geofence decision and are not retained on the stamp.
 - **Cooldown/rate limit:** one new stamp per place every 15 minutes and 20 stamps per hour across places.
 - **Ownership:** another account receives 404 for an owner's master Passport, private collection, stamp, and place-history resources. The only signed-out stamp visibility is through a valid explicitly enabled collection share, and it resolves only that collection's current stamp membership.
@@ -75,7 +75,6 @@ When `GET /api/places` returns non-null `attribution`, display the supplied Open
 | `DELETE /api/me/avatar` | none | `AvatarResponse` |
 | `GET /api/me/pins` | none | `PinsResponse` |
 | `PUT /api/me/pins` | `PinsRequest` | `PinsResponse` |
-| `GET /api/me/neighborhoods` | none | `NeighborhoodIndexResponse` |
 
 Account deletion requires a fresh email challenge for the account's current email. It revokes sessions, anonymizes identity fields, clears profile media, marks live stamps removed, disables access to shared collections, and deletes stored photo/avatar files.
 
@@ -88,6 +87,8 @@ Account deletion requires a fresh email challenge for the account's current emai
 | `GET /api/places/nearby?lat=&lng=` | `NearbyPlacesResponse`, nearest first with `distanceM` and `inside` |
 | `GET /api/places/:id/mine?lat=&lng=` | `MyPlacePageResponse`, containing only the signed-in owner's stamps at that place |
 | `POST /api/places/:id/stamps` | `CreateStampResponse` |
+
+Google-backed restaurant and bar discovery is worldwide. Place responses include optional `area`, `city`, `region`, `country`, and `countryCode` fields plus an IANA `timeZone`. `area` is descriptive only and may represent a neighborhood, district, sublocality, quartiere, or similar label; no geographic hierarchy or polygon membership is required for a place to exist.
 
 Stamp creation is multipart. It accepts repeated `photos` fields, `caption`, optional song metadata (`songTitle`, `songArtist`, `songArtUrl`, `songSourceId`), optional internal `rating`, and:
 
