@@ -19,7 +19,7 @@ const TABLES = [
 ];
 
 const nativeFetch = globalThis.fetch;
-process.env.GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY ?? "integration-test-key";
+process.env.GOOGLE_PLACES_API_KEY = "integration-test-key";
 globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
   const url = String(input);
   if (url === "https://places.googleapis.com/v1/places:searchNearby") {
