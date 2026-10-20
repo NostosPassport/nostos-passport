@@ -5,7 +5,7 @@ export type CuisineIcon = "restaurant" | "pasta" | "taco" | "sushi" | "noodles" 
 export type CategoryStampArtwork = { version: typeof CATEGORY_STAMP_VERSION; kind: CategoryStampKind; cuisine: string; label: string; color: string; icon: CuisineIcon };
 export type CategoryVenue = { id: string; category?: string | null; primaryType?: string | null; cuisines?: readonly string[] | null };
 const CATALOG: Record<string, { label: string; color: string; icon: CuisineIcon }> = {
-  italian: {label:"Italian",color:"#A2473C",icon:"pasta"}, mexican: {label:"Mexican",color:"#A75435",icon:"taco"},
+  italian: {label:"Italian",color:"#143B2B",icon:"pasta"}, mexican: {label:"Mexican",color:"#A75435",icon:"taco"},
   japanese: {label:"Japanese",color:"#396D78",icon:"sushi"}, korean: {label:"Korean",color:"#895060",icon:"grill"},
   chinese: {label:"Chinese",color:"#9B4642",icon:"noodles"}, indian: {label:"Indian",color:"#79508A",icon:"curry"},
   thai: {label:"Thai",color:"#518065",icon:"bowl"}, vietnamese: {label:"Vietnamese",color:"#4D7966",icon:"bowl"},
@@ -35,7 +35,7 @@ export function resolveCategoryStamp(venue:CategoryVenue):CategoryStampArtwork|n
  const primary=norm(venue.primaryType??"");
  if(venue.category==="bar"||BAR_TYPES.has(primary)){
    const club=["night_club","nightclub","dance_club"].includes(primary);
-   return {version:CATEGORY_STAMP_VERSION,kind:"bar",cuisine:club?"nightclub":"bar",label:club?"NIGHTCLUB":"BAR · CLUB",color:club?"#555675":"#4C5D68",icon:club?"music":"glass"};
+   return {version:CATEGORY_STAMP_VERSION,kind:"bar",cuisine:club?"nightclub":"bar",label:club?"NIGHTCLUB":"BAR · CLUB",color:club?"#7C1030":"#7C1030",icon:club?"music":"glass"};
  }
  const tags=(venue.cuisines??[]).map(cuisineKey).filter((v):v is string=>!!v);
  if(venue.category!=="restaurant"&&!primary.includes("restaurant")&&primary!=="steak_house"&&!tags.length)return null;
@@ -87,4 +87,31 @@ export function layoutCategoryName(name:string,kind:CategoryStampKind):StampName
  }
  const chars=Array.from(clean);const cap=kind==="bar"?19:21;
  return{lines:Array.from({length:maxLines},(_,i)=>chars.slice(i*cap,(i+1)*cap-(i===maxLines-1?1:0)).join("")+(i===maxLines-1?"…":"")),fontSize:10,truncated:true};
+}
+
+/** Fixed SVG measurement system shared by Expo and web. Coordinates follow the approved square-photo study. */
+export const CATEGORY_STAMP_GEOMETRY = {
+  restaurant: {
+    viewBox: "0 0 260 154",
+    photo: {x: 22, y: 21, s: 110},
+    titleCenterX: 194,
+    titleBaselines: {one: 56, two: [43, 63], three: [35, 51, 67]},
+    iconX: 180, iconY: 76, captionX: 194, cuisineY: 112, localityY: 130, dateY: 143,
+  },
+  bar: {
+    viewBox: "0 0 160 160",
+    photo: {x: 41, y: 43, s: 78},
+    titleArc: "M30 56 A56 56 0 0 1 130 56",
+    titleArcSize: 14,
+    iconX: 122, iconY: 83, localityY: 145, dateY: 134,
+  },
+} as const;
+/** Date labels are about the New York visit day, never the rendering device's timezone. */
+export function categoryStampDateLabel(value: string | null | undefined): string {
+  if (!value || Number.isNaN(Date.parse(value))) return "";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", day: "2-digit", month: "short", year: "numeric",
+  }).formatToParts(new Date(value));
+  const part=(kind: string) => parts.find(p=>p.type===kind)?.value ?? "";
+  return `${part("day")} ${part("month").toUpperCase()} ${part("year")}`;
 }

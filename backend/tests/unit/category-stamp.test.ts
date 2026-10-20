@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCategoryStamp, photoClipPath, layoutCategoryName, safeStampPhotoUrl } from "../../../shared/category-stamp-artwork";
+import { resolveCategoryStamp, CATEGORY_STAMP_GEOMETRY, categoryStampDateLabel, photoClipPath, layoutCategoryName, safeStampPhotoUrl } from "../../../shared/category-stamp-artwork";
 
 describe("category ink stamp design v1", () => {
   it("uses specific primary type rather than generic tags", () => {
@@ -28,6 +28,14 @@ describe("category ink stamp design v1", () => {
       expect(result.fontSize).toBeGreaterThanOrEqual(10);
       if(!result.truncated) expect(result.lines.join(" ").replace(/ /g,"")).toBe(name.replace(/ /g,""));
     }
+  });
+  it("uses fixed dimensions for the approved restaurant and bar references", () => {
+    expect(CATEGORY_STAMP_GEOMETRY.restaurant.photo).toEqual({x:22,y:21,s:110});
+    expect(CATEGORY_STAMP_GEOMETRY.bar.photo).toEqual({x:41,y:43,s:78});
+    expect(CATEGORY_STAMP_GEOMETRY.bar.titleArc).toMatch(/^M/);
+    expect(resolveCategoryStamp({id:"o",category:"restaurant",primaryType:"italian_restaurant"})?.color).toBe("#143B2B");
+    expect(resolveCategoryStamp({id:"b",category:"bar",primaryType:"cocktail_bar"})?.color).toBe("#7C1030");
+    expect(categoryStampDateLabel("2026-10-20T12:00:00-04:00")).toBe("20 OCT 2026");
   });
   it("clip paths are valid and URLs reject non-photo injection", () => {
     expect(photoClipPath(10,10,80).startsWith("M")).toBe(true);
