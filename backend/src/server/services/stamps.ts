@@ -88,7 +88,7 @@ type StampRow = {
   venue: {
     id: string; slug: string; name: string;
     area: string | null; city: string | null; region: string | null; country: string | null; countryCode: string | null; timeZone: string;
-    category: string | null; cuisines: string[]; googlePrimaryType: string | null;
+    category: string | null; cuisines: string[]; googlePrimaryType: string | null; michelinStars: number | null;
   };
   photos: { id: string; storageKey: string; position: number; x: number | null; y: number | null; rotation: number | null }[];
 };
@@ -97,7 +97,7 @@ const stampSelect = {
   id: true, userId: true, caption: true, songTitle: true, songArtist: true, songArtUrl: true, songSourceId: true,
   createdAt: true, visitedAt: true, verifiedAt: true, editedAt: true, removedAt: true,
   user: { select: { deletedAt: true } },
-  venue: { select: { id: true, slug: true, name: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true, category: true, cuisines: true, googlePrimaryType: true } },
+  venue: { select: { id: true, slug: true, name: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true, category: true, cuisines: true, googlePrimaryType: true, michelinStars: true } },
   photos: { where: { removedAt: null }, orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }], select: { id: true, storageKey: true, position: true, x: true, y: true, rotation: true } },
 };
 
@@ -127,10 +127,11 @@ async function toStampViews(db: Db, rows: readonly StampRow[], now: Date) {
       cuisines: r.venue.cuisines,
       primaryType: r.venue.googlePrimaryType,
     });
+    const michelinStars = r.venue.michelinStars === 1 || r.venue.michelinStars === 2 || r.venue.michelinStars === 3 ? r.venue.michelinStars : null;
     return {
       id: r.id,
       photoUrl: r.photos[0] ? await uploadUrl(r.photos[0].storageKey, now) : null,
-      artwork: artwork ? { ...artwork, priceTier: prices.get(r.venue.id) ?? null } : null,
+      artwork: artwork ? { ...artwork, priceTier: prices.get(r.venue.id) ?? null, michelinStars } : null,
       photos: await Promise.all(r.photos.map(async (p) => ({ id: p.id, url: await uploadUrl(p.storageKey, now), position: p.position, x: p.x, y: p.y, rotation: p.rotation }))),
       caption: r.caption,
       song: r.songTitle ? { title: r.songTitle, artist: r.songArtist!, artUrl: r.songArtUrl, sourceId: r.songSourceId } : null,
