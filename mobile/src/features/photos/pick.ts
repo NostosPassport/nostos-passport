@@ -30,18 +30,25 @@ const LIBRARY_OPTIONS: ImagePicker.ImagePickerOptions = {
   preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Current,
 };
 
-function first(res: ImagePicker.ImagePickerResult): PickedImage | null {
-  if (res.canceled || !res.assets?.[0]) return null;
-  const a = res.assets[0];
+function image(asset: ImagePicker.ImagePickerAsset): PickedImage {
   return {
-    uri: a.uri,
-    width: a.width,
-    height: a.height,
-    assetId: a.assetId ?? null,
-    fileName: a.fileName ?? null,
-    mimeType: a.mimeType ?? null,
-    exif: (a.exif as Record<string, unknown> | null | undefined) ?? null,
+    uri: asset.uri,
+    width: asset.width,
+    height: asset.height,
+    assetId: asset.assetId ?? null,
+    fileName: asset.fileName ?? null,
+    mimeType: asset.mimeType ?? null,
+    exif: (asset.exif as Record<string, unknown> | null | undefined) ?? null,
   };
+}
+
+function all(res: ImagePicker.ImagePickerResult): PickedImage[] {
+  if (res.canceled || !res.assets) return [];
+  return res.assets.map(image);
+}
+
+function first(res: ImagePicker.ImagePickerResult): PickedImage | null {
+  return all(res)[0] ?? null;
 }
 
 export async function takePhoto(): Promise<CameraOutcome> {
@@ -69,6 +76,18 @@ export async function pickFromLibrary(): Promise<PickedImage | null> {
     return first(await ImagePicker.launchImageLibraryAsync(LIBRARY_OPTIONS));
   } catch {
     return null;
+  }
+}
+
+export async function pickManyFromLibrary(selectionLimit = 0): Promise<PickedImage[]> {
+  try {
+    return all(await ImagePicker.launchImageLibraryAsync({
+      ...LIBRARY_OPTIONS,
+      allowsMultipleSelection: true,
+      selectionLimit,
+    }));
+  } catch {
+    return [];
   }
 }
 
