@@ -1,9 +1,9 @@
+import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
-import type { CollectionColor } from "@/api/collection-contracts";
-import { COLLECTION_NAME_MAX } from "@/api/collection-contracts";
-import type { StampView } from "@/api/contracts";
 import { errorText } from "@/api";
+import { COLLECTION_NAME_MAX, type CollectionColor } from "@/api/collection-contracts";
+import type { StampView } from "@/api/contracts";
 import { Kicker, Rule } from "@/components/editorial/editorial";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -13,7 +13,6 @@ import { Text } from "@/components/ui/text";
 import { colors, fonts, hairlineWidth, size, space } from "@/theme";
 import { COLLECTION_COLORS } from "./colors";
 import { useMyStamps } from "./use-my-stamps";
-import { useState } from "react";
 
 export type CollectionDraft = { name: string; color: CollectionColor; stampIds: string[] };
 
