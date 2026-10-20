@@ -36,3 +36,42 @@ jobs:
       - name: Contract sync
         working-directory: mobile
         run: npx jest src/api/__tests__/contracts-sync.test.ts --silent
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: nostos_codex
+          POSTGRES_USER: nostos
+          POSTGRES_PASSWORD: nostos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nostos -d nostos_codex"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://nostos:nostos@localhost:5432/nostos_codex?schema=public
+      DIRECT_URL: postgresql://nostos:nostos@localhost:5432/nostos_codex?schema=public
+      TEST_DATABASE_URL: postgresql://nostos:nostos@localhost:5432/nostos_codex_test?schema=public
+      STORAGE_DRIVER: local
+      APP_ENV: development
+      UPLOAD_URL_SECRET: dev-only-upload-url-secret-change-me-0000
+      SHARE_TOKEN_SECRET: dev-only-collection-share-secret-change-me
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+      - name: Install backend
+        working-directory: backend
+        run: pnpm install --frozen-lockfile
+      - name: Backend unit and integration tests against ephemeral Postgres
+        working-directory: backend
+        run: pnpm test
