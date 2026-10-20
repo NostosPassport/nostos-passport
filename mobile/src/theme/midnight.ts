@@ -123,5 +123,19 @@ export const bookStyle = {
 export const midnight = { name: "Editorial", palette, colors, fonts, shadows, bookMotion, bookStyle, stampStyle } as const;
 export type Theme = typeof midnight;
 
-/** Scene lighting uses the current app palette; GLB material values stay untouched. */
-export const scene3d = {background:colors.background,softbox:palette.black,strip:palette.boneFaint,rim:palette.black,fill:palette.boneDim,floor:palette.inkRaised,studio:palette.bone,shadow:palette.bone,shadowOpacity:0.55} as const;
+/** Scene lighting and the runtime 3D passport cover treatment. */
+export const scene3d = {
+  background: colors.background,
+  softbox: palette.black,
+  strip: palette.boneFaint,
+  rim: palette.black,
+  fill: palette.boneDim,
+  floor: palette.inkRaised,
+  studio: palette.bone,
+  shadow: palette.bone,
+  shadowOpacity: 0.55,
+  passportCover: "#3F63B7",
+  passportCoverRoughness: 0.96,
+  passportCoverEnvIntensity: 0.08,
+  passportCoverNormalScale: 0.28,
+} as const;
