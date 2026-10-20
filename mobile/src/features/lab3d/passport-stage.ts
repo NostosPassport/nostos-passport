@@ -136,7 +136,7 @@ const disposeMaterial = (m: THREE.Material) => {
   m.dispose();
 };
 
-export async function createStage(gl: ExpoWebGLRenderingContext, coverColor = scene3d.passportCover): Promise<Stage> {
+export async function createStage(gl: ExpoWebGLRenderingContext, coverColor: string = scene3d.passportCover): Promise<Stage> {
   const started = Date.now();
   const width = gl.drawingBufferWidth;
   const height = gl.drawingBufferHeight;
