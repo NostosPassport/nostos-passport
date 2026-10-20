@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react-native";
+import { render, screen, within } from "@testing-library/react-native";
 import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
 import { State } from "react-native-gesture-handler";
 import { Text } from "react-native";
@@ -24,6 +24,17 @@ describe("SinglePageFlipBook", () => {
     await render(<SinglePageFlipBook pageWidth={PW} pageHeight={426} total={4} page={2} pageTaps onPageChange={back} renderPage={(index) => <Text>{`page ${index}`}</Text>} />);
     await tap(50);
     expect(back).toHaveBeenCalledWith(1);
+  });
+
+  it("uses the current page as the turning sheet instead of duplicating the destination", async () => {
+    await render(<SinglePageFlipBook pageWidth={PW} pageHeight={426} total={4} page={1} pageTaps onPageChange={jest.fn()} renderPage={(index) => <Text>{`page ${index}`}</Text>} />);
+
+    expect(within(screen.getByTestId("single-turn-current-next")).getByText("page 1")).toBeTruthy();
+    expect(within(screen.getByTestId("single-turn-current-next")).queryByText("page 2")).toBeNull();
+    expect(within(screen.getByTestId("single-turn-current-prev")).getByText("page 1")).toBeTruthy();
+    expect(within(screen.getByTestId("single-turn-current-prev")).queryByText("page 0")).toBeNull();
+    expect(screen.getAllByText("page 2")).toHaveLength(1);
+    expect(screen.getAllByText("page 0")).toHaveLength(1);
   });
 
   it("holds at the profile and final page boundaries", async () => {
