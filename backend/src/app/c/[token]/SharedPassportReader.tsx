@@ -6,6 +6,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, TransitionEvent 
 
 import {
   PASSPORT_PAGE_ASPECT,
+  STAMP_ARTWORK_STYLE,
   STAMP_BOX,
   motifPath,
   ringsFor,
@@ -71,8 +72,8 @@ type DragState = {
 
 const PAGE_WIDTH = 1000;
 const PAGE_HEIGHT = PAGE_WIDTH * PASSPORT_PAGE_ASPECT;
-const STAMP_STROKES = { ring: 3, hair: 1.2 } as const;
-const STAMP_TEXT = { name: 11, area: 6.5, arcTrack: 1.2, bannerTrack: 1 } as const;
+const STAMP_STROKES = STAMP_ARTWORK_STYLE.strokes;
+const STAMP_TEXT = STAMP_ARTWORK_STYLE.text;
 
 function wantsReducedMotion() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
