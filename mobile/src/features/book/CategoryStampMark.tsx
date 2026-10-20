@@ -1,39 +1,62 @@
 import { useId } from "react";
-import Svg, { Circle, ClipPath, Defs, G, Image as SvgImage, Path, Rect, Text as SvgText } from "react-native-svg";
-import { fonts } from "@/theme";
-import { type CategoryStampArtwork, CATEGORY_STAMP_GEOMETRY, CUISINE_PATHS, categoryStampDateLabel, categoryNameLineWidth, fitCategoryLocality, layoutCategoryName, needsUnicodeFont, photoClipPath, safeStampPhotoUrl } from "../../../../shared/category-stamp-artwork";
-/** Pure SVG native counterpart of the shared-web ink stamp, with transparent background. */
-export function CategoryStampMark({ artwork, name, locality, visitedAt, timeZone, photoUri, size }: {
-  artwork: CategoryStampArtwork; name: string; locality: string; visitedAt?: string | null; timeZone?: string | null; photoUri?: string | null; size: number;
-}) {
-  const id="nst-"+useId().replace(/[^a-zA-Z0-9_-]/g,"_");
-  const bar=artwork.kind==="bar", g=bar?CATEGORY_STAMP_GEOMETRY.bar:CATEGORY_STAMP_GEOMETRY.restaurant;
-  const p=g.photo, clip=photoClipPath(p.x,p.y,p.s);
-  const title=layoutCategoryName(name,artwork.kind);
-  const photo=safeStampPhotoUrl(photoUri), ink=artwork.color, date=categoryStampDateLabel(visitedAt, timeZone ?? undefined);
-  const serif=needsUnicodeFont(name)?undefined:fonts.serif;
-  const fittedLocality=fitCategoryLocality(locality,artwork.kind);
-  return <Svg width={size} height={size} viewBox={g.viewBox} preserveAspectRatio="xMidYMid meet"
-    accessible accessibilityLabel={[name,artwork.label,locality,date].filter(Boolean).join(", ")}>
-    <Defs><ClipPath id={id}><Path d={clip}/></ClipPath></Defs>
-    {bar?<><Circle cx={80} cy={80} r={76} fill="none" stroke={ink} strokeWidth={2.8}/>
-      <Circle cx={80} cy={80} r={71} fill="none" stroke={ink} strokeWidth={1.05}/></>:
-      <><Rect x={3} y={3} width={254} height={148} rx={22} fill="none" stroke={ink} strokeWidth={2.8}/>
-        <Rect x={9} y={9} width={242} height={136} rx={17} fill="none" stroke={ink} strokeWidth={1.05}/></>}
-    {photo?<SvgImage href={{uri:photo}} x={p.x} y={p.y} width={p.s} height={p.s} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${id})`}/>:
-      <Path d={clip} fill="none" stroke={ink} strokeWidth={0.6} strokeDasharray="2 3" strokeOpacity={0.5}/>}
-    {bar?<>{title.lines.map((line,i)=><SvgText key={i} x={80} y={title.lines.length===1?28:25+i*12}
-      textAnchor="middle" fontFamily={serif} fontSize={title.fontSize} textLength={categoryNameLineWidth(line,"bar",title.fontSize,i,title.lines.length)} lengthAdjust="spacingAndGlyphs" fill={ink}>{line}</SvgText>)}
-      <G transform={`translate(${g.iconX} ${g.iconY})`}><Path d={CUISINE_PATHS[artwork.icon]} fill="none" stroke={ink} strokeWidth={1.55} strokeLinecap="round" strokeLinejoin="round"/></G>
-      <SvgText x={80} y={g.dateY} textAnchor="middle" fontFamily={fonts.serif} fontSize={9.8} fill={ink}>{date}</SvgText>
-      <SvgText x={80} y={CATEGORY_STAMP_GEOMETRY.bar.categoryY} textAnchor="middle" fontFamily={fonts.serif} fontSize={8.8} letterSpacing={0.3} fill={ink}>{artwork.cuisine==="nightclub"?"NIGHTCLUB":"BAR / CLUB"}</SvgText>
-      <SvgText x={80} y={g.localityY} textAnchor="middle" fontFamily={fonts.serif} fontSize={fittedLocality.fontSize} letterSpacing={0.1} textLength={fittedLocality.width||undefined} lengthAdjust="spacingAndGlyphs" fill={ink}>{fittedLocality.text}</SvgText>
-    </>:<>{title.lines.map((line,i)=><SvgText key={i} x={CATEGORY_STAMP_GEOMETRY.restaurant.titleCenterX} y={title.lines.length===1?52:title.lines.length===2?[43,64][i]:[34,51,68][i]}
-      textAnchor="middle" fontFamily={serif} fontSize={title.fontSize} textLength={categoryNameLineWidth(line,"restaurant",title.fontSize,i,title.lines.length)} lengthAdjust="spacingAndGlyphs" fill={ink}>{line}</SvgText>)}
-      <G transform={`translate(${g.iconX} ${g.iconY})`}><Path d={CUISINE_PATHS[artwork.icon]} fill="none" stroke={ink} strokeWidth={1.65} strokeLinecap="round" strokeLinejoin="round"/></G>
-      <SvgText x={CATEGORY_STAMP_GEOMETRY.restaurant.captionX} y={CATEGORY_STAMP_GEOMETRY.restaurant.cuisineY} textAnchor="middle" fontFamily={fonts.serif} fontSize={10.5} letterSpacing={0.65} fill={ink}>{artwork.label}</SvgText>
-      <SvgText x={CATEGORY_STAMP_GEOMETRY.restaurant.captionX} y={g.localityY} textAnchor="middle" fontFamily={fonts.serif} fontSize={fittedLocality.fontSize} letterSpacing={0.1} textLength={fittedLocality.width||undefined} lengthAdjust="spacingAndGlyphs" fill={ink}>{fittedLocality.text}</SvgText>
-      <SvgText x={CATEGORY_STAMP_GEOMETRY.restaurant.captionX} y={g.dateY} textAnchor="middle" fontFamily={fonts.serif} fontSize={10.6} letterSpacing={0.2} fill={ink}>{date}</SvgText>
-    </>}
-  </Svg>;
+import Svg, { Circle, ClipPath, Defs, G, Image as SvgImage, Mask, Path, Rect, Text as SvgText, TextPath } from "react-native-svg";
+import type { CategoryStampArtwork } from "../../../../shared/category-stamp-artwork";
+import { categoryStampDateLabel } from "../../../../shared/category-stamp-artwork";
+import { MASK_ERASE, MASK_KEEP, type StampDesignInput, buildStampScene, designFromArtwork, hasFallbackGlyphs } from "../../../../shared/category-stamp-design";
+
+export const STAMP_SERIF = "SourceSerif4_600SemiBold";
+const PETALS = [0, 72, 144, 216, 288];
+
+type Props = {
+  visitedAt?: string | null; photoUri?: string | null; seed?: string;
+  /** Width of the stamp in points; the height follows the template. */
+  size: number;
+} & (
+  | { artwork: CategoryStampArtwork; name: string; locality: string; timeZone?: string | null; design?: undefined }
+  | { design: StampDesignInput; artwork?: undefined }
+);
+
+/**
+ * Category stamp, native. Pure counterpart of the web CategoryStampSvg: both draw the scene from buildStampScene, so layout,
+ * fit and strings cannot differ. The frame, photo window and interior are transparent.
+ */
+export function CategoryStampMark(props: Props) {
+  const uid = "nst-" + useId().replace(/[^a-zA-Z0-9_-]/g, "_");
+  const design = props.design ?? designFromArtwork(props.artwork, { name: props.name, locality: props.locality, timeZone: props.timeZone });
+  const date = categoryStampDateLabel(props.visitedAt, design.timeZone);
+  const scene = buildStampScene(design, { seed: props.seed ?? design.name, dateLabel: date });
+  const ink = design.color, p = scene.photo, i = scene.icon;
+  const height = (props.size * scene.height) / scene.width;
+  const face = (text: string) => (hasFallbackGlyphs(text) ? undefined : STAMP_SERIF);
+  return (
+    <Svg width={props.size} height={height} viewBox={`0 0 ${scene.width} ${scene.height}`} preserveAspectRatio="xMidYMid meet" accessible accessibilityLabel={scene.a11yLabel}>
+      <Defs>
+        <ClipPath id={`${uid}-photo`}><Path d={p.clipD} /></ClipPath>
+        <Mask id={`${uid}-ink`} maskUnits="userSpaceOnUse" x={0} y={0} width={scene.width} height={scene.height}>
+          <Rect x={0} y={0} width={scene.width} height={scene.height} fill={MASK_KEEP} />
+          {scene.specks.map((s, k) => <Circle key={k} cx={s.cx} cy={s.cy} r={s.r} fill={MASK_ERASE} />)}
+        </Mask>
+        {scene.arcs.map((a) => <Path key={a.id} id={`${uid}-${a.id}`} d={a.d} />)}
+      </Defs>
+      <G mask={`url(#${uid}-ink)`} fill="none" stroke={ink} strokeLinejoin="round">
+        {scene.borders.map((b, k) => <Path key={k} d={b.d} strokeWidth={b.width} />)}
+      </G>
+      {props.photoUri
+        ? <SvgImage href={{ uri: props.photoUri }} x={p.x - 2} y={p.y - 2} width={p.s + 4} height={p.s + 4} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${uid}-photo)`} />
+        : <Path d={p.clipD} fill="none" stroke={ink} strokeWidth={1} strokeDasharray="3 4" strokeOpacity={0.55} />}
+      {scene.texts.map((t, k) => (
+        <SvgText key={k} x={t.x} y={t.y} fill={ink} fontFamily={face(t.text)} fontSize={t.size} letterSpacing={t.tracking || undefined} textAnchor={t.anchor} textLength={t.textLength} lengthAdjust={t.textLength ? "spacingAndGlyphs" : undefined}>{t.text}</SvgText>
+      ))}
+      {scene.arcs.map((a) => (
+        <SvgText key={a.id} fill={ink} fontFamily={face(a.text)} fontSize={a.size} letterSpacing={a.tracking}>
+          <TextPath href={`#${uid}-${a.id}`} startOffset={a.startOffset}>{a.text}</TextPath>
+        </SvgText>
+      ))}
+      <G transform={`translate(${i.x} ${i.y}) rotate(${i.rotate} ${i.size / 2} ${i.size / 2}) scale(${i.size / 24})`}
+        fill={i.fill ? ink : "none"} stroke={ink} strokeWidth={i.fill ? 0.6 : i.strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+        <Path d={i.d} />
+      </G>
+      {scene.mark ? <G fill={ink}>{PETALS.map((a) => <Circle key={a} cx={scene.mark!.cx + Math.sin((a * Math.PI) / 180) * scene.mark!.r * 0.62} cy={scene.mark!.cy - Math.cos((a * Math.PI) / 180) * scene.mark!.r * 0.62} r={scene.mark!.r * 0.42} />)}</G> : null}
+    </Svg>
+  );
 }

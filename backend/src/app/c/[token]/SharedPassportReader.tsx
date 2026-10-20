@@ -10,6 +10,8 @@ import {
   PASSPORT_PAGE_ASPECT,
   STAMP_ARTWORK_STYLE,
   STAMP_BOX,
+  footprintOf,
+  placementHeight,
   motifPath,
   ringsFor,
   rosettePath,
@@ -93,7 +95,7 @@ function visitDate(value: string, timeZone: string) {
 }
 
 function StampArtwork({ stamp }: { stamp: SharedPassportStamp }) {
-  if (stamp.artwork) return <CategoryStampSvg artwork={stamp.artwork} name={stamp.place.name} locality={stamp.place.localityName} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} photoUrl={stamp.photos[0]?.url} />;
+  if (stamp.artwork) return <CategoryStampSvg artwork={stamp.artwork} name={stamp.place.name} locality={stamp.place.localityName} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} photoUrl={stamp.photos[0]?.url} seed={stamp.place.id} />;
   const input = {
     placeId: stamp.place.id,
     placeName: stamp.place.name,
@@ -224,11 +226,12 @@ function PassportPage({
       {emptyMessage ? <div className={styles.emptyPageLabel}>{emptyMessage}</div> : null}
 
       {stamps.map((stamp) => {
-        const placement = slotPlacement(stamp.id, stamp.slot, PAGE_WIDTH, PAGE_HEIGHT);
+        const placement = slotPlacement(stamp.id, stamp.slot, PAGE_WIDTH, PAGE_HEIGHT, footprintOf(stamp.artwork));
+        const stampHeight = placementHeight(placement);
         const left = ((placement.cx - placement.size / 2) / PAGE_WIDTH) * 100;
-        const top = ((placement.cy - placement.size / 2) / PAGE_HEIGHT) * 100;
+        const top = ((placement.cy - stampHeight / 2) / PAGE_HEIGHT) * 100;
         const width = (placement.size / PAGE_WIDTH) * 100;
-        const height = (placement.size / PAGE_HEIGHT) * 100;
+        const height = (stampHeight / PAGE_HEIGHT) * 100;
         return (
           <button
             key={stamp.id}

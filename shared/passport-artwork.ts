@@ -21,7 +21,10 @@ export const STAMP_ARTWORK_STYLE = {
   maxTiltDeg: 11,
 } as const;
 
-export type Placement = { cx: number; cy: number; size: number; rotation: number };
+/** `size` is the stamp's width. `height` is set for stamps that are not square and defaults to `size`. */
+export type Placement = { cx: number; cy: number; size: number; rotation: number; height?: number };
+/** How a category stamp occupies its slot: width as a share of the page width, and width/height. */
+export type StampFootprint = { share: number; aspect: number };
 export type Speckle = { cx: number; cy: number; r: number };
 export type StampInput = { placeId: string; placeName: string; localityKey: string; localityName: string };
 export type StampDesign = {
@@ -43,6 +46,11 @@ const SLOT_X = [0.34, 0.66, 0.4] as const;
 const SLOT_TOP = 0.13;
 const SLOT_BOTTOM = 0.87;
 const SLOT_JITTER = 0.025;
+/** Category stamps use more of the page height than the legacy neutral stamps, centered in each of the three cells. */
+const FOOTPRINT_TOP = 0.075;
+const FOOTPRINT_BOTTOM = 0.925;
+const FOOTPRINT_JITTER = 0.006;
+const FOOTPRINT_TILT_DEG = 3;
 const ELLIPSIS = "…";
 
 export function hashString(input: string): number {
@@ -71,9 +79,20 @@ export function seeded(seed: number | string) {
   };
 }
 
-export function slotPlacement(seed: string, slot: number, width: number, height: number): Placement {
+export function slotPlacement(seed: string, slot: number, width: number, height: number, footprint?: StampFootprint | null): Placement {
   if (!Number.isInteger(slot) || slot < 1 || slot > 3) throw new RangeError("slot is 1, 2 or 3");
   const rng = seeded(`${seed}:${slot}`);
+  if (footprint) {
+    const cell = ((FOOTPRINT_BOTTOM - FOOTPRINT_TOP) * height) / 3;
+    const size = footprint.share * width;
+    return {
+      cx: width / 2 + rng.range(-FOOTPRINT_JITTER, FOOTPRINT_JITTER) * width,
+      cy: FOOTPRINT_TOP * height + cell * (slot - 0.5) + rng.range(-FOOTPRINT_JITTER, FOOTPRINT_JITTER) * width,
+      size,
+      height: size / footprint.aspect,
+      rotation: rng.range(-FOOTPRINT_TILT_DEG, FOOTPRINT_TILT_DEG),
+    };
+  }
   const pitch = ((SLOT_BOTTOM - SLOT_TOP) * height) / 3;
   const jx = rng.range(-SLOT_JITTER, SLOT_JITTER) * width;
   const jy = rng.range(-SLOT_JITTER, SLOT_JITTER) * width;
@@ -85,11 +104,13 @@ export function slotPlacement(seed: string, slot: number, width: number, height:
   };
 }
 
+export const placementHeight = (placement: Placement) => placement.height ?? placement.size;
+
 export const boxOf = (placement: Placement) => ({
   left: placement.cx - placement.size / 2,
-  top: placement.cy - placement.size / 2,
+  top: placement.cy - placementHeight(placement) / 2,
   right: placement.cx + placement.size / 2,
-  bottom: placement.cy + placement.size / 2,
+  bottom: placement.cy + placementHeight(placement) / 2,
 });
 
 export function overlapShare(a: Placement, b: Placement): number {
@@ -98,7 +119,7 @@ export function overlapShare(a: Placement, b: Placement): number {
   const width = Math.min(A.right, B.right) - Math.max(A.left, B.left);
   const height = Math.min(A.bottom, B.bottom) - Math.max(A.top, B.top);
   if (width <= 0 || height <= 0) return 0;
-  return (width * height) / Math.min(a.size * a.size, b.size * b.size);
+  return (width * height) / Math.min(a.size * placementHeight(a), b.size * placementHeight(b));
 }
 
 const clip = (value: string, max: number) => value.length <= max ? value : `${value.slice(0, Math.max(1, max - 1)).trimEnd()}${ELLIPSIS}`;
@@ -263,4 +284,25 @@ export function wavePaths(seed: string, width: number, bandHeight: number, lines
     }
     return points.join(" ");
   });
+}
+
+/**
+ * Width share and width/height of each category stamp inside the three-slot page grid: the largest size at which three stamps
+ * stack on one page without touching. (The stamp detail view draws a single stamp near full page width instead.)
+ */
+export const STAMP_FOOTPRINTS = {
+  restaurant: { share: 0.64, aspect: 320 / 184 },
+  airport: { share: 0.64, aspect: 320 / 184 },
+  hotel: { share: 0.54, aspect: 340 / 232 },
+  bar: { share: 0.38, aspect: 1 },
+} as const satisfies Record<string, StampFootprint>;
+
+/** Single-stamp page (detail view): nearly the whole page width. */
+export const STAMP_DETAIL_SHARE = { restaurant: 0.9, airport: 0.9, hotel: 0.88, bar: 0.8 } as const;
+
+/** Footprint for a stored stamp's category artwork, or null for the legacy neutral stamp (no artwork). */
+export function footprintOf(artwork: { kind?: string; template?: string } | null | undefined): StampFootprint | null {
+  if (!artwork) return null;
+  const key = (artwork.template ?? artwork.kind) as keyof typeof STAMP_FOOTPRINTS | undefined;
+  return key && key in STAMP_FOOTPRINTS ? STAMP_FOOTPRINTS[key] : null;
 }

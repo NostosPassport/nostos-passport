@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Cormorant_Garamond } from "next/font/google";
+import { Source_Serif_4 } from "next/font/google";
 
-// The OFL-licensed semibold font is self-hosted by Next at build time, matching Expo.
-const stampSerif = Cormorant_Garamond({ subsets: ["latin", "latin-ext"], weight: "600", display: "swap", variable: "--font-stamp-serif" });
+// Stamps use Source Serif 4 SemiBold (OFL), self-hosted by Next at build time: the same face Expo bundles (@expo-google-fonts/source-serif-4).
+const stampSerif = Source_Serif_4({ subsets: ["latin", "latin-ext", "cyrillic", "greek"], weight: "600", display: "swap", variable: "--font-stamp-serif" });
 
 export const metadata: Metadata = {
   title: "Nostos | A passport for the places you go",

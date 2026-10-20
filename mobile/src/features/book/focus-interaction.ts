@@ -29,8 +29,9 @@ export function focusPageSize(width:number,height:number) {
 }
 export function stampHitRect(p:Placement,offsetX:number):HitRect {
  const r=Math.abs(p.rotation)*Math.PI/180;
- const half=p.size/2*(Math.abs(Math.cos(r))+Math.abs(Math.sin(r)));
- return {left:offsetX+p.cx-half,right:offsetX+p.cx+half,top:p.cy-half,bottom:p.cy+half};
+ const w=p.size/2,h=(p.height??p.size)/2;
+ const halfX=w*Math.abs(Math.cos(r))+h*Math.abs(Math.sin(r)),halfY=h*Math.abs(Math.cos(r))+w*Math.abs(Math.sin(r));
+ return {left:offsetX+p.cx-halfX,right:offsetX+p.cx+halfX,top:p.cy-halfY,bottom:p.cy+halfY};
 }
 export function focusSpreadCount(pages:readonly (number|null)[]):number {
  return 1+Math.ceil(Math.max(0,...pages.map(p=>p??0))/2);

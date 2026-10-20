@@ -13,7 +13,7 @@ const MID = STAMP_BOX / 2;
 export function StampMark({ input, size, design, artwork, photoUrl, visitedAt, timeZone }: { input: StampInput; size: number; design?: StampDesign; artwork?: CategoryStampArtwork | null; photoUrl?: string | null; visitedAt?: string | null; timeZone?: string | null }) {
   if (artwork && !design) {
     const photo = safeStampPhotoUrl(photoUrl) ? mediaUrl(photoUrl!) : null;
-    return <CategoryStampMark artwork={artwork} name={input.placeName} locality={input.localityName} visitedAt={visitedAt} timeZone={timeZone} photoUri={photo} size={size} />;
+    return <CategoryStampMark artwork={artwork} name={input.placeName} locality={input.localityName} visitedAt={visitedAt} timeZone={timeZone} photoUri={photo} size={size} seed={input.placeId} />;
   }
   const d = design ?? stampDesign(input);
   const arcId = `arc-${input.placeId}`;

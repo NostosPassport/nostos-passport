@@ -13,7 +13,7 @@ import { colors, radius, shadows, size, space } from "@/theme";
 import { LANDING, landingFrame } from "./landing";
 import { landingCopy, photoPins } from "./landing-copy";
 import { PageView } from "./PageView";
-import { slotPlacement } from "./slots";
+import { placementHeight, stampPlacement } from "./slots";
 import { StampMark } from "./StampMark";
 
 type Props = {
@@ -29,7 +29,7 @@ export function LandingScene({ stamp, others, pageWidth: pw, pageHeight: ph, onD
   const t = useSharedValue(0);
   const page = stamp.page ?? 1;
   const slot = stamp.slot ?? 1;
-  const place = slotPlacement(stamp.id, slot, pw, ph);
+  const place = stampPlacement({ id: stamp.id, slot, artwork: stamp.artwork }, pw, ph);
   const copy = landingCopy(stamp.page);
   const pins = photoPins(stamp.photos.length, pw, stamp.id);
 
@@ -54,13 +54,13 @@ export function LandingScene({ stamp, others, pageWidth: pw, pageHeight: ph, onD
   });
   const pin$ = useAnimatedStyle(() => ({ opacity: t.value > LANDING.impact + LANDING.ink ? 1 : 0 }));
 
-  const spot = { position: "absolute" as const, left: place.cx - place.size / 2, top: place.cy - place.size / 2, width: place.size, height: place.size };
+  const spot = { position: "absolute" as const, left: place.cx - place.size / 2, top: place.cy - placementHeight(place) / 2, width: place.size, height: placementHeight(place) };
   return (
     <View style={styles.root}>
       <Animated.View style={[{ width: pw, height: ph }, page$]}>
         <PageView page={page} side={page % 2 === 1 ? "left" : "right"} width={pw} height={ph} stamps={others} />
-        <Animated.View pointerEvents="none" style={[spot, styles.glow, { borderRadius: place.size / 2 }, glow$]} />
-        <Animated.View pointerEvents="none" style={[spot, styles.ink, { borderRadius: place.size / 2 }, ink$]} />
+        <Animated.View pointerEvents="none" style={[spot, styles.glow, { borderRadius: Math.min(place.size, placementHeight(place)) / 2 }, glow$]} />
+        <Animated.View pointerEvents="none" style={[spot, styles.ink, { borderRadius: Math.min(place.size, placementHeight(place)) / 2 }, ink$]} />
         <Animated.View style={[spot, stamp$]} accessible accessibilityLabel={`New stamp, ${stamp.place.name}, page ${page}, slot ${slot}`}>
           <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey: localityKey(stamp.place), localityName: localityLabel(stamp.place) }} size={place.size} artwork={stamp.artwork} photoUrl={stamp.photoUrl} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} />
         </Animated.View>

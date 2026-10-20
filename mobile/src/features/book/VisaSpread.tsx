@@ -15,7 +15,8 @@ import { bookSize } from "./dimensions";
 import { PageStock } from "./PageStock";
 import { PhotoViewer } from "./PhotoViewer";
 import { ScrapbookPage } from "./ScrapbookPage";
-import { slotPlacement } from "./slots";
+import { stampPlacement } from "./slots";
+import { STAMP_DETAIL_SHARE } from "../../../../shared/passport-artwork";
 import { Spread } from "./Spread";
 import { StampMark } from "./StampMark";
 import { TicketStub } from "./TicketStub";
@@ -31,12 +32,12 @@ export function VisaSpread({ stamp, onSaveLayout }: { stamp: StampView; onSaveLa
   const pageH = Math.floor(pageW * (book.pageHeight / book.pageWidth));
   const { date, time } = visaStamp(stamp.visitedAt, stamp.place.timeZone);
   const typed = useTypewriter(stamp.caption);
-  const place = slotPlacement(stamp.id, stamp.slot ?? 1, pageW, pageH);
+  const place = stampPlacement(stamp, pageW, pageH);
   const locality = localityLabel(stamp.place);
   const save = useMutation({ mutationFn: (body: Parameters<typeof api.stamps.layout>[1]) => api.stamps.layout(stamp.id, body), onSuccess: (r) => patchStamp(queryClient, stamp.id, () => r.stamp), onError: (e) => { haptics.warning(); toast.show(errorText(e, "Couldn't save the photo layout. Try again."), "neutral"); } });
   return <View style={styles.root}>
     <Spread pageWidth={pageW} pageHeight={pageH} spreadIndex={0} spreadTotal={1}><View style={styles.row}>
-      <PageStock width={pageW} height={pageH} spine="right"><View style={styles.stampPage} accessible accessibilityLabel={`Stamp, ${stamp.place.name}`}><View style={{ transform: [{ rotate: `${place.rotation}deg` }] }}><StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey: localityKey(stamp.place), localityName: locality }} size={Math.round(pageW * 0.8)} artwork={stamp.artwork} photoUrl={stamp.photoUrl} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} /></View></View></PageStock>
+      <PageStock width={pageW} height={pageH} spine="right"><View style={styles.stampPage} accessible accessibilityLabel={`Stamp, ${stamp.place.name}`}><View style={{ transform: [{ rotate: `${place.rotation}deg` }] }}><StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey: localityKey(stamp.place), localityName: locality }} size={Math.round(pageW * (stamp.artwork ? STAMP_DETAIL_SHARE[stamp.artwork.kind] : 0.8))} artwork={stamp.artwork} photoUrl={stamp.photoUrl} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} /></View></View></PageStock>
       <ScrapbookPage stampId={stamp.id} photos={stamp.photos} width={pageW} height={pageH} editable onLayout={(body) => (onSaveLayout ? onSaveLayout(body) : save.mutate(body))} onOpenPhoto={setViewing} />
     </View></Spread>
     <View style={styles.slip} accessible={false}>

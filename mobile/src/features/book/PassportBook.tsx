@@ -21,7 +21,7 @@ import { InsideCover } from "./InsideCover";
 import { PageView } from "./PageView";
 import { SinglePageFlipBook } from "./SinglePageFlipBook";
 import { type PageFace, groupByPage } from "./spreads";
-import { slotPlacement } from "./slots";
+import { stampPlacement } from "./slots";
 import { FOCUS_TOP_SPACE, FOCUS_BOTTOM_SPACE, focusBookSize, focusPageCount, focusPageSize, focusSpreadCount, stampHitRect } from "./focus-interaction";
 import { usePassport } from "./use-passport";
 
@@ -147,10 +147,10 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
   const stampTargets = useMemo(() => {
     if (compactReader) {
       if (current === 0) return [];
-      return (byPage.get(current) ?? []).map((s) => stampHitRect(slotPlacement(s.id, s.slot ?? 1, book.pageWidth, book.pageHeight), 0));
+      return (byPage.get(current) ?? []).map((s) => stampHitRect(stampPlacement(s, book.pageWidth, book.pageHeight), 0));
     }
     return [current * 2 - 1, current * 2].flatMap((p, index) =>
-      (byPage.get(p) ?? []).map((s) => stampHitRect(slotPlacement(s.id, s.slot ?? 1, book.pageWidth, book.pageHeight), index * book.pageWidth)));
+      (byPage.get(p) ?? []).map((s) => stampHitRect(stampPlacement(s, book.pageWidth, book.pageHeight), index * book.pageWidth)));
   }, [compactReader, byPage, current, book.pageWidth, book.pageHeight]);
   const close = () => {
     if (closing.value) return;

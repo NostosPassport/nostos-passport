@@ -1,4 +1,5 @@
 import { CormorantGaramond_500Medium, CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold } from "@expo-google-fonts/cormorant-garamond";
+import { SourceSerif4_600SemiBold } from "@expo-google-fonts/source-serif-4";
 import { CourierPrime_400Regular, CourierPrime_700Bold } from "@expo-google-fonts/courier-prime";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
@@ -43,7 +44,7 @@ function RootNavigator() {
   useOfflineAnnouncer();
   const { status } = useAuth();
   const me = useMe();
-  const [fontsLoaded, fontError] = useFonts({ CormorantGaramond_500Medium, CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold, CourierPrime_400Regular, CourierPrime_700Bold });
+  const [fontsLoaded, fontError] = useFonts({ CormorantGaramond_500Medium, CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold, SourceSerif4_600SemiBold, CourierPrime_400Regular, CourierPrime_700Bold });
   const signedIn = status === "signedIn";
   const meReady = signedIn && !!me.data;
   const needsTerms = meReady && me.data?.terms.needsAcceptance === true;

@@ -10,7 +10,7 @@ import { ribbonPath, ribbonsOnPage } from "./edges";
 import { rosettePath, wavePaths } from "./guilloche";
 import { PageStock } from "./PageStock";
 import { StampMark } from "./StampMark";
-import { type Placement, slotPlacement } from "./slots";
+import { type Placement, placementHeight, stampPlacement } from "./slots";
 
 export type RenderStamp = (stamp: StampView, placement: Placement) => ReactNode;
 type Props = { page: number; side: "left" | "right"; width: number; height: number; stamps: readonly StampView[]; pinnedIds?: readonly string[]; renderStamp?: RenderStamp; onStampPress?: (stamp: StampView) => void };
@@ -28,9 +28,9 @@ export function PageView({ page, side, width, height, stamps, pinnedIds = [], re
         {wavePaths(`top:${page}`, width - inset * 2, band).map((d, i) => <Path key={`t${i}`} d={d} transform={`translate(${inset} ${inset})`} stroke={colors.brass} strokeOpacity={0.14} strokeWidth={bookStyle.pageLine} fill="none" />)}
       </Svg>
       {stamps.map((stamp) => {
-        const p = slotPlacement(stamp.id, stamp.slot ?? 1, width, height);
+        const p = stampPlacement(stamp, width, height);
         return (
-          <Pressable key={stamp.id} onPress={onStampPress ? () => onStampPress(stamp) : undefined} accessibilityRole="button" accessibilityLabel={`Stamp, ${stamp.place.name}, page ${page}, slot ${stamp.slot}${stamp.verified ? ", visit verified" : ""}${ribbons.has(stamp.id) ? ", pinned" : ""}`} style={{ position: "absolute", left: p.cx - p.size / 2, top: p.cy - p.size / 2, width: p.size, height: p.size, transform: [{ rotate: `${p.rotation}deg` }] }}>
+          <Pressable key={stamp.id} onPress={onStampPress ? () => onStampPress(stamp) : undefined} accessibilityRole="button" accessibilityLabel={`Stamp, ${stamp.place.name}, page ${page}, slot ${stamp.slot}${stamp.verified ? ", visit verified" : ""}${ribbons.has(stamp.id) ? ", pinned" : ""}`} style={{ position: "absolute", left: p.cx - p.size / 2, top: p.cy - placementHeight(p) / 2, width: p.size, height: placementHeight(p), transform: [{ rotate: `${p.rotation}deg` }] }}>
             {renderStamp(stamp, p)}
             {ribbons.has(stamp.id) ? <Svg width={ribbonW} height={ribbonW * 2.6} style={{ position: "absolute", top: -ribbonW * 0.4, right: p.size * 0.08 }} pointerEvents="none"><Path d={ribbonPath(ribbonW, ribbonW * 2.6)} fill={colors.brass} fillOpacity={0.9} /></Svg> : null}
           </Pressable>
