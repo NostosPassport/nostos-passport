@@ -8,7 +8,7 @@ import { z } from "zod";
 import type { Db } from "@/lib/db";
 import { distanceMeters } from "@/lib/geo";
 import { OSM_ATTRIBUTION, slugify } from "@/lib/osm";
-import { badRequest, notFound } from "@/server/errors";
+import { notFound } from "@/server/errors";
 import { googleNearby, googlePlaceDetails, googleTextSearch, type GooglePlace } from "@/server/services/google-places";
 import { loadNeighborhoods, locate } from "@/server/services/neighborhoods";
 
@@ -18,6 +18,11 @@ const placeSelect = {
   name: true,
   address: true,
   neighborhood: true,
+  area: true,
+  city: true,
+  region: true,
+  country: true,
+  countryCode: true,
   lat: true,
   lng: true,
   geofenceMeters: true,
@@ -37,6 +42,11 @@ type PlaceRow = {
   name: string;
   address: string;
   neighborhood: string;
+  area: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  countryCode: string | null;
   lat: number;
   lng: number;
   geofenceMeters: number;
@@ -56,6 +66,11 @@ export type PlaceView = {
   name: string;
   address: string;
   neighborhood: string;
+  area: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  countryCode: string | null;
   lat: number;
   lng: number;
   geofenceMeters: number;
@@ -84,9 +99,19 @@ export async function listPlaces(db: Db): Promise<PlaceView[]> {
   return (await db.venue.findMany({ orderBy: { name: "asc" }, select: placeSelect })).map(toView);
 }
 
+function displayArea(place: GooglePlace, hood: { name: string } | null, existing?: PlaceRow) {
+  return hood?.name
+    ?? existing?.neighborhood
+    ?? place.area
+    ?? place.city
+    ?? place.region
+    ?? place.country
+    ?? "Unknown area";
+}
+
 function discoveryView(
   place: GooglePlace,
-  hood: { id: string; name: string },
+  hood: { id: string; name: string } | null,
   existing: PlaceRow | undefined,
 ): PlaceView {
   return {
@@ -94,11 +119,16 @@ function discoveryView(
     slug: existing?.slug ?? slugify(place.name),
     name: place.name,
     address: place.address,
-    neighborhood: hood.name,
+    neighborhood: displayArea(place, hood, existing),
+    area: existing?.area ?? place.area,
+    city: existing?.city ?? place.city,
+    region: existing?.region ?? place.region,
+    country: existing?.country ?? place.country,
+    countryCode: existing?.countryCode ?? place.countryCode,
     lat: place.lat,
     lng: place.lng,
     geofenceMeters: existing?.geofenceMeters ?? 100,
-    neighborhoodId: hood.id,
+    neighborhoodId: hood?.id ?? existing?.neighborhoodId ?? null,
     fromOsm: existing?.osmId != null,
     googlePlaceId: place.googlePlaceId,
     category: place.category,
@@ -114,10 +144,9 @@ async function discoveryViews(db: Db, google: GooglePlace[]) {
   const ids = google.map((place) => place.googlePlaceId);
   const stored = await db.venue.findMany({ where: { googlePlaceId: { in: ids } }, select: placeSelect });
   const byGoogle = new Map(stored.flatMap((row) => row.googlePlaceId ? [[row.googlePlaceId, row] as const] : []));
-  return google.flatMap((place) => {
+  return google.map((place) => {
     const hood = locate(hoods, place.lat, place.lng);
-    if (!hood) return [];
-    return [discoveryView(place, hood, byGoogle.get(place.googlePlaceId))];
+    return discoveryView(place, hood, byGoogle.get(place.googlePlaceId));
   });
 }
 
@@ -167,7 +196,7 @@ async function legacyMatch(db: Db, place: GooglePlace) {
 
 /**
  * Beli-style get-or-create: a Google place_id becomes a durable Nostos venue only when the user actually uses it.
- * Cuisine/category are snapshotted from Google's type data at that point.
+ * Cuisine/category and locality are snapshotted from Google's place data at that point.
  */
 export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise<PlaceView> {
   const already = await db.venue.findUnique({ where: { googlePlaceId }, select: placeSelect });
@@ -175,14 +204,17 @@ export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise
 
   const google = await googlePlaceDetails(googlePlaceId);
   const hood = locate(await loadNeighborhoods(db), google.lat, google.lng);
-  if (!hood) throw badRequest("Nostos currently supports New York City restaurants and bars.", "unsupported_place");
-
   const old = await legacyMatch(db, google);
   const data = {
     name: google.name,
     address: google.address,
-    neighborhood: hood.name,
-    neighborhoodId: hood.id,
+    neighborhood: displayArea(google, hood, old ?? undefined),
+    area: google.area,
+    city: google.city,
+    region: google.region,
+    country: google.country,
+    countryCode: google.countryCode,
+    neighborhoodId: hood?.id ?? null,
     lat: google.lat,
     lng: google.lng,
     googlePlaceId: google.googlePlaceId,
