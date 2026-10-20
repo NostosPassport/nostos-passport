@@ -46,11 +46,15 @@ const place = (id: string, over: Partial<Place> = {}): Place => ({
   slug: id,
   name: `Place ${id}`,
   address: "",
-  neighborhood: "West Village",
+  area: "West Village",
+  city: "New York",
+  region: "New York",
+  country: "United States",
+  countryCode: "US",
+  timeZone: "America/New_York",
   lat: 40.7314,
   lng: -74.0078,
   geofenceMeters: 100,
-  neighborhoodId: "n1",
   fromOsm: false,
   googlePlaceId: `g-${id}`,
   category: "restaurant",
@@ -61,7 +65,19 @@ const place = (id: string, over: Partial<Place> = {}): Place => ({
 });
 
 const mineRow = (p: Place, latestStampId: string): UserPlacesResponse["places"][number] => ({
-  place: { id: p.id, slug: p.slug, name: p.name, neighborhood: p.neighborhood, lat: p.lat, lng: p.lng },
+  place: {
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    area: p.area,
+    city: p.city,
+    region: p.region,
+    country: p.country,
+    countryCode: p.countryCode,
+    timeZone: p.timeZone,
+    lat: p.lat,
+    lng: p.lng,
+  },
   stamps: 1,
   latestStamp: {
     id: latestStampId,
@@ -74,7 +90,7 @@ const mineRow = (p: Place, latestStampId: string): UserPlacesResponse["places"][
 
 describe("PinMarker", () => {
   it("renders a visited stamp marker", async () => {
-    const input = { placeId: "a", placeName: "A", neighborhoodId: null, neighborhoodName: "West Village" };
+    const input = { placeId: "a", placeName: "A", localityKey: "West Village", localityName: "West Village" };
     await render(<View><PinMarker kind="lit" selected={false} input={input} /></View>);
   });
 });
