@@ -3,7 +3,7 @@ import { formatDistance } from "@/lib/format";
 
 const song = { title: "Heroes", artist: "David Bowie", artUrl: "https://is1-ssl.mzstatic.com/a.jpg", sourceId: "1" };
 const place = (over: Partial<{ id: string; inside: boolean; distanceM: number; geofenceMeters: number }>) =>
-  ({ id: "p", slug: "p", name: "P", address: "", neighborhood: "East Village", lat: 1, lng: 2, geofenceMeters: 100, neighborhoodId: null, fromOsm: false, googlePlaceId: null, category: null, cuisines: [], primaryType: null, businessStatus: null, distanceM: 10, inside: true, ...over });
+  ({ id: "p", slug: "p", name: "P", address: "", area: "East Village", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York", lat: 1, lng: 2, geofenceMeters: 100, fromOsm: false, googlePlaceId: null, category: null, cuisines: [], primaryType: null, businessStatus: null, distanceM: 10, inside: true, ...over });
 
 describe("stamp content rule", () => {
   it("needs at least one of photo, caption or song", () => {
