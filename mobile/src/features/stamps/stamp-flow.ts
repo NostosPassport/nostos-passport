@@ -1,6 +1,7 @@
 /** Shared stamp-flow helpers. Verification is a positive signal, never a gate to creating a memory. */
 import type { NearbyPlacesResponse } from "@/api/contracts";
 import { formatDistance } from "@/lib/format";
+import { localityLabel } from "@/lib/place";
 import { placeDistanceLabel } from "./composer";
 
 type Nearby = NearbyPlacesResponse["places"][number];
@@ -27,7 +28,7 @@ export function placeSections(places: readonly Nearby[]): { title: string; place
 
 export function placeRowText(p: Nearby): { title: string; subtitle: string; spoken: string } {
   const standing = placeDistanceLabel(p, formatDistance);
-  return { title: p.name, subtitle: `${p.neighborhood} · ${standing}`, spoken: `${p.name}, ${standing}` };
+  return { title: p.name, subtitle: [localityLabel(p), standing].filter(Boolean).join(" · "), spoken: `${p.name}, ${standing}` };
 }
 
 export function stampReadiness(input: { problem: string | null; busy: boolean }): { ready: boolean; hint: string | null } {
