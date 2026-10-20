@@ -1,13 +1,15 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Modal, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { AppState, Modal, Pressable, StyleSheet, Text as NativeText, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
 import { Skeleton } from "@/components/ui/skeleton";
-import { bookMotion, colors, size, space } from "@/theme";
+import { useCollection } from "@/api/queries";
+import { collectionColorValue } from "@/features/collections/colors";
+import { bookMotion, colors, fonts, size, space } from "@/theme";
 import { Passport3DView } from "../lab3d/Passport3DView";
 import { READER_AT, SPREAD_FILL } from "../lab3d/open-motion";
 import { BearerPage } from "./BearerPage";
@@ -23,12 +25,25 @@ import { FOCUS_TOP_SPACE, FOCUS_BOTTOM_SPACE, focusBookSize, focusSpreadCount, s
 import { usePassport } from "./use-passport";
 
 /* eslint-disable react-hooks/immutability -- Reanimated shared values are written through .value by design */
-/** The real 3D passport outside: tap and its cover swings open (the Blender `open` clip), and once the spread is nearly flat
- * the existing 2D page reader fades in over it. Close fades the reader out while the 3D cover starts closing behind it.
- * If there is no live 3D model (still loading, failed, or a test), tapping goes straight to the reader as before.
- */
-export function PassportBook() {
- const data=usePassport();
+type Props = { collectionId?: string };
+
+export function PassportBook({ collectionId }: Props = {}) {
+ const master=usePassport();
+ const collectionQuery=useCollection(collectionId??"",!!collectionId);
+ const collection=collectionQuery.data?.collection??null;
+ const customStamps=collection?.stamps??[];
+ const customPlaces=new Set(customStamps.map(stamp=>stamp.place.id)).size;
+ const customNeighborhoods=new Set(customStamps.map(stamp=>stamp.place.neighborhoodId).filter(Boolean)).size;
+ const customStatus=master.status==="error"||collectionQuery.isError?"error":master.status==="pending"||collectionQuery.isPending?"pending":"ready";
+ const data=collectionId?{
+  ...master,
+  status:customStatus as "pending"|"error"|"ready",
+  stamps:customStamps,
+  counts:{stamps:customStamps.length,places:customPlaces,neighborhoods:customNeighborhoods},
+  retry:()=>{master.retry();void collectionQuery.refetch();},
+ }:master;
+ const coverColor=collection?collectionColorValue(collection.color):undefined;
+ const collectionTitle=collection?.name??null;
  const firstRun=useFirstRun();
  const openPages=()=>{firstRun.dismiss();setTransitioning(true);setFocused(true);};
  const open=()=>{
@@ -107,9 +122,9 @@ export function PassportBook() {
   <View testID="passport-home" pointerEvents={focused||modelClosing?"none":"auto"} style={[styles.home,{paddingTop:insets.top+size.hitTarget+space.xs}]} accessibilityElementsHidden={focused} importantForAccessibility={focused?"no-hide-descendants":"auto"}>
    <Animated.View testID="passport-model-stage" onLayout={e=>setModelFrame({y:e.nativeEvent.layout.y,height:e.nativeEvent.layout.height,width:e.nativeEvent.layout.width})} style={[styles.model,modelMotion]}>
     {modelError?<View style={styles.center}><InlineError message="Couldn't load the 3D passport." onRetry={()=>{setModelError(false);setModelKey(k=>k+1);}}/><Pressable onPress={openPages} accessibilityRole="button" accessibilityLabel="Open stamp pages" style={styles.close}><Icon name="book" size={size.icon} color="accent"/></Pressable></View>:
-    <Passport3DView key={modelKey} running={screenActive&&appActive} lowPower reduceMotion={reduced} soak={false} glassMode="auto" open={opening} onTap={()=>open()} onOpenProgress={onOpenProgress} onOpenSettled={onOpenSettled} onReady={()=>{modelReady.current=true;setModelError(false);}} onError={()=>{modelReady.current=false;setModelClosing(false);setModelError(true);}} onGlass={()=>undefined} onStats={()=>undefined}/>}
+    <Passport3DView key={`${modelKey}-${coverColor??"master"}`} running={screenActive&&appActive} lowPower reduceMotion={reduced} soak={false} glassMode="auto" coverColor={coverColor} open={opening} onTap={()=>open()} onOpenProgress={onOpenProgress} onOpenSettled={onOpenSettled} onReady={()=>{modelReady.current=true;setModelError(false);}} onError={()=>{modelReady.current=false;setModelClosing(false);setModelError(true);}} onGlass={()=>undefined} onStats={()=>undefined}/>} 
    </Animated.View>
-   <Animated.View style={[styles.counts,chromeMotion]}><Counts counts={data.counts}/>{firstRun.show?<FirstRunHint onDismiss={firstRun.dismiss}/>:null}</Animated.View>
+   <Animated.View style={[styles.counts,chromeMotion]}>{collectionTitle?<NativeText numberOfLines={2} style={styles.collectionTitle}>{collectionTitle}</NativeText>:null}<Counts counts={data.counts}/>{!collectionId&&firstRun.show?<FirstRunHint onDismiss={firstRun.dismiss}/>:null}</Animated.View>
   </View>
   <Modal visible={focused} transparent presentationStyle="overFullScreen" animationType="none" onRequestClose={close}>
    <View style={[styles.focus,{paddingTop:insets.top+FOCUS_TOP_SPACE,paddingBottom:insets.bottom+FOCUS_BOTTOM_SPACE,paddingLeft:insets.left+8,paddingRight:insets.right+8}]} accessibilityViewIsModal>
@@ -124,5 +139,5 @@ export function PassportBook() {
 }
 const styles=StyleSheet.create({
  root:{flex:1,backgroundColor:colors.background},home:{flex:1,paddingHorizontal:space.md,paddingBottom:space.xs,alignItems:"center"},center:{flex:1,alignItems:"center",justifyContent:"center",padding:space.lg},
- model:{flex:1,width:"100%",minHeight:0},counts:{width:"100%",alignItems:"center",paddingTop:space.md,gap:space.xs},focus:{flex:1,alignItems:"center",justifyContent:"center"},backdrop:{backgroundColor:colors.background},close:{minWidth:size.hitTarget,minHeight:size.hitTarget,alignItems:"center",justifyContent:"center"},
+ model:{flex:1,width:"100%",minHeight:0},counts:{width:"100%",alignItems:"center",paddingTop:space.md,gap:space.xs},collectionTitle:{maxWidth:"88%",color:colors.textPrimary,fontFamily:fonts.serifRegular,fontSize:28,lineHeight:31,textAlign:"center"},focus:{flex:1,alignItems:"center",justifyContent:"center"},backdrop:{backgroundColor:colors.background},close:{minWidth:size.hitTarget,minHeight:size.hitTarget,alignItems:"center",justifyContent:"center"},
 });
