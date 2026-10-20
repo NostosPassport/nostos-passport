@@ -1,3 +1,5 @@
+import { STAMP_ARTWORK_STYLE } from "../../../shared/passport-artwork";
+
 /**
  * EDITORIAL: the shared visual language from the current Nostos Figma refinement.
  *
@@ -106,9 +108,9 @@ export const stampStyle = {
   glow: colors.brassGlow,
   roughness: 0.55,
   partialFill: 0.18,
-  strokes: { ring: 3, hair: 1.2, text: 2 },
-  text: { name: 11, area: 6.5, arcTrack: 1.2, bannerTrack: 1, completeWord: 13, completeTrack: 2, completeArea: 7 },
-  maxTiltDeg: 11,
+  strokes: STAMP_ARTWORK_STYLE.strokes,
+  text: STAMP_ARTWORK_STYLE.text,
+  maxTiltDeg: STAMP_ARTWORK_STYLE.maxTiltDeg,
   maxOverlap: 0.12,
 } as const;
 
