@@ -7,6 +7,7 @@ import { pageAndSlot } from "@/lib/layout";
 import { getStorage, newStorageKey, type BlobStorage } from "@/lib/storage";
 import type { Actor } from "@/server/actor";
 import { livePhotoCoverSelect, uploadUrl } from "@/server/media";
+import { appendStampToCollections } from "@/server/services/collection-membership";
 import { recordProgress } from "@/server/services/neighborhoods";
 import { assertCleanText, badRequest, notFound } from "@/server/errors";
 import { assertCanEditOwnContent, requireSignedIn } from "@/server/permissions";
@@ -20,6 +21,8 @@ export const MAX_STAMP_PHOTOS = 6;
 const SONG_FIELD_MAX = 200;
 const YEAR_MS = 366 * 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_MS = 5 * 60 * 1000;
+
+type CreateStampInput = { bytes?: Buffer | null; photos?: Buffer[]; meta: unknown; collectionIds?: string[] };
 
 const artUrl = z.string().trim().max(500).refine((u) => {
   try {
@@ -127,11 +130,11 @@ async function toStampViews(db: Db, rows: readonly StampRow[], now: Date) {
   })));
 }
 
-export async function createStamp(db: Db, actor: Actor | null, venueId: string, input: { bytes?: Buffer | null; photos?: Buffer[]; meta: unknown }, now = new Date(), storage: BlobStorage = getStorage()) {
+export async function createStamp(db: Db, actor: Actor | null, venueId: string, input: CreateStampInput, now = new Date(), storage: BlobStorage = getStorage()) {
   return (await createStampWithProgress(db, actor, venueId, input, now, storage)).stamp;
 }
 
-export async function createStampWithProgress(db: Db, actor: Actor | null, venueId: string, input: { bytes?: Buffer | null; photos?: Buffer[]; meta: unknown }, now = new Date(), storage: BlobStorage = getStorage()) {
+export async function createStampWithProgress(db: Db, actor: Actor | null, venueId: string, input: CreateStampInput, now = new Date(), storage: BlobStorage = getStorage()) {
   const me = requireSignedIn(actor);
   const meta = stampMetaSchema.parse(input.meta);
   const buffers = [...(input.bytes ? [input.bytes] : []), ...(input.photos ?? [])].filter((b) => b.length > 0);
@@ -163,6 +166,7 @@ export async function createStampWithProgress(db: Db, actor: Actor | null, venue
         }, select: { id: true },
       });
       for (const [i, img] of images.entries()) await tx.stampPhoto.create({ data: { stampId: created.id, storageKey: keys[i]!, mimeType: img.kind.mime, position: i, createdAt: now } });
+      await appendStampToCollections(tx, me.userId, created.id, input.collectionIds ?? [], now);
       if (!me.geofenceExempt) progress = await recordProgress(tx, me.userId, venueId, created.id, now);
       for (const [i, img] of images.entries()) { await storage.put(keys[i]!, img.bytes, img.kind.mime); written.push(keys[i]!); }
       return tx.photo.findUniqueOrThrow({ where: { id: created.id }, select: stampSelect });

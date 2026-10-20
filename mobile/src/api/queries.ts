@@ -42,13 +42,11 @@ function useDebouncedText(raw: string, delayMs = 350) {
   return value;
 }
 
-export function usePlaceSearch(rawQuery: string, pos: { lat: number; lng: number } | null) {
+export function usePlaceSearch(rawQuery: string, _pos: { lat: number; lng: number } | null) {
   const q = useDebouncedText(rawQuery);
-  const lat = pos ? Math.round(pos.lat * 1_000) / 1_000 : null;
-  const lng = pos ? Math.round(pos.lng * 1_000) / 1_000 : null;
   return useQuery({
-    queryKey: qk.placeSearch(q, lat, lng),
-    queryFn: () => api.places.search(q, lat !== null && lng !== null ? { lat, lng } : undefined),
+    queryKey: qk.placeSearch(q, null, null),
+    queryFn: () => api.places.search(q),
     enabled: q.length >= 2,
     staleTime: 2 * 60_000,
     retry: false,
@@ -84,12 +82,21 @@ export function usePlacePage(id: string, pos: { lat: number; lng: number } | nul
 
 export function usePins() {
   const { status } = useAuth();
-  return useQuery({ queryKey: qk.pins, queryFn: () => api.pins.get(), enabled: status === "signedIn", staleTime: 60_000 });
+  return useQuery({ queryKey: qk.pins, queryFn: api.pins.get, enabled: status === "signedIn", staleTime: 60_000 });
 }
 
 export function useNeighborhoodIndex() {
   const { status } = useAuth();
-  return useQuery({ queryKey: qk.neighborhoods, queryFn: () => api.neighborhoods(), enabled: status === "signedIn", staleTime: 60_000 });
+  return useQuery({ queryKey: qk.neighborhoods, queryFn: api.neighborhoods, enabled: status === "signedIn", staleTime: 60_000 });
+}
+
+export function useCollections() {
+  const { status } = useAuth();
+  return useQuery({ queryKey: qk.collections, queryFn: api.collections.list, enabled: status === "signedIn", staleTime: 30_000 });
+}
+
+export function useCollection(id: string, enabled = true) {
+  return useQuery({ queryKey: qk.collection(id), queryFn: () => api.collections.get(id), enabled: enabled && id !== "", staleTime: 30_000 });
 }
 
 export function useProfileSettings() {

@@ -1,6 +1,7 @@
 /** Typed HTTP client for the Nostos API. */
 import type { z } from "zod";
 import * as C from "./contracts";
+import * as CC from "./collection-contracts";
 
 export type ApiErrorCode =
   | "unauthorized"
@@ -165,6 +166,15 @@ export function createApi(config: ApiConfig) {
       mine: (idOrSlug: string, pos?: { lat: number; lng: number }) => request("GET", `/api/places/${enc(idOrSlug)}/mine${pos ? `?lat=${pos.lat}&lng=${pos.lng}` : ""}`, C.MyPlacePageResponse),
       nearby: (pos: { lat: number; lng: number }, radiusM = 750) => request("GET", `/api/places/nearby?lat=${pos.lat}&lng=${pos.lng}&radius=${Math.round(radiusM)}`, C.NearbyPlacesResponse),
       search: (q: string, pos?: { lat: number; lng: number }) => request("GET", `/api/places/search?q=${enc(q)}${pos ? `&lat=${pos.lat}&lng=${pos.lng}` : ""}`, C.PlacesResponse),
+    },
+
+    collections: {
+      list: () => request("GET", "/api/collections", CC.CollectionsResponse),
+      get: (id: string) => request("GET", `/api/collections/${enc(id)}`, CC.CollectionResponse),
+      create: (body: CC.CollectionCreateInput) => request("POST", "/api/collections", CC.CollectionResponse, body),
+      update: (id: string, body: CC.CollectionUpdateInput) => request("PATCH", `/api/collections/${enc(id)}`, CC.CollectionResponse, body),
+      remove: (id: string) => request("DELETE", `/api/collections/${enc(id)}`, CC.DeleteCollectionResponse),
+      setForStamp: (stampId: string, collectionIds: string[]) => request("PUT", `/api/stamps/${enc(stampId)}/collections`, CC.StampCollectionsResponse, { collectionIds }),
     },
 
     stamps: {

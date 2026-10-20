@@ -46,6 +46,7 @@ model User {
   rateEvents  RateEvent[]
   pinned      PinnedStamp[]
   completions NeighborhoodCompletion[]
+  collections Collection[]
 
   @@map("app_user")
 }
@@ -131,6 +132,7 @@ model Photo {
   venue               Venue     @relation(fields: [venueId], references: [id])
   photos              StampPhoto[]
   pins                PinnedStamp[]
+  collections         CollectionStamp[]
 
   @@index([venueId, createdAt])
   @@index([userId, createdAt])
@@ -138,6 +140,34 @@ model Photo {
   @@index([venueId, visitedAt])
   @@index([userId, visitedAt])
   @@map("photo")
+}
+
+model Collection {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  name      String
+  color     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stamps    CollectionStamp[]
+
+  @@index([userId, createdAt])
+  @@map("collection")
+}
+
+model CollectionStamp {
+  collectionId String     @map("collection_id")
+  stampId      String     @map("stamp_id")
+  position     Int
+  addedAt      DateTime   @default(now()) @map("added_at") @db.Timestamptz(3)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  stamp        Photo      @relation(fields: [stampId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, stampId])
+  @@index([collectionId, position])
+  @@index([stampId])
+  @@map("collection_stamp")
 }
 
 model Neighborhood {

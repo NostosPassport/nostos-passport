@@ -36,6 +36,7 @@ jest.mock("@/api/queries", () => ({
   qk: jest.requireActual("@/api/keys").qk,
   useNearbyPlaces: () => ({ data: { places: mockNearby }, isPending: false, isError: false, refetch: jest.fn() }),
   usePlaceSearch: () => ({ data: { places: mockSearchResults }, isPending: false, isError: false, isSuccess: true, refetch: jest.fn() }),
+  useCollections: () => ({ data: { collections: [] }, isPending: false, isError: false, refetch: jest.fn() }),
 }));
 jest.mock("@/api", () => {
   const client = jest.requireActual("@/api/client");

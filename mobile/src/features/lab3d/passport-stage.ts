@@ -12,6 +12,7 @@ import { createViewportSizer } from "./viewport";
 import { colors, scene3d } from "@/theme";
 import { type EnvChoice, type GlassChoice, type GlassMode, chooseEnvironment, chooseGlass, describeAssets } from "./asset-select";
 import { withoutWebGL1Global, guardPixelStorei, guardUnimplemented, createCompatLog } from "./gl-compat";
+import { createCoverTitleMesh } from "./cover-title";
 import { decodeImage, flipRows } from "./decode-image";
 import { parseModel } from "./load-model";
 import { cameraDistance, facingAngle, motionShare, shadowSpread } from "./open-motion";
@@ -79,16 +80,26 @@ async function loadEnvironment(): Promise<{ texture: THREE.DataTexture; choice: 
 
 const hexRgb = (hex: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
 
-function buildCoverArtworkMap(source: THREE.Texture | null): THREE.DataTexture | null {
+function buildCoverArtworkMap(source: THREE.Texture | null, coverColor: string, hideWordmark = false): THREE.DataTexture | null {
   if (!source) return null;
   const image = (source as THREE.DataTexture).image as { data?: Uint8Array; width?: number; height?: number } | undefined;
   if (!image?.data || !image.width || !image.height) return null;
 
-  const base = hexRgb(scene3d.passportCover);
+  const base = hexRgb(coverColor);
   const art = hexRgb(scene3d.passportCoverArtwork);
   const out = new Uint8Array(image.data.length);
+  const frontWidth = image.width / 2;
   for (let i = 0; i < image.data.length; i += 4) {
-    const raw = Math.max(0, Math.min(1, (image.data[i + 1]! - 14) / 85));
+    const pixel = i / 4;
+    const x = pixel % image.width;
+    const y = Math.floor(pixel / image.width);
+    const inWordmark = hideWordmark
+      && x < frontWidth
+      && x > frontWidth * 0.16
+      && x < frontWidth * 0.84
+      && y > image.height * 0.56
+      && y < image.height * 0.70;
+    const raw = inWordmark ? 0 : Math.max(0, Math.min(1, (image.data[i + 1]! - 14) / 85));
     const mask = raw * raw * (3 - 2 * raw);
     out[i] = Math.round(base[0] + (art[0] - base[0]) * mask);
     out[i + 1] = Math.round(base[1] + (art[1] - base[1]) * mask);
@@ -136,7 +147,7 @@ const disposeMaterial = (m: THREE.Material) => {
   m.dispose();
 };
 
-export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage> {
+export async function createStage(gl: ExpoWebGLRenderingContext, coverColor: string = scene3d.passportCover, coverTitle?: string): Promise<Stage> {
   const started = Date.now();
   const width = gl.drawingBufferWidth;
   const height = gl.drawingBufferHeight;
@@ -213,6 +224,24 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
   tilt.add(spin);
   scene.add(tilt);
 
+  const customTitle = coverTitle?.trim() ?? "";
+  const coverFront = model.root.getObjectByName("CoverFront") as THREE.Mesh | undefined;
+  if (customTitle && coverFront?.isMesh) {
+    coverFront.geometry.computeBoundingBox();
+    const box = coverFront.geometry.boundingBox;
+    const titleMesh = createCoverTitleMesh(customTitle, scene3d.passportCoverArtwork);
+    if (box && titleMesh) {
+      const widthLocal = box.max.x - box.min.x;
+      const heightLocal = box.max.y - box.min.y;
+      titleMesh.position.set(
+        box.min.x + widthLocal * 0.5,
+        box.min.y + heightLocal * 0.39,
+        box.max.z + 0.00003,
+      );
+      coverFront.add(titleMesh);
+    }
+  }
+
   const covers: THREE.Mesh[] = [];
   model.root.traverse((o) => {
     const m = o as THREE.Mesh;
@@ -221,13 +250,13 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
   const coverMaterial = covers[0]?.material as THREE.MeshPhysicalMaterial | undefined;
   const hiddenCoverTextures = new Set<THREE.Texture>();
   if (coverMaterial) {
-    const artworkMap = buildCoverArtworkMap(coverMaterial.roughnessMap);
+    const artworkMap = buildCoverArtworkMap(coverMaterial.roughnessMap, coverColor, customTitle.length > 0);
     for (const texture of [coverMaterial.map, coverMaterial.metalnessMap, coverMaterial.roughnessMap]) {
       if (texture) hiddenCoverTextures.add(texture);
     }
     coverMaterial.map = artworkMap;
     if (artworkMap) coverMaterial.color.setScalar(1);
-    else coverMaterial.color.set(scene3d.passportCover);
+    else coverMaterial.color.set(coverColor);
     coverMaterial.metalness = 0;
     coverMaterial.metalnessMap = null;
     coverMaterial.roughness = scene3d.passportCoverRoughness;

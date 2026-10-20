@@ -14,6 +14,10 @@ export default function AppLayout() {
       <Stack.Screen name="stamp/landed" options={{ headerShown: false, gestureEnabled: false, animation: "fade" }} />
       <Stack.Screen name="stamp/edit" options={{ title: "Edit stamp", presentation: "modal" }} />
       <Stack.Screen name="stamp/song" options={{ title: "Add a song", presentation: "modal" }} />
+      <Stack.Screen name="collections/index" options={{ title: "Collections", headerLargeTitle: true }} />
+      <Stack.Screen name="collections/new" options={{ title: "Create collection", presentation: "modal" }} />
+      <Stack.Screen name="collections/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="collections/[id]/edit" options={{ title: "Edit collection", presentation: "modal" }} />
       <Stack.Screen
         name="location-permission"
         options={{ presentation: "formSheet", sheetAllowedDetents: [0.6], sheetGrabberVisible: true, sheetCornerRadius: radius.sheet, headerShown: false, contentStyle: { backgroundColor: colors.surface } }}
