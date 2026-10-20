@@ -2,7 +2,7 @@
 import React, { useId } from "react";
 import type { CategoryStampArtwork } from "@/lib/category-stamp-artwork";
 import { categoryStampDateLabel, safeStampPhotoUrl } from "@/lib/category-stamp-artwork";
-import { MASK_ERASE, MASK_KEEP, type StampDesignInput, buildStampScene, designFromArtwork } from "@/lib/category-stamp-design";
+import { MASK_ERASE, MASK_KEEP, type PriceTier, type StampDesignInput, buildStampScene, designFromArtwork } from "@/lib/category-stamp-design";
 
 /** Five small petals around a centre: the mark in the top corner of the rectangular templates. */
 const PETALS = [0, 72, 144, 216, 288];
@@ -16,7 +16,7 @@ type Common = {
   localPreviewPhotoUrl?: string | null;
 };
 type Props = Common & (
-  | { artwork: CategoryStampArtwork; name: string; locality: string; timeZone?: string | null; design?: undefined }
+  | { artwork: CategoryStampArtwork & { priceTier?: PriceTier | null }; name: string; locality: string; timeZone?: string | null; design?: undefined }
   | { design: StampDesignInput; artwork?: undefined }
 );
 
@@ -26,7 +26,7 @@ type Props = Common & (
  */
 export function CategoryStampSvg(props: Props) {
   const uid = "nst-" + useId().replace(/[^a-zA-Z0-9_-]/g, "_");
-  const design = props.design ?? designFromArtwork(props.artwork, { name: props.name, locality: props.locality, timeZone: props.timeZone });
+  const design = props.design ?? designFromArtwork(props.artwork, { name: props.name, locality: props.locality, timeZone: props.timeZone, priceTier: props.artwork.priceTier ?? null });
   const date = categoryStampDateLabel(props.visitedAt, design.timeZone);
   const scene = buildStampScene(design, { seed: props.seed ?? design.name, dateLabel: date });
   const ink = design.color;
