@@ -5,10 +5,8 @@ export {
   STAMP_ARTWORK_STYLE,
   STAMP_BOX,
   borderFor,
-  completionDesign,
   fitName,
   motifPath,
-  rayPath,
   ringsFor,
   shapePath,
   stampDesign,
@@ -16,7 +14,6 @@ export {
 
 export type {
   Border,
-  CompletionDesign,
   Motif,
   Shape,
   Speckle,
