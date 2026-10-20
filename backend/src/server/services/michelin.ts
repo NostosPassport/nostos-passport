@@ -6,6 +6,8 @@ import { distanceMeters } from "@/lib/geo";
 import type { MichelinStars } from "@/lib/michelin-stamp";
 
 const ALGOLIA_URL = "https://8nvhrd7onv-dsn.algolia.net/1/indexes/*/queries?x-algolia-agent=Algolia%20for%20JavaScript%20(5.47.0)%3B%20Lite%20(5.47.0)%3B%20Browser&x-algolia-api-key=3222e669cf890dc73fa5f38241117ba5&x-algolia-application-id=8NVHRD7ONV";
+const MICHELIN_REFERRER = "https://guide.michelin.com/us/en/restaurants/3-stars-michelin";
+const MICHELIN_ORIGIN = "https://guide.michelin.com";
 const MICHELIN_TIMEOUT_MS = 2_500;
 
 type MichelinDb = Db | PrismaTypes.TransactionClient;
@@ -85,8 +87,13 @@ export async function lookupMichelinStars(place: MichelinPlace, fetchImpl: typeo
     method: "POST",
     headers: {
       accept: "application/json",
+      "accept-language": "en-US,en;q=0.9",
       "content-type": "text/plain",
+      origin: MICHELIN_ORIGIN,
+      referer: MICHELIN_REFERRER,
     },
+    referrer: MICHELIN_REFERRER,
+    referrerPolicy: "strict-origin-when-cross-origin",
     body: JSON.stringify({
       requests: [{
         indexName: "prod-restaurants-en",
@@ -108,7 +115,16 @@ export async function lookupMichelinStars(place: MichelinPlace, fetchImpl: typeo
     redirect: "error",
   });
   logMichelin("response", { venueId: place.id, name: place.name, status: response.status });
-  if (!response.ok) throw new Error(`Michelin search ${response.status}`);
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    logMichelin("response error", {
+      venueId: place.id,
+      name: place.name,
+      status: response.status,
+      body: body.slice(0, 500),
+    });
+    throw new Error(`Michelin search ${response.status}${body ? `: ${body.slice(0, 200)}` : ""}`);
+  }
   const parsed = responseSchema.safeParse(await response.json());
   if (!parsed.success) throw new Error("Unexpected Michelin search response");
   const match = parsed.data.results[0]!.hits
