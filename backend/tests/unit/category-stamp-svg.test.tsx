@@ -40,6 +40,10 @@ describe("category stamp SVGs",()=>{
    expect(html).toContain('aria-label="An Exceptionally Long Cocktail Lounge, BAR / CLUB, West Village, 20 OCT 2026"');
    expect(html).not.toContain('lengthAdjust="spacingAndGlyphs"'); // Latin names are measured, never squeezed
  });
+ it("renders a cached Google price tier carried by stamp artwork",()=>{
+   const html=renderToStaticMarkup(one({ ...italian, priceTier: "$$$" } as typeof italian & { priceTier: "$$$" },"Osteria"));
+   expect(html).toContain("$$$");
+ });
  it("draws all four reference templates from design input",()=>{
    const html=REFERENCE.map(c=>renderToStaticMarkup(createElement(CategoryStampSvg,{design:c.design,visitedAt:c.visitedAt}))).join("");
    for(const word of ["OSTERIA","JOHN F.","THE ASTER HOUSE","MIDNIGHT SOCIAL"]) expect(html.toUpperCase()).toContain(word.toUpperCase());
