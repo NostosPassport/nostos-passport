@@ -5,6 +5,9 @@ import { prisma } from "@/lib/db";
 const TABLES = [
   "rate_event",
   "login_attempt",
+  "collection_share",
+  "collection_stamp",
+  "collection",
   "pinned_stamp",
   "neighborhood_completion",
   "stamp_photo",
