@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCategoryStamp, inkTextWidth, CATEGORY_STAMP_GEOMETRY, categoryStampDateLabel, photoClipPath, layoutCategoryName, safeStampPhotoUrl } from "../../../shared/category-stamp-artwork";
+import { resolveCategoryStamp, inkTextWidth, fitCategoryLocality, categoryNameLineWidth, CATEGORY_STAMP_GEOMETRY, categoryStampDateLabel, photoClipPath, layoutCategoryName, safeStampPhotoUrl } from "../../../shared/category-stamp-artwork";
 
 describe("category ink stamp design v1", () => {
   it("uses specific primary type rather than generic tags", () => {
@@ -31,8 +31,9 @@ describe("category ink stamp design v1", () => {
   });
   it("uses fixed dimensions for the approved restaurant and bar references", () => {
     expect(CATEGORY_STAMP_GEOMETRY.restaurant.photo).toEqual({x:22,y:21,s:110});
-    expect(CATEGORY_STAMP_GEOMETRY.bar.photo).toEqual({x:46,y:47,s:68});
-    expect(CATEGORY_STAMP_GEOMETRY.bar.titleArc).toMatch(/^M/);
+    expect(CATEGORY_STAMP_GEOMETRY.bar.photo).toEqual({x:43,y:40,s:74});
+    expect(CATEGORY_STAMP_GEOMETRY.bar.photo.s).toBeGreaterThan(68);
+    expect(CATEGORY_STAMP_GEOMETRY.bar.photo.y + CATEGORY_STAMP_GEOMETRY.bar.photo.s).toBeLessThan(CATEGORY_STAMP_GEOMETRY.bar.dateY);
     expect(resolveCategoryStamp({id:"o",category:"restaurant",primaryType:"italian_restaurant"})?.color).toBe("#143B2B");
     expect(resolveCategoryStamp({id:"b",category:"bar",primaryType:"cocktail_bar"})?.color).toBe("#7C1030");
     expect(categoryStampDateLabel("2026-10-20T12:00:00-04:00")).toBe("20 OCT 2026");
@@ -53,6 +54,17 @@ describe("category ink stamp design v1", () => {
         expect(layout.lines.every(line=>inkTextWidth(line,layout.fontSize)<=(kind==="bar"?85:102)+0.01)).toBe(true);
       }
     }
+  });
+  it("keeps WEST VILLAGE untruncated and constrains actual requested SVG advances", () => {
+    const line=fitCategoryLocality("WEST VILLAGE","bar");
+    const g=CATEGORY_STAMP_GEOMETRY.bar;
+    const halfChord=Math.sqrt(71**2-(g.localityY-80)**2);
+    expect(line.text).toBe("WEST VILLAGE");
+    expect(line.width).toBeLessThan(halfChord*2);
+    const long=fitCategoryLocality("A VERY LONG UNBROKEN NEIGHBORHOOD NAME","bar");
+    expect(long.text.endsWith("…")).toBe(true);
+    expect(long.width).toBeLessThanOrEqual(60);
+    expect(categoryNameLineWidth("WWWWWWWW","bar",13,0,2)).toBeLessThanOrEqual(54);
   });
   it("keeps the circles' three metadata lines inside reserved coordinates", () => {
     expect(CATEGORY_STAMP_GEOMETRY.bar.dateY).toBeLessThan(CATEGORY_STAMP_GEOMETRY.bar.categoryY);
