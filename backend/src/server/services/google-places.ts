@@ -16,6 +16,7 @@ const LIST_FIELD_MASK = [
   "places.formattedAddress",
   "places.location",
   "places.addressComponents",
+  "places.timeZone",
   "places.primaryType",
   "places.types",
   "places.businessStatus",
@@ -26,6 +27,7 @@ const DETAIL_FIELD_MASK = [
   "formattedAddress",
   "location",
   "addressComponents",
+  "timeZone",
   "primaryType",
   "types",
   "businessStatus",
@@ -43,6 +45,7 @@ const googlePlaceSchema = z.object({
   formattedAddress: z.string().optional(),
   location: z.object({ latitude: z.number(), longitude: z.number() }).passthrough(),
   addressComponents: z.array(addressComponentSchema).optional().default([]),
+  timeZone: z.string().optional(),
   primaryType: z.string().optional(),
   types: z.array(z.string()).optional().default([]),
   businessStatus: z.string().optional(),
@@ -66,6 +69,7 @@ export type GooglePlace = PlaceLocality & {
   address: string;
   lat: number;
   lng: number;
+  timeZone: string | null;
   primaryType: string | null;
   types: string[];
   businessStatus: string | null;
@@ -211,6 +215,7 @@ function normalize(raw: z.infer<typeof googlePlaceSchema>): GooglePlace | null {
     lat: raw.location.latitude,
     lng: raw.location.longitude,
     ...localityFromAddressComponents(raw.addressComponents),
+    timeZone: raw.timeZone?.trim() || null,
     primaryType,
     types: [...new Set(raw.types)].slice(0, 32),
     businessStatus: raw.businessStatus ?? null,
