@@ -1,7 +1,8 @@
-// Expo's default Metro config, plus .glb as an asset type (the 3D passport lab bundles assets/3d/passport.glb).
+const path = require("node:path");
 const { getDefaultConfig } = require("expo/metro-config");
 
 const config = getDefaultConfig(__dirname);
 config.resolver.assetExts.push("glb");
+config.watchFolders = [...(config.watchFolders ?? []), path.resolve(__dirname, "../shared")];
 
 module.exports = config;
