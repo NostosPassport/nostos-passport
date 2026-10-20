@@ -9,9 +9,8 @@ import type { Db } from "@/lib/db";
 import { distanceMeters } from "@/lib/geo";
 import { OSM_ATTRIBUTION, slugify } from "@/lib/osm";
 import { notFound } from "@/server/errors";
-import { cacheGooglePrice, cachedGooglePrice, cachedGooglePrices } from "@/server/services/google-price-cache";
+import { cacheGooglePrice, cachedGooglePrice } from "@/server/services/google-price-cache";
 import { googleNearby, googlePlaceDetails, googleTextSearch, type GooglePlace } from "@/server/services/google-places";
-import type { PriceTier } from "../../../../shared/category-stamp-design";
 
 const placeSelect = {
   id: true,
@@ -79,32 +78,28 @@ export type PlaceView = {
   cuisines: string[];
   primaryType: string | null;
   businessStatus: string | null;
-  priceTier: PriceTier | null;
 };
 
 export const localityLabel = (place: Pick<PlaceView, "area" | "city" | "region" | "country">) =>
   place.area ?? place.city ?? place.region ?? place.country ?? "Unknown area";
 
 const category = (value: string | null): "restaurant" | "bar" | null => value === "restaurant" || value === "bar" ? value : null;
-const toView = ({ osmId, googlePrimaryType, googleBusinessStatus, ...p }: PlaceRow, priceTier: PriceTier | null): PlaceView => ({
+const toView = ({ osmId, googlePrimaryType, googleBusinessStatus, ...p }: PlaceRow): PlaceView => ({
   ...p,
   fromOsm: osmId !== null,
   category: category(p.category),
   primaryType: googlePrimaryType,
   businessStatus: googleBusinessStatus,
-  priceTier,
 });
 
 /** Legacy ODbL attribution for stored OSM venues. New discovery comes from Google Places. */
 export const attributionFor = (places: readonly { fromOsm: boolean }[]) => (places.some((p) => p.fromOsm) ? OSM_ATTRIBUTION : null);
 
 export async function listPlaces(db: Db): Promise<PlaceView[]> {
-  const rows = await db.venue.findMany({ orderBy: { name: "asc" }, select: placeSelect });
-  const prices = await cachedGooglePrices(db, rows.map((row) => row.id));
-  return rows.map((row) => toView(row, prices.get(row.id) ?? null));
+  return (await db.venue.findMany({ orderBy: { name: "asc" }, select: placeSelect })).map(toView);
 }
 
-function discoveryView(place: GooglePlace, existing: PlaceRow | undefined, priceTier: PriceTier | null): PlaceView {
+function discoveryView(place: GooglePlace, existing: PlaceRow | undefined): PlaceView {
   return {
     id: existing?.id ?? place.googlePlaceId,
     slug: existing?.slug ?? slugify(place.name),
@@ -125,7 +120,6 @@ function discoveryView(place: GooglePlace, existing: PlaceRow | undefined, price
     cuisines: place.cuisines,
     primaryType: place.primaryType,
     businessStatus: place.businessStatus,
-    priceTier,
   };
 }
 
@@ -134,11 +128,7 @@ async function discoveryViews(db: Db, google: GooglePlace[]) {
   const ids = google.map((place) => place.googlePlaceId);
   const stored = await db.venue.findMany({ where: { googlePlaceId: { in: ids } }, select: placeSelect });
   const byGoogle = new Map(stored.flatMap((row) => row.googlePlaceId ? [[row.googlePlaceId, row] as const] : []));
-  const prices = await cachedGooglePrices(db, stored.map((row) => row.id));
-  return google.map((place) => {
-    const existing = byGoogle.get(place.googlePlaceId);
-    return discoveryView(place, existing, existing ? prices.get(existing.id) ?? null : null);
-  });
+  return google.map((place) => discoveryView(place, byGoogle.get(place.googlePlaceId)));
 }
 
 /**
@@ -186,18 +176,18 @@ async function legacyMatch(db: Db, place: GooglePlace) {
 }
 
 async function viewStoredGoogleVenue(db: Db, row: PlaceRow): Promise<PlaceView> {
-  if (!row.googlePlaceId) return toView(row, null);
+  if (!row.googlePlaceId) return toView(row);
   const cached = await cachedGooglePrice(db, row.id);
-  if (cached.cached) return toView(row, cached.priceTier);
+  if (cached.cached) return toView(row);
   const google = await googlePlaceDetails(row.googlePlaceId);
-  const priceTier = await cacheGooglePrice(db, row.id, google.priceLevel);
-  return toView(row, priceTier);
+  await cacheGooglePrice(db, row.id, google.priceLevel);
+  return toView(row);
 }
 
 /**
  * Beli-style get-or-create: a Google place_id becomes a durable Nostos venue only when the user actually uses it.
- * Cuisine/category, locality and price tier are snapshotted at that point. Price is cached after the first Details call,
- * including a no-price result, so later stamps never pay to ask Google for it again.
+ * Cuisine/category and locality are snapshotted from Google's place data at that point. Price is cached after the first
+ * Details call, including a no-price result, so later stamps never pay to ask Google for it again.
  */
 export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise<PlaceView> {
   const already = await db.venue.findUnique({ where: { googlePlaceId }, select: placeSelect });
@@ -227,20 +217,20 @@ export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise
 
   if (old) {
     const row = await db.venue.update({ where: { id: old.id }, data, select: placeSelect });
-    const priceTier = await cacheGooglePrice(db, row.id, google.priceLevel);
-    return toView(row, priceTier);
+    await cacheGooglePrice(db, row.id, google.priceLevel);
+    return toView(row);
   }
   const slug = await uniqueSlug(db, google.name, google.googlePlaceId);
   try {
     const row = await db.venue.create({ data: { ...data, slug, geofenceMeters: 100 }, select: placeSelect });
-    const priceTier = await cacheGooglePrice(db, row.id, google.priceLevel);
-    return toView(row, priceTier);
+    await cacheGooglePrice(db, row.id, google.priceLevel);
+    return toView(row);
   } catch (error) {
     const raced = await db.venue.findUnique({ where: { googlePlaceId }, select: placeSelect });
     if (raced) {
       const cached = await cachedGooglePrice(db, raced.id);
-      const priceTier = cached.cached ? cached.priceTier : await cacheGooglePrice(db, raced.id, google.priceLevel);
-      return toView(raced, priceTier);
+      if (!cached.cached) await cacheGooglePrice(db, raced.id, google.priceLevel);
+      return toView(raced);
     }
     throw error;
   }
