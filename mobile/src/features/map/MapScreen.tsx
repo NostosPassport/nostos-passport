@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import MapView, { Marker, type Region } from "react-native-maps";
 
+import type { Place } from "@/api/contracts";
 import { useMe, usePlaces, useUserPlaces } from "@/api/queries";
 import { Body, DisplayTitle, EditorialHeader, EditorialSafeContent, EditorialScreen, GearButton, Kicker, Rule } from "@/components/editorial/editorial";
 import { Icon } from "@/components/ui/icon";
@@ -14,6 +15,16 @@ import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
 
 type MapFilter = "all" | "restaurant" | "bar";
+
+const BAR_TYPES = new Set(["bar", "bar_and_grill", "beer_garden", "brewpub", "cocktail_bar", "gastropub", "hookah_bar", "irish_pub", "lounge_bar", "pub", "snack_bar", "sports_bar", "wine_bar"]);
+
+function effectiveCategory(place: Place): Exclude<MapFilter, "all"> | null {
+  if (place.category) return place.category;
+  if (place.primaryType && BAR_TYPES.has(place.primaryType)) return "bar";
+  if (place.primaryType === "restaurant" || place.primaryType?.endsWith("_restaurant") || place.primaryType === "steak_house") return "restaurant";
+  if (place.cuisines.length > 0) return "restaurant";
+  return null;
+}
 
 export function MapScreen() {
   const me = useMe();
@@ -27,7 +38,7 @@ export function MapScreen() {
   const [filter, setFilter] = useState<MapFilter>("all");
   const visited = useMemo(() => mine.data?.places ?? [], [mine.data?.places]);
   const categoryByPlace = useMemo(
-    () => new Map((storedPlaces.data?.places ?? []).map((place) => [place.id, place.category] as const)),
+    () => new Map((storedPlaces.data?.places ?? []).map((place) => [place.id, effectiveCategory(place)] as const)),
     [storedPlaces.data?.places],
   );
   const filteredVisited = useMemo(
