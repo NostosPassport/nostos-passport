@@ -228,7 +228,7 @@ model RateEvent {
 }
 
 model LoginAttempt {
-  id        String   @id
+  id        String   @id @default(cuid())
   email     String
   ip        String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
