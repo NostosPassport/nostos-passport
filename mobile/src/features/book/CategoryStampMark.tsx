@@ -14,7 +14,7 @@ export function CategoryStampMark({ artwork, name, locality, visitedAt, photoUri
 }) {
   const id = "nst-" + useId().replace(/[^a-zA-Z0-9_-]/g, "_");
   const circle = artwork.kind === "bar";
-  const photo = circle ? { x: 43, y: 54, s: 74 } : { x: 18, y: 28, s: 98 };
+  const photo = circle ? { x: 45, y: 50, s: 70 } : { x: 18, y: 28, s: 98 };
   const title = layoutCategoryName(name, artwork.kind);
   const url = safeStampPhotoUrl(photoUri);
   const ink = artwork.color;
@@ -35,8 +35,8 @@ export function CategoryStampMark({ artwork, name, locality, visitedAt, photoUri
       {circle ? <>
         {title.lines.map((line, i) => <SvgText key={i} x={80} y={title.lines.length === 1 ? 40 : 26 + i * 14} textAnchor="middle" fill={ink} fontSize={title.fontSize} fontWeight="700">{line}</SvgText>)}
         <G transform="translate(122 43)"><Path d={CUISINE_PATHS[artwork.icon]} fill="none" stroke={ink} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" /></G>
-        <SvgText x={80} y={138} textAnchor="middle" fontSize={9} fill={ink} fontWeight="700">{locality.slice(0, 27)}</SvgText>
-        <SvgText x={80} y={148} textAnchor="middle" fontSize={7.8} fill={ink}>{date}</SvgText>
+        <SvgText x={80} y={131} textAnchor="middle" fontSize={9} fill={ink} fontWeight="700">{locality.slice(0, 27)}</SvgText>
+        <SvgText x={80} y={141} textAnchor="middle" fontSize={7.8} fill={ink}>{date}</SvgText>
       </> : <>
         {title.lines.map((line,i) => <SvgText key={i} x={128} y={41 + i * 19} fill={ink} fontWeight="700" fontSize={title.fontSize}>{line}</SvgText>)}
         <G transform="translate(128 90)"><Path d={CUISINE_PATHS[artwork.icon]} fill="none" stroke={ink} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" /></G>
