@@ -8,7 +8,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { collectionColorValue } from "@/features/collections/colors";
-import { colors, hairlineWidth, size, space } from "@/theme";
+import { colors, hairlineWidth, radius, size, space } from "@/theme";
 
 export default function CollectionsScreen() {
   const query = useCollections();
@@ -21,7 +21,7 @@ export default function CollectionsScreen() {
         <Text variant="callout" color="textSecondary">Build smaller passports from stamps in your master Passport. A stamp can appear in as many collections as you want.</Text>
         {query.isPending ? <SkeletonRows count={3} /> : null}
         {query.isError ? <InlineError message="Couldn't load your collections." onRetry={() => void query.refetch()} /> : null}
-        {!query.isPending && !query.isError && collections.length === 0 ? <View style={styles.empty}><Icon name="book" color="accent" size={32} /><Text variant="title2">No collections yet</Text><Text variant="callout" color="textSecondary" align="center">Create a passport for favorites, date nights, a trip, or anything else you want to keep together.</Text></View> : null}
+        {!query.isPending && !query.isError && collections.length === 0 ? <View style={styles.empty}><Icon name="book" color="accent" size={size.iconLarge} /><Text variant="title2">No collections yet</Text><Text variant="callout" color="textSecondary" align="center">Create a passport for favorites, date nights, a trip, or anything else you want to keep together.</Text></View> : null}
         <View style={styles.list}>
           {collections.map((collection) => (
             <Pressable key={collection.id} onPress={() => router.push({ pathname: "/collections/[id]", params: { id: collection.id } })} accessibilityRole="button" accessibilityLabel={`Open ${collection.name}`} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
@@ -42,12 +42,12 @@ export default function CollectionsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { padding: space.lg, paddingBottom: 48, gap: space.lg },
+  content: { padding: space.lg, paddingBottom: space.xxxl, gap: space.lg },
   list: { gap: space.sm },
-  row: { minHeight: 92, flexDirection: "row", alignItems: "center", gap: space.md, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline, paddingVertical: space.sm },
-  book: { width: 54, height: 72, borderRadius: 3, paddingLeft: 7, justifyContent: "center" },
+  row: { minHeight: size.listRow, flexDirection: "row", alignItems: "center", gap: space.md, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline, paddingVertical: space.sm },
+  book: { width: size.buttonHeight, height: size.avatarLarge, borderRadius: radius.chip, paddingLeft: space.xs, justifyContent: "center" },
   bookRule: { width: hairlineWidth, height: "80%", backgroundColor: colors.foilHighlight },
-  rowText: { flex: 1, gap: 4 },
+  rowText: { flex: 1, gap: space.xxs },
   pressed: { opacity: 0.72 },
-  empty: { minHeight: 260, alignItems: "center", justifyContent: "center", gap: space.sm, paddingHorizontal: space.xl },
+  empty: { minHeight: size.heroHeight, alignItems: "center", justifyContent: "center", gap: space.sm, paddingHorizontal: space.xl },
 });
