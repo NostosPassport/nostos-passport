@@ -8,9 +8,8 @@ import { scheduleOnRN } from "react-native-worklets";
 
 import { haptics } from "@/lib/haptics";
 import { bookMotion, colors, hairlineWidth, shadows } from "@/theme";
-import { DRAG_ZONE, FLICK, TAP_ZONE, castShade, dragPos, flipAngle, flipShade, settleTarget, showsBack, stepTarget, turnProgress } from "./flip-math";
+import { DRAG_ZONE, FLICK, TAP_ZONE, castShade, dragPos, flipShade, settleTarget, stepTarget, turnProgress } from "./flip-math";
 import { type HitRect, singlePageTapTarget } from "./focus-interaction";
-import { PERSPECTIVE } from "./open-math";
 
 type Props = {
   pageTaps?: boolean;
@@ -27,6 +26,7 @@ type Props = {
 type Zone = "next" | "prev" | null;
 
 function zoneAt(x: number, width: number, share: number): Zone {
+  "worklet";
   if (x >= width - width * share && x <= width) return "next";
   if (x >= 0 && x <= width * share) return "prev";
   return null;
@@ -138,12 +138,14 @@ function TurningPage({ k, pos, pw, ph, reduced, front, back }: { k: number; pos:
   const frontStyle = useAnimatedStyle(() => {
     const p = turnProgress(pos.value, k);
     if (reduced) return { opacity: 1 - p, transform: [] };
-    return { opacity: showsBack(p) ? 0 : 1, transform: [{ perspective: PERSPECTIVE }, { rotateY: `${flipAngle(p)}deg` }] };
+    const scale = Math.max(0.001, 1 - p * 2);
+    return { opacity: p < 0.5 ? 1 : 0, transform: [{ scaleX: scale }] };
   });
   const backStyle = useAnimatedStyle(() => {
     const p = turnProgress(pos.value, k);
     if (reduced) return { opacity: p, transform: [] };
-    return { opacity: showsBack(p) ? 1 : 0, transform: [{ perspective: PERSPECTIVE }, { rotateY: `${flipAngle(p)}deg` }, { scaleX: -1 }] };
+    const scale = Math.max(0.001, p * 2 - 1);
+    return { opacity: p >= 0.5 ? 1 : 0, transform: [{ scaleX: scale }] };
   });
   const shade = useAnimatedStyle(() => ({ opacity: reduced ? 0 : flipShade(turnProgress(pos.value, k)) }));
   const cast = useAnimatedStyle(() => ({ opacity: reduced ? 0 : castShade(turnProgress(pos.value, k)) }));
