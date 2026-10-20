@@ -4,10 +4,11 @@ import { View, StyleSheet } from "react-native";
 
 import { api } from "@/api";
 import { qk } from "@/api/keys";
+import { COLLECTION_COLORS } from "@/features/collections/colors";
 import { CollectionEditor, type CollectionDraft } from "@/features/collections/CollectionEditor";
 import { colors } from "@/theme";
 
-const initial: CollectionDraft = { name: "", color: "blue", stampIds: [] };
+const initial: CollectionDraft = { name: "", color: COLLECTION_COLORS[0]!.id, stampIds: [] };
 
 export default function NewCollectionScreen() {
   const queryClient = useQueryClient();
