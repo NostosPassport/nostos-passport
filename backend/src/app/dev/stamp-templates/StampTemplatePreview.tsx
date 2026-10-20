@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { resolveCategoryStamp } from "@/lib/category-stamp-artwork";
 import { CategoryStampSvg } from "@/app/c/[token]/CategoryStampSvg";
 
@@ -17,8 +17,7 @@ const examples=[
 ] as const;
 
 export function StampTemplatePreview(){
- const [file,setFile]=useState<File|null>(null);
- const blob=useMemo(()=>file?URL.createObjectURL(file):null,[file]);
+ const [blob,setBlob]=useState<string|null>(null);
  const [passport,setPassport]=useState(true);
  const [paper,setPaper]=useState<"ivory"|"blue"|"white">("ivory");
  useEffect(()=>()=>{if(blob)URL.revokeObjectURL(blob);},[blob]);
@@ -27,7 +26,7 @@ export function StampTemplatePreview(){
   <h1 style={{fontFamily:"Georgia,serif",fontSize:32}}>Nostos · transparent category stamps</h1>
   <p>Production web SVG renderer, development-only. Photo uploads stay in this browser; no server upload is performed.</p>
   <div style={{display:"flex",gap:20,flexWrap:"wrap",alignItems:"center"}}>
-   <label>Local photo: <input type="file" accept="image/*" onChange={e=>setFile(e.target.files?.[0]??null)}/></label>
+   <label>Local photo: <input type="file" accept="image/*" onChange={e=>setBlob(e.target.files?.[0]?URL.createObjectURL(e.target.files[0]):null)}/></label>
    <label><input type="checkbox" checked={passport} onChange={e=>setPassport(e.target.checked)}/> Real passport-size (120px width)</label>
    <label>Page paper <select value={paper} onChange={e=>setPaper(e.target.value as typeof paper)}>
     <option value="ivory">Ivory</option><option value="blue">Blue</option><option value="white">White</option>
