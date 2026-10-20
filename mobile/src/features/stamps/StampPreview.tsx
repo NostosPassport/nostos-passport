@@ -8,17 +8,17 @@ import { resolveCategoryStamp } from "../../../../shared/category-stamp-artwork"
 export function StampPreview({ place, visitedAt, photoUri, size }: { place: Place; visitedAt: string; photoUri?: string | null; size: number }) {
   const artwork = resolveCategoryStamp(place);
   const key = place.googlePlaceId ?? place.id;
-  const [michelinStars, setMichelinStars] = useState<MichelinStars | null>(null);
+  const [preview, setPreview] = useState<{ key: string; stars: MichelinStars | null } | null>(null);
+  const michelinStars = preview?.key === key ? preview.stars : null;
 
   useEffect(() => {
     let live = true;
     michelinPreviewDraft.select(key);
-    setMichelinStars(null);
     if (place.category !== "restaurant") return () => michelinPreviewDraft.clear(key);
-    void fetchMichelinPreview(key).then((preview) => {
+    void fetchMichelinPreview(key).then((result) => {
       if (!live) return;
-      michelinPreviewDraft.resolve(key, preview);
-      setMichelinStars(preview.stars);
+      michelinPreviewDraft.resolve(key, result);
+      setPreview({ key, stars: result.stars });
     }).catch(() => {
       if (live) michelinPreviewDraft.resolve(key, { venueId: place.id, stars: null, proof: null });
     });
