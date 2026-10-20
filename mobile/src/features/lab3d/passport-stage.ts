@@ -134,9 +134,7 @@ function buildShadowTexture(): THREE.DataTexture {
       px[k + 2] = rgb[2]!;
       px[k + 3] = Math.round(255 * a * a);
     }
-  const t = new THREE.DataTexture(px, n, n, 4);
-  t.format = THREE.RGBAFormat;
-  t.type = THREE.UnsignedByteType;
+  const t = new THREE.DataTexture(px, n, n, THREE.RGBAFormat, THREE.UnsignedByteType);
   t.magFilter = THREE.LinearFilter;
   t.minFilter = THREE.LinearFilter;
   t.generateMipmaps = false;
