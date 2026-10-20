@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import type { Db } from "@/lib/db";
 import { distanceMeters } from "@/lib/geo";
-import type { MichelinStars } from "../../../../shared/michelin-stamp";
+import type { MichelinStars } from "@/lib/michelin-stamp";
 
 const ALGOLIA_URL = "https://8nvhrd7onv-dsn.algolia.net/1/indexes/*/queries?x-algolia-agent=Algolia%20for%20JavaScript%20(5.47.0)%3B%20Lite%20(5.47.0)%3B%20Browser&x-algolia-api-key=3222e669cf890dc73fa5f38241117ba5&x-algolia-application-id=8NVHRD7ONV";
 const MICHELIN_TIMEOUT_MS = 2_500;
