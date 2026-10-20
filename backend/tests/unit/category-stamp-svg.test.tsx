@@ -28,13 +28,23 @@ describe("transparent category SVGs",()=>{
    expect(new Set(ids).size).toBe(3);
    expect(markup).toContain('preserveAspectRatio="xMidYMid slice"');
  });
+ it("keeps WEST VILLAGE visible and constrains both name layouts",()=>{
+   const html=renderToStaticMarkup(createElement("div",null,
+     createElement(CategoryStampSvg,{artwork:bar,name:"An Exceptionally Long Cocktail Lounge",locality:"West Village",visitedAt:"2026-10-20T12:00:00-04:00"}),
+     one(italian,"Café de l'Étoile")));
+   expect(html).toContain("WEST VILLAGE");
+   expect(html).toContain('lengthAdjust="spacingAndGlyphs"');
+   expect(html).toContain("textLength=");
+   expect(html).not.toMatch(/<rect[^>]+fill="(white|#fff|#FFFFFF)"/);
+   expect(html).not.toMatch(/<circle[^>]+fill="(white|#fff|#FFFFFF)"/);
+ });
  it("reserves non-overlapping bar date, category and locality lines",()=>{
    const html=renderToStaticMarkup(one(bar,"Midnight Social"));
    expect(html).toContain("BAR / CLUB");
    expect(html).toContain("NEW YORK");
    expect(html).toContain("20 OCT 2026");
    expect(html).toContain('y="124"');
-   expect(html).toContain('y="136"');
-   expect(html).toContain('y="146"');
+   expect(html).toContain('y="134"');
+   expect(html).toContain('y="143"');
  });
 });
