@@ -17,17 +17,18 @@ const wire = (x: unknown) => JSON.parse(JSON.stringify(x)) as unknown;
 
 describe("invariants", () => {
   it("rule 1: location verification is server-enforced while outside stamps remain unverified", async () => {
-    const venue = await makeVenue();
+    const outsideVenue = await makeVenue();
+    const insideVenue = await makeVenue();
     const me = await makeActor();
-    const outside = await makeStamp(me, venue.id, { at: OUTSIDE });
+    const outside = await makeStamp(me, outsideVenue.id, { at: OUTSIDE });
     expect(outside.verified).toBe(false);
     expect((await prisma.photo.findUniqueOrThrow({ where: { id: outside.id } })).countable).toBe(true);
 
-    const inside = await makeStamp(me, venue.id, { at: INSIDE });
+    const inside = await makeStamp(me, insideVenue.id, { at: INSIDE });
     expect(inside.verified).toBe(true);
 
     const reviewer = await makeActor({ geofenceExempt: true });
-    const stamp = await makeStamp(reviewer, venue.id, { at: OUTSIDE });
+    const stamp = await makeStamp(reviewer, outsideVenue.id, { at: OUTSIDE });
     expect(stamp.verified).toBe(false);
     expect((await prisma.photo.findUniqueOrThrow({ where: { id: stamp.id } })).countable).toBe(false);
   });
