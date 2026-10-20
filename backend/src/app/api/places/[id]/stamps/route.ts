@@ -3,6 +3,7 @@ import { MAX_UPLOAD_BYTES } from "@/lib/storage";
 import { badRequest, ServiceError } from "@/server/errors";
 import { getActor, ok, route } from "@/server/http";
 import { requireSignedIn } from "@/server/permissions";
+import { ensureMichelinForStamp } from "@/server/services/michelin";
 import { ensureGooglePriceForStamp, getPlace } from "@/server/services/places";
 import { createStamp, MAX_STAMP_PHOTOS } from "@/server/services/stamps";
 
@@ -30,6 +31,7 @@ export const POST = route<Ctx>(async (req, { params }) => {
   }
   const place = await getPlace(prisma, id);
   await ensureGooglePriceForStamp(prisma, place);
+  await ensureMichelinForStamp(prisma, place);
   const stamp = await createStamp(prisma, actor, place.id, {
     photos: await Promise.all((files as Blob[]).map(async (f) => Buffer.from(await f.arrayBuffer()))),
     meta,
