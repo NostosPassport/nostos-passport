@@ -15,7 +15,11 @@ describe("Michelin metadata", () => {
 
   it("lays out one to three six-lobed outlined Michelin marks inside the restaurant border", () => {
     const mark = { cx: 297, cy: 26, r: 5 };
-    expect(michelinMarkCenters(mark, 1)).toEqual([{ cx: 289, cy: 26, r: 3.5999999999999996 }]);
+    const one = michelinMarkCenters(mark, 1);
+    expect(one).toHaveLength(1);
+    expect(one[0]!.cx).toBe(289);
+    expect(one[0]!.cy).toBe(26);
+    expect(one[0]!.r).toBeCloseTo(3.6);
     expect(michelinMarkCenters(mark, 2)).toHaveLength(2);
     const three = michelinMarkCenters(mark, 3);
     expect(three).toHaveLength(3);
