@@ -45,7 +45,6 @@ model User {
   photos      Photo[]
   rateEvents  RateEvent[]
   pinned      PinnedStamp[]
-  completions NeighborhoodCompletion[]
   collections Collection[]
 
   @@map("app_user")
@@ -81,32 +80,29 @@ model EmailChallenge {
 }
 
 model Venue {
-  id                   String        @id @default(cuid())
-  slug                 String        @unique
+  id                   String   @id @default(cuid())
+  slug                 String   @unique
   name                 String
   address              String
-  neighborhood         String
   area                 String?
   city                 String?
   region               String?
   country              String?
-  countryCode          String?       @map("country_code")
-  timeZone             String?       @map("time_zone")
+  countryCode          String?  @map("country_code")
+  timeZone             String   @default("UTC") @map("time_zone")
   lat                  Float
   lng                  Float
-  geofenceMeters       Int           @default(100) @map("geofence_meters")
-  neighborhoodId       String?       @map("neighborhood_id")
-  hood                 Neighborhood? @relation(fields: [neighborhoodId], references: [id])
-  osmId                String?       @unique @map("osm_id")
-  googlePlaceId        String?       @unique @map("google_place_id")
-  googlePrimaryType    String?       @map("google_primary_type")
-  googleTypes          String[]      @default([]) @map("google_types")
-  cuisines             String[]      @default([])
+  geofenceMeters       Int      @default(100) @map("geofence_meters")
+  osmId                String?  @unique @map("osm_id")
+  googlePlaceId        String?  @unique @map("google_place_id")
+  googlePrimaryType    String?  @map("google_primary_type")
+  googleTypes          String[] @default([]) @map("google_types")
+  cuisines             String[] @default([])
   category             String?
-  googleBusinessStatus String?       @map("google_business_status")
-  googleSyncedAt       DateTime?     @map("google_synced_at") @db.Timestamptz(3)
-  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  googleBusinessStatus String?  @map("google_business_status")
+  googleSyncedAt       DateTime? @map("google_synced_at") @db.Timestamptz(3)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   photos Photo[]
 
@@ -185,33 +181,6 @@ model CollectionStamp {
   @@index([collectionId, position])
   @@index([stampId])
   @@map("collection_stamp")
-}
-
-model Neighborhood {
-  id          String                   @id
-  name        String
-  borough     String
-  boundary    Json
-  minLat      Float                    @map("min_lat")
-  maxLat      Float                    @map("max_lat")
-  minLng      Float                    @map("min_lng")
-  maxLng      Float                    @map("max_lng")
-  places      Venue[]
-  completions NeighborhoodCompletion[]
-
-  @@map("neighborhood")
-}
-
-model NeighborhoodCompletion {
-  userId         String       @map("user_id")
-  neighborhoodId String       @map("neighborhood_id")
-  completedAt    DateTime     @map("completed_at") @db.Timestamptz(3)
-  stampId        String       @map("stamp_id")
-  user           User         @relation(fields: [userId], references: [id])
-  neighborhood   Neighborhood @relation(fields: [neighborhoodId], references: [id])
-
-  @@id([userId, neighborhoodId])
-  @@map("neighborhood_completion")
 }
 
 model StampPhoto {
