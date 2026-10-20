@@ -34,6 +34,7 @@ import styles from "./SharedPassportReader.module.css";
 
 export type SharedPassportStamp = {
   id: string;
+  href: string;
   caption: string;
   visitedAt: string;
   verified: boolean;
@@ -252,7 +253,6 @@ function PassportPage({
             }}
           >
             <StampArtwork stamp={stamp} />
-            
           </button>
         );
       })}
@@ -284,6 +284,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
   const maxPage = Math.max(2, ...stamps.map((stamp) => stamp.page));
   const totalSpreads = Math.max(1, Math.ceil(maxPage / 2));
   const safeSpread = Math.min(spread, totalSpreads - 1);
+  const openStamp = (stamp: SharedPassportStamp) => window.location.assign(stamp.href);
 
   useEffect(() => {
     if (!selected) return;
@@ -446,7 +447,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
             page={baseLeft}
             side="left"
             stamps={byPage.get(baseLeft) ?? []}
-            onStamp={setSelected}
+            onStamp={openStamp}
             onNavigate={!turn && safeSpread > 0 ? () => animateTo(safeSpread - 1) : undefined}
             emptyMessage={stamps.length === 0 && baseLeft === 1 ? "No stamps in this collection yet." : undefined}
           />
@@ -454,7 +455,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
             page={baseRight}
             side="right"
             stamps={byPage.get(baseRight) ?? []}
-            onStamp={setSelected}
+            onStamp={openStamp}
             onNavigate={!turn && safeSpread < totalSpreads - 1 ? () => animateTo(safeSpread + 1) : undefined}
           />
 
@@ -477,7 +478,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
                   side={turnFront.side}
                   stamps={byPage.get(turnFront.page) ?? []}
                   embedded
-                  onStamp={setSelected}
+                  onStamp={openStamp}
                 />
                 <div className={styles.turnShade} style={{ opacity: flipShade(turn.progress) }} />
               </div>
@@ -487,7 +488,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
                   side={turnBack.side}
                   stamps={byPage.get(turnBack.page) ?? []}
                   embedded
-                  onStamp={setSelected}
+                  onStamp={openStamp}
                 />
                 <div className={styles.turnShade} style={{ opacity: flipShade(turn.progress) }} />
               </div>
