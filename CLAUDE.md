@@ -8,7 +8,7 @@ Nostos is an iPhone-only personal passport for New York. A signed-in user saves 
 
 Users choose `Now` or `Past` when creating a stamp. A Now stamp may be location verified when the server confirms the current device position is inside the selected place geofence. Location is optional: missing location or an out-of-geofence position produces a normal unverified stamp instead of blocking creation. Past stamps are unverified, may be dated up to one year back, and cannot use a future date. Visit dates can be edited later; changing the calendar day of a verified stamp removes verification.
 
-Current product scope is owner-only. Feed, follows, likes, Activity, other-user passports, moderation/admin social tooling, and guest preview are not part of the product or active architecture.
+The product is private by default. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared. Feed, follows, likes, Activity, other-user passports, public profiles, moderation/admin social tooling, and guest preview are not part of the product or active architecture.
 
 ## Photos
 
@@ -49,13 +49,14 @@ Preserve these unless the user explicitly changes product behavior and the corre
 
 1. Visit verification is decided server-side from submitted current coordinates and the venue geofence. Outside/no-location Now stamps remain valid but unverified. `geofenceExempt` remains the App Review/QA exception.
 2. Raw device coordinates used for visit verification are not retained on stamps. The stored trust artifact is verification status/time.
-3. One account never receives another account's passport, stamp, pin, place-history, or profile data.
-4. Removing a stamp is final and retained as `removed_at`; user content is not silently hard-deleted.
-5. Uploaded images are re-encoded so EXIF/GPS does not survive the upload.
-6. Raw storage keys and internal user identifiers are not exposed in normal API payloads.
-7. Under-age signup handling must remain consistent with the current age-gate implementation and legal review requirements.
-8. Contract copies between backend and mobile must stay synchronized.
-9. Passport chronology and page/slot assignment use `visited_at`, not database creation time.
+3. One account never receives another account's master Passport, private collection, stamp, pin, place-history, or profile data. The only cross-account/signed-out stamp visibility is an explicitly enabled collection share link, which exposes only that collection's current stamps through the dedicated read-only web resolver.
+4. The master Passport has no sharing primitive. Share records may reference only persisted `Collection` rows, are owner-controlled, and must become unavailable immediately when disabled or when their collection/account is deleted.
+5. Removing a stamp is final and retained as `removed_at`; user content is not silently hard-deleted.
+6. Uploaded images are re-encoded so EXIF/GPS does not survive the upload.
+7. Raw storage keys and internal user identifiers are not exposed in normal API payloads or shared collection pages.
+8. Under-age signup handling must remain consistent with the current age-gate implementation and legal review requirements.
+9. Contract copies between backend and mobile must stay synchronized.
+10. Passport chronology and page/slot assignment use `visited_at`, not database creation time.
 
 ## Engineering rules
 
