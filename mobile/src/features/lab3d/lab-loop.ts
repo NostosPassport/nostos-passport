@@ -15,19 +15,16 @@ import { bobOffset, dragAngle } from "./rotation";
 import { type SimInput, advance, createSim, isActive, isSettled } from "./sim";
 
 export type LoopProps = {
-  /** True only while focused, the app is active and the view is visible. */
   running: boolean;
   lowPower: boolean;
   reduceMotion: boolean;
   soak: boolean;
   glassMode: GlassMode;
+  coverColor?: string;
   onReady: (info: StageInfo) => void;
   onTap?: () => void;
-  /** True opens the passport (plays the model's `open` clip forward); false closes it (the same clip backwards). */
   open: boolean;
-  /** How far open, 0..1, on every frame it changes. */
   onOpenProgress?: (progress: number) => void;
-  /** Once, when the passport has finished opening (true) or closing (false). */
   onOpenSettled?: (open: boolean) => void;
   onGlass: (glass: GlassChoice) => void;
   onStats: (fps: FpsReading, target: number) => void;
@@ -64,7 +61,7 @@ export class LabLoop {
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: (e) => {
-      this.ignoring = !canRotate(this.openProgress, this.openTarget); // an open or opening passport is not a toy to spin
+      this.ignoring = !canRotate(this.openProgress, this.openTarget);
       if (this.ignoring) return;
       grab(this.finger, e.nativeEvent.pageX, e.nativeEvent.pageY, e.nativeEvent.timestamp);
       this.sim = { ...this.sim, velocity: 0 };
@@ -94,7 +91,6 @@ export class LabLoop {
     this.wake();
   }
 
-  /** Called on every render of the view with the newest props; starts or stops the loop when `running` changes. */
   update(props: LoopProps) {
     const glassChanged = props.glassMode !== this.props.glassMode;
     this.props = props;
@@ -108,14 +104,13 @@ export class LabLoop {
     else this.stop();
   }
 
-  /** The GLView made a context (again, if the pixel cap changed): free any old stage, build the new one, start. */
   async attach(gl: Parameters<typeof createStage>[0]) {
     const generation = ++this.generation;
     try {
       this.stop();
       this.stage?.dispose();
       this.stage = null;
-      const stage = await createStage(gl);
+      const stage = await createStage(gl, this.props.coverColor);
       if (this.disposed || generation !== this.generation) {
         stage.dispose();
         return;
@@ -123,7 +118,7 @@ export class LabLoop {
       this.stage = stage;
       this.props.onGlass(stage.setGlass(this.props.glassMode));
       this.props.onReady({ ...stage.info });
-      stage.render({ angle: this.sim.angle, tiltX: 0, tiltY: 0, bob: 0, open: this.openProgress }); // one frame, so the model shows even when settled
+      stage.render({ angle: this.sim.angle, tiltX: 0, tiltY: 0, bob: 0, open: this.openProgress });
       this.wake();
     } catch (e) {
       this.props.onError(e instanceof Error ? e.message : String(e));
@@ -156,7 +151,7 @@ export class LabLoop {
     const resized = this.stage.resize();
     const f = this.finger;
     const animating = this.openProgress !== this.renderedOpen || !isOpenSettled(this.openProgress, this.openTarget);
-    const idle = this.openProgress === 0 && this.openTarget === 0; // idle spin and bob only while the book is closed
+    const idle = this.openProgress === 0 && this.openTarget === 0;
     const input: SimInput = { dragging: f.dragging, offsetX: f.offsetX, offsetY: f.offsetY, motion: !p.reduceMotion && !p.lowPower && idle, soak: p.soak && idle };
     const fps = targetFps({ active: isActive(this.sim, input) || animating, lowPower: p.lowPower });
     if (shouldRender(now, this.lastRender, fps)) {
@@ -165,7 +160,7 @@ export class LabLoop {
       this.openProgress = stepOpen(this.openProgress, this.openTarget, dt, p.reduceMotion);
       const moved = this.openProgress !== this.renderedOpen;
       if (!resized && !moved && isSettled(this.sim, input)) {
-        this.lastRender = null; // nothing moves: draw nothing
+        this.lastRender = null;
       } else {
         this.sim = advance(this.sim, dt, input);
         this.stage.render({ angle: this.sim.angle, tiltX: this.sim.tiltX, tiltY: this.sim.tiltY, bob: bobOffset(this.sim.time, input.motion), open: this.openProgress });
@@ -183,7 +178,6 @@ export class LabLoop {
       this.lastStats = now;
       p.onStats(this.meter.read(now), fps);
     }
-    // Fully open and still: stop the loop entirely (the reader is on top). Any prop change or touch wakes it again.
     if (this.openTarget === 1 && this.openProgress === 1 && this.settledReported && !f.dragging) return;
     this.frame = requestAnimationFrame(this.tick);
   };
