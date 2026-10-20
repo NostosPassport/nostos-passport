@@ -80,7 +80,7 @@ describe("Stamp detail", () => {
     expect(screen.getByText("Velvet")).toBeTruthy();
     expect(screen.getByText("hello there")).toBeTruthy();
     expect(screen.getByText("David Bowie")).toBeTruthy();
-    expect(screen.getByText(/East Village, NEW YORK/)).toBeTruthy();
+    expect(screen.getByText("EAST VILLAGE")).toBeTruthy();
     expect(screen.getByText("VISIT VERIFIED")).toBeTruthy();
     expect(screen.getByText(/confirmed this device was near the venue/)).toBeTruthy();
   });
