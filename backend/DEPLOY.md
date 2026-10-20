@@ -2,7 +2,7 @@
 
 Nostos production is designed around:
 
-- Vercel for the Next.js API and public legal/support site
+- Vercel for the Next.js API and public web site
 - Neon Postgres for persistent relational data
 - Cloudflare R2 for private photo storage
 - Resend for passwordless authentication email
@@ -13,7 +13,7 @@ The mobile app is configured to use:
 - production API: `https://api.nostospassport.com`
 - preview API: `https://preview-api.nostospassport.com`
 
-The public production site uses `https://nostospassport.com` for privacy, terms, support, and account-deletion pages.
+The public production site uses `https://nostospassport.com` for privacy, terms, support, account deletion, and shared collection pages.
 
 ## Environment layout
 
@@ -37,7 +37,7 @@ Create the project from `NostosPassport/nostos-passport` with:
 - Root Directory: `backend`
 - Framework Preset: Next.js
 - Build Command: `pnpm vercel-build`
-- Node.js: 20 or newer
+- Node.js: 22.x, matching `backend/package.json`
 - Function region: `iad1` (Washington, D.C.)
 
 `pnpm vercel-build` runs:
@@ -49,7 +49,7 @@ prisma migrate deploy
 next build
 ```
 
-`deploy:check` refuses a preview/production deployment when required secrets are missing, database URLs point to localhost, storage is not configured for R2, or auth/cron secrets are invalid.
+`deploy:check` refuses a preview/production deployment when required secrets are missing, database URLs point to localhost, storage is not configured for R2, or authentication, cron, or collection-share secrets are invalid.
 
 The repository already defines the daily maintenance cron in `backend/vercel.json`.
 
@@ -78,7 +78,7 @@ Before any non-local migration:
 1. inspect the pending migrations
 2. confirm the database target
 3. confirm the provider backup or restore strategy
-4. rehearse destructive schema changes on an isolated Neon branch when possible
+4. rehearse schema changes on an isolated Neon branch when possible
 5. use `prisma migrate deploy` only for the intended environment
 6. never run `pnpm db:reset` or `prisma migrate reset` against preview or production
 
@@ -107,7 +107,7 @@ R2_SECRET_ACCESS_KEY=<R2 S3 secret>
 R2_BUCKET=<environment bucket name>
 ```
 
-Photos stay private. The backend generates short-lived S3-compatible presigned GET URLs for authorized owners.
+Photos stay private. The backend generates short-lived S3-compatible presigned GET URLs after the viewer has been authorized, including when a valid shared collection link authorizes a read-only web view.
 
 ## Resend
 
@@ -141,21 +141,25 @@ Generate `AUTH_CODE_SECRET` with:
 openssl rand -hex 32
 ```
 
-## Operational secret
+## Operational and share-link secrets
 
-Generate a separate cron secret:
+Generate separate random secrets for the maintenance cron and signed collection-share links:
 
 ```bash
 openssl rand -hex 32
+openssl rand -hex 32
 ```
 
-Set it as:
+Set them as:
 
 ```text
 CRON_SECRET=<random secret>
+SHARE_TOKEN_SECRET=<different random secret>
 ```
 
-Do not reuse `AUTH_CODE_SECRET` as `CRON_SECRET`.
+`AUTH_CODE_SECRET`, `CRON_SECRET`, and `SHARE_TOKEN_SECRET` must all be distinct and at least 32 characters. Rotating `SHARE_TOKEN_SECRET` intentionally invalidates every currently enabled collection URL, so do not rotate it casually.
+
+`PUBLIC_WEB_URL` is optional. Production defaults shared collection URLs to `https://nostospassport.com`; set the variable only when an environment intentionally needs a different public origin. Preview currently defaults to `https://preview-api.nostospassport.com` unless overridden.
 
 ## Required Vercel variables
 
@@ -176,6 +180,7 @@ AUTH_COMPANY_ADDRESS=<complete mailing address>
 RESEND_VERIFY_EMAIL_TEMPLATE_ID=email-otp
 AUTH_CODE_SECRET=<unique random secret>
 CRON_SECRET=<unique random secret>
+SHARE_TOKEN_SECRET=<unique random secret>
 ```
 
 Preview should use the same variable names with its own Neon database, R2 bucket, Resend key, and unique secrets, plus:
@@ -183,6 +188,12 @@ Preview should use the same variable names with its own Neon database, R2 bucket
 ```text
 APP_ENV=preview
 R2_BUCKET=nostos-preview
+```
+
+If preview shared links should use a dedicated public web domain instead of the preview API origin, also set:
+
+```text
+PUBLIC_WEB_URL=<preview public origin>
 ```
 
 Do not set `DEV_SEED_PASSWORD`, `TEST_DATABASE_URL`, or local upload paths in production unless an explicit operational task requires them.
@@ -206,16 +217,20 @@ Use `false` to clear it. `geofenceExempt` is not a staff role and grants no acce
 Verify, in order:
 
 1. `GET /api/health` succeeds on the intended domain
-2. Prisma migrations are present in the intended database
+2. Prisma migrations are present in the intended database, including `collection_share`
 3. signup sends an OTP through Resend
 4. sign-in works by both email and handle
 5. a test photo can be uploaded to the correct R2 bucket
 6. the returned photo URL is signed and expires
 7. the maintenance cron authenticates successfully
-8. an account cannot read another account's passport, stamp, or place-history data
-9. the mobile preview build talks only to `preview-api.nostospassport.com`
-10. the mobile production build talks only to `api.nostospassport.com`
-11. `https://nostospassport.com/privacy`, `/terms`, and `/support` resolve before App Store submission
+8. an account cannot read another account's master Passport, private collection, stamp, or place-history data
+9. enabling a user-created collection share produces a working `/c/...` link without requiring sign-in
+10. the shared page contains only the stamps currently in that collection and does not expose the user's master Passport
+11. disabling the shared link makes the old URL return not found immediately
+12. deleting the collection or owner account makes the shared URL unavailable
+13. the mobile preview build talks only to `preview-api.nostospassport.com`
+14. the mobile production build talks only to `api.nostospassport.com`
+15. `https://nostospassport.com/privacy`, `/terms`, `/support`, and a valid `/c/...` page resolve before App Store submission
 
 ## Local development
 
@@ -225,5 +240,6 @@ Local defaults remain:
 - Docker Postgres port: 5438
 - database: `nostos_codex`
 - `STORAGE_DRIVER=local`
+- shared collection links use `http://localhost:3001` unless `PUBLIC_WEB_URL` is set
 
-Local development may log OTP codes to the backend console when `RESEND_API_KEY` is blank.
+Local development may log OTP codes to the backend console when `RESEND_API_KEY` is blank. The committed `.env.example` includes a development-only collection-share secret; preview and production must use unique real secrets.
