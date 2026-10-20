@@ -8,7 +8,7 @@ Nostos is an iPhone-only personal passport for the places a user goes. The norma
 
 Primary app navigation is Passport, Stamp, and Map. Feed, follows, likes, Activity, public profiles, moderation, and other social architecture are not part of the active product. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared.
 
-Google-backed restaurant and bar discovery is worldwide. Durable venues carry optional `area`, `city`, `region`, `country`, and `countryCode` locality metadata. NYC NTA neighborhood data remains for compatibility and optional completion history only; a missing NYC neighborhood match must never hide or reject an otherwise supported Google place.
+Google-backed restaurant and bar discovery is worldwide. Durable venues carry optional `area`, `city`, `region`, `country`, and `countryCode` locality metadata plus an IANA `timeZone`. The former NYC neighborhood polygon/completion system has been removed rather than retained as a product layer.
 
 The repository default branch is `main`. Ignore old handoff instructions that refer to `build`, `build-codex`, leaving a merge uncommitted, or a specific local checkout path.
 
@@ -37,10 +37,11 @@ Relevant files:
 - Nearby search uses the location supplied for that request and is not constrained to NYC or the United States.
 - Text search is not given an artificial NYC fallback or forced US region code. When a real device-location bias is available it may still be used to improve relevance.
 - Google `addressComponents` are normalized into optional `area`, `city`, `region`, `country`, and `countryCode` fields in the same Places request; no extra reverse-geocoding call is required.
-- `area` is descriptive and may represent a neighborhood, district, sublocality, or similar local label. `city` is the preferred stable worldwide grouping.
-- Existing NYC venue rows are backfilled from their current neighborhood metadata. New NYC places may still receive `neighborhoodId`; places elsewhere normally have `neighborhoodId = null`.
-- The historical required `neighborhood` string is retained temporarily as a compatibility display label. It falls back through NYC NTA, area, city, region, then country.
-- The Passport cover shows universal STAMPS and PLACES counts rather than presenting NYC neighborhood completion as a core product metric.
+- `area` is descriptive and may represent a neighborhood, district, sublocality, quartiere, or similar local label. It is optional and must never gate whether a place can exist.
+- Each durable venue also stores an IANA `timeZone`, used for visit-date grouping and verification-preserving calendar-day logic.
+- Existing NYC venue rows are backfilled to New York / United States / `America/New_York` while preserving their old neighborhood label as `area` when available.
+- The old `neighborhood`, `neighborhoodId`, `Neighborhood`, `NeighborhoodCompletion`, `/api/me/neighborhoods`, polygon import scripts, and completion UI/contracts have been removed.
+- The Passport cover uses universal STAMPS and PLACES counts rather than geographic completion metrics.
 
 ## Stamp visits and verification
 
@@ -50,7 +51,7 @@ The current trust model verifies visits rather than photographs.
 - A Now stamp is marked verified only when the server receives valid current coordinates and confirms the device is within the selected place geofence.
 - Location is optional. No location or an out-of-geofence position still creates a normal unverified stamp.
 - Past stamps are always unverified, are limited to one year back, and cannot be dated in the future.
-- Owners can edit the visit date. Moving a verified stamp to a different calendar day removes its verification.
+- Owners can edit the visit date. Moving a verified stamp to a different calendar day in that venue's local time zone removes its verification.
 - Passport page/slot chronology uses `visited_at`, not record creation time.
 - Raw coordinates used to make the geofence decision are not retained on the stamp. The durable trust fields are `verified_at` and the visit date.
 - `geofenceExempt` remains for App Review/QA accounts. Those stamps remain `countable=false` and are not verified.
@@ -70,11 +71,11 @@ The stamp photo flow does not use the old custom in-app camera preview.
 
 ## Backend and database
 
-The backend exposes account/auth, owner profile/passport/stamp/pin/neighborhood/collection endpoints, owner-controlled collection-share endpoints, the public collection-share web resolver, places, songs, media, health, and maintenance routes.
+The backend exposes account/auth, owner profile/passport/stamp/pin/collection endpoints, owner-controlled collection-share endpoints, the public collection-share web resolver, worldwide places, songs, media, health, and maintenance routes.
 
 The Prisma `photo` table remains the historical backing table for stamps. Legacy `lat`/`lng` columns remain nullable for migration stability but a database constraint requires them to be null. Collection sharing adds a narrow one-to-one `collection_share` table related only to `collection`.
 
-The Prisma schema does not contain follows, follow requests, blocks, likes, reports, moderation events, staff roles, reputation, suspension state, private-account state, or stamp moderation state.
+The Prisma schema does not contain follows, follow requests, blocks, likes, reports, moderation events, staff roles, reputation, suspension state, private-account state, stamp moderation state, neighborhood polygons, or neighborhood completion records.
 
 ## Design
 
@@ -97,4 +98,4 @@ Preview/production must provide a unique `SHARE_TOKEN_SECRET` in addition to the
 
 ## Verification note
 
-For worldwide-place changes, run the normal backend/mobile checks and the backend tests against a migrated local Postgres database. A useful manual smoke test is searching for a restaurant or bar outside NYC, persisting it through a Past stamp, and confirming the venue keeps its worldwide locality metadata while neighborhood progress remains null.
+For worldwide-place changes, run the normal backend/mobile checks and the backend tests against a migrated local Postgres database. A useful manual smoke test is searching for a restaurant or bar outside the United States, persisting it through a Past stamp, and confirming its `area`/city/country/time-zone metadata is stored and rendered correctly.
