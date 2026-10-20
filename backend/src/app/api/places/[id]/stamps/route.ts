@@ -5,7 +5,7 @@ import { getActor, ok, route } from "@/server/http";
 import { requireSignedIn } from "@/server/permissions";
 import { cacheMichelinPreviewForStamp } from "@/server/services/michelin";
 import { ensureGooglePriceForStamp, getPlace } from "@/server/services/places";
-import { createStamp, MAX_STAMP_PHOTOS } from "@/server/services/stamps";
+import { createStamp, getStamp, MAX_STAMP_PHOTOS } from "@/server/services/stamps";
 
 type Ctx = { params: Promise<{ id: string }> };
 const field = (form: FormData, name: string) => { const v = form.get(name); return typeof v === "string" ? v : undefined; };
@@ -30,11 +30,11 @@ export const POST = route<Ctx>(async (req, { params }) => {
   }
   const place = await getPlace(prisma, id);
   await ensureGooglePriceForStamp(prisma, place);
-  await cacheMichelinPreviewForStamp(prisma, place, field(form, "michelinProof"));
   const stamp = await createStamp(prisma, actor, place.id, {
     photos: await Promise.all((files as Blob[]).map(async (f) => Buffer.from(await f.arrayBuffer()))),
     meta,
     collectionIds,
   });
-  return ok({ stamp }, 201);
+  await cacheMichelinPreviewForStamp(prisma, place, field(form, "michelinProof")).catch(() => undefined);
+  return ok(await getStamp(prisma, actor, stamp.id), 201);
 });
