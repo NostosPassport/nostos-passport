@@ -15,17 +15,34 @@ const LIST_FIELD_MASK = [
   "places.displayName",
   "places.formattedAddress",
   "places.location",
+  "places.addressComponents",
   "places.primaryType",
   "places.types",
   "places.businessStatus",
 ].join(",");
-const DETAIL_FIELD_MASK = ["id", "displayName", "formattedAddress", "location", "primaryType", "types", "businessStatus"].join(",");
+const DETAIL_FIELD_MASK = [
+  "id",
+  "displayName",
+  "formattedAddress",
+  "location",
+  "addressComponents",
+  "primaryType",
+  "types",
+  "businessStatus",
+].join(",");
+
+const addressComponentSchema = z.object({
+  longText: z.string().optional(),
+  shortText: z.string().optional(),
+  types: z.array(z.string()).optional().default([]),
+}).passthrough();
 
 const googlePlaceSchema = z.object({
   id: z.string().min(1),
   displayName: z.object({ text: z.string().min(1) }).passthrough(),
   formattedAddress: z.string().optional(),
   location: z.object({ latitude: z.number(), longitude: z.number() }).passthrough(),
+  addressComponents: z.array(addressComponentSchema).optional().default([]),
   primaryType: z.string().optional(),
   types: z.array(z.string()).optional().default([]),
   businessStatus: z.string().optional(),
@@ -33,7 +50,17 @@ const googlePlaceSchema = z.object({
 
 const googleListSchema = z.object({ places: z.array(googlePlaceSchema).optional().default([]) }).passthrough();
 
-export type GooglePlace = {
+type GoogleAddressComponent = z.infer<typeof addressComponentSchema>;
+
+export type PlaceLocality = {
+  area: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  countryCode: string | null;
+};
+
+export type GooglePlace = PlaceLocality & {
   googlePlaceId: string;
   name: string;
   address: string;
@@ -151,6 +178,28 @@ export function cuisineTags(primaryType: string | null, types: readonly string[]
   return tags.slice(0, 6);
 }
 
+function component(components: readonly GoogleAddressComponent[], types: readonly string[]) {
+  for (const type of types) {
+    const match = components.find((item) => item.types.includes(type));
+    if (match) return match;
+  }
+  return null;
+}
+
+export function localityFromAddressComponents(components: readonly GoogleAddressComponent[]): PlaceLocality {
+  const area = component(components, ["neighborhood", "sublocality_level_1", "sublocality_level_2", "sublocality"]);
+  const city = component(components, ["locality", "postal_town", "administrative_area_level_3", "administrative_area_level_2"]);
+  const region = component(components, ["administrative_area_level_1"]);
+  const country = component(components, ["country"]);
+  return {
+    area: area?.longText?.trim() || null,
+    city: city?.longText?.trim() || null,
+    region: region?.longText?.trim() || null,
+    country: country?.longText?.trim() || null,
+    countryCode: country?.shortText?.trim().toUpperCase() || null,
+  };
+}
+
 function normalize(raw: z.infer<typeof googlePlaceSchema>): GooglePlace | null {
   const primaryType = raw.primaryType ?? null;
   const category = categoryFor(primaryType, raw.types);
@@ -161,6 +210,7 @@ function normalize(raw: z.infer<typeof googlePlaceSchema>): GooglePlace | null {
     address: (raw.formattedAddress ?? "").trim().slice(0, 240),
     lat: raw.location.latitude,
     lng: raw.location.longitude,
+    ...localityFromAddressComponents(raw.addressComponents),
     primaryType,
     types: [...new Set(raw.types)].slice(0, 32),
     businessStatus: raw.businessStatus ?? null,
@@ -218,7 +268,6 @@ export async function googleNearby(
         maxResultCount: GOOGLE_NEARBY_MAX_RESULTS,
         rankPreference: "DISTANCE",
         languageCode: "en",
-        regionCode: "US",
         locationRestriction: { circle: { center: { latitude: pos.lat, longitude: pos.lng }, radius: Math.max(100, Math.min(5_000, radiusM)) } },
       }),
     },
@@ -233,19 +282,19 @@ export async function googleTextSearch(
   bias: { lat: number; lng: number } | null,
   fetchImpl: typeof fetch = fetch,
 ): Promise<GooglePlace[]> {
-  const center = bias ?? { lat: 40.7128, lng: -74.006 };
+  const request: Record<string, unknown> = {
+    textQuery: term,
+    maxResultCount: 20,
+    languageCode: "en",
+  };
+  if (bias) {
+    request.locationBias = {
+      circle: { center: { latitude: bias.lat, longitude: bias.lng }, radius: 20_000 },
+    };
+  }
   const body = await googleFetch(
     SEARCH_TEXT_URL,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        textQuery: term,
-        maxResultCount: 20,
-        languageCode: "en",
-        regionCode: "US",
-        locationBias: { circle: { center: { latitude: center.lat, longitude: center.lng }, radius: bias ? 20_000 : 50_000 } },
-      }),
-    },
+    { method: "POST", body: JSON.stringify(request) },
     LIST_FIELD_MASK,
     fetchImpl,
   );
