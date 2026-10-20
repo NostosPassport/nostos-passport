@@ -96,6 +96,7 @@ export const CategoryStampArtwork = z.object({
   label: z.string(),
   color: z.string(),
   icon: z.enum(["croissant", "burger", "tapas", "mezze", "restaurant", "pasta", "taco", "sushi", "noodles", "curry", "pizza", "bread", "fish", "leaf", "bowl", "grill", "glass", "music"]),
+  priceTier: z.enum(["$", "$$", "$$$", "$$$$"]).nullable().optional(),
 }).strict();
 export type CategoryStampArtwork = z.infer<typeof CategoryStampArtwork>;
 export const StampView = z.object({
@@ -136,7 +137,7 @@ export const ProfileSettingsResponse = z.object({ profile: z.object({ handle: z.
 export const AvatarResponse = z.object({ avatarUrl: z.string().nullable() }).strict();
 
 export const CronResponse = z.object({ ok: z.literal(true), prunedLoginAttempts: z.number().int(), prunedRateEvents: z.number().int(), ms: z.number() }).strict();
-export const HealthResponse = z.object({ ok: z.literal(true), db: z.literal("up"), env: z.string(), commit: z.string().nullable(), ms: z.number() }).strict();
+export const HealthResponse = z.object({ ok: z.literal("up").transform(() => true), db: z.literal("up"), env: z.string(), commit: z.string().nullable(), ms: z.number() }).strict().transform((v) => ({ ...v, ok: true as const }));
 
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
 export type Attribution = z.infer<typeof Attribution>;
