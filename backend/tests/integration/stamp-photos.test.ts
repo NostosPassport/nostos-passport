@@ -42,6 +42,38 @@ describe("multi-photo stamps", () => {
     expect(removed.stamp.editedAt).not.toBeNull();
   });
 
+  it("moves the first photograph later and immediately changes the thumbnail", async () => {
+    const me=await makeActor();
+    const stamp=await stampWith(me,(await makeVenue()).id,3);
+    const [a,b,c]=stamp.photos;
+    const result=await setPhotoLayout(prisma,me,stamp.id,{
+      photos:[{id:a!.id,position:2},{id:b!.id,position:0},{id:c!.id,position:1}],
+    });
+    expect(result.stamp.photos.map(p=>p.id)).toEqual([b!.id,c!.id,a!.id]);
+    expect(result.stamp.photoUrl).toBe(result.stamp.photos[0]!.url);
+    const saved=await getStamp(prisma,me,stamp.id);
+    expect(saved.stamp.photos[0]!.id).toBe(b!.id);
+    expect(saved.stamp.photoUrl).toBe(saved.stamp.photos[0]!.url);
+  });
+
+  it("removes the first photo, shows the next one, then allows caption-only no-photo stamps", async () => {
+    const me=await makeActor();
+    const stamp=await createStamp(prisma,me,(await makeVenue()).id,{
+      photos:many(2),meta:{caption:"A visit worth remembering",lat:String(INSIDE.lat),lng:String(INSIDE.lng)},
+    });
+    const [first,second]=stamp.photos;
+    const changed=await removeStampPhoto(prisma,me,stamp.id,first!.id);
+    expect(changed.stamp.photos.map(p=>p.id)).toEqual([second!.id]);
+    expect(changed.stamp.photoUrl).toBe(changed.stamp.photos[0]!.url);
+    const empty=await removeStampPhoto(prisma,me,stamp.id,second!.id);
+    expect(empty.stamp.photos).toEqual([]);
+    expect(empty.stamp.photoUrl).toBeNull();
+    const saved=await getStamp(prisma,me,stamp.id);
+    expect(saved.stamp.photos).toEqual([]);
+    expect(saved.stamp.photoUrl).toBeNull();
+    expect(saved.stamp.caption).toBe("A visit worth remembering");
+  });
+
   it("strips EXIF and GPS from every photo", async () => {
     const me = await makeActor();
     const dirty = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#aa8844" } })
