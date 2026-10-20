@@ -49,6 +49,7 @@ export default async function SharedCollectionPage({ params }: Ctx) {
       caption: stamp.caption,
       visitedAt: new Date(stamp.visitedAt).toISOString(),
       verified: stamp.verified,
+      artwork: stamp.artwork,
       page: stamp.page ?? 1,
       slot: stamp.slot ?? 1,
       photos: stamp.photos.map((photo) => ({ id: photo.id, url: photo.url })),
