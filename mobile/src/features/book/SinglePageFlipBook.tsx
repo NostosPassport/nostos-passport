@@ -33,6 +33,11 @@ function zoneAt(x: number, width: number, share: number): Zone {
   return null;
 }
 
+function currentTurnProgress(position: number, current: number, direction: TurnDirection) {
+  "worklet";
+  return direction === "next" ? turnProgress(position, current) : 1 - turnProgress(position, current - 1);
+}
+
 export function SinglePageFlipBook({ pageWidth: pw, pageHeight: ph, total, page, onPageChange, onCloseBook, renderPage, pageTaps = false, stampTargets = [] }: Props) {
   const reduced = useReducedMotion();
   const pos = useSharedValue(page);
@@ -131,19 +136,18 @@ export function SinglePageFlipBook({ pageWidth: pw, pageHeight: ph, total, page,
 }
 
 function TurningCurrentPage({ direction, current, pos, pw, ph, reduced, children }: { direction: TurnDirection; current: number; pos: SharedValue<number>; pw: number; ph: number; reduced: boolean; children: ReactNode }) {
-  const progress = () => direction === "next" ? turnProgress(pos.value, current) : 1 - turnProgress(pos.value, current - 1);
   const activeStyle = useAnimatedStyle(() => {
-    const p = progress();
+    const p = currentTurnProgress(pos.value, current, direction);
     const active = p > 0.001 && p < 0.999;
     return { opacity: active ? 1 : 0, zIndex: active ? 2 : 0 };
   });
   const pageStyle = useAnimatedStyle(() => {
-    const p = progress();
+    const p = currentTurnProgress(pos.value, current, direction);
     if (reduced) return { opacity: 1 - p, transform: [] };
     return { opacity: p < 0.999 ? 1 : 0, transform: [{ scaleX: Math.max(0.001, 1 - p) }] };
   });
-  const shade = useAnimatedStyle(() => ({ opacity: reduced ? 0 : flipShade(progress()) }));
-  const cast = useAnimatedStyle(() => ({ opacity: reduced ? 0 : castShade(progress()) }));
+  const shade = useAnimatedStyle(() => ({ opacity: reduced ? 0 : flipShade(currentTurnProgress(pos.value, current, direction)) }));
+  const cast = useAnimatedStyle(() => ({ opacity: reduced ? 0 : castShade(currentTurnProgress(pos.value, current, direction)) }));
 
   return (
     <Animated.View testID={`single-turn-current-${direction}`} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.page, { width: pw, height: ph }, activeStyle]}>
