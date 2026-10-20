@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCategoryStamp, CATEGORY_STAMP_GEOMETRY, categoryStampDateLabel, photoClipPath, layoutCategoryName, safeStampPhotoUrl } from "../../../shared/category-stamp-artwork";
+import { resolveCategoryStamp, inkTextWidth, CATEGORY_STAMP_GEOMETRY, categoryStampDateLabel, photoClipPath, layoutCategoryName, safeStampPhotoUrl } from "../../../shared/category-stamp-artwork";
 
 describe("category ink stamp design v1", () => {
   it("uses specific primary type rather than generic tags", () => {
@@ -36,6 +36,27 @@ describe("category ink stamp design v1", () => {
     expect(resolveCategoryStamp({id:"o",category:"restaurant",primaryType:"italian_restaurant"})?.color).toBe("#143B2B");
     expect(resolveCategoryStamp({id:"b",category:"bar",primaryType:"cocktail_bar"})?.color).toBe("#7C1030");
     expect(categoryStampDateLabel("2026-10-20T12:00:00-04:00")).toBe("20 OCT 2026");
+  });
+  it("categorizes French, American, Spanish and Lebanese without name inference", () => {
+    for(const [kind,tag] of [["french","french_restaurant"],["american","american_restaurant"],["spanish","spanish_restaurant"],["lebanese","lebanese_restaurant"]] as const){
+      expect(resolveCategoryStamp({id:"v",category:"restaurant",primaryType:tag,cuisines:[]})?.cuisine).toBe(kind);
+    }
+    expect(resolveCategoryStamp({id:"v",category:"restaurant",primaryType:"fine_dining_restaurant",cuisines:[]})?.cuisine).toBe("restaurant");
+  });
+  it("fits wide and multilingual glyphs without relying on character count", () => {
+    expect(inkTextWidth("WWWW",12)).toBeGreaterThan(inkTextWidth("iiii",12));
+    for(const name of ["WMWMWM & GRAND", "Épicerie Française", "東京和食店", "THISISAWORDSOWIDEITNEVERHASSPACES"]){
+      for(const kind of ["bar","restaurant"] as const){
+        const layout=layoutCategoryName(name,kind);
+        expect(layout.lines.length).toBeLessThanOrEqual(kind==="bar"?2:3);
+        expect(layout.lines.every(line=>inkTextWidth(line,layout.fontSize)<=(kind==="bar"?85:102)+0.01)).toBe(true);
+      }
+    }
+  });
+  it("keeps the circles' three metadata lines inside reserved coordinates", () => {
+    expect(CATEGORY_STAMP_GEOMETRY.bar.dateY).toBeLessThan(CATEGORY_STAMP_GEOMETRY.bar.categoryY);
+    expect(CATEGORY_STAMP_GEOMETRY.bar.categoryY).toBeLessThan(CATEGORY_STAMP_GEOMETRY.bar.localityY);
+    expect(CATEGORY_STAMP_GEOMETRY.bar.photo.y + CATEGORY_STAMP_GEOMETRY.bar.photo.s).toBeLessThan(CATEGORY_STAMP_GEOMETRY.bar.dateY);
   });
   it("clip paths are valid and URLs reject non-photo injection", () => {
     expect(photoClipPath(10,10,80).startsWith("M")).toBe(true);

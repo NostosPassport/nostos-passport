@@ -1,10 +1,17 @@
 /** Versioned, pure stamp classification and SVG geometry shared by backend, Expo and web. */
 export const CATEGORY_STAMP_VERSION = "category-ink/1" as const;
 export type CategoryStampKind = "restaurant" | "bar";
-export type CuisineIcon = "restaurant" | "pasta" | "taco" | "sushi" | "noodles" | "curry" | "pizza" | "bread" | "fish" | "leaf" | "bowl" | "grill" | "glass" | "music";
+export type CuisineIcon = "croissant" | "burger" | "tapas" | "mezze" | "restaurant" | "pasta" | "taco" | "sushi" | "noodles" | "curry" | "pizza" | "bread" | "fish" | "leaf" | "bowl" | "grill" | "glass" | "music";
 export type CategoryStampArtwork = { version: typeof CATEGORY_STAMP_VERSION; kind: CategoryStampKind; cuisine: string; label: string; color: string; icon: CuisineIcon };
 export type CategoryVenue = { id: string; category?: string | null; primaryType?: string | null; cuisines?: readonly string[] | null };
 const CATALOG: Record<string, { label: string; color: string; icon: CuisineIcon }> = {
+  french: {label:"French",color:"#385478",icon:"croissant"},
+  american: {label:"American",color:"#526472",icon:"burger"},
+  spanish: {label:"Spanish",color:"#95523C",icon:"tapas"},
+  lebanese: {label:"Lebanese",color:"#53704E",icon:"mezze"},
+  turkish: {label:"Turkish",color:"#8B594D",icon:"mezze"},
+  portuguese: {label:"Portuguese",color:"#526F73",icon:"fish"},
+  ethiopian: {label:"Ethiopian",color:"#956F43",icon:"bowl"},
   italian: {label:"Italian",color:"#143B2B",icon:"pasta"}, mexican: {label:"Mexican",color:"#A75435",icon:"taco"},
   japanese: {label:"Japanese",color:"#396D78",icon:"sushi"}, korean: {label:"Korean",color:"#895060",icon:"grill"},
   chinese: {label:"Chinese",color:"#9B4642",icon:"noodles"}, indian: {label:"Indian",color:"#79508A",icon:"curry"},
@@ -17,6 +24,9 @@ const CATALOG: Record<string, { label: string; color: string; icon: CuisineIcon 
 };
 const BAR_TYPES = new Set(["bar","bar_and_grill","beer_garden","brewpub","cocktail_bar","gastropub","hookah_bar","irish_pub","lounge_bar","pub","snack_bar","sports_bar","wine_bar","night_club","nightclub","dance_club"]);
 const PRIMARY: Record<string,string> = {
+ french_restaurant:"french",american_restaurant:"american",new_american_restaurant:"american",
+ spanish_restaurant:"spanish",tapas_restaurant:"spanish",lebanese_restaurant:"lebanese",
+ turkish_restaurant:"turkish",portuguese_restaurant:"portuguese",ethiopian_restaurant:"ethiopian",
  italian_restaurant:"italian",pasta_restaurant:"italian",pizza_restaurant:"pizza",mexican_restaurant:"mexican",taco_restaurant:"mexican",burrito_restaurant:"mexican",tex_mex_restaurant:"mexican",
  japanese_restaurant:"japanese",sushi_restaurant:"japanese",ramen_restaurant:"japanese",japanese_izakaya_restaurant:"japanese",
  korean_restaurant:"korean",korean_barbecue_restaurant:"korean",chinese_restaurant:"chinese",chinese_noodle_restaurant:"chinese",dim_sum_restaurant:"chinese",dumpling_restaurant:"chinese",
@@ -25,8 +35,8 @@ const PRIMARY: Record<string,string> = {
  seafood_restaurant:"seafood",fish_and_chips_restaurant:"seafood",oyster_bar_restaurant:"seafood",bakery:"bakery",cafe:"cafe",coffee_shop:"cafe",
  vegetarian_restaurant:"vegetarian",vegan_restaurant:"vegetarian",steak_house:"steakhouse",
 };
-const ALIAS: Record<string,string> = {sushi:"japanese",ramen:"japanese",izakaya:"japanese",tacos:"mexican",tex_mex:"mexican",north_indian:"indian",south_indian:"indian",dim_sum:"chinese",chinese_noodles:"chinese",korean_barbecue:"korean",oyster_bar:"seafood",fish_and_chips:"seafood",coffee:"cafe",coffee_shop:"cafe",café:"cafe"};
-const PRIORITY=["pizza","japanese","mexican","italian","korean","chinese","indian","thai","vietnamese","greek","mediterranean","middle_eastern","seafood","steakhouse","bakery","cafe","vegetarian"];
+const ALIAS: Record<string,string> = {french:"french",american:"american",spanish:"spanish",lebanese:"lebanese",tapas:"spanish",new_american:"american",sushi:"japanese",ramen:"japanese",izakaya:"japanese",tacos:"mexican",tex_mex:"mexican",north_indian:"indian",south_indian:"indian",dim_sum:"chinese",chinese_noodles:"chinese",korean_barbecue:"korean",oyster_bar:"seafood",fish_and_chips:"seafood",coffee:"cafe",coffee_shop:"cafe",café:"cafe"};
+const PRIORITY=["french","american","spanish","lebanese","turkish","portuguese","ethiopian","pizza","japanese","mexican","italian","korean","chinese","indian","thai","vietnamese","greek","mediterranean","middle_eastern","seafood","steakhouse","bakery","cafe","vegetarian"];
 const norm=(s:string)=>s.trim().toLowerCase().replace(/[\s-]+/g,"_");
 function cuisineKey(value:string):string|null { const t=norm(value);const k=PRIMARY[t]??ALIAS[t]??(CATALOG[t]?t:null);return k&&k!=="restaurant"&&CATALOG[k]?k:null; }
 /** No random seed: venue category and stored Google cuisine tags determine the design. */
@@ -45,6 +55,10 @@ export function resolveCategoryStamp(venue:CategoryVenue):CategoryStampArtwork|n
 }
 /** Twenty-four unit, independently editable SVG paths. */
 export const CUISINE_PATHS:Record<CuisineIcon,string>={
+ croissant:"M3 16 Q6 7 12 11 Q18 7 21 16 Q15 21 12 16 Q9 21 3 16 Z",
+ burger:"M4 11 Q12 3 20 11 M3 13 H21 M4 17 H20 M6 19 H18",
+ tapas:"M4 14 H20 M6 14 Q5 19 12 20 Q19 19 18 14 M9 9 L11 12 M15 7 L15 12",
+ mezze:"M3 14 Q12 23 21 14 M5 14 H19 M7 9 Q10 4 12 9 Q15 5 18 10",
  restaurant:"M4 10 Q12 4 20 10 M5 11 L7 19 H17 L19 11 M8 14 H16",
  pasta:"M3 12 Q12 23 21 12 M5 14 H19 M7 7 Q10 3 13 8 T19 7",
  taco:"M3 17 Q4 5 12 6 Q20 6 21 17 Z M6 12 Q12 8 18 12",
@@ -72,21 +86,62 @@ export function safeStampPhotoUrl(value:string|null|undefined):string|null{
  try{const u=new URL(value);return u.protocol==="https:"||(u.protocol==="http:"&&(["127.0.0.1","localhost"].includes(u.hostname)||/^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\./.test(u.hostname)))?value:null;}catch{return null;}
 }
 export type StampNameLayout={lines:string[];fontSize:number;truncated:boolean};
-/** Fixed reserved title area and bounded font sizes. Full name always remains accessible. */
-export function layoutCategoryName(name:string,kind:CategoryStampKind):StampNameLayout{
- const clean=(name||"").trim().replace(/\s+/gu," ");const width=kind==="bar"?128:118;const maxLines=kind==="bar"?2:3;
- for(const size of (kind==="bar"?[13,12,11,10]:[17,16,15,14,13,12,11,10])){
-   const cap=Math.max(5,Math.floor(width/(size*.56)));const lines:string[]=[];let line="";
-   for(const word of clean.split(" ")){
-     let chars=Array.from(word);const parts:string[]=[];
-     while(chars.length>cap)parts.push(chars.splice(0,cap).join(""));parts.push(chars.join(""));
-     for(const part of parts){if(!part)continue;if(!line)line=part;else if(Array.from(line+" "+part).length<=cap)line+=" "+part;else{lines.push(line);line=part;}}
+/** Conservative Cormorant advance widths. Unlike character count, wide, narrow and CJK glyphs differ. */
+export function inkTextWidth(value:string, fontSize:number):number {
+ let n=0;
+ for(const ch of Array.from(value.normalize("NFC"))){
+   if(/\p{Mark}/u.test(ch))continue;
+   if(/\s/u.test(ch))n+=0.3;
+   else if(/[MW@%&]/u.test(ch))n+=0.9;
+   else if(/[ilI!|.,:;'’]/u.test(ch))n+=0.32;
+   else if(/[A-Z]/u.test(ch))n+=0.7;
+   else if(/[0-9]/u.test(ch))n+=0.57;
+   else if(/[a-z]/u.test(ch))n+=0.58;
+   else if(/\p{Script=Latin}/u.test(ch))n+=0.7;
+   else n+=1.07;
+ }
+ return n*fontSize;
+}
+export function needsUnicodeFont(value:string):boolean {
+ return /[^\p{Script=Latin}\p{Mark}\p{Number}\p{Punctuation}\p{Separator}]/u.test(value);
+}
+/** Reserve the fixed title region first; shrink only within readable bounds. */
+export function layoutCategoryName(value:string,kind:CategoryStampKind):StampNameLayout{
+ const name=(value||"").normalize("NFC").trim().replace(/\s+/gu," ")||"UNNAMED";
+ const bar=kind==="bar",maxLines=bar?2:3,maxWidth=bar?85:102;
+ const sizes=bar?[13,12,11,10,9]:[17,16,15,14,13,12,11];
+ for(const size of sizes){
+   const lines:string[]=[];let line="";
+   for(const raw of name.split(" ")){
+     const pieces:string[]=[];let word="";
+     for(const ch of Array.from(raw)){
+       if(word&&inkTextWidth(word+ch,size)>maxWidth){pieces.push(word);word=ch;}
+       else word+=ch;
+     }
+     if(word)pieces.push(word);
+     for(const piece of pieces){
+       if(!line)line=piece;
+       else if(inkTextWidth(line+" "+piece,size)<=maxWidth)line+=" "+piece;
+       else {lines.push(line);line=piece;}
+     }
    }
    if(line)lines.push(line);
-   if(lines.length<=maxLines)return{lines:lines.length?lines:["UNNAMED"],fontSize:size,truncated:false};
+   if(lines.length<=maxLines&&lines.every(x=>inkTextWidth(x,size)<=maxWidth))return {lines,fontSize:size,truncated:false};
  }
- const chars=Array.from(clean);const cap=kind==="bar"?19:21;
- return{lines:Array.from({length:maxLines},(_,i)=>chars.slice(i*cap,(i+1)*cap-(i===maxLines-1?1:0)).join("")+(i===maxLines-1?"…":"")),fontSize:10,truncated:true};
+ const size=sizes[sizes.length-1]!;
+ const lines:string[]=[];let line="";let used=0;
+ for(const ch of Array.from(name)){
+   if(inkTextWidth(line+ch,size)>maxWidth){
+     if(lines.length===maxLines-1)break;
+     if(line)lines.push(line);
+     line=ch;
+   }else line+=ch;
+   used++;
+ }
+ if(line)lines.push(line);
+ const truncated=used<Array.from(name).length;
+ if(truncated){let last=lines[lines.length-1]||"";while(last&&inkTextWidth(last+"…",size)>maxWidth)last=Array.from(last).slice(0,-1).join("");lines[lines.length-1]=last+"…";}
+ return {lines,fontSize:size,truncated};
 }
 
 /** Fixed SVG measurement system shared by Expo and web. Coordinates follow the approved square-photo study. */
@@ -100,10 +155,10 @@ export const CATEGORY_STAMP_GEOMETRY = {
   },
   bar: {
     viewBox: "0 0 160 160",
-    photo: {x: 41, y: 43, s: 78},
+    photo: {x: 46, y: 47, s: 68},
     titleArc: "M30 56 A56 56 0 0 1 130 56",
     titleArcSize: 14,
-    iconX: 122, iconY: 83, localityY: 145, dateY: 134,
+    iconX: 119, iconY: 82, dateY: 124, categoryY: 136, localityY: 146,
   },
 } as const;
 /** Date labels are about the New York visit day, never the rendering device's timezone. */

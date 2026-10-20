@@ -17,7 +17,7 @@ import { resolveCategoryStamp } from "../../../../shared/category-stamp-artwork"
 
 type MapFilter = "all" | "restaurant" | "bar";
 
-const BAR_TYPES = new Set(["bar", "bar_and_grill", "beer_garden", "brewpub", "cocktail_bar", "gastropub", "hookah_bar", "irish_pub", "lounge_bar", "pub", "snack_bar", "sports_bar", "wine_bar"]);
+const BAR_TYPES = new Set(["bar", "bar_and_grill", "beer_garden", "brewpub", "cocktail_bar", "gastropub", "hookah_bar", "irish_pub", "lounge_bar", "pub", "snack_bar", "sports_bar", "wine_bar","night_club","nightclub","dance_club"]);
 
 function effectiveCategory(place: Place): Exclude<MapFilter, "all"> | null {
   if (place.category) return place.category;

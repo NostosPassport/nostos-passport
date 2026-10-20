@@ -36,6 +36,7 @@ describe("multi-photo stamps", () => {
     const stamp = await stampWith(me, (await makeVenue()).id, 3);
     const removed = await removeStampPhoto(prisma, me, stamp.id, stamp.photos[1]!.id);
     expect(removed.stamp.photos.map((p) => p.position)).toEqual([0, 2]);
+    expect(removed.stamp.photoUrl).toBe(removed.stamp.photos[0]!.url);
     await expect(addStampPhotos(prisma, me, stamp.id, many(2))).rejects.toMatchObject({ status: 400 });
     expect((await getStamp(prisma, me, stamp.id)).stamp.photos.map((p) => p.position)).toEqual([0, 2]);
     expect(removed.stamp.editedAt).not.toBeNull();
@@ -68,6 +69,7 @@ describe("multi-photo stamps", () => {
       photos: [{ id: a!.id, x: 0.2, y: 0.3, rotation: 5 }, { id: b!.id, position: 2 }, { id: c!.id, position: 1 }],
     });
     expect(out.stamp.photos.map((p) => p.id)).toEqual([a!.id, c!.id, b!.id]);
+    expect(out.stamp.photoUrl).toBe(out.stamp.photos[0]!.url);
     expect(out.stamp.photos[0]).toMatchObject({ x: 0.2, y: 0.3, rotation: 5 });
     expect(out.stamp.photos.map((p) => p.url.split("?")[0]).sort()).toEqual(stamp.photos.map((p) => p.url.split("?")[0]).sort());
     expect((await getStamp(prisma, me, stamp.id)).stamp.photos[0]).toMatchObject({ x: 0.2, y: 0.3, rotation: 5 });

@@ -81,7 +81,7 @@ export const CategoryStampArtwork = z.object({
   cuisine: z.string(),
   label: z.string(),
   color: z.string(),
-  icon: z.enum(["restaurant", "pasta", "taco", "sushi", "noodles", "curry", "pizza", "bread", "fish", "leaf", "bowl", "grill", "glass", "music"]),
+  icon: z.enum(["croissant", "burger", "tapas", "mezze", "restaurant", "pasta", "taco", "sushi", "noodles", "curry", "pizza", "bread", "fish", "leaf", "bowl", "grill", "glass", "music"]),
 }).strict();
 export type CategoryStampArtwork = z.infer<typeof CategoryStampArtwork>;
 export const StampView = z.object({

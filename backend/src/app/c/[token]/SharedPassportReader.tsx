@@ -248,7 +248,7 @@ function PassportPage({
             }}
           >
             <StampArtwork stamp={stamp} />
-            {stamp.verified ? <span className={styles.verifiedMark}>N</span> : null}
+            
           </button>
         );
       })}
