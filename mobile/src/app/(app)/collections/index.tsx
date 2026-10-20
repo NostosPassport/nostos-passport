@@ -8,7 +8,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { collectionColorValue } from "@/features/collections/colors";
-import { colors, fonts, hairlineWidth, size, space } from "@/theme";
+import { colors, hairlineWidth, size, space } from "@/theme";
 
 export default function CollectionsScreen() {
   const query = useCollections();
