@@ -41,22 +41,27 @@ export default async function SharedCollectionPage({ params }: Ctx) {
 
   const { collection, owner } = shared;
   const coverColor = coverColors[collection.color] ?? "#5F84D7";
-  const stamps = collection.stamps.map((stamp) => ({
-    id: stamp.id,
-    caption: stamp.caption,
-    visitedAt: new Date(stamp.visitedAt).toISOString(),
-    verified: stamp.verified,
-    page: stamp.page ?? 1,
-    slot: stamp.slot ?? 1,
-    photos: stamp.photos.map((photo) => ({ id: photo.id, url: photo.url })),
-    song: stamp.song ? { title: stamp.song.title, artist: stamp.song.artist } : null,
-    place: {
-      id: stamp.place.id,
-      name: stamp.place.name,
-      neighborhood: stamp.place.area ?? stamp.place.city ?? stamp.place.region ?? stamp.place.country ?? "",
-      neighborhoodId: null,
-    },
-  }));
+  const stamps = collection.stamps.map((stamp) => {
+    const localityName = stamp.place.area ?? stamp.place.city ?? stamp.place.region ?? stamp.place.country ?? "";
+    const localityKey = stamp.place.area ?? stamp.place.city ?? stamp.place.countryCode ?? stamp.place.country ?? stamp.place.id;
+    return {
+      id: stamp.id,
+      caption: stamp.caption,
+      visitedAt: new Date(stamp.visitedAt).toISOString(),
+      verified: stamp.verified,
+      page: stamp.page ?? 1,
+      slot: stamp.slot ?? 1,
+      photos: stamp.photos.map((photo) => ({ id: photo.id, url: photo.url })),
+      song: stamp.song ? { title: stamp.song.title, artist: stamp.song.artist } : null,
+      place: {
+        id: stamp.place.id,
+        name: stamp.place.name,
+        localityName,
+        localityKey,
+        timeZone: stamp.place.timeZone,
+      },
+    };
+  });
 
   return (
     <main className="min-h-screen px-4 py-7 sm:px-8 sm:py-10">
