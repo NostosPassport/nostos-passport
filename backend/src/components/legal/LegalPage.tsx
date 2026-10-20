@@ -21,4 +21,4 @@ export function LegalPage({ title, updated, children }: { title: string; updated
 }
 
 export const SUPPORT_EMAIL = "support@nostospassport.com";
-export const POLICY_UPDATED = "October 8, 2026";
+export const POLICY_UPDATED = "October 20, 2026";
