@@ -86,6 +86,11 @@ model Venue {
   name                 String
   address              String
   neighborhood         String
+  area                 String?
+  city                 String?
+  region               String?
+  country              String?
+  countryCode          String?       @map("country_code")
   lat                  Float
   lng                  Float
   geofenceMeters       Int           @default(100) @map("geofence_meters")
@@ -104,6 +109,7 @@ model Venue {
 
   photos Photo[]
 
+  @@index([countryCode, city])
   @@map("venue")
 }
 
