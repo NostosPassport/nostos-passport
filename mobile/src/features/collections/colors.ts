@@ -1,7 +1,7 @@
-import type { CollectionColor } from "@/api/collection-contracts";
+import type { CollectionColorValue } from "@/api/collection-contracts";
 import { palette } from "@/theme";
 
-export const COLLECTION_COLORS: { id: CollectionColor; label: string; value: string }[] = [
+export const COLLECTION_COLORS: { id: CollectionColorValue; label: string; value: string }[] = [
   { id: "blue", label: "Blue", value: palette.passportBlue },
   { id: "navy", label: "Navy", value: palette.collectionNavy },
   { id: "green", label: "Green", value: palette.collectionGreen },
@@ -10,6 +10,6 @@ export const COLLECTION_COLORS: { id: CollectionColor; label: string; value: str
   { id: "plum", label: "Plum", value: palette.collectionPlum },
 ];
 
-export function collectionColorValue(color: CollectionColor): string {
+export function collectionColorValue(color: CollectionColorValue): string {
   return COLLECTION_COLORS.find((option) => option.id === color)?.value ?? palette.passportBlue;
 }
