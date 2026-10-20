@@ -12,7 +12,7 @@ import { emblem } from "./emblem";
 import { trackedOffsets } from "./foil";
 import { useFoilSweep } from "./use-foil-sweep";
 
-export type CoverCounts = { stamps: number; places: number };
+export type CoverCounts = { stamps: number; places: number; neighborhoods?: number };
 
 const LEATHER = Skia.RuntimeEffect.Make(`
 uniform half4 dark;
