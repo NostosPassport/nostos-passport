@@ -153,7 +153,7 @@ function EditForm({ stamp }: { stamp: StampView }) {
               {stamp.photos.map((photo, index) => (
                 <View key={photo.id} style={styles.thumb}>
                   <Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                  {index === 0 ? <View style={styles.coverBadge}><Text variant="caption2" color="onAccent" weight="semibold">COVER</Text></View> : null}
+                  {index === 0 ? <View style={styles.coverBadge}><Text variant="caption" color="onAccent" weight="semibold">COVER</Text></View> : null}
                   <Pressable onPress={() => Alert.alert("Remove photo?", "This removes it from the stamp.", [{ text: "Cancel", style: "cancel" }, { text: "Remove", style: "destructive", onPress: () => removePhoto.mutate(photo.id) }])} accessibilityRole="button" accessibilityLabel="Remove photo" style={styles.removePhoto}><Icon name="xmark" color="onAccent" size={16} /></Pressable>
                   <View style={styles.orderControls}>
                     <Pressable disabled={index === 0 || reorderPhotos.isPending} onPress={() => movePhoto(index, -1)} accessibilityRole="button" accessibilityLabel={`Move photo ${index + 1} earlier`} style={[styles.orderButton, index === 0 && styles.orderDisabled]}><Icon name="chevron.left" color="onAccent" size={15} /></Pressable>
