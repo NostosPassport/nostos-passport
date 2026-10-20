@@ -12,7 +12,7 @@ import { emblem } from "./emblem";
 import { trackedOffsets } from "./foil";
 import { useFoilSweep } from "./use-foil-sweep";
 
-export type CoverCounts = { stamps: number; places: number; neighborhoods: number };
+export type CoverCounts = { stamps: number; places: number };
 
 const LEATHER = Skia.RuntimeEffect.Make(`
 uniform half4 dark;
@@ -59,7 +59,7 @@ export function Cover({ width, height, counts, onOpen, name, showCounts = true }
     return trackedOffsets(widths, width * 0.03);
   }, [subFont, width]);
 
-  const label = `Open your passport${name ? `, ${name}` : ""}. ${counts.stamps} stamps, ${counts.places} places, ${counts.neighborhoods} neighborhoods.`;
+  const label = `Open your passport${name ? `, ${name}` : ""}. ${counts.stamps} stamps, ${counts.places} places.`;
 
   return (
     <View style={styles.wrap}>
@@ -118,9 +118,9 @@ function FoilGradient({ start, end }: { start: ReturnType<typeof useDerivedValue
 }
 
 export function Counts({ counts }: { counts: CoverCounts }) {
-  const items: [string, number][] = [["STAMPS", counts.stamps], ["PLACES", counts.places], ["NEIGHBORHOODS", counts.neighborhoods]];
+  const items: [string, number][] = [["STAMPS", counts.stamps], ["PLACES", counts.places]];
   return (
-    <View style={styles.counts} accessible accessibilityLabel={`${counts.stamps} stamps, ${counts.places} places, ${counts.neighborhoods} neighborhoods`}>
+    <View style={styles.counts} accessible accessibilityLabel={`${counts.stamps} stamps, ${counts.places} places`}>
       {items.map(([label, n]) => (
         <View key={label} testID={`passport-count-${label}`} style={styles.count}>
           <Text variant="title" color="bookAccent" tabular accessibilityElementsHidden>
