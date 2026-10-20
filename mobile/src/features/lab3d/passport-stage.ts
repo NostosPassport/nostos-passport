@@ -79,12 +79,12 @@ async function loadEnvironment(): Promise<{ texture: THREE.DataTexture; choice: 
 
 const hexRgb = (hex: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
 
-function buildCoverArtworkMap(source: THREE.Texture | null): THREE.DataTexture | null {
+function buildCoverArtworkMap(source: THREE.Texture | null, coverColor: string): THREE.DataTexture | null {
   if (!source) return null;
   const image = (source as THREE.DataTexture).image as { data?: Uint8Array; width?: number; height?: number } | undefined;
   if (!image?.data || !image.width || !image.height) return null;
 
-  const base = hexRgb(scene3d.passportCover);
+  const base = hexRgb(coverColor);
   const art = hexRgb(scene3d.passportCoverArtwork);
   const out = new Uint8Array(image.data.length);
   for (let i = 0; i < image.data.length; i += 4) {
@@ -136,7 +136,7 @@ const disposeMaterial = (m: THREE.Material) => {
   m.dispose();
 };
 
-export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage> {
+export async function createStage(gl: ExpoWebGLRenderingContext, coverColor = scene3d.passportCover): Promise<Stage> {
   const started = Date.now();
   const width = gl.drawingBufferWidth;
   const height = gl.drawingBufferHeight;
@@ -221,13 +221,13 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
   const coverMaterial = covers[0]?.material as THREE.MeshPhysicalMaterial | undefined;
   const hiddenCoverTextures = new Set<THREE.Texture>();
   if (coverMaterial) {
-    const artworkMap = buildCoverArtworkMap(coverMaterial.roughnessMap);
+    const artworkMap = buildCoverArtworkMap(coverMaterial.roughnessMap, coverColor);
     for (const texture of [coverMaterial.map, coverMaterial.metalnessMap, coverMaterial.roughnessMap]) {
       if (texture) hiddenCoverTextures.add(texture);
     }
     coverMaterial.map = artworkMap;
     if (artworkMap) coverMaterial.color.setScalar(1);
-    else coverMaterial.color.set(scene3d.passportCover);
+    else coverMaterial.color.set(coverColor);
     coverMaterial.metalness = 0;
     coverMaterial.metalnessMap = null;
     coverMaterial.roughness = scene3d.passportCoverRoughness;
