@@ -12,7 +12,7 @@ export type PassportData = {
   memberSince: string;
   stamps: StampView[];
   pins: StampView[];
-  counts: { stamps: number; places: number };
+  counts: { stamps: number; places: number; neighborhoods?: number };
   retry: () => void;
 };
 
