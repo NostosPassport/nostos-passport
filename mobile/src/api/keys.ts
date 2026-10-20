@@ -8,6 +8,8 @@ export const qk = {
   placePage: (id: string, lat: number | null, lng: number | null) => ["places", "mine", id, lat, lng] as const,
   pins: ["me", "pins"] as const,
   neighborhoods: ["me", "neighborhoods"] as const,
+  collections: ["collections"] as const,
+  collection: (id: string) => ["collections", id] as const,
   userStamps: (handle: string) => ["user", handle, "stamps"] as const,
   userPlaces: (handle: string) => ["user", handle, "places"] as const,
   stamp: (id: string) => ["stamp", id] as const,
