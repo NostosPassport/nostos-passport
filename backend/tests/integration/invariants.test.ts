@@ -5,11 +5,14 @@ import { describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
 import { processImage } from "@/server/services/image";
 import { createStamp, getStamp, listUserPlaces, listUserStamps, removeStamp } from "@/server/services/stamps";
+import { createCollection } from "@/server/services/collections";
+import { enableCollectionShare, resolveCollectionShare } from "@/server/services/collection-sharing";
 import { startSignup, UNDERAGE_MESSAGE } from "@/server/services/auth";
 import { installMemoryStorage } from "./mem-storage";
 import { makeActor, makeStamp, makeVenue, INSIDE, OUTSIDE } from "./factories";
 
 installMemoryStorage();
+process.env.SHARE_TOKEN_SECRET = "invariants-collection-share-secret-1234567890";
 const wire = (x: unknown) => JSON.parse(JSON.stringify(x)) as unknown;
 
 describe("invariants", () => {
@@ -115,5 +118,22 @@ describe("invariants", () => {
     const backend = readFileSync(path.resolve(process.cwd(), "src/contracts/api.ts"), "utf8");
     const mobile = readFileSync(path.resolve(process.cwd(), "../mobile/src/api/contracts.ts"), "utf8");
     expect(mobile).toBe(backend);
+  });
+
+  it("rule 8: collection sharing can expose only an explicit collection and never the master Passport", async () => {
+    const owner = await makeActor();
+    const sharedStamp = await makeStamp(owner, (await makeVenue()).id, { caption: "shared" });
+    const masterOnlyStamp = await makeStamp(owner, (await makeVenue()).id, { caption: "master only" });
+    const created = await createCollection(prisma, owner, { name: "Shared", color: "blue", stampIds: [sharedStamp.id] });
+    const result = await enableCollectionShare(prisma, owner, created.collection.id);
+    expect(result.share.enabled).toBe(true);
+    if (!result.share.enabled) throw new Error("Expected collection sharing to be enabled");
+
+    const token = decodeURIComponent(new URL(result.share.url).pathname.split("/").filter(Boolean).at(-1)!);
+    const publicView = wire(await resolveCollectionShare(prisma, token));
+    const json = JSON.stringify(publicView);
+    expect(json).toContain(sharedStamp.id);
+    expect(json).not.toContain(masterOnlyStamp.id);
+    expect(json).not.toContain(owner.userId);
   });
 });
