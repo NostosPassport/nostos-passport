@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import type { Metadata } from "next";
 import { unstable_noStore as noStore } from "next/cache";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/db";
@@ -53,7 +54,7 @@ export default async function SharedCollectionPage({ params }: Ctx) {
   return (
     <main className="mx-auto min-h-screen w-full max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
       <header className="mb-10 flex items-center justify-between border-b border-line pb-4">
-        <a href="/" className="font-serif text-2xl tracking-tight text-text">Nostos</a>
+        <Link href="/" className="font-serif text-2xl tracking-tight text-text">Nostos</Link>
         <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Shared collection</span>
       </header>
 
@@ -109,7 +110,7 @@ export default async function SharedCollectionPage({ params }: Ctx) {
 
       <footer className="mt-16 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-xs text-muted">
         <span>Shared from Nostos. This link can be disabled by the collection owner at any time.</span>
-        <a href="/support" className="underline underline-offset-2">Report this collection</a>
+        <Link href="/support" className="underline underline-offset-2">Report this collection</Link>
       </footer>
     </main>
   );
