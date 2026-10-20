@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { priceTierForGoogleLevel } from "@/server/services/google-price-cache";
 import { cuisineTags, googleNearby, googlePlaceDetails, googleTextSearch, localityFromAddressComponents } from "@/server/services/google-places";
 
 const originalKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -17,6 +18,15 @@ describe("Google Places normalization", () => {
     expect(cuisineTags("cocktail_bar", ["cocktail_bar", "bar"])).toEqual(["Cocktail Bar"]);
   });
 
+  it("maps Google price levels to stamp dollar signs", () => {
+    expect(priceTierForGoogleLevel("PRICE_LEVEL_INEXPENSIVE")).toBe("$");
+    expect(priceTierForGoogleLevel("PRICE_LEVEL_MODERATE")).toBe("$$");
+    expect(priceTierForGoogleLevel("PRICE_LEVEL_EXPENSIVE")).toBe("$$$");
+    expect(priceTierForGoogleLevel("PRICE_LEVEL_VERY_EXPENSIVE")).toBe("$$$$");
+    expect(priceTierForGoogleLevel("PRICE_LEVEL_FREE")).toBeNull();
+    expect(priceTierForGoogleLevel("PRICE_LEVEL_UNSPECIFIED")).toBeNull();
+  });
+
   it("normalizes worldwide locality from Google address components", () => {
     expect(localityFromAddressComponents([
       { longText: "Trastevere", shortText: "Trastevere", types: ["neighborhood"] },
@@ -26,29 +36,34 @@ describe("Google Places normalization", () => {
     ])).toEqual({ area: "Trastevere", city: "Rome", region: "Lazio", country: "Italy", countryCode: "IT" });
   });
 
-  it("normalizes nearby restaurants and bars and excludes permanently closed results", async () => {
+  it("keeps nearby search on the non-price field mask", async () => {
     process.env.GOOGLE_PLACES_API_KEY = "test-key";
-    const fetchImpl = (async () => response({ places: [
-      {
-        id: "open",
-        displayName: { text: "Open Sushi" },
-        formattedAddress: "1 Test St",
-        location: { latitude: 40.7, longitude: -73.9 },
-        addressComponents: [
-          { longText: "Queens", shortText: "Queens", types: ["sublocality_level_1", "political"] },
-          { longText: "New York", shortText: "New York", types: ["locality", "political"] },
-          { longText: "New York", shortText: "NY", types: ["administrative_area_level_1", "political"] },
-          { longText: "United States", shortText: "US", types: ["country", "political"] },
-        ],
-        timeZone: { id: "America/New_York", version: "2026a" },
-        primaryType: "sushi_restaurant",
-        types: ["sushi_restaurant", "restaurant"],
-        businessStatus: "OPERATIONAL",
-      },
-      { id: "closed", displayName: { text: "Closed Bar" }, formattedAddress: "2 Test St", location: { latitude: 40.71, longitude: -73.91 }, primaryType: "bar", types: ["bar"], businessStatus: "CLOSED_PERMANENTLY" },
-    ] })) as unknown as typeof fetch;
+    let fieldMask = "";
+    const fetchImpl = (async (_input: string | URL | Request, init?: RequestInit) => {
+      fieldMask = new Headers(init?.headers).get("X-Goog-FieldMask") ?? "";
+      return response({ places: [
+        {
+          id: "open",
+          displayName: { text: "Open Sushi" },
+          formattedAddress: "1 Test St",
+          location: { latitude: 40.7, longitude: -73.9 },
+          addressComponents: [
+            { longText: "Queens", shortText: "Queens", types: ["sublocality_level_1", "political"] },
+            { longText: "New York", shortText: "New York", types: ["locality", "political"] },
+            { longText: "New York", shortText: "NY", types: ["administrative_area_level_1", "political"] },
+            { longText: "United States", shortText: "US", types: ["country", "political"] },
+          ],
+          timeZone: { id: "America/New_York", version: "2026a" },
+          primaryType: "sushi_restaurant",
+          types: ["sushi_restaurant", "restaurant"],
+          businessStatus: "OPERATIONAL",
+        },
+        { id: "closed", displayName: { text: "Closed Bar" }, formattedAddress: "2 Test St", location: { latitude: 40.71, longitude: -73.91 }, primaryType: "bar", types: ["bar"], businessStatus: "CLOSED_PERMANENTLY" },
+      ] });
+    }) as unknown as typeof fetch;
 
     const places = await googleNearby({ lat: 40.7, lng: -73.9 }, 750, fetchImpl);
+    expect(fieldMask).not.toContain("priceLevel");
     expect(places).toEqual([expect.objectContaining({
       googlePlaceId: "open",
       name: "Open Sushi",
@@ -60,6 +75,7 @@ describe("Google Places normalization", () => {
       country: "United States",
       countryCode: "US",
       timeZone: "America/New_York",
+      priceLevel: null,
     })]);
   });
 
@@ -77,11 +93,13 @@ describe("Google Places normalization", () => {
     expect(body).not.toHaveProperty("locationBias");
   });
 
-  it("loads a bar detail by Google place id", async () => {
+  it("loads price level only on place details", async () => {
     process.env.GOOGLE_PLACES_API_KEY = "test-key";
     let seen = "";
-    const fetchImpl = (async (input: string | URL | Request) => {
+    let fieldMask = "";
+    const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
       seen = String(input);
+      fieldMask = new Headers(init?.headers).get("X-Goog-FieldMask") ?? "";
       return response({
         id: "abc/123",
         displayName: { text: "Test Wine Bar" },
@@ -94,11 +112,13 @@ describe("Google Places normalization", () => {
         primaryType: "wine_bar",
         types: ["wine_bar", "bar"],
         businessStatus: "OPERATIONAL",
+        priceLevel: "PRICE_LEVEL_EXPENSIVE",
       });
     }) as unknown as typeof fetch;
 
     const place = await googlePlaceDetails("abc/123", fetchImpl);
     expect(seen).toContain("abc%2F123");
-    expect(place).toMatchObject({ category: "bar", cuisines: ["Wine Bar"], city: "Rome", country: "Italy", countryCode: "IT", timeZone: "Europe/Rome" });
+    expect(fieldMask).toContain("priceLevel");
+    expect(place).toMatchObject({ category: "bar", cuisines: ["Wine Bar"], city: "Rome", country: "Italy", countryCode: "IT", timeZone: "Europe/Rome", priceLevel: "PRICE_LEVEL_EXPENSIVE" });
   });
 });
