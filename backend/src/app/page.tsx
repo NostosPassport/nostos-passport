@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 
 import styles from "./LandingPage.module.css";
@@ -12,6 +13,8 @@ const neighborhoods = [
   "SoHo",
   "Williamsburg",
 ];
+
+const stampAngle = (angle: string) => ({ "--stamp-angle": angle } as CSSProperties);
 
 function NeighborhoodTicker() {
   const items = [...neighborhoods, ...neighborhoods];
@@ -37,10 +40,10 @@ function HeroPassport() {
           <div className={styles.page}>
             <div className={styles.pageRule} />
             <div className={styles.guilloche} />
-            <div className={`${styles.stamp} ${styles.stampOne}`}>
+            <div className={`${styles.stamp} ${styles.stampOne}`} style={stampAngle("-7deg")}>
               <span>Morning coffee<span className={styles.stampDate}>Oct · 18</span></span>
             </div>
-            <div className={`${styles.stamp} ${styles.stampThree}`}>
+            <div className={`${styles.stamp} ${styles.stampThree}`} style={stampAngle("5deg")}>
               <span>Sunday walk<span className={styles.stampDate}>Oct · 19</span></span>
             </div>
             <span className={styles.pageNumber}>07</span>
@@ -48,7 +51,7 @@ function HeroPassport() {
           <div className={styles.page}>
             <div className={styles.pageRule} />
             <div className={styles.guilloche} />
-            <div className={`${styles.stamp} ${styles.stampTwo}`}>
+            <div className={`${styles.stamp} ${styles.stampTwo}`} style={stampAngle("8deg")}>
               <span>Dinner<span className={styles.stampDate}>Oct · 20</span></span>
             </div>
             <span className={styles.pageNumber}>08</span>
