@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { PhotoViewer } from "@/features/book/PhotoViewer";
-import { CAMERA_NOTE, pickManyFromLibrary, takePhoto } from "@/features/photos/pick";
+import { CAMERA_NOTE, pickFromLibrary, pickManyFromLibrary, takePhoto } from "@/features/photos/pick";
 import { prepareImage } from "@/features/photos/prepare";
 import { saveAcceptedCameraPhoto } from "@/features/photos/save-camera-photo";
 import { photoDraft, usePhotoDraft } from "@/features/stamps/photo-draft";
@@ -54,7 +54,11 @@ export default function StampCamera() {
     if (!startWork()) return;
     try {
       const remaining = MAX_STAMP_PHOTOS - photoDraft.get().length;
-      const picked = await pickManyFromLibrary(remaining);
+      let picked = typeof pickManyFromLibrary === "function" ? await pickManyFromLibrary(remaining) : [];
+      if (!picked.length && typeof pickManyFromLibrary !== "function") {
+        const single = await pickFromLibrary();
+        picked = single ? [single] : [];
+      }
       if (!picked.length) return;
       let added = 0;
       for (const item of picked.slice(0, remaining)) {
@@ -96,7 +100,7 @@ export default function StampCamera() {
         {note ? <Text variant="footnote" color="danger" align="center">{note}</Text> : null}
       </View>
       <View style={styles.actions}>
-        {!full ? <Button title={photos.length > 0 ? "Add more photos" : "Add photos"} onPress={chooseSource} loading={busy} /> : null}
+        {!full ? <Button title={photos.length > 0 ? "Add another photo" : "Add a photo"} onPress={chooseSource} loading={busy} /> : null}
         <Button title="Done" variant="plain" onPress={() => router.back()} />
       </View>
       <PhotoViewer photos={viewerPhotos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
