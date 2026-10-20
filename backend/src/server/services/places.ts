@@ -9,7 +9,6 @@ import type { Db } from "@/lib/db";
 import { distanceMeters } from "@/lib/geo";
 import { OSM_ATTRIBUTION, slugify } from "@/lib/osm";
 import { notFound } from "@/server/errors";
-import { cacheGooglePrice, cachedGooglePrice } from "@/server/services/google-price-cache";
 import { googleNearby, googlePlaceDetails, googlePlacePriceLevel, googleTextSearch, type GooglePlace } from "@/server/services/google-places";
 
 const placeSelect = {
@@ -33,6 +32,8 @@ const placeSelect = {
   cuisines: true,
   category: true,
   googleBusinessStatus: true,
+  googlePriceLevel: true,
+  googlePriceCheckedAt: true,
 } as const;
 
 type PlaceRow = {
@@ -56,6 +57,8 @@ type PlaceRow = {
   cuisines: string[];
   category: string | null;
   googleBusinessStatus: string | null;
+  googlePriceLevel: string | null;
+  googlePriceCheckedAt: Date | null;
 };
 
 export type PlaceView = {
@@ -84,12 +87,26 @@ export const localityLabel = (place: Pick<PlaceView, "area" | "city" | "region" 
   place.area ?? place.city ?? place.region ?? place.country ?? "Unknown area";
 
 const category = (value: string | null): "restaurant" | "bar" | null => value === "restaurant" || value === "bar" ? value : null;
-const toView = ({ osmId, googlePrimaryType, googleBusinessStatus, ...p }: PlaceRow): PlaceView => ({
-  ...p,
-  fromOsm: osmId !== null,
-  category: category(p.category),
-  primaryType: googlePrimaryType,
-  businessStatus: googleBusinessStatus,
+const toView = (row: PlaceRow): PlaceView => ({
+  id: row.id,
+  slug: row.slug,
+  name: row.name,
+  address: row.address,
+  area: row.area,
+  city: row.city,
+  region: row.region,
+  country: row.country,
+  countryCode: row.countryCode,
+  timeZone: row.timeZone,
+  lat: row.lat,
+  lng: row.lng,
+  geofenceMeters: row.geofenceMeters,
+  fromOsm: row.osmId !== null,
+  googlePlaceId: row.googlePlaceId,
+  category: category(row.category),
+  cuisines: row.cuisines,
+  primaryType: row.googlePrimaryType,
+  businessStatus: row.googleBusinessStatus,
 });
 
 /** Legacy ODbL attribution for stored OSM venues. New discovery comes from Google Places. */
@@ -176,23 +193,24 @@ async function legacyMatch(db: Db, place: GooglePlace) {
 }
 
 /**
- * One-time price enrichment used by stamp creation. The venue row lock makes concurrent first stamps serialize, so once a
- * cached row exists neither another stamp nor any stamp-viewing path makes another paid Details request for price.
+ * One-time price enrichment used by stamp creation. The venue row lock makes concurrent first stamps serialize, so once
+ * googlePriceCheckedAt is set neither another stamp nor any stamp-viewing path makes another paid Details request for price.
  */
 export async function ensureGooglePriceForStamp(db: Db, place: Pick<PlaceView, "id" | "googlePlaceId">) {
   if (!place.googlePlaceId) return;
   await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM venue WHERE id = ${place.id} FOR UPDATE`;
-    if ((await cachedGooglePrice(tx, place.id)).cached) return;
-    const priceLevel = await googlePlacePriceLevel(place.googlePlaceId!);
-    await cacheGooglePrice(tx, place.id, priceLevel);
+    const current = await tx.venue.findUnique({ where: { id: place.id }, select: { googlePlaceId: true, googlePriceCheckedAt: true } });
+    if (!current?.googlePlaceId || current.googlePriceCheckedAt) return;
+    const priceLevel = await googlePlacePriceLevel(current.googlePlaceId);
+    await tx.venue.update({ where: { id: place.id }, data: { googlePriceLevel: priceLevel, googlePriceCheckedAt: new Date() } });
   });
 }
 
 /**
  * Beli-style get-or-create: a Google place_id becomes a durable Nostos venue only when the user actually uses it.
- * Cuisine/category and locality are snapshotted from Google's place data at that point. A newly resolved venue also caches
- * price from that same Details response, so no second request is needed when its first stamp is created.
+ * Cuisine/category, locality and price are snapshotted from the same Details response. googlePriceCheckedAt records that a
+ * price lookup has already happened even when Google returns no price, preventing repeat paid requests.
  */
 export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise<PlaceView> {
   const already = await db.venue.findUnique({ where: { googlePlaceId }, select: placeSelect });
@@ -200,6 +218,7 @@ export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise
 
   const google = await googlePlaceDetails(googlePlaceId);
   const old = await legacyMatch(db, google);
+  const now = new Date();
   const data = {
     name: google.name,
     address: google.address,
@@ -217,24 +236,22 @@ export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise
     cuisines: google.cuisines,
     category: google.category,
     googleBusinessStatus: google.businessStatus,
-    googleSyncedAt: new Date(),
+    googlePriceLevel: google.priceLevel,
+    googlePriceCheckedAt: now,
+    googleSyncedAt: now,
   };
 
-  if (old) {
-    const row = await db.venue.update({ where: { id: old.id }, data, select: placeSelect });
-    await cacheGooglePrice(db, row.id, google.priceLevel);
-    return toView(row);
-  }
+  if (old) return toView(await db.venue.update({ where: { id: old.id }, data, select: placeSelect }));
   const slug = await uniqueSlug(db, google.name, google.googlePlaceId);
   try {
-    const row = await db.venue.create({ data: { ...data, slug, geofenceMeters: 100 }, select: placeSelect });
-    await cacheGooglePrice(db, row.id, google.priceLevel);
-    return toView(row);
+    return toView(await db.venue.create({ data: { ...data, slug, geofenceMeters: 100 }, select: placeSelect }));
   } catch (error) {
     const raced = await db.venue.findUnique({ where: { googlePlaceId }, select: placeSelect });
     if (raced) {
-      const cached = await cachedGooglePrice(db, raced.id);
-      if (!cached.cached) await cacheGooglePrice(db, raced.id, google.priceLevel);
+      if (!raced.googlePriceCheckedAt) {
+        const updated = await db.venue.update({ where: { id: raced.id }, data: { googlePriceLevel: google.priceLevel, googlePriceCheckedAt: now }, select: placeSelect });
+        return toView(updated);
+      }
       return toView(raced);
     }
     throw error;
