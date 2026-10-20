@@ -63,12 +63,12 @@ export default function ShareCollectionScreen() {
     <View style={styles.root}>
       <Stack.Screen options={{ title: "Share collection", presentation: "modal" }} />
       <View style={styles.hero}>
-        <Text variant="title1">{collection.name}</Text>
+        <Text variant="title">{collection.name}</Text>
         <Text color="textSecondary">Only this collection can be shared. Your master Passport always stays private.</Text>
       </View>
 
       <View style={styles.card}>
-        <Text variant="title3">Web link</Text>
+        <Text variant="title2">Web link</Text>
         <Text color="textSecondary">
           {share.enabled
             ? "Anyone with this link can view the live collection on the web. The page is not listed or indexed by search engines."
@@ -83,7 +83,13 @@ export default function ShareCollectionScreen() {
         ) : (
           <Button title="Create and share link" icon="square.and.arrow.up" loading={enable.isPending} onPress={() => enable.mutate()} />
         )}
-        {mutationError ? <InlineError message="Couldn't update this shared link." onRetry={share.enabled ? () => disable.reset() : () => enable.reset()} /> : null}
+        {mutationError ? (
+          <InlineError
+            message="Couldn't update this shared link."
+            onRetry={share.enabled ? () => disable.mutate() : () => enable.mutate()}
+            retrying={enable.isPending || disable.isPending}
+          />
+        ) : null}
       </View>
 
       <Text variant="caption" color="textSecondary">
