@@ -23,6 +23,7 @@ const placeSelect = {
   region: true,
   country: true,
   countryCode: true,
+  timeZone: true,
   lat: true,
   lng: true,
   geofenceMeters: true,
@@ -47,6 +48,7 @@ type PlaceRow = {
   region: string | null;
   country: string | null;
   countryCode: string | null;
+  timeZone: string | null;
   lat: number;
   lng: number;
   geofenceMeters: number;
@@ -71,6 +73,7 @@ export type PlaceView = {
   region: string | null;
   country: string | null;
   countryCode: string | null;
+  timeZone: string | null;
   lat: number;
   lng: number;
   geofenceMeters: number;
@@ -125,6 +128,7 @@ function discoveryView(
     region: existing?.region ?? place.region,
     country: existing?.country ?? place.country,
     countryCode: existing?.countryCode ?? place.countryCode,
+    timeZone: existing?.timeZone ?? place.timeZone,
     lat: place.lat,
     lng: place.lng,
     geofenceMeters: existing?.geofenceMeters ?? 100,
@@ -214,6 +218,7 @@ export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise
     region: google.region,
     country: google.country,
     countryCode: google.countryCode,
+    timeZone: google.timeZone,
     neighborhoodId: hood?.id ?? null,
     lat: google.lat,
     lng: google.lng,
