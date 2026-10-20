@@ -80,28 +80,6 @@ async function loadEnvironment(): Promise<{ texture: THREE.DataTexture; choice: 
 
 const hexRgb = (hex: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
 
-function buildBackgroundTexture(): THREE.DataTexture {
-  const rows = 256;
-  const top = hexRgb(colors.background);
-  const bottom = hexRgb(colors.surface);
-  const data = new Uint8Array(rows * 4);
-  for (let y = 0; y < rows; y++) {
-    const t = y / (rows - 1);
-    const k = y * 4;
-    data[k] = Math.round(bottom[0] + (top[0] - bottom[0]) * t);
-    data[k + 1] = Math.round(bottom[1] + (top[1] - bottom[1]) * t);
-    data[k + 2] = Math.round(bottom[2] + (top[2] - bottom[2]) * t);
-    data[k + 3] = 255;
-  }
-  const texture = new THREE.DataTexture(data, 1, rows, THREE.RGBAFormat, THREE.UnsignedByteType);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearFilter;
-  texture.generateMipmaps = false;
-  texture.needsUpdate = true;
-  return texture;
-}
-
 function buildCoverArtworkMap(source: THREE.Texture | null, coverColor: string, hideWordmark = false): THREE.DataTexture | null {
   if (!source) return null;
   const image = (source as THREE.DataTexture).image as { data?: Uint8Array; width?: number; height?: number } | undefined;
@@ -184,8 +162,7 @@ export async function createStage(gl: ExpoWebGLRenderingContext, coverColor: str
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
   const scene = new THREE.Scene();
-  const backgroundTexture = buildBackgroundTexture();
-  scene.background = backgroundTexture;
+  scene.background = new THREE.Color(colors.background);
   const camera = new THREE.PerspectiveCamera(CAMERA.fov, width / height, 0.05, 5);
   camera.position.set(0, CAMERA.lift, CAMERA.distance);
   camera.lookAt(0, -0.01, 0);
@@ -363,7 +340,6 @@ export async function createStage(gl: ExpoWebGLRenderingContext, coverColor: str
       });
       hiddenPageTextures.forEach((texture) => texture.dispose());
       hiddenCoverTextures.forEach((texture) => texture.dispose());
-      backgroundTexture.dispose();
       shadowTexture.dispose();
       envTarget?.dispose();
       env.texture.dispose();
