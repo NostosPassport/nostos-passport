@@ -24,7 +24,6 @@ import { slotPlacement } from "./slots";
 import { FOCUS_TOP_SPACE, FOCUS_BOTTOM_SPACE, focusBookSize, focusSpreadCount, stampHitRect } from "./focus-interaction";
 import { usePassport } from "./use-passport";
 
-/* eslint-disable react-hooks/immutability -- Reanimated shared values are written through .value by design */
 type Props = { collectionId?: string };
 type PassportData = ReturnType<typeof usePassport>;
 type BookViewProps = {
@@ -49,7 +48,6 @@ function CollectionPassportBook({ collectionId }: { collectionId: string }) {
   const collection = collectionQuery.data?.collection ?? null;
   const customStamps = collection?.stamps ?? [];
   const customPlaces = new Set(customStamps.map((stamp) => stamp.place.id)).size;
-  const customNeighborhoods = new Set(customStamps.map((stamp) => stamp.place.neighborhoodId).filter(Boolean)).size;
   const customStatus = master.status === "error" || collectionQuery.isError
     ? "error"
     : master.status === "pending" || collectionQuery.isPending
@@ -59,7 +57,7 @@ function CollectionPassportBook({ collectionId }: { collectionId: string }) {
     ...master,
     status: customStatus,
     stamps: customStamps,
-    counts: { stamps: customStamps.length, places: customPlaces, neighborhoods: customNeighborhoods },
+    counts: { stamps: customStamps.length, places: customPlaces },
     retry: () => {
       master.retry();
       void collectionQuery.refetch();
