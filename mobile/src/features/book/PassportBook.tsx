@@ -9,7 +9,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCollection } from "@/api/queries";
 import { collectionColorValue } from "@/features/collections/colors";
-import { bookMotion, colors, fonts, size, space } from "@/theme";
+import { bookMotion, colors, size, space, type as typeScale } from "@/theme";
 import { Passport3DView } from "../lab3d/Passport3DView";
 import { READER_AT, SPREAD_FILL } from "../lab3d/open-motion";
 import { BearerPage } from "./BearerPage";
@@ -139,5 +139,5 @@ export function PassportBook({ collectionId }: Props = {}) {
 }
 const styles=StyleSheet.create({
  root:{flex:1,backgroundColor:colors.background},home:{flex:1,paddingHorizontal:space.md,paddingBottom:space.xs,alignItems:"center"},center:{flex:1,alignItems:"center",justifyContent:"center",padding:space.lg},
- model:{flex:1,width:"100%",minHeight:0},counts:{width:"100%",alignItems:"center",paddingTop:space.md,gap:space.xs},collectionTitle:{maxWidth:"88%",color:colors.textPrimary,fontFamily:fonts.serifRegular,fontSize:28,lineHeight:31,textAlign:"center"},focus:{flex:1,alignItems:"center",justifyContent:"center"},backdrop:{backgroundColor:colors.background},close:{minWidth:size.hitTarget,minHeight:size.hitTarget,alignItems:"center",justifyContent:"center"},
+ model:{flex:1,width:"100%",minHeight:0},counts:{width:"100%",alignItems:"center",paddingTop:space.md,gap:space.xs},collectionTitle:{...typeScale.title2,maxWidth:"88%",color:colors.textPrimary,textAlign:"center"},focus:{flex:1,alignItems:"center",justifyContent:"center"},backdrop:{backgroundColor:colors.background},close:{minWidth:size.hitTarget,minHeight:size.hitTarget,alignItems:"center",justifyContent:"center"},
 });
