@@ -1,4 +1,5 @@
 import { api } from "@/api";
+import { tokenStore } from "@/auth/token-store";
 
 export type MichelinStars = 1 | 2 | 3;
 export type MichelinPreview = { venueId: string; stars: MichelinStars | null; proof: string | null };
@@ -27,9 +28,14 @@ export const michelinPreviewDraft = {
 };
 
 export async function fetchMichelinPreview(placeId: string): Promise<MichelinPreview> {
+  const token = tokenStore.current();
   const response = await fetch(`${api.baseUrl}/api/places/${encodeURIComponent(placeId)}/michelin`, {
     method: "GET",
-    headers: { Accept: "application/json", "X-Client": "ios" },
+    headers: {
+      Accept: "application/json",
+      "X-Client": "ios",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
   if (!response.ok) throw new Error(`Michelin preview ${response.status}`);
   const value = await response.json() as { venueId?: unknown; stars?: unknown; proof?: unknown };
