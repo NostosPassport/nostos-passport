@@ -99,6 +99,11 @@ export function useCollection(id: string, enabled = true) {
   return useQuery({ queryKey: qk.collection(id), queryFn: () => api.collections.get(id), enabled: enabled && id !== "", staleTime: 30_000 });
 }
 
+export function useCollectionShare(id: string, enabled = true) {
+  const { status } = useAuth();
+  return useQuery({ queryKey: qk.collectionShare(id), queryFn: () => api.collections.shareStatus(id), enabled: status === "signedIn" && enabled && id !== "", staleTime: 15_000 });
+}
+
 export function useProfileSettings() {
   return useQuery({ queryKey: qk.profileSettings, queryFn: api.me.profile });
 }
