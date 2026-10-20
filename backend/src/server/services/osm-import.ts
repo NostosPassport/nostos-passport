@@ -1,12 +1,8 @@
 import type { Db } from "@/lib/db";
-import { assignSlugs, neighborhoodOf, parseOverpass, type OverpassElement } from "@/lib/osm";
+import { assignSlugs, parseOverpass, type OverpassElement } from "@/lib/osm";
 
 export type ImportResult = { fetched: number; created: number; updated: number; unchanged: number };
 
-/**
- * Legacy NYC OSM importer. New product discovery comes from Google Places, but this remains useful for historical
- * OSM rows and development fixtures. The old OSM neighborhood label is stored as generalized `area` metadata.
- */
 export async function importOsmVenues(db: Db, elements: readonly OverpassElement[]): Promise<ImportResult> {
   const venues = parseOverpass(elements);
   return db.$transaction(
@@ -22,7 +18,6 @@ export async function importOsmVenues(db: Db, elements: readonly OverpassElement
 
       for (const v of venues) {
         const current = byOsm.get(v.osmId);
-        const area = v.neighborhood || neighborhoodOf(v.lat, v.lng);
         if (!current) {
           const slug = slugs.get(v.osmId)!;
           if (usedSlugs.has(slug)) throw new Error(`Slug collision for ${v.osmId}: "${slug}" is already used`);
@@ -33,7 +28,7 @@ export async function importOsmVenues(db: Db, elements: readonly OverpassElement
               osmId: v.osmId,
               name: v.name,
               address: v.address,
-              area,
+              area: v.area,
               city: "New York",
               region: "New York",
               country: "United States",
@@ -51,7 +46,7 @@ export async function importOsmVenues(db: Db, elements: readonly OverpassElement
           data.lat = v.lat;
           data.lng = v.lng;
         }
-        if ((area ?? null) !== current.area) data.area = area ?? null;
+        if (v.area !== current.area) data.area = v.area;
         if (current.name !== v.name || current.address !== v.address) Object.assign(data, { name: v.name, address: v.address });
         if (Object.keys(data).length) {
           await tx.venue.update({ where: { id: current.id }, data });
