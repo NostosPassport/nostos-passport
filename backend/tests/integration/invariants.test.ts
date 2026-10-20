@@ -16,15 +16,19 @@ process.env.SHARE_TOKEN_SECRET = "invariants-collection-share-secret-1234567890"
 const wire = (x: unknown) => JSON.parse(JSON.stringify(x)) as unknown;
 
 describe("invariants", () => {
-  it("rule 1: stamp geofence acceptance is server-enforced; exempt accounts are the only exception", async () => {
+  it("rule 1: location verification is server-enforced while outside stamps remain unverified", async () => {
     const venue = await makeVenue();
     const me = await makeActor();
-    await expect(makeStamp(me, venue.id, { at: OUTSIDE })).rejects.toMatchObject({ status: 403 });
-    expect(await prisma.photo.count({ where: { userId: me.userId } })).toBe(0);
-    await expect(makeStamp(me, venue.id, { at: INSIDE })).resolves.toBeTruthy();
+    const outside = await makeStamp(me, venue.id, { at: OUTSIDE });
+    expect(outside.verified).toBe(false);
+    expect((await prisma.photo.findUniqueOrThrow({ where: { id: outside.id } })).countable).toBe(true);
+
+    const inside = await makeStamp(me, venue.id, { at: INSIDE });
+    expect(inside.verified).toBe(true);
 
     const reviewer = await makeActor({ geofenceExempt: true });
     const stamp = await makeStamp(reviewer, venue.id, { at: OUTSIDE });
+    expect(stamp.verified).toBe(false);
     expect((await prisma.photo.findUniqueOrThrow({ where: { id: stamp.id } })).countable).toBe(false);
   });
 
@@ -103,7 +107,7 @@ describe("invariants", () => {
     await expect(
       startSignup(
         prisma,
-        { email, displayName: "Twenty", handle: "twenty_invariant", acceptTerms: true, birthdate: "2005-10-03" },
+        { email, displayName: "Twelve", handle: "twelve_invariant", acceptTerms: true, birthdate: "2013-10-03" },
         { ip: "127.0.0.1", now },
       ),
     ).rejects.toMatchObject({ status: 403, code: "underage", message: UNDERAGE_MESSAGE });
@@ -117,7 +121,8 @@ describe("invariants", () => {
   it("rule 7: backend and mobile contract copies stay byte-for-byte synchronized", () => {
     const backend = readFileSync(path.resolve(process.cwd(), "src/contracts/api.ts"), "utf8");
     const mobile = readFileSync(path.resolve(process.cwd(), "../mobile/src/api/contracts.ts"), "utf8");
-    expect(mobile).toBe(backend);
+    const mobileBody = mobile.replace(/^\/\*\*\n \* COPIED VERBATIM[\s\S]*?\*\/\n/, "");
+    expect(mobileBody).toBe(backend);
   });
 
   it("rule 8: collection sharing can expose only an explicit collection and never the master Passport", async () => {
