@@ -24,6 +24,7 @@ type Props = {
 };
 
 type Zone = "next" | "prev" | null;
+type TurnDirection = "next" | "prev";
 
 function zoneAt(x: number, width: number, share: number): Zone {
   "worklet";
@@ -122,43 +123,33 @@ export function SinglePageFlipBook({ pageWidth: pw, pageHeight: ph, total, page,
         {current > 0 ? <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.page, { width: pw, height: ph }, previousStyle]}>{renderPage(current - 1)}</Animated.View> : null}
         {current < total - 1 ? <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.page, { width: pw, height: ph }, nextStyle]}>{renderPage(current + 1)}</Animated.View> : null}
         <Animated.View style={[styles.page, { width: pw, height: ph }, currentStyle]}>{renderPage(current)}</Animated.View>
-        {current > 0 ? <TurningPage k={current - 1} pos={pos} pw={pw} ph={ph} reduced={reduced} front={renderPage(current - 1)} back={renderPage(current)} /> : null}
-        {current < total - 1 ? <TurningPage k={current} pos={pos} pw={pw} ph={ph} reduced={reduced} front={renderPage(current)} back={renderPage(current + 1)} /> : null}
+        {current > 0 ? <TurningCurrentPage direction="prev" current={current} pos={pos} pw={pw} ph={ph} reduced={reduced}>{renderPage(current)}</TurningCurrentPage> : null}
+        {current < total - 1 ? <TurningCurrentPage direction="next" current={current} pos={pos} pw={pw} ph={ph} reduced={reduced}>{renderPage(current)}</TurningCurrentPage> : null}
       </View>
     </GestureDetector>
   );
 }
 
-function TurningPage({ k, pos, pw, ph, reduced, front, back }: { k: number; pos: SharedValue<number>; pw: number; ph: number; reduced: boolean; front: ReactNode; back: ReactNode }) {
+function TurningCurrentPage({ direction, current, pos, pw, ph, reduced, children }: { direction: TurnDirection; current: number; pos: SharedValue<number>; pw: number; ph: number; reduced: boolean; children: ReactNode }) {
+  const progress = () => direction === "next" ? turnProgress(pos.value, current) : 1 - turnProgress(pos.value, current - 1);
   const activeStyle = useAnimatedStyle(() => {
-    const p = turnProgress(pos.value, k);
+    const p = progress();
     const active = p > 0.001 && p < 0.999;
     return { opacity: active ? 1 : 0, zIndex: active ? 2 : 0 };
   });
-  const frontStyle = useAnimatedStyle(() => {
-    const p = turnProgress(pos.value, k);
+  const pageStyle = useAnimatedStyle(() => {
+    const p = progress();
     if (reduced) return { opacity: 1 - p, transform: [] };
-    const scale = Math.max(0.001, 1 - p * 2);
-    return { opacity: p < 0.5 ? 1 : 0, transform: [{ scaleX: scale }] };
+    return { opacity: p < 0.999 ? 1 : 0, transform: [{ scaleX: Math.max(0.001, 1 - p) }] };
   });
-  const backStyle = useAnimatedStyle(() => {
-    const p = turnProgress(pos.value, k);
-    if (reduced) return { opacity: p, transform: [] };
-    const scale = Math.max(0.001, p * 2 - 1);
-    return { opacity: p >= 0.5 ? 1 : 0, transform: [{ scaleX: scale }] };
-  });
-  const shade = useAnimatedStyle(() => ({ opacity: reduced ? 0 : flipShade(turnProgress(pos.value, k)) }));
-  const cast = useAnimatedStyle(() => ({ opacity: reduced ? 0 : castShade(turnProgress(pos.value, k)) }));
+  const shade = useAnimatedStyle(() => ({ opacity: reduced ? 0 : flipShade(progress()) }));
+  const cast = useAnimatedStyle(() => ({ opacity: reduced ? 0 : castShade(progress()) }));
 
   return (
-    <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.page, { width: pw, height: ph }, activeStyle]}>
+    <Animated.View testID={`single-turn-current-${direction}`} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.page, { width: pw, height: ph }, activeStyle]}>
       <Animated.View style={[styles.cast, { width: pw, height: ph }, cast]} />
-      <Animated.View style={[styles.page, { width: pw, height: ph, transformOrigin: "left center" }, frontStyle]}>
-        {front}
-        <Animated.View pointerEvents="none" style={[styles.cast, { width: pw, height: ph }, shade]} />
-      </Animated.View>
-      <Animated.View style={[styles.page, { width: pw, height: ph, transformOrigin: "left center" }, backStyle]}>
-        {back}
+      <Animated.View style={[styles.page, { width: pw, height: ph, transformOrigin: direction === "next" ? "left center" : "right center" }, pageStyle]}>
+        {children}
         <Animated.View pointerEvents="none" style={[styles.cast, { width: pw, height: ph }, shade]} />
       </Animated.View>
     </Animated.View>
