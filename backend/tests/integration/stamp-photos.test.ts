@@ -24,21 +24,24 @@ describe("multi-photo stamps", () => {
     await expect(addStampPhotos(prisma, me, stamp.id, many(1))).rejects.toMatchObject({ status: 400 });
     await expect(
       prisma.$transaction(async (tx) => {
-        const parent = await tx.photo.create({ data: { userId: me.userId, venueId: venue.id, caption: "batch", ...INSIDE } });
+        const parent = await tx.photo.create({ data: { userId: me.userId, venueId: venue.id, caption: "batch" } });
         for (let i = 0; i < 7; i++) await tx.stampPhoto.create({ data: { stampId: parent.id, storageKey: `photos/limit${i}.png`, mimeType: "image/png", position: i % 6 } });
       }),
     ).rejects.toThrow(/at most 6 photos/);
     await expect(prisma.stampPhoto.create({ data: { stampId: stamp.id, storageKey: "photos/x8.png", mimeType: "image/png", position: 6 } })).rejects.toThrow();
   });
 
-  it("refuses later additions and keeps original positions after a removal", async () => {
+  it("allows later additions up to the cap and keeps original positions after a removal", async () => {
     const me = await makeActor();
     const stamp = await stampWith(me, (await makeVenue()).id, 3);
     const removed = await removeStampPhoto(prisma, me, stamp.id, stamp.photos[1]!.id);
     expect(removed.stamp.photos.map((p) => p.position)).toEqual([0, 2]);
     expect(removed.stamp.photoUrl).toBe(removed.stamp.photos[0]!.url);
-    await expect(addStampPhotos(prisma, me, stamp.id, many(2))).rejects.toMatchObject({ status: 400 });
+    // Photos may be added after creation, up to the 6-photo cap; the freed slot is reused and survivors keep their positions.
+    await expect(addStampPhotos(prisma, me, stamp.id, many(5))).rejects.toMatchObject({ status: 400 });
     expect((await getStamp(prisma, me, stamp.id)).stamp.photos.map((p) => p.position)).toEqual([0, 2]);
+    const added = await addStampPhotos(prisma, me, stamp.id, many(1));
+    expect(added.stamp.photos.map((p) => p.position)).toEqual([0, 1, 2]);
     expect(removed.stamp.editedAt).not.toBeNull();
   });
 
