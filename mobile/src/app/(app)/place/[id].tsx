@@ -74,7 +74,7 @@ function Page() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: colors.transparent },
   content: { padding: screenPadding, gap: space.lg, paddingBottom: space.xxxl },
   head: { gap: space.xs },
   visit: { gap: space.xs, padding: space.md, borderRadius: radius.card, backgroundColor: colors.surface },

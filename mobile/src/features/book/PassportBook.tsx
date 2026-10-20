@@ -195,7 +195,7 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: colors.transparent },
   home: { flex: 1, paddingHorizontal: space.md, paddingBottom: space.xs, alignItems: "center" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: space.lg },
   model: { flex: 1, width: "100%", minHeight: 0 },
