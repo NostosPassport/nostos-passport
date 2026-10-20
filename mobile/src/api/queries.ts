@@ -98,8 +98,7 @@ export function useCollections() {
 }
 
 export function useCollection(id: string, enabled = true) {
-  const { status } = useAuth();
-  return useQuery({ queryKey: qk.collection(id), queryFn: () => api.collections.get(id), enabled: status === "signedIn" && enabled && id !== "", staleTime: 30_000 });
+  return useQuery({ queryKey: qk.collection(id), queryFn: () => api.collections.get(id), enabled: enabled && id !== "", staleTime: 30_000 });
 }
 
 export function useProfileSettings() {
