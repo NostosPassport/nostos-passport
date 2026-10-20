@@ -7,7 +7,7 @@ import { colors, radius } from "@/theme";
 export default function AppLayout() {
   return (
     <AppBackground>
-      <Stack screenOptions={{ ...stackOptions, contentStyle: { backgroundColor: colors.transparent } }}>
+      <Stack screenOptions={{ ...stackOptions, contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="place/[id]" options={{ title: "Place" }} />
         <Stack.Screen name="stamp/[id]" options={{ title: "Stamp" }} />
