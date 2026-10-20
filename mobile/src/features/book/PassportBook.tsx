@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Modal, Pressable, StyleSheet, Text as NativeText, useWindowDimensions, View } from "react-native";
+import { AppState, Modal, Platform, Pressable, StyleSheet, Text as NativeText, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
@@ -19,9 +19,10 @@ import { FirstRunHint } from "./FirstRunHint";
 import { useFirstRun } from "./first-run";
 import { InsideCover } from "./InsideCover";
 import { PageView } from "./PageView";
+import { SinglePageFlipBook } from "./SinglePageFlipBook";
 import { type PageFace, groupByPage } from "./spreads";
 import { slotPlacement } from "./slots";
-import { FOCUS_TOP_SPACE, FOCUS_BOTTOM_SPACE, focusBookSize, focusSpreadCount, stampHitRect } from "./focus-interaction";
+import { FOCUS_TOP_SPACE, FOCUS_BOTTOM_SPACE, focusBookSize, focusPageCount, focusPageSize, focusSpreadCount, stampHitRect } from "./focus-interaction";
 import { usePassport } from "./use-passport";
 
 /* eslint-disable react-hooks/immutability -- Reanimated shared values are written through .value by design */
@@ -33,6 +34,8 @@ type BookViewProps = {
   coverColor?: string;
   collectionTitle?: string | null;
 };
+
+const TABLET_MIN_DIMENSION = 700;
 
 export function PassportBook({ collectionId }: Props = {}) {
   return collectionId ? <CollectionPassportBook collectionId={collectionId} /> : <MasterPassportBook />;
@@ -88,8 +91,9 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
+  const compactReader = Platform.OS !== "web" && Math.min(width, height) < TABLET_MIN_DIMENSION;
   const [focused, setFocused] = useState(false);
-  const [spread, setSpread] = useState(0);
+  const [readerIndex, setReaderIndex] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
   const [opening, setOpening] = useState(false);
   const [modelClosing, setModelClosing] = useState(false);
@@ -118,10 +122,14 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
     return () => setScreenActive(false);
   }, []));
   useEffect(() => { const sub = AppState.addEventListener("change", (s) => setAppActive(s === "active")); return () => sub.remove(); }, []);
-  const total = focusSpreadCount(data.stamps.map((s) => s.page));
-  const current = Math.min(spread, total - 1);
-  const book = focusBookSize(width - insets.left - insets.right, height - insets.top - insets.bottom);
-  const fitScale = modelFrame.width > 0 ? Math.min(1.6, Math.max(1, (book.pageWidth * 2) / (SPREAD_FILL * modelFrame.width))) : 1.1;
+  const stampPages = data.stamps.map((s) => s.page);
+  const total = compactReader ? focusPageCount(stampPages) : focusSpreadCount(stampPages);
+  const current = Math.min(readerIndex, total - 1);
+  const availableWidth = width - insets.left - insets.right;
+  const availableHeight = height - insets.top - insets.bottom;
+  const book = compactReader ? focusPageSize(availableWidth, availableHeight) : focusBookSize(availableWidth, availableHeight);
+  const readerWidth = compactReader ? book.pageWidth : book.pageWidth * 2;
+  const fitScale = modelFrame.width > 0 ? Math.min(1.6, Math.max(1, readerWidth / (SPREAD_FILL * modelFrame.width))) : 1.1;
   const modelMotion = useAnimatedStyle(() => {
     const sourceCenter = insets.top + size.hitTarget + space.xs + modelFrame.y + modelFrame.height / 2;
     const destinationCenter = (height + insets.top - insets.bottom + FOCUS_TOP_SPACE - FOCUS_BOTTOM_SPACE) / 2;
@@ -136,8 +144,14 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
   };
   const byPage = useMemo(() => groupByPage(data.stamps), [data.stamps]);
   const pinnedIds = useMemo(() => data.pins.map((s) => s.id), [data.pins]);
-  const stampTargets = useMemo(() => [current * 2 - 1, current * 2].flatMap((p, index) =>
-    (byPage.get(p) ?? []).map((s) => stampHitRect(slotPlacement(s.id, s.slot ?? 1, book.pageWidth, book.pageHeight), index * book.pageWidth))), [byPage, current, book.pageWidth, book.pageHeight]);
+  const stampTargets = useMemo(() => {
+    if (compactReader) {
+      if (current === 0) return [];
+      return (byPage.get(current) ?? []).map((s) => stampHitRect(slotPlacement(s.id, s.slot ?? 1, book.pageWidth, book.pageHeight), 0));
+    }
+    return [current * 2 - 1, current * 2].flatMap((p, index) =>
+      (byPage.get(p) ?? []).map((s) => stampHitRect(slotPlacement(s.id, s.slot ?? 1, book.pageWidth, book.pageHeight), index * book.pageWidth)));
+  }, [compactReader, byPage, current, book.pageWidth, book.pageHeight]);
   const close = () => {
     if (closing.value) return;
     closing.value = true;
@@ -146,10 +160,15 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
     progress.value = withTiming(0, { duration: reduced ? 0 : bookMotion.durations.standard }, (finished) => { if (finished) scheduleOnRN(finishClose); });
   };
   const openStamp = (id: string) => { returnToFocus.current = true; setFocused(false); router.push({ pathname: "/stamp/[id]", params: { id } }); };
+  const bearerPage = <BearerPage width={book.pageWidth} height={book.pageHeight} bearer={{ displayName: data.displayName, handle: data.handle, memberSince: data.memberSince, bio: data.bio }} avatarUrl={data.avatarUrl} />;
   const renderFace = (face: PageFace, side: "left" | "right") => {
     if (face.kind === "inside-cover") return <InsideCover width={book.pageWidth} height={book.pageHeight} />;
-    if (face.kind === "bearer") return <BearerPage width={book.pageWidth} height={book.pageHeight} bearer={{ displayName: data.displayName, handle: data.handle, memberSince: data.memberSince, bio: data.bio }} avatarUrl={data.avatarUrl} />;
+    if (face.kind === "bearer") return bearerPage;
     return <PageView page={face.page} side={side} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(face.page) ?? []} pinnedIds={pinnedIds} onStampPress={(s) => openStamp(s.id)} />;
+  };
+  const renderSinglePage = (index: number) => {
+    if (index === 0) return bearerPage;
+    return <PageView page={index} side={index % 2 === 1 ? "left" : "right"} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(index) ?? []} pinnedIds={pinnedIds} onStampPress={(s) => openStamp(s.id)} />;
   };
   if (data.status === "error") return <View style={styles.center}><InlineError message="Couldn't open your passport. Your connection may be down." onRetry={data.retry} /></View>;
   if (data.status === "pending") return <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Opening your passport"><Skeleton width={width * .8} height={height * .5} /></View>;
@@ -165,7 +184,9 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
       <View style={[styles.focus, { paddingTop: insets.top + FOCUS_TOP_SPACE, paddingBottom: insets.bottom + FOCUS_BOTTOM_SPACE, paddingLeft: insets.left + 8, paddingRight: insets.right + 8 }]} accessibilityViewIsModal>
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.backdrop, backdropMotion]} />
         <Animated.View testID="passport-reader-stage" pointerEvents={transitioning ? "none" : "auto"} style={readerMotion}>
-          <FlipBook key="focused-pages" pageWidth={book.pageWidth} pageHeight={book.pageHeight} total={total} spread={current} onSpreadChange={setSpread} renderFace={renderFace} pageTaps stampTargets={stampTargets} />
+          {compactReader ?
+            <SinglePageFlipBook key="focused-single-pages" pageWidth={book.pageWidth} pageHeight={book.pageHeight} total={total} page={current} onPageChange={setReaderIndex} renderPage={renderSinglePage} pageTaps stampTargets={stampTargets} /> :
+            <FlipBook key="focused-spreads" pageWidth={book.pageWidth} pageHeight={book.pageHeight} total={total} spread={current} onSpreadChange={setReaderIndex} renderFace={renderFace} pageTaps stampTargets={stampTargets} />}
         </Animated.View>
         <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close passport" accessibilityHint="Returns to the main screen without changing your page" onAccessibilityEscape={close} style={[styles.close, { position: "absolute", top: insets.top + 4, right: insets.right + 8 }]}><Icon name="xmark" color="textPrimary" size={size.iconSmall} /></Pressable>
       </View>
