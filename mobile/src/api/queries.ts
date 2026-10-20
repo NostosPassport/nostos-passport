@@ -85,11 +85,6 @@ export function usePins() {
   return useQuery({ queryKey: qk.pins, queryFn: api.pins.get, enabled: status === "signedIn", staleTime: 60_000 });
 }
 
-export function useNeighborhoodIndex() {
-  const { status } = useAuth();
-  return useQuery({ queryKey: qk.neighborhoods, queryFn: api.neighborhoods, enabled: status === "signedIn", staleTime: 60_000 });
-}
-
 export function useCollections() {
   const { status } = useAuth();
   return useQuery({ queryKey: qk.collections, queryFn: api.collections.list, enabled: status === "signedIn", staleTime: 30_000 });
