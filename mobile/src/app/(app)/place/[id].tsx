@@ -56,7 +56,7 @@ function Page() {
                 <Text variant="serifLabel" color="brass" accessibilityRole="header">{dayLabel(visit.day)}</Text>
                 {visit.stamps.map((s) => (
                   <Pressable key={s.id} onPress={() => router.push({ pathname: "/stamp/[id]", params: { id: s.id } })} accessibilityRole="button" accessibilityLabel={`Stamp, ${stampLine(s)}${s.verified ? ", visit verified" : ""}`} accessibilityHint="Opens the stamp" style={styles.row}>
-                    <StampMark input={{ placeId: s.place.id, placeName: s.place.name, neighborhoodId: s.place.neighborhoodId, neighborhoodName: s.place.neighborhood }} size={size.avatarLarge} />
+                    <StampMark input={{ placeId: s.place.id, placeName: s.place.name, neighborhoodId: s.place.neighborhoodId, neighborhoodName: s.place.neighborhood }} size={size.avatarLarge} artwork={s.artwork} photoUrl={s.photoUrl} visitedAt={s.visitedAt} />
                     <View style={styles.line}><Text variant="typewriter" color="textPrimary" numberOfLines={3}>{stampLine(s)}</Text>{s.verified ? <Text variant="footnote" color="accent">Nostos verified</Text> : null}</View>
                   </Pressable>
                 ))}

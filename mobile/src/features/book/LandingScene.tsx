@@ -67,7 +67,7 @@ export function LandingScene({ stamp, others, progress, pageWidth: pw, pageHeigh
         <Animated.View pointerEvents="none" style={[spot, styles.glow, { borderRadius: place.size / 2 }, glow$]} />
         <Animated.View pointerEvents="none" style={[spot, styles.ink, { borderRadius: place.size / 2 }, ink$]} />
         <Animated.View style={[spot, stamp$]} accessible accessibilityLabel={`New stamp, ${stamp.place.name}, page ${page}, slot ${slot}`}>
-          <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, neighborhoodId: stamp.place.neighborhoodId, neighborhoodName: stamp.place.neighborhood }} size={place.size} />
+          <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, neighborhoodId: stamp.place.neighborhoodId, neighborhoodName: stamp.place.neighborhood }} size={place.size} artwork={stamp.artwork} photoUrl={stamp.photoUrl} visitedAt={stamp.visitedAt} />
         </Animated.View>
         <Animated.View pointerEvents="none" style={[styles.pins, pin$]}>
           {pins.map((p, i) => (

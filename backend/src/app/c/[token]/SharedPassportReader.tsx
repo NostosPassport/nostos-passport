@@ -2,6 +2,8 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CategoryStampArtwork as CategoryArtwork } from "@/lib/category-stamp-artwork";
+import { CategoryStampSvg } from "./CategoryStampSvg";
 import type { CSSProperties, PointerEvent as ReactPointerEvent, TransitionEvent as ReactTransitionEvent } from "react";
 
 import {
@@ -36,6 +38,7 @@ export type SharedPassportStamp = {
   page: number;
   slot: number;
   photos: { id: string; url: string }[];
+  artwork?: CategoryArtwork | null;
   song: { title: string; artist: string } | null;
   place: {
     id: string;
@@ -89,6 +92,7 @@ function visitDate(value: string) {
 }
 
 function StampArtwork({ stamp }: { stamp: SharedPassportStamp }) {
+  if (stamp.artwork) return <CategoryStampSvg artwork={stamp.artwork} name={stamp.place.name} locality={stamp.place.neighborhood} visitedAt={stamp.visitedAt} photoUrl={stamp.photos[0]?.url} />;
   const input = {
     placeId: stamp.place.id,
     placeName: stamp.place.name,

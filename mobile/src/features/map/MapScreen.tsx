@@ -13,6 +13,7 @@ import { HOME_REGION } from "@/lib/geo";
 import { colors } from "@/theme";
 import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
+import { resolveCategoryStamp } from "../../../../shared/category-stamp-artwork";
 
 type MapFilter = "all" | "restaurant" | "bar";
 
@@ -41,6 +42,7 @@ export function MapScreen() {
     () => new Map((storedPlaces.data?.places ?? []).map((place) => [place.id, effectiveCategory(place)] as const)),
     [storedPlaces.data?.places],
   );
+  const artworkByPlace = useMemo(() => new Map((storedPlaces.data?.places ?? []).map(place => [place.id, resolveCategoryStamp(place)] as const)), [storedPlaces.data?.places]);
   const filteredVisited = useMemo(
     () => filter === "all" ? visited : visited.filter(({ place }) => categoryByPlace.get(place.id) === filter),
     [categoryByPlace, filter, visited],
@@ -111,7 +113,7 @@ export function MapScreen() {
           >
             {filteredVisited.map(({ place, latestStamp }) => (
               <Marker
-                key={place.id}
+                key={`${place.id}-${artworkByPlace.get(place.id)?.icon ?? "legacy"}`}
                 coordinate={{ latitude: place.lat, longitude: place.lng }}
                 onPress={() => router.push({ pathname: "/stamp/[id]", params: { id: latestStamp.id } })}
                 tracksViewChanges={false}
@@ -119,6 +121,7 @@ export function MapScreen() {
                 accessibilityLabel={`${place.name}, open most recent stamp`}
               >
                 <PinMarker
+                  artwork={artworkByPlace.get(place.id)}
                   kind="lit"
                   selected={false}
                   input={{

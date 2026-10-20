@@ -14,6 +14,7 @@ import { assertCanEditOwnContent, requireSignedIn } from "@/server/permissions";
 import { consumeRate } from "@/server/rate-limit";
 import { lockAndCheckCooldown } from "@/server/services/geofence";
 import { processImage } from "@/server/services/image";
+import { resolveCategoryStamp } from "@/lib/category-stamp-artwork";
 
 export const CAPTION_MAX = 280;
 export const STAMPS_PAGE = 30;
@@ -84,7 +85,7 @@ type StampRow = {
   id: string; userId: string; caption: string; songTitle: string | null; songArtist: string | null; songArtUrl: string | null; songSourceId: string | null;
   createdAt: Date; visitedAt: Date; verifiedAt: Date | null; editedAt: Date | null; removedAt: Date | null;
   user: { deletedAt: Date | null };
-  venue: { id: string; slug: string; name: string; neighborhood: string; neighborhoodId: string | null };
+  venue: { id: string; slug: string; name: string; neighborhood: string; neighborhoodId: string | null; category: string | null; cuisines: string[]; googlePrimaryType: string | null };
   photos: { id: string; storageKey: string; position: number; x: number | null; y: number | null; rotation: number | null }[];
 };
 
@@ -92,7 +93,7 @@ const stampSelect = {
   id: true, userId: true, caption: true, songTitle: true, songArtist: true, songArtUrl: true, songSourceId: true,
   createdAt: true, visitedAt: true, verifiedAt: true, editedAt: true, removedAt: true,
   user: { select: { deletedAt: true } },
-  venue: { select: { id: true, slug: true, name: true, neighborhood: true, neighborhoodId: true } },
+  venue: { select: { id: true, slug: true, name: true, neighborhood: true, neighborhoodId: true, category: true, cuisines: true, googlePrimaryType: true } },
   photos: { where: { removedAt: null }, orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }], select: { id: true, storageKey: true, position: true, x: true, y: true, rotation: true } },
 };
 
@@ -117,6 +118,7 @@ async function toStampViews(db: Db, rows: readonly StampRow[], now: Date) {
   return Promise.all(rows.map(async (r) => ({
     id: r.id,
     photoUrl: r.photos[0] ? await uploadUrl(r.photos[0].storageKey, now) : null,
+    artwork: resolveCategoryStamp({ id: r.venue.id, category: r.venue.category, cuisines: r.venue.cuisines, primaryType: r.venue.googlePrimaryType }),
     photos: await Promise.all(r.photos.map(async (p) => ({ id: p.id, url: await uploadUrl(p.storageKey, now), position: p.position, x: p.x, y: p.y, rotation: p.rotation }))),
     caption: r.caption,
     song: r.songTitle ? { title: r.songTitle, artist: r.songArtist!, artUrl: r.songArtUrl, sourceId: r.songSourceId } : null,

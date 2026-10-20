@@ -15,7 +15,7 @@ import { type Placement, slotPlacement } from "./slots";
 const NOSTOS_MARK = require("../../../assets/images/nostos-watermark.png");
 export type RenderStamp = (stamp: StampView, placement: Placement) => ReactNode;
 type Props = { page: number; side: "left" | "right"; width: number; height: number; stamps: readonly StampView[]; pinnedIds?: readonly string[]; renderStamp?: RenderStamp; onStampPress?: (stamp: StampView) => void };
-const defaultRender: RenderStamp = (stamp, p) => <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, neighborhoodId: stamp.place.neighborhoodId, neighborhoodName: stamp.place.neighborhood }} size={p.size} />;
+const defaultRender: RenderStamp = (stamp, p) => <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, neighborhoodId: stamp.place.neighborhoodId, neighborhoodName: stamp.place.neighborhood }} size={p.size} artwork={stamp.artwork} photoUrl={stamp.photoUrl} visitedAt={stamp.visitedAt} />;
 
 export function PageView({ page, side, width, height, stamps, pinnedIds = [], renderStamp = defaultRender, onStampPress }: Props) {
   const ribbons = new Set(ribbonsOnPage(stamps, pinnedIds));

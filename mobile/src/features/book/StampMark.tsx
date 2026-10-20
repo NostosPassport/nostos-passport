@@ -1,12 +1,20 @@
 import Svg, { Circle, Defs, G, LinearGradient, Path, Stop, Text as SvgText, TextPath } from "react-native-svg";
 
 import { colors, fonts, stampStyle } from "@/theme";
+import type { CategoryStampArtwork } from "@/api/contracts";
+import { mediaUrl } from "@/api";
+import { safeStampPhotoUrl } from "../../../../shared/category-stamp-artwork";
+import { CategoryStampMark } from "./CategoryStampMark";
 import { STAMP_BOX, type StampDesign, type StampInput, completionDesign, motifPath, rayPath, ringsFor, shapePath, stampDesign } from "./stamp-design";
 
 const MID = STAMP_BOX / 2;
 
 /** A stamp inked on the page: brass, drawn from the place's design. The same place always looks the same. */
-export function StampMark({ input, size, design }: { input: StampInput; size: number; design?: StampDesign }) {
+export function StampMark({ input, size, design, artwork, photoUrl, visitedAt }: { input: StampInput; size: number; design?: StampDesign; artwork?: CategoryStampArtwork | null; photoUrl?: string | null; visitedAt?: string | null }) {
+  if (artwork && !design) {
+    const photo = safeStampPhotoUrl(photoUrl) ? mediaUrl(photoUrl!) : null;
+    return <CategoryStampMark artwork={artwork} name={input.placeName} locality={input.neighborhoodName} visitedAt={visitedAt} photoUri={photo} size={size} />;
+  }
   const d = design ?? stampDesign(input);
   const arcId = `arc-${input.placeId}`;
   const rings = ringsFor(d.border, stampStyle.strokes);

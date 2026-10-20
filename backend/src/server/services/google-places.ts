@@ -60,6 +60,9 @@ const BAR_TYPES = new Set([
   "snack_bar",
   "sports_bar",
   "wine_bar",
+  "night_club",
+  "nightclub",
+  "dance_club",
 ]);
 
 const TYPE_LABELS: Record<string, string> = {
