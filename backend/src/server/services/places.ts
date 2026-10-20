@@ -175,23 +175,28 @@ async function legacyMatch(db: Db, place: GooglePlace) {
     .sort((a, b) => distanceMeters(place, a) - distanceMeters(place, b))[0] ?? null;
 }
 
-async function viewStoredGoogleVenue(db: Db, row: PlaceRow): Promise<PlaceView> {
-  if (!row.googlePlaceId) return toView(row);
-  const cached = await cachedGooglePrice(db, row.id);
-  if (cached.cached) return toView(row);
-  const google = await googlePlaceDetails(row.googlePlaceId);
-  await cacheGooglePrice(db, row.id, google.priceLevel);
-  return toView(row);
+/**
+ * One-time price enrichment used by stamp creation. The venue row lock makes concurrent first stamps serialize, so once a
+ * cached row exists neither another stamp nor any stamp-viewing path makes another paid Details request for price.
+ */
+export async function ensureGooglePriceForStamp(db: Db, place: Pick<PlaceView, "id" | "googlePlaceId">) {
+  if (!place.googlePlaceId) return;
+  await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM venue WHERE id = ${place.id} FOR UPDATE`;
+    if ((await cachedGooglePrice(tx, place.id)).cached) return;
+    const google = await googlePlaceDetails(place.googlePlaceId!);
+    await cacheGooglePrice(tx, place.id, google.priceLevel);
+  });
 }
 
 /**
  * Beli-style get-or-create: a Google place_id becomes a durable Nostos venue only when the user actually uses it.
- * Cuisine/category and locality are snapshotted from Google's place data at that point. Price is cached after the first
- * Details call, including a no-price result, so later stamps never pay to ask Google for it again.
+ * Cuisine/category and locality are snapshotted from Google's place data at that point. A newly resolved venue also caches
+ * price from that same Details response, so no second request is needed when its first stamp is created.
  */
 export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise<PlaceView> {
   const already = await db.venue.findUnique({ where: { googlePlaceId }, select: placeSelect });
-  if (already) return viewStoredGoogleVenue(db, already);
+  if (already) return toView(already);
 
   const google = await googlePlaceDetails(googlePlaceId);
   const old = await legacyMatch(db, google);
@@ -239,7 +244,7 @@ export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise
 /** A durable place by Nostos id/slug, or a Google place_id that should be resolved on demand. */
 export async function getPlace(db: Db, key: string): Promise<PlaceView> {
   const stored = await db.venue.findFirst({ where: { OR: [{ id: key }, { slug: key }, { googlePlaceId: key }] }, select: placeSelect });
-  if (stored) return viewStoredGoogleVenue(db, stored);
+  if (stored) return toView(stored);
   if (!key.trim()) throw notFound("Place not found");
   return resolveGoogleVenue(db, key);
 }
