@@ -32,6 +32,12 @@ const responseSchema = z.object({
 
 type MichelinHit = z.infer<typeof hitSchema>;
 
+function logMichelin(message: string, details?: unknown) {
+  if (process.env.NODE_ENV === "production") return;
+  if (details === undefined) console.info(`[michelin] ${message}`);
+  else console.info(`[michelin] ${message}`, details);
+}
+
 const normalizeName = (value: string) => value
   .normalize("NFKD")
   .replace(/\p{Mark}/gu, "")
@@ -74,6 +80,7 @@ function confidentMatch(place: MichelinPlace, hit: MichelinHit) {
 }
 
 export async function lookupMichelinStars(place: MichelinPlace, fetchImpl: typeof fetch = fetch): Promise<MichelinStars | null> {
+  logMichelin("request", { venueId: place.id, name: place.name });
   const response = await fetchImpl(ALGOLIA_URL, {
     method: "POST",
     headers: {
@@ -100,13 +107,22 @@ export async function lookupMichelinStars(place: MichelinPlace, fetchImpl: typeo
     credentials: "omit",
     redirect: "error",
   });
+  logMichelin("response", { venueId: place.id, name: place.name, status: response.status });
   if (!response.ok) throw new Error(`Michelin search ${response.status}`);
   const parsed = responseSchema.safeParse(await response.json());
   if (!parsed.success) throw new Error("Unexpected Michelin search response");
   const match = parsed.data.results[0]!.hits
     .filter((hit) => confidentMatch(place, hit))
     .sort((a, b) => candidateDistance(place, a) - candidateDistance(place, b))[0];
-  return match ? michelinStarsFromHit(match) : null;
+  const stars = match ? michelinStarsFromHit(match) : null;
+  logMichelin("result", {
+    venueId: place.id,
+    name: place.name,
+    matchedName: match?.name ?? null,
+    distanceM: match ? Math.round(candidateDistance(place, match)) : null,
+    stars,
+  });
+  return stars;
 }
 
 export async function cachedMichelinStars(db: MichelinDb, venueId: string): Promise<MichelinStars | null> {
@@ -121,7 +137,10 @@ export async function cachedMichelinStars(db: MichelinDb, venueId: string): Prom
 }
 
 export async function ensureMichelinForStamp(db: Db, place: MichelinPlace): Promise<void> {
-  if (place.category !== "restaurant") return;
+  if (place.category !== "restaurant") {
+    logMichelin("skip", { venueId: place.id, name: place.name, reason: `category=${place.category ?? "null"}` });
+    return;
+  }
   try {
     await db.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<CacheRow[]>`
@@ -131,15 +150,32 @@ export async function ensureMichelinForStamp(db: Db, place: MichelinPlace): Prom
         FOR UPDATE
       `;
       const row = rows[0];
-      if (!row || row.michelin_checked_at) return;
+      if (!row) {
+        logMichelin("skip", { venueId: place.id, name: place.name, reason: "venue row missing" });
+        return;
+      }
+      if (row.michelin_checked_at) {
+        logMichelin("cache hit", {
+          venueId: place.id,
+          name: place.name,
+          stars: row.michelin_stars,
+          checkedAt: row.michelin_checked_at.toISOString(),
+        });
+        return;
+      }
       const stars = await lookupMichelinStars(place);
       await tx.$executeRaw`
         UPDATE venue
         SET michelin_stars = ${stars}, michelin_checked_at = CURRENT_TIMESTAMP
         WHERE id = ${place.id} AND michelin_checked_at IS NULL
       `;
+      logMichelin("cached", { venueId: place.id, name: place.name, stars });
     });
-  } catch {
-    // Michelin is decorative enrichment only. A timeout, API change or outage must never block stamping.
+  } catch (error) {
+    logMichelin("failed", {
+      venueId: place.id,
+      name: place.name,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
