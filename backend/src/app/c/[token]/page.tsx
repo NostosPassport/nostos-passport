@@ -107,8 +107,9 @@ export default async function SharedCollectionPage({ params }: Ctx) {
         </section>
       )}
 
-      <footer className="mt-16 border-t border-line pt-5 text-xs text-muted">
-        Shared from Nostos. This link can be disabled by the collection owner at any time.
+      <footer className="mt-16 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-xs text-muted">
+        <span>Shared from Nostos. This link can be disabled by the collection owner at any time.</span>
+        <a href="/support" className="underline underline-offset-2">Report this collection</a>
       </footer>
     </main>
   );
