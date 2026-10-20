@@ -3,7 +3,7 @@ import React, { useId } from "react";
 import type { CategoryStampArtwork } from "@/lib/category-stamp-artwork";
 import { categoryStampDateLabel, safeStampPhotoUrl } from "@/lib/category-stamp-artwork";
 import { MASK_ERASE, MASK_KEEP, type PriceTier, type StampDesignInput, buildStampScene, designFromArtwork } from "@/lib/category-stamp-design";
-import { michelinMarkCenters, type MichelinStars } from "../../../../../shared/michelin-stamp";
+import { michelinMarkCenters, type MichelinStars } from "@/lib/michelin-stamp";
 
 /** Five small petals around a centre: the Michelin-like mark used by the approved restaurant stamp study. */
 const PETALS = [0, 72, 144, 216, 288];
