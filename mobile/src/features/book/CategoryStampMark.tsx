@@ -3,6 +3,7 @@ import Svg, { Circle, ClipPath, Defs, G, Image as SvgImage, Mask, Path, Rect, Te
 import type { CategoryStampArtwork } from "../../../../shared/category-stamp-artwork";
 import { categoryStampDateLabel } from "../../../../shared/category-stamp-artwork";
 import { MASK_ERASE, MASK_KEEP, type PriceTier, type StampDesignInput, buildStampScene, designFromArtwork, hasFallbackGlyphs } from "../../../../shared/category-stamp-design";
+import { michelinMarkCenters, type MichelinStars } from "../../../../shared/michelin-stamp";
 
 export const STAMP_SERIF = "SourceSerif4_600SemiBold";
 const PETALS = [0, 72, 144, 216, 288];
@@ -12,7 +13,7 @@ type Props = {
   /** Width of the stamp in points; the height follows the template. */
   size: number;
 } & (
-  | { artwork: CategoryStampArtwork & { priceTier?: PriceTier | null }; name: string; locality: string; timeZone?: string | null; design?: undefined }
+  | { artwork: CategoryStampArtwork & { priceTier?: PriceTier | null; michelinStars?: MichelinStars | null }; name: string; locality: string; timeZone?: string | null; design?: undefined }
   | { design: StampDesignInput; artwork?: undefined }
 );
 
@@ -28,8 +29,11 @@ export function CategoryStampMark(props: Props) {
   const ink = design.color, p = scene.photo, i = scene.icon;
   const height = (props.size * scene.height) / scene.width;
   const face = (text: string) => (hasFallbackGlyphs(text) ? undefined : STAMP_SERIF);
+  const michelinStars = props.artwork?.michelinStars ?? null;
+  const michelinMarks = scene.mark && michelinStars ? michelinMarkCenters(scene.mark, michelinStars) : [];
+  const accessibilityLabel = michelinStars ? `${scene.a11yLabel}, ${michelinStars} Michelin star${michelinStars === 1 ? "" : "s"}` : scene.a11yLabel;
   return (
-    <Svg width={props.size} height={height} viewBox={`0 0 ${scene.width} ${scene.height}`} preserveAspectRatio="xMidYMid meet" accessible accessibilityLabel={scene.a11yLabel}>
+    <Svg width={props.size} height={height} viewBox={`0 0 ${scene.width} ${scene.height}`} preserveAspectRatio="xMidYMid meet" accessible accessibilityLabel={accessibilityLabel}>
       <Defs>
         <ClipPath id={`${uid}-photo`}><Path d={p.clipD} /></ClipPath>
         <Mask id={`${uid}-ink`} maskUnits="userSpaceOnUse" x={0} y={0} width={scene.width} height={scene.height}>
@@ -56,7 +60,7 @@ export function CategoryStampMark(props: Props) {
         fill={i.fill ? ink : "none"} stroke={ink} strokeWidth={i.fill ? 0.6 : i.strokeWidth} strokeLinecap="round" strokeLinejoin="round">
         <Path d={i.d} />
       </G>
-      {scene.mark ? <G fill={ink}>{PETALS.map((a) => <Circle key={a} cx={scene.mark!.cx + Math.sin((a * Math.PI) / 180) * scene.mark!.r * 0.62} cy={scene.mark!.cy - Math.cos((a * Math.PI) / 180) * scene.mark!.r * 0.62} r={scene.mark!.r * 0.42} />)}</G> : null}
+      {michelinMarks.map((mark, index) => <G key={index} fill={ink}>{PETALS.map((a) => <Circle key={a} cx={mark.cx + Math.sin((a * Math.PI) / 180) * mark.r * 0.62} cy={mark.cy - Math.cos((a * Math.PI) / 180) * mark.r * 0.62} r={mark.r * 0.42} />)}</G>)}
     </Svg>
   );
 }
