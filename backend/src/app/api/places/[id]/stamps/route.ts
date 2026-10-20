@@ -4,7 +4,7 @@ import { badRequest, ServiceError } from "@/server/errors";
 import { getActor, ok, route } from "@/server/http";
 import { requireSignedIn } from "@/server/permissions";
 import { getPlace } from "@/server/services/places";
-import { createStampWithProgress, MAX_STAMP_PHOTOS } from "@/server/services/stamps";
+import { createStamp, MAX_STAMP_PHOTOS } from "@/server/services/stamps";
 
 type Ctx = { params: Promise<{ id: string }> };
 const field = (form: FormData, name: string) => { const v = form.get(name); return typeof v === "string" ? v : undefined; };
@@ -29,10 +29,10 @@ export const POST = route<Ctx>(async (req, { params }) => {
     const v = field(form, name); if (v !== undefined) meta[name] = v;
   }
   const place = await getPlace(prisma, id);
-  const { stamp, progress } = await createStampWithProgress(prisma, actor, place.id, {
+  const stamp = await createStamp(prisma, actor, place.id, {
     photos: await Promise.all((files as Blob[]).map(async (f) => Buffer.from(await f.arrayBuffer()))),
     meta,
     collectionIds,
   });
-  return ok({ stamp, progress }, 201);
+  return ok({ stamp }, 201);
 });
