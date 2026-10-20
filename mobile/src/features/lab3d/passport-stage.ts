@@ -1,7 +1,7 @@
 /**
  * The three.js side of the 3D passport lab: renderer on an expo-gl context, the real model, a studio environment, the
- * glass (clearcoat, or a fake cube reflection), the fake shadow, and a complete dispose. No React in here. This file
- * needs a phone to run (expo-gl), so its logic is kept thin and the decisions live in the tested modules next to it.
+ * matte passport cover, the fake shadow, and a complete dispose. No React in here. This file needs a phone to run
+ * (expo-gl), so its logic is kept thin and the decisions live in the tested modules next to it.
  */
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
@@ -16,7 +16,7 @@ import { decodeImage, flipRows } from "./decode-image";
 import { parseModel } from "./load-model";
 import { cameraDistance, facingAngle, motionShare, shadowSpread } from "./open-motion";
 import { shadowWidthRatio } from "./rotation";
-import { buildCubeFace, buildEquirect } from "./studio-env";
+import { buildEquirect } from "./studio-env";
 
 import MODEL from "../../../assets/3d/passport-openable.glb";
 import ENV_IMAGE from "../../../assets/3d/studio-env.jpg";
@@ -49,7 +49,6 @@ const CAMERA = { fov: 30, distance: 0.42, lift: 0.03 };
 const PAPER_LIFT = 0.3;
 const SHADOW = { y: -0.098, wide: 0.13, deep: 0.05 };
 const ENV_SIZE = { cols: 512, rows: 256 };
-const CUBE_SIZE = 64;
 
 const bytesOf = async (moduleId: number) => {
   const [asset] = await Asset.loadAsync(moduleId);
@@ -78,18 +77,35 @@ async function loadEnvironment(): Promise<{ texture: THREE.DataTexture; choice: 
   return { texture, choice };
 }
 
-function buildCube(): THREE.CubeTexture {
-  const faces = Array.from({ length: 6 }, (_, f) => {
-    const t = new THREE.DataTexture(buildCubeFace(f, CUBE_SIZE), CUBE_SIZE, CUBE_SIZE, THREE.RGBAFormat, THREE.UnsignedByteType);
-    t.colorSpace = THREE.SRGBColorSpace;
-    return t;
-  });
-  const cube = new THREE.CubeTexture(faces as unknown as HTMLImageElement[]);
-  cube.colorSpace = THREE.SRGBColorSpace;
-  cube.generateMipmaps = false;
-  cube.minFilter = THREE.LinearFilter;
-  cube.needsUpdate = true;
-  return cube;
+const hexRgb = (hex: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
+
+function buildCoverArtworkMap(source: THREE.Texture | null): THREE.DataTexture | null {
+  if (!source) return null;
+  const image = (source as THREE.DataTexture).image as { data?: Uint8Array; width?: number; height?: number } | undefined;
+  if (!image?.data || !image.width || !image.height) return null;
+
+  const base = hexRgb(scene3d.passportCover);
+  const art = hexRgb(scene3d.passportCoverArtwork);
+  const out = new Uint8Array(image.data.length);
+  for (let i = 0; i < image.data.length; i += 4) {
+    const raw = Math.max(0, Math.min(1, (image.data[i + 1]! - 14) / 85));
+    const mask = raw * raw * (3 - 2 * raw);
+    out[i] = Math.round(base[0] + (art[0] - base[0]) * mask);
+    out[i + 1] = Math.round(base[1] + (art[1] - base[1]) * mask);
+    out[i + 2] = Math.round(base[2] + (art[2] - base[2]) * mask);
+    out[i + 3] = 255;
+  }
+
+  const texture = new THREE.DataTexture(out, image.width, image.height, THREE.RGBAFormat, THREE.UnsignedByteType);
+  texture.flipY = source.flipY;
+  texture.magFilter = source.magFilter;
+  texture.minFilter = source.minFilter;
+  texture.generateMipmaps = source.generateMipmaps;
+  texture.wrapS = source.wrapS;
+  texture.wrapT = source.wrapT;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 function buildShadowTexture(): THREE.DataTexture {
@@ -202,24 +218,36 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
     const m = o as THREE.Mesh;
     if (m.isMesh && (m.material as THREE.Material).name === "CoverGlass") covers.push(m);
   });
-  const clearMaterial = covers[0]?.material as THREE.MeshPhysicalMaterial | undefined;
-  let cube: THREE.CubeTexture | null = null;
-  let fakeMaterial: THREE.MeshPhongMaterial | null = null;
-  const makeFake = () => {
-    cube ??= buildCube();
-    fakeMaterial ??= new THREE.MeshPhongMaterial({
-      color: clearMaterial?.color ?? new THREE.Color(scene3d.studio),
-      normalMap: clearMaterial?.normalMap ?? null,
-      envMap: cube,
-      reflectivity: 0.6,
-      combine: THREE.MixOperation,
-      shininess: 120,
-      specular: new THREE.Color(scene3d.strip),
-    });
-    return fakeMaterial;
-  };
-  const applyGlass = (choice: GlassChoice) => {
-    for (const c of covers) c.material = choice === "clearcoat" && clearMaterial ? clearMaterial : makeFake();
+  const coverMaterial = covers[0]?.material as THREE.MeshPhysicalMaterial | undefined;
+  const hiddenCoverTextures = new Set<THREE.Texture>();
+  if (coverMaterial) {
+    const artworkMap = buildCoverArtworkMap(coverMaterial.roughnessMap);
+    for (const texture of [coverMaterial.map, coverMaterial.metalnessMap, coverMaterial.roughnessMap]) {
+      if (texture) hiddenCoverTextures.add(texture);
+    }
+    coverMaterial.map = artworkMap;
+    if (artworkMap) coverMaterial.color.setScalar(1);
+    else coverMaterial.color.set(scene3d.passportCover);
+    coverMaterial.metalness = 0;
+    coverMaterial.metalnessMap = null;
+    coverMaterial.roughness = scene3d.passportCoverRoughness;
+    coverMaterial.roughnessMap = null;
+    coverMaterial.envMapIntensity = scene3d.passportCoverEnvIntensity;
+    coverMaterial.clearcoat = 0;
+    coverMaterial.clearcoatRoughness = 1;
+    coverMaterial.transmission = 0;
+    coverMaterial.thickness = 0;
+    coverMaterial.sheen = 0;
+    coverMaterial.iridescence = 0;
+    coverMaterial.transparent = false;
+    coverMaterial.opacity = 1;
+    coverMaterial.depthWrite = true;
+    coverMaterial.normalScale.setScalar(scene3d.passportCoverNormalScale);
+    coverMaterial.needsUpdate = true;
+  }
+  const applyGlass = (_choice: GlassChoice) => {
+    if (!coverMaterial) return;
+    for (const cover of covers) cover.material = coverMaterial;
   };
   const setGlass = (mode: GlassMode) => {
     const choice = chooseGlass({ clearcoatInModel: model.info.clearcoat, pmremOk, mode });
@@ -282,9 +310,7 @@ export async function createStage(gl: ExpoWebGLRenderingContext): Promise<Stage>
         [m.material].flat().forEach(disposeMaterial);
       });
       hiddenPageTextures.forEach((texture) => texture.dispose());
-      if (fakeMaterial) disposeMaterial(fakeMaterial);
-      cube?.dispose();
-      (cube?.images as THREE.DataTexture[] | undefined)?.forEach((t) => t.dispose?.());
+      hiddenCoverTextures.forEach((texture) => texture.dispose());
       shadowTexture.dispose();
       envTarget?.dispose();
       env.texture.dispose();
