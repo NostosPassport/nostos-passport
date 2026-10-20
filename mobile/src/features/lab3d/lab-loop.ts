@@ -21,6 +21,7 @@ export type LoopProps = {
   soak: boolean;
   glassMode: GlassMode;
   coverColor?: string;
+  coverTitle?: string;
   onReady: (info: StageInfo) => void;
   onTap?: () => void;
   open: boolean;
@@ -110,7 +111,7 @@ export class LabLoop {
       this.stop();
       this.stage?.dispose();
       this.stage = null;
-      const stage = await createStage(gl, this.props.coverColor);
+      const stage = await createStage(gl, this.props.coverColor, this.props.coverTitle);
       if (this.disposed || generation !== this.generation) {
         stage.dispose();
         return;
