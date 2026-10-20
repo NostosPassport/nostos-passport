@@ -16,7 +16,7 @@ describe("scrapbook layout", () => {
       for (const s of spots) {
         expect(s.x - half).toBeGreaterThanOrEqual(0);
         expect(s.x + half).toBeLessThanOrEqual(1);
-        expect(s.y - half * 0.7).toBeGreaterThanOrEqual(0); // the page is taller than wide
+        expect(s.y - half * 0.7).toBeGreaterThanOrEqual(0);
         expect(Math.abs(s.rotation)).toBeLessThanOrEqual(6);
       }
     }
@@ -48,7 +48,7 @@ describe("dragging and zooming", () => {
     expect(clampCenter(-50, -50, 100, 300, 420)).toEqual({ cx: 50, cy: 50 });
     expect(clampCenter(999, 999, 100, 300, 420)).toEqual({ cx: 250, cy: 370 });
     expect(clampCenter(150, 200, 100, 300, 420)).toEqual({ cx: 150, cy: 200 });
-    expect(clampCenter(5, 5, 400, 300, 420)).toEqual({ cx: 200, cy: 200 }); // bigger than the page: pinned to the middle-ish
+    expect(clampCenter(5, 5, 400, 300, 420)).toEqual({ cx: 200, cy: 200 });
   });
   it("zooms between 1 and 4 times, and double tap toggles in and out", () => {
     expect(clampScale(0.2)).toBe(1);
@@ -71,13 +71,15 @@ describe("typing and dates", () => {
     expect(typedCount(-5, 40)).toBe(0);
     expect(typedCount(500, 0)).toBe(0);
   });
-  it("reads a stamp's moment in New York time, so a late night stays on its own date", () => {
-    expect(visaStamp("2026-10-04T03:41:00.000Z")).toEqual({ date: "03 OCT 2026", time: "11:41 PM" });
-    expect(visaStamp("2026-01-15T17:05:00.000Z")).toEqual({ date: "15 JAN 2026", time: "12:05 PM" });
-    expect(visaStamp("nope")).toEqual({ date: "", time: "" });
+  it("reads each stamp in its venue's local time zone", () => {
+    expect(visaStamp("2026-10-04T03:41:00.000Z", "America/New_York")).toEqual({ date: "03 OCT 2026", time: "11:41 PM" });
+    expect(visaStamp("2026-01-15T17:05:00.000Z", "America/New_York")).toEqual({ date: "15 JAN 2026", time: "12:05 PM" });
+    expect(visaStamp("2026-10-04T03:41:00.000Z", "Europe/Rome")).toEqual({ date: "04 OCT 2026", time: "5:41 AM" });
+    expect(visaStamp("nope", "Europe/Rome")).toEqual({ date: "", time: "" });
   });
-  it("has a spoken label", () => {
-    expect(visaLabel("Katz's", "East Village", "2026-10-04T03:41:00.000Z", 3)).toBe("Katz's, East Village, 03 OCT 2026 at 11:41 PM. Page 3.");
-    expect(visaLabel("Katz's", "", "bad", null)).toBe("Katz's.");
+  it("has a spoken label using the supplied locality and venue time zone", () => {
+    expect(visaLabel("Katz's", "East Village", "2026-10-04T03:41:00.000Z", 3, "America/New_York")).toBe("Katz's, East Village, 03 OCT 2026 at 11:41 PM. Page 3.");
+    expect(visaLabel("Roscioli", "Rome, Italy", "2026-10-04T03:41:00.000Z", 2, "Europe/Rome")).toBe("Roscioli, Rome, Italy, 04 OCT 2026 at 5:41 AM. Page 2.");
+    expect(visaLabel("Katz's", "", "bad", null, "America/New_York")).toBe("Katz's.");
   });
 });
