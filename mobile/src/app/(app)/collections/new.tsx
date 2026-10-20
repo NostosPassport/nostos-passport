@@ -29,4 +29,4 @@ export default function NewCollectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: colors.background } });
+const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: colors.transparent } });

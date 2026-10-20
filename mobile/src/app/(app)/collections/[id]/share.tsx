@@ -100,8 +100,8 @@ export default function ShareCollectionScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background, padding: space.lg, gap: space.lg },
-  loading: { flex: 1, backgroundColor: colors.background, padding: space.lg },
+  root: { flex: 1, backgroundColor: colors.transparent, padding: space.lg, gap: space.lg },
+  loading: { flex: 1, backgroundColor: colors.transparent, padding: space.lg },
   hero: { gap: space.xs },
   card: { borderTopWidth: hairlineWidth, borderBottomWidth: hairlineWidth, borderColor: colors.hairline, paddingVertical: space.lg, gap: space.md },
 });
