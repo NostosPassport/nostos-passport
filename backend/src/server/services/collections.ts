@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-import { CollectionCreateRequest, CollectionUpdateRequest, MAX_COLLECTIONS_PER_STAMP } from "@/contracts/collections";
+import { CollectionCreateRequest, CollectionUpdateRequest, StampCollectionsRequest } from "@/contracts/collections";
 import type { Db } from "@/lib/db";
 import { pageAndSlot } from "@/lib/layout";
 import type { Actor } from "@/server/actor";
@@ -18,6 +18,13 @@ async function assertOwnStamps(db: Db | Prisma.TransactionClient, userId: string
   if (!stampIds.length) return;
   const rows = await db.photo.findMany({ where: { id: { in: stampIds }, userId, removedAt: null }, select: { id: true } });
   if (rows.length !== stampIds.length) throw badRequest("Collections can only include your own stamps");
+}
+
+async function assertOwnCollections(db: Db | Prisma.TransactionClient, userId: string, collectionIds: string[]) {
+  if (new Set(collectionIds).size !== collectionIds.length) throw badRequest("Each collection can be selected once");
+  if (!collectionIds.length) return;
+  const rows = await db.collection.findMany({ where: { id: { in: collectionIds }, userId }, select: { id: true } });
+  if (rows.length !== collectionIds.length) throw badRequest("You can only add stamps to your own collections");
 }
 
 export async function listCollections(db: Db, actor: Actor | null) {
@@ -86,9 +93,7 @@ export async function createCollection(db: Db, actor: Actor | null, raw: unknown
   const id = await db.$transaction(async (tx) => {
     const collection = await tx.collection.create({ data: { userId: me.userId, name: input.name, color: input.color, createdAt: now, updatedAt: now }, select: { id: true } });
     if (input.stampIds.length) {
-      await tx.collectionStamp.createMany({
-        data: input.stampIds.map((stampId, position) => ({ collectionId: collection.id, stampId, position, addedAt: now })),
-      });
+      await tx.collectionStamp.createMany({ data: input.stampIds.map((stampId, position) => ({ collectionId: collection.id, stampId, position, addedAt: now })) });
     }
     return collection.id;
   });
@@ -121,20 +126,25 @@ export async function deleteCollection(db: Db, actor: Actor | null, id: string) 
   return { deleted: true as const };
 }
 
-export async function appendStampToCollections(
-  tx: Prisma.TransactionClient,
-  userId: string,
-  stampId: string,
-  collectionIds: string[],
-  now: Date,
-) {
-  if (!collectionIds.length) return;
-  if (collectionIds.length > MAX_COLLECTIONS_PER_STAMP) throw badRequest(`Add a stamp to up to ${MAX_COLLECTIONS_PER_STAMP} collections at once`);
-  if (new Set(collectionIds).size !== collectionIds.length) throw badRequest("Each collection can be selected once");
-  const collections = await tx.collection.findMany({ where: { id: { in: collectionIds }, userId }, select: { id: true } });
-  if (collections.length !== collectionIds.length) throw badRequest("You can only add stamps to your own collections");
-  for (const collectionId of collectionIds) {
-    const last = await tx.collectionStamp.findFirst({ where: { collectionId }, orderBy: [{ position: "desc" }, { addedAt: "desc" }], select: { position: true } });
-    await tx.collectionStamp.create({ data: { collectionId, stampId, position: (last?.position ?? -1) + 1, addedAt: now } });
-  }
+export async function setStampCollections(db: Db, actor: Actor | null, stampId: string, raw: unknown, now = new Date()) {
+  const me = requireSignedIn(actor);
+  const { collectionIds } = StampCollectionsRequest.parse(raw);
+  const stamp = await db.photo.findFirst({ where: { id: stampId, userId: me.userId, removedAt: null }, select: { id: true } });
+  if (!stamp) throw notFound("Stamp not found");
+  await assertOwnCollections(db, me.userId, collectionIds);
+
+  await db.$transaction(async (tx) => {
+    const existing = await tx.collectionStamp.findMany({ where: { stampId }, select: { collectionId: true } });
+    const wanted = new Set(collectionIds);
+    const existingIds = new Set(existing.map((row) => row.collectionId));
+    await tx.collectionStamp.deleteMany({ where: { stampId, collectionId: { notIn: collectionIds } } });
+    for (const collectionId of collectionIds) {
+      if (existingIds.has(collectionId)) continue;
+      const last = await tx.collectionStamp.findFirst({ where: { collectionId }, orderBy: [{ position: "desc" }, { addedAt: "desc" }], select: { position: true } });
+      await tx.collectionStamp.create({ data: { collectionId, stampId, position: (last?.position ?? -1) + 1, addedAt: now } });
+    }
+    if (!wanted.size) await tx.collectionStamp.deleteMany({ where: { stampId } });
+  });
+
+  return { collectionIds };
 }
