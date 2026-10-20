@@ -12,7 +12,7 @@ import { emblem } from "./emblem";
 import { trackedOffsets } from "./foil";
 import { useFoilSweep } from "./use-foil-sweep";
 
-export type CoverCounts = { stamps: number; places: number; neighborhoods?: number };
+export type CoverCounts = { stamps: number; places: number };
 
 const LEATHER = Skia.RuntimeEffect.Make(`
 uniform half4 dark;
@@ -123,12 +123,8 @@ export function Counts({ counts }: { counts: CoverCounts }) {
     <View style={styles.counts} accessible accessibilityLabel={`${counts.stamps} stamps, ${counts.places} places`}>
       {items.map(([label, n]) => (
         <View key={label} testID={`passport-count-${label}`} style={styles.count}>
-          <Text variant="title" color="bookAccent" tabular accessibilityElementsHidden>
-            {n}
-          </Text>
-          <Text variant="typewriterSmall" color="dimBrass" align="center" numberOfLines={1} adjustsFontSizeToFit style={styles.countLabel} accessibilityElementsHidden>
-            {label}
-          </Text>
+          <Text variant="title" color="bookAccent" tabular accessibilityElementsHidden>{n}</Text>
+          <Text variant="typewriterSmall" color="dimBrass" align="center" numberOfLines={1} adjustsFontSizeToFit style={styles.countLabel} accessibilityElementsHidden>{label}</Text>
         </View>
       ))}
     </View>
