@@ -24,6 +24,7 @@ import { slotPlacement } from "./slots";
 import { FOCUS_TOP_SPACE, FOCUS_BOTTOM_SPACE, focusBookSize, focusSpreadCount, stampHitRect } from "./focus-interaction";
 import { usePassport } from "./use-passport";
 
+/* eslint-disable react-hooks/immutability -- Reanimated shared values are written through .value by design */
 type Props = { collectionId?: string };
 type PassportData = ReturnType<typeof usePassport>;
 type BookViewProps = {
