@@ -13,7 +13,6 @@ let mockMine: UserPlacesResponse["places"] = [];
 let mockHere: { lat: number; lng: number } | null = null;
 
 jest.mock("expo-router", () => ({ router: { push: (...a: unknown[]) => mockPush(...a) } }));
-jest.mock("expo-constants", () => ({ __esModule: true, default: { appOwnership: null } }));
 jest.mock("react-native-maps", () => {
   const React = jest.requireActual("react");
   const { View: V, Pressable: P } = jest.requireActual("react-native");
@@ -32,7 +31,7 @@ jest.mock("react-native-maps", () => {
   const Marker = ({ children, onPress, accessibilityLabel }: { children?: ReactNode; onPress?: () => void; accessibilityLabel?: string }) => (
     <P onPress={onPress} accessibilityLabel={accessibilityLabel} accessibilityRole="button">{children}</P>
   );
-  return { __esModule: true, default: MapView, Marker, PROVIDER_GOOGLE: "google" };
+  return { __esModule: true, default: MapView, Marker };
 });
 jest.mock("@/api/queries", () => ({
   useMe: () => ({ data: { user: { handle: "ava" } } }),
@@ -128,9 +127,10 @@ describe("MapScreen", () => {
     expect(mockAnimateToRegion).toHaveBeenCalledWith(expect.objectContaining({ latitude: 40.7314, longitude: -74.0078 }), 300);
   });
 
-  it("disables recenter when location is unavailable", async () => {
+  it("opens the location permission flow when recenter needs location", async () => {
     mockHere = null;
     await render(<MapScreen />);
-    expect(screen.getByRole("button", { name: "Recenter map on my location" }).props.accessibilityState).toEqual({ disabled: true });
+    await fireEvent.press(screen.getByRole("button", { name: "Share location to recenter map" }));
+    expect(mockPush).toHaveBeenCalledWith("/location-permission");
   });
 });
