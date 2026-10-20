@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { prisma } from "@/lib/db";
-import { ensureMichelinForStamp } from "@/server/services/michelin";
+import { cacheMichelinPreviewForStamp, previewMichelinForPlace } from "@/server/services/michelin";
 import { createStamp } from "@/server/services/stamps";
 import { makeActor, VENUE_POS } from "./factories";
 
@@ -11,7 +11,7 @@ const response = (body: unknown) => new Response(JSON.stringify(body), { status:
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Michelin enrichment", () => {
-  it("matches by name and location, caches once, and exposes the star count on stamp artwork", async () => {
+  it("looks up on restaurant selection, leaves the venue untouched, then caches the signed result when stamped", async () => {
     const venue = await prisma.venue.create({
       data: {
         slug: `michelin-${randomUUID()}`,
@@ -42,8 +42,17 @@ describe("Michelin enrichment", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const place = { id: venue.id, name: venue.name, lat: venue.lat, lng: venue.lng, city: venue.city, country: venue.country, category: "restaurant" as const };
-    await ensureMichelinForStamp(prisma, place);
-    await ensureMichelinForStamp(prisma, place);
+    const preview = await previewMichelinForPlace(prisma, place);
+
+    expect(preview).toMatchObject({ venueId: venue.id, stars: 2, proof: expect.any(String) });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await prisma.venue.findUniqueOrThrow({ where: { id: venue.id }, select: { michelinStars: true, michelinCheckedAt: true } })).toEqual({
+      michelinStars: null,
+      michelinCheckedAt: null,
+    });
+
+    await cacheMichelinPreviewForStamp(prisma, place, preview.proof);
+    await cacheMichelinPreviewForStamp(prisma, place, preview.proof);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(await prisma.venue.findUniqueOrThrow({ where: { id: venue.id }, select: { michelinStars: true, michelinCheckedAt: true } })).toMatchObject({
@@ -57,7 +66,7 @@ describe("Michelin enrichment", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("never blocks stamping when Michelin is unavailable and leaves the venue eligible for a later retry", async () => {
+  it("does not cache a failed click-time lookup and still allows the stamp", async () => {
     const venue = await prisma.venue.create({
       data: {
         slug: `michelin-down-${randomUUID()}`,
@@ -73,17 +82,21 @@ describe("Michelin enrichment", () => {
         googlePrimaryType: "french_restaurant",
       },
     });
-    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("network down"); }));
+    const fetchMock = vi.fn(async () => { throw new Error("network down"); });
+    vi.stubGlobal("fetch", fetchMock);
 
-    await expect(ensureMichelinForStamp(prisma, {
+    const place = {
       id: venue.id,
       name: venue.name,
       lat: venue.lat,
       lng: venue.lng,
       city: venue.city,
       country: venue.country,
-      category: "restaurant",
-    })).resolves.toBeUndefined();
+      category: "restaurant" as const,
+    };
+    const preview = await previewMichelinForPlace(prisma, place);
+    expect(preview).toEqual({ venueId: venue.id, stars: null, proof: null });
+    await cacheMichelinPreviewForStamp(prisma, place, preview.proof);
 
     expect(await prisma.venue.findUniqueOrThrow({ where: { id: venue.id }, select: { michelinStars: true, michelinCheckedAt: true } })).toEqual({
       michelinStars: null,
@@ -93,5 +106,6 @@ describe("Michelin enrichment", () => {
     const me = await makeActor();
     const stamp = await createStamp(prisma, me, venue.id, { meta: { caption: "still stamps", mode: "now" } });
     expect(stamp.artwork?.michelinStars ?? null).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
