@@ -49,7 +49,7 @@ function awardText(value: unknown) {
 
 export function michelinStarsFromHit(hit: Pick<MichelinHit, "michelin_award" | "distinction">): MichelinStars | null {
   const raw = `${awardText(hit.michelin_award)} ${awardText(hit.distinction)}`.toLowerCase();
-  if (!raw || /green[\s_-]*star/.test(raw)) return null;
+  if (!raw) return null;
   const numeric = raw.match(/(?:^|\D)([123])(?:\s|_|-)*(?:michelin(?:\s|_|-)*)?stars?\b/) ?? raw.match(/(?:^|\D)([123])(?:\s|_|-)*stars?(?:\s|_|-)*michelin\b/);
   if (numeric) return Number(numeric[1]) as MichelinStars;
   if (/\bthree\s+stars?\b/.test(raw)) return 3;
