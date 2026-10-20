@@ -42,22 +42,11 @@ describe("Google price cache", () => {
       },
     });
 
-    const fetchMock = vi.fn(async () => response({
-      id: googlePlaceId,
-      displayName: { text: "Priced Bistro" },
-      formattedAddress: "1 Price St",
-      location: { latitude: VENUE_POS.lat, longitude: VENUE_POS.lng },
-      addressComponents: [
-        { longText: "West Village", shortText: "West Village", types: ["neighborhood"] },
-        { longText: "New York", shortText: "New York", types: ["locality"] },
-        { longText: "United States", shortText: "US", types: ["country"] },
-      ],
-      timeZone: { id: "America/New_York" },
-      primaryType: "italian_restaurant",
-      types: ["italian_restaurant", "restaurant"],
-      businessStatus: "OPERATIONAL",
-      priceLevel: "PRICE_LEVEL_MODERATE",
-    }));
+    let fieldMask = "";
+    const fetchMock = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      fieldMask = new Headers(init?.headers).get("X-Goog-FieldMask") ?? "";
+      return response({ priceLevel: "PRICE_LEVEL_MODERATE" });
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const place = { id: venue.id, googlePlaceId };
@@ -65,6 +54,7 @@ describe("Google price cache", () => {
     await ensureGooglePriceForStamp(prisma, place);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fieldMask).toBe("priceLevel");
     expect(await cachedGooglePrice(prisma, venue.id)).toEqual({ cached: true, priceTier: "$$" });
 
     const me = await makeActor();
@@ -98,15 +88,7 @@ describe("Google price cache", () => {
       },
     });
 
-    const fetchMock = vi.fn(async () => response({
-      id: googlePlaceId,
-      displayName: { text: "Unpriced Cafe" },
-      location: { latitude: VENUE_POS.lat, longitude: VENUE_POS.lng },
-      timeZone: { id: "America/New_York" },
-      primaryType: "cafe",
-      types: ["cafe", "restaurant"],
-      businessStatus: "OPERATIONAL",
-    }));
+    const fetchMock = vi.fn(async () => response({}));
     vi.stubGlobal("fetch", fetchMock);
 
     const place = { id: venue.id, googlePlaceId };
