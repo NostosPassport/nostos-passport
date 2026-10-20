@@ -10,7 +10,7 @@ import { distanceMeters } from "@/lib/geo";
 import { OSM_ATTRIBUTION, slugify } from "@/lib/osm";
 import { notFound } from "@/server/errors";
 import { cacheGooglePrice, cachedGooglePrice } from "@/server/services/google-price-cache";
-import { googleNearby, googlePlaceDetails, googleTextSearch, type GooglePlace } from "@/server/services/google-places";
+import { googleNearby, googlePlaceDetails, googlePlacePriceLevel, googleTextSearch, type GooglePlace } from "@/server/services/google-places";
 
 const placeSelect = {
   id: true,
@@ -184,8 +184,8 @@ export async function ensureGooglePriceForStamp(db: Db, place: Pick<PlaceView, "
   await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM venue WHERE id = ${place.id} FOR UPDATE`;
     if ((await cachedGooglePrice(tx, place.id)).cached) return;
-    const google = await googlePlaceDetails(place.googlePlaceId!);
-    await cacheGooglePrice(tx, place.id, google.priceLevel);
+    const priceLevel = await googlePlacePriceLevel(place.googlePlaceId!);
+    await cacheGooglePrice(tx, place.id, priceLevel);
   });
 }
 
