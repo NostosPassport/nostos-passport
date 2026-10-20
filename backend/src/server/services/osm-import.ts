@@ -1,25 +1,18 @@
 import type { Db } from "@/lib/db";
 import { assignSlugs, neighborhoodOf, parseOverpass, type OverpassElement } from "@/lib/osm";
-import { loadNeighborhoods, locate } from "@/server/services/neighborhoods";
 
 export type ImportResult = { fetched: number; created: number; updated: number; unchanged: number };
 
 /**
- * Idempotent upsert on osm_id, in one transaction (all or nothing).
- * - New places get the default geofence.
- * - Slugs are assigned once, from OSM data alone (see assignSlugs), and never change afterwards.
- * - On re-import, coordinates always follow OSM (they define the geofence) and the neighborhood is recomputed from
- *   them. Name and address follow OSM.
- * - Places that disappear from OSM are left alone (they may have stamps).
+ * Legacy NYC OSM importer. New product discovery comes from Google Places, but this remains useful for historical
+ * OSM rows and development fixtures. The old OSM neighborhood label is stored as generalized `area` metadata.
  */
 export async function importOsmVenues(db: Db, elements: readonly OverpassElement[]): Promise<ImportResult> {
-  // With neighborhood boundaries loaded, any place inside NYC is kept and filed under its neighborhood.
-  const hoods = await loadNeighborhoods(db);
-  const venues = parseOverpass(elements, hoods.length ? (lat, lng) => locate(hoods, lat, lng) : undefined);
+  const venues = parseOverpass(elements);
   return db.$transaction(
     async (tx) => {
       const existing = await tx.venue.findMany({
-        select: { id: true, slug: true, osmId: true, name: true, address: true, neighborhood: true, lat: true, lng: true, neighborhoodId: true },
+        select: { id: true, slug: true, osmId: true, name: true, address: true, area: true, lat: true, lng: true },
       });
       const byOsm = new Map(existing.filter((v) => v.osmId).map((v) => [v.osmId!, v]));
       const reserved = new Set(existing.filter((v) => !v.osmId).map((v) => v.slug));
@@ -29,26 +22,37 @@ export async function importOsmVenues(db: Db, elements: readonly OverpassElement
 
       for (const v of venues) {
         const current = byOsm.get(v.osmId);
+        const area = v.neighborhood || neighborhoodOf(v.lat, v.lng);
         if (!current) {
           const slug = slugs.get(v.osmId)!;
           if (usedSlugs.has(slug)) throw new Error(`Slug collision for ${v.osmId}: "${slug}" is already used`);
           usedSlugs.add(slug);
           await tx.venue.create({
-            data: { slug, osmId: v.osmId, name: v.name, address: v.address, neighborhood: v.neighborhood, lat: v.lat, lng: v.lng, neighborhoodId: v.neighborhoodId ?? null },
+            data: {
+              slug,
+              osmId: v.osmId,
+              name: v.name,
+              address: v.address,
+              area,
+              city: "New York",
+              region: "New York",
+              country: "United States",
+              countryCode: "US",
+              timeZone: "America/New_York",
+              lat: v.lat,
+              lng: v.lng,
+            },
           });
           result.created++;
           continue;
         }
-        const data: { lat?: number; lng?: number; neighborhood?: string; neighborhoodId?: string; name?: string; address?: string } = {};
+        const data: { lat?: number; lng?: number; area?: string | null; name?: string; address?: string } = {};
         if (current.lat !== v.lat || current.lng !== v.lng) {
           data.lat = v.lat;
           data.lng = v.lng;
         }
-        const hood = v.neighborhoodId ? v.neighborhood : (neighborhoodOf(v.lat, v.lng) ?? current.neighborhood);
-        if (hood !== current.neighborhood) data.neighborhood = hood;
-        if (v.neighborhoodId && v.neighborhoodId !== current.neighborhoodId) data.neighborhoodId = v.neighborhoodId;
-        const namesDiffer = current.name !== v.name || current.address !== v.address;
-        if (namesDiffer) Object.assign(data, { name: v.name, address: v.address });
+        if ((area ?? null) !== current.area) data.area = area ?? null;
+        if (current.name !== v.name || current.address !== v.address) Object.assign(data, { name: v.name, address: v.address });
         if (Object.keys(data).length) {
           await tx.venue.update({ where: { id: current.id }, data });
           result.updated++;
