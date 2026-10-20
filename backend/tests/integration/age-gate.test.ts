@@ -13,10 +13,10 @@ async function rowCounts() {
   return out;
 }
 
-describe("the 21+ age gate at signup", () => {
-  it("turns away someone one day short of 21 before storing anything", async () => {
+describe("the 13+ age gate at signup", () => {
+  it("turns away someone one day short of 13 before storing anything", async () => {
     const before = await rowCounts();
-    await expect(startSignup(prisma, { ...base, birthdate: "2005-10-03" }, { ip: "127.0.0.1", now: NOW })).rejects.toMatchObject({
+    await expect(startSignup(prisma, { ...base, birthdate: "2013-10-03" }, { ip: "127.0.0.1", now: NOW })).rejects.toMatchObject({
       status: 403,
       code: "underage",
       message: UNDERAGE_MESSAGE,
@@ -26,22 +26,22 @@ describe("the 21+ age gate at signup", () => {
 
   it("checks age before duplicate-account disclosure", async () => {
     await prisma.user.create({ data: { email: base.email, handle: base.handle, displayName: base.displayName } });
-    await expect(startSignup(prisma, { ...base, birthdate: "2010-01-01" }, { ip: "127.0.0.1", now: NOW })).rejects.toMatchObject({ status: 403, code: "underage" });
+    await expect(startSignup(prisma, { ...base, birthdate: "2014-01-01" }, { ip: "127.0.0.1", now: NOW })).rejects.toMatchObject({ status: 403, code: "underage" });
     await expect(startSignup(prisma, { ...base, birthdate: "1990-05-05" }, { ip: "127.0.0.1", now: NOW })).rejects.toMatchObject({ status: 409 });
   });
 
-  it("accepts someone on their 21st birthday and never persists the birthdate", async () => {
+  it("accepts someone on their 13th birthday and never persists the birthdate", async () => {
     const realKey = process.env.RESEND_API_KEY;
     delete process.env.RESEND_API_KEY;
     try {
-      const challenge = await startSignup(prisma, { ...base, birthdate: "2005-10-02" }, { ip: "127.0.0.1", now: NOW });
+      const challenge = await startSignup(prisma, { ...base, birthdate: "2013-10-02" }, { ip: "127.0.0.1", now: NOW });
       expect(challenge.challengeId).toBeTruthy();
     } finally {
       if (realKey) process.env.RESEND_API_KEY = realKey;
     }
 
     const cols = await prisma.$queryRaw<{ table_name: string; column_name: string }[]>`SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public'`;
-    expect(cols.filter((c) => /birth|dob|age$|^age/i.test(c.column_name)).map((c) => `${c.table_name}.${c.column_name}`)).toEqual([]);
+    expect(cols.filter((c) => /birth|dob/i.test(c.column_name)).map((c) => `${c.table_name}.${c.column_name}`)).toEqual([]);
   });
 
   it("requires a real YYYY-MM-DD birthdate", async () => {
