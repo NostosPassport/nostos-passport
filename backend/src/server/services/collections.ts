@@ -135,15 +135,17 @@ export async function setStampCollections(db: Db, actor: Actor | null, stampId: 
 
   await db.$transaction(async (tx) => {
     const existing = await tx.collectionStamp.findMany({ where: { stampId }, select: { collectionId: true } });
-    const wanted = new Set(collectionIds);
     const existingIds = new Set(existing.map((row) => row.collectionId));
-    await tx.collectionStamp.deleteMany({ where: { stampId, collectionId: { notIn: collectionIds } } });
+    if (collectionIds.length > 0) {
+      await tx.collectionStamp.deleteMany({ where: { stampId, collectionId: { notIn: collectionIds } } });
+    } else {
+      await tx.collectionStamp.deleteMany({ where: { stampId } });
+    }
     for (const collectionId of collectionIds) {
       if (existingIds.has(collectionId)) continue;
       const last = await tx.collectionStamp.findFirst({ where: { collectionId }, orderBy: [{ position: "desc" }, { addedAt: "desc" }], select: { position: true } });
       await tx.collectionStamp.create({ data: { collectionId, stampId, position: (last?.position ?? -1) + 1, addedAt: now } });
     }
-    if (!wanted.size) await tx.collectionStamp.deleteMany({ where: { stampId } });
   });
 
   return { collectionIds };
