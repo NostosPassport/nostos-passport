@@ -19,7 +19,7 @@ export function useMyStamps(): {
 
   return {
     stamps: (query.data?.pages ?? []).flatMap((page) => page.stamps),
-    pending: me.isPending || query.isPending || query.hasNextPage,
+    pending: me.isPending || query.isPending || !!query.hasNextPage,
     error: me.isError || query.isError,
     retry: () => {
       void me.refetch();
