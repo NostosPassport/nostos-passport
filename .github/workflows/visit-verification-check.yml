@@ -15,18 +15,6 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: mobile/package-lock.json
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.22.0
-      - name: Install backend
-        working-directory: backend
-        run: pnpm install --frozen-lockfile
-      - name: Backend typecheck
-        working-directory: backend
-        run: pnpm typecheck
-      - name: Backend lint
-        working-directory: backend
-        run: pnpm lint
       - name: Install mobile
         working-directory: mobile
         run: npm ci
@@ -72,6 +60,12 @@ jobs:
       - name: Install backend
         working-directory: backend
         run: pnpm install --frozen-lockfile
+      - name: Backend typecheck
+        working-directory: backend
+        run: pnpm typecheck
+      - name: Backend lint
+        working-directory: backend
+        run: pnpm lint
       - name: Backend unit and integration tests against ephemeral Postgres
         working-directory: backend
         run: pnpm test
