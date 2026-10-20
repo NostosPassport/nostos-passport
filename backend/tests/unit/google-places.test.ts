@@ -40,6 +40,7 @@ describe("Google Places normalization", () => {
           { longText: "New York", shortText: "NY", types: ["administrative_area_level_1", "political"] },
           { longText: "United States", shortText: "US", types: ["country", "political"] },
         ],
+        timeZone: "America/New_York",
         primaryType: "sushi_restaurant",
         types: ["sushi_restaurant", "restaurant"],
         businessStatus: "OPERATIONAL",
@@ -58,6 +59,7 @@ describe("Google Places normalization", () => {
       region: "New York",
       country: "United States",
       countryCode: "US",
+      timeZone: "America/New_York",
     })]);
   });
 
@@ -88,6 +90,7 @@ describe("Google Places normalization", () => {
           { longText: "Rome", shortText: "Rome", types: ["locality", "political"] },
           { longText: "Italy", shortText: "IT", types: ["country", "political"] },
         ],
+        timeZone: "Europe/Rome",
         primaryType: "wine_bar",
         types: ["wine_bar", "bar"],
         businessStatus: "OPERATIONAL",
@@ -96,6 +99,6 @@ describe("Google Places normalization", () => {
 
     const place = await googlePlaceDetails("abc/123", fetchImpl);
     expect(seen).toContain("abc%2F123");
-    expect(place).toMatchObject({ category: "bar", cuisines: ["Wine Bar"], city: "Rome", country: "Italy", countryCode: "IT" });
+    expect(place).toMatchObject({ category: "bar", cuisines: ["Wine Bar"], city: "Rome", country: "Italy", countryCode: "IT", timeZone: "Europe/Rome" });
   });
 });
