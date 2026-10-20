@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { prisma } from "@/lib/db";
 import { cacheMichelinPreviewForStamp, previewMichelinForPlace } from "@/server/services/michelin";
-import { createStamp } from "@/server/services/stamps";
+import { createStamp, getStamp } from "@/server/services/stamps";
 import { makeActor, VENUE_POS } from "./factories";
 
 const response = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
@@ -11,7 +11,7 @@ const response = (body: unknown) => new Response(JSON.stringify(body), { status:
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Michelin enrichment", () => {
-  it("looks up on restaurant selection, leaves the venue untouched, then caches the signed result when stamped", async () => {
+  it("looks up on restaurant selection, leaves the venue untouched, then caches the signed result only after a stamp succeeds", async () => {
     const venue = await prisma.venue.create({
       data: {
         slug: `michelin-${randomUUID()}`,
@@ -51,6 +51,10 @@ describe("Michelin enrichment", () => {
       michelinCheckedAt: null,
     });
 
+    const me = await makeActor();
+    const created = await createStamp(prisma, me, venue.id, { meta: { caption: "dinner", mode: "now" } });
+    expect(created.artwork?.michelinStars ?? null).toBeNull();
+
     await cacheMichelinPreviewForStamp(prisma, place, preview.proof);
     await cacheMichelinPreviewForStamp(prisma, place, preview.proof);
 
@@ -59,11 +63,8 @@ describe("Michelin enrichment", () => {
       michelinStars: 2,
       michelinCheckedAt: expect.any(Date),
     });
-
-    const me = await makeActor();
-    const stamp = await createStamp(prisma, me, venue.id, { meta: { caption: "dinner", mode: "now" } });
-    expect(stamp.artwork).toMatchObject({ michelinStars: 2 });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const refreshed = await getStamp(prisma, me, created.id);
+    expect(refreshed.stamp.artwork).toMatchObject({ michelinStars: 2 });
   });
 
   it("does not cache a failed click-time lookup and still allows the stamp", async () => {
@@ -96,15 +97,15 @@ describe("Michelin enrichment", () => {
     };
     const preview = await previewMichelinForPlace(prisma, place);
     expect(preview).toEqual({ venueId: venue.id, stars: null, proof: null });
+
+    const me = await makeActor();
+    const stamp = await createStamp(prisma, me, venue.id, { meta: { caption: "still stamps", mode: "now" } });
     await cacheMichelinPreviewForStamp(prisma, place, preview.proof);
 
     expect(await prisma.venue.findUniqueOrThrow({ where: { id: venue.id }, select: { michelinStars: true, michelinCheckedAt: true } })).toEqual({
       michelinStars: null,
       michelinCheckedAt: null,
     });
-
-    const me = await makeActor();
-    const stamp = await createStamp(prisma, me, venue.id, { meta: { caption: "still stamps", mode: "now" } });
     expect(stamp.artwork?.michelinStars ?? null).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
