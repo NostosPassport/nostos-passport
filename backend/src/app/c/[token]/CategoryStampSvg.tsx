@@ -17,9 +17,13 @@ type Common = {
   localPreviewPhotoUrl?: string | null;
 };
 type Props = Common & (
-  | { artwork: CategoryStampArtwork & { priceTier?: PriceTier | null; michelinStars?: MichelinStars | null }; name: string; locality: string; timeZone?: string | null; design?: undefined }
+  | { artwork: CategoryStampArtwork & { priceTier?: PriceTier | null; michelinStars?: number | null }; name: string; locality: string; timeZone?: string | null; design?: undefined }
   | { design: StampDesignInput; artwork?: undefined }
 );
+
+function validMichelinStars(value: number | null | undefined): MichelinStars | null {
+  return value === 1 || value === 2 || value === 3 ? value : null;
+}
 
 /**
  * Category stamp, web. Every position, size and string comes from buildStampScene (shared with Expo); this component only
@@ -36,7 +40,7 @@ export function CategoryStampSvg(props: Props) {
   const photo = dev ?? safeStampPhotoUrl(props.photoUrl);
   const font = "var(--font-stamp-serif), 'Source Serif 4', Georgia, serif";
   const p = scene.photo, i = scene.icon;
-  const michelinStars = props.artwork?.michelinStars ?? null;
+  const michelinStars = validMichelinStars(props.artwork?.michelinStars);
   const michelinMarks = scene.mark && michelinStars ? michelinMarkCenters(scene.mark, michelinStars) : [];
   const accessibilityLabel = michelinStars ? `${scene.a11yLabel}, ${michelinStars} Michelin star${michelinStars === 1 ? "" : "s"}` : scene.a11yLabel;
   return <svg width="100%" height="100%" viewBox={`0 0 ${scene.width} ${scene.height}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={accessibilityLabel}>
