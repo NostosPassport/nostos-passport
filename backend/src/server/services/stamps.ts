@@ -321,3 +321,21 @@ export async function listUserPlaces(db: Db, actor: Actor | null, handle: string
   for (const r of rows) { const p = places.get(r.venue.id); if (p) p.stamps++; else places.set(r.venue.id, { place: r.venue, stamps: 1, latest: r }); }
   return { places: await Promise.all([...places.values()].map(async ({ place, stamps, latest }) => ({ place, stamps, latestStamp: { id: latest.id, createdAt: latest.createdAt, visitedAt: latest.visitedAt, photoUrl: latest.photos[0] ? await uploadUrl(latest.photos[0].storageKey, now) : null, caption: latest.caption } }))) };
 }
+
+export const stampDay = (d: Date) => {
+  const p = localParts(d);
+  return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+};
+
+export async function getMyPlacePage(db: Db, actor: Actor | null, idOrSlug: string, pos?: { lat: number; lng: number } | null, now = new Date()) {
+  const me = requireSignedIn(actor);
+  const place = await db.venue.findFirst({ where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] }, select: { id: true, slug: true, name: true, address: true, neighborhood: true, neighborhoodId: true, lat: true, lng: true, geofenceMeters: true, osmId: true } });
+  if (!place) throw notFound("Place not found");
+  const rows = await db.photo.findMany({ where: { userId: me.userId, venueId: place.id, removedAt: null }, orderBy: [{ visitedAt: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: stampSelect });
+  const stamps = await toStampViews(db, rows, now);
+  const visits: { day: string; stamps: typeof stamps }[] = [];
+  for (const st of stamps) { const day = stampDay(st.visitedAt); const last = visits[visits.length - 1]; if (last && last.day === day) last.stamps.push(st); else visits.push({ day, stamps: [st] }); }
+  const here = pos && isValidLatLng(pos) ? Math.round(distanceMeters(pos, place)) : null;
+  const { osmId, ...rest } = place;
+  return { place: { ...rest, fromOsm: osmId !== null }, stamps, visits, inside: here === null ? null : here <= place.geofenceMeters, distanceM: here };
+}
