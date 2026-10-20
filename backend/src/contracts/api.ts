@@ -93,6 +93,7 @@ export const CategoryStampArtwork = z.object({
   label: z.string(),
   color: z.string(),
   icon: z.enum(["croissant", "burger", "tapas", "mezze", "restaurant", "pasta", "taco", "sushi", "noodles", "curry", "pizza", "bread", "fish", "leaf", "bowl", "grill", "glass", "music"]),
+  priceTier: z.enum(["$", "$$", "$$$", "$$$$"]).nullable().optional(),
 }).strict();
 export type CategoryStampArtwork = z.infer<typeof CategoryStampArtwork>;
 export const StampView = z.object({
@@ -129,7 +130,7 @@ export const SongSearchResponse = z.object({ songs: z.array(SongResult) }).stric
 export const MyPlacePageResponse = z.object({ place: Place.omit({ fromOsm: true }).extend({ fromOsm: z.boolean() }).strict(), stamps: z.array(StampView), visits: z.array(z.object({ day: z.string(), stamps: z.array(StampView) }).strict()), inside: z.boolean().nullable(), distanceM: z.number().int().nullable() }).strict();
 
 export const ProfileSettingsRequest = z.object({ displayName: z.string().trim().min(1).max(60), bio: z.string().trim().max(150) }).partial().strict();
-export const ProfileSettingsResponse = z.object({ profile: z.object({ handle: z.string(), displayName: z.string(), bio: z.string(), avatarUrl: z.string().nullable() }).strict() }).strict();
+export const ProfileSettingsResponse = z.object({ profile: z.object({ handle: z.string(), displayName: z.string(), bio: z.string(), avatarUrl: z.string().nullable() }).strict();
 export const AvatarResponse = z.object({ avatarUrl: z.string().nullable() }).strict();
 
 export const CronResponse = z.object({ ok: z.literal(true), prunedLoginAttempts: z.number().int(), prunedRateEvents: z.number().int(), ms: z.number() }).strict();
