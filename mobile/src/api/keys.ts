@@ -10,6 +10,7 @@ export const qk = {
   neighborhoods: ["me", "neighborhoods"] as const,
   collections: ["collections"] as const,
   collection: (id: string) => ["collections", id] as const,
+  collectionShare: (id: string) => ["collections", id, "share"] as const,
   userStamps: (handle: string) => ["user", handle, "stamps"] as const,
   userPlaces: (handle: string) => ["user", handle, "places"] as const,
   stamp: (id: string) => ["stamp", id] as const,
