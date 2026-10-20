@@ -5,7 +5,6 @@ import { mulberry32 } from "../src/lib/rng";
 import { DAY_MS, HOUR_MS, MINUTE_MS } from "../src/lib/time";
 import { storageFromEnv, type BlobStorage } from "../src/lib/storage";
 import { CURRENT_TERMS_VERSION } from "../src/server/services/auth";
-import { assignNeighborhoods, importNeighborhoods } from "../src/server/services/neighborhoods";
 import { placeholderPng } from "./placeholder-image";
 import { assertSeedAllowed } from "./seed-guard";
 import { CAPTIONS, PEOPLE, PLACES, SONGS } from "./seed-data";
@@ -14,14 +13,12 @@ const TABLES = [
   "rate_event",
   "login_attempt",
   "pinned_stamp",
-  "neighborhood_completion",
   "stamp_photo",
   "photo",
   "venue",
   "session",
   "email_challenge",
   "app_user",
-  "neighborhood",
 ];
 
 export type SeedOptions = { now?: Date; storage?: BlobStorage; env?: Record<string, string | undefined> };
@@ -38,9 +35,17 @@ export async function seed(db: PrismaClient, opts: SeedOptions = {}): Promise<Se
   const storage = opts.storage ?? storageFromEnv(env as Record<string, string | undefined>);
 
   await db.$executeRawUnsafe(`TRUNCATE TABLE ${TABLES.map((t) => `"${t}"`).join(", ")} RESTART IDENTITY CASCADE`);
-  await importNeighborhoods(db);
-  await db.venue.createMany({ data: PLACES.map((p, i) => ({ id: `seed_v_${String(i + 1).padStart(3, "0")}`, ...p })) });
-  await assignNeighborhoods(db);
+  await db.venue.createMany({
+    data: PLACES.map((p, i) => ({
+      id: `seed_v_${String(i + 1).padStart(3, "0")}`,
+      ...p,
+      city: "New York",
+      region: "New York",
+      country: "United States",
+      countryCode: "US",
+      timeZone: "America/New_York",
+    })),
+  });
   const places = await db.venue.findMany({ orderBy: { id: "asc" } });
 
   const password = env.DEV_SEED_PASSWORD ?? "lastcall-dev";
@@ -90,8 +95,6 @@ export async function seed(db: PrismaClient, opts: SeedOptions = {}): Promise<Se
       const exempt = person.exempt === true;
       const createdAt = ago(age);
       const visitedAt = createdAt;
-      // Mix verified and unverified memories so both treatments are visible in local development.
-      // App Review/QA accounts stay unverified by definition.
       const verifiedAt = !exempt && rng.chance(0.65) ? createdAt : null;
       await db.$transaction(async (tx) => {
         await tx.photo.create({

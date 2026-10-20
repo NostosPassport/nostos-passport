@@ -4,6 +4,7 @@ import Svg, { Path } from "react-native-svg";
 
 import type { StampView } from "@/api/contracts";
 import { Text } from "@/components/ui/text";
+import { localityKey, localityLabel } from "@/lib/place";
 import { bookStyle, colors } from "@/theme";
 import { ribbonPath, ribbonsOnPage } from "./edges";
 import { rosettePath, wavePaths } from "./guilloche";
@@ -13,7 +14,7 @@ import { type Placement, slotPlacement } from "./slots";
 
 export type RenderStamp = (stamp: StampView, placement: Placement) => ReactNode;
 type Props = { page: number; side: "left" | "right"; width: number; height: number; stamps: readonly StampView[]; pinnedIds?: readonly string[]; renderStamp?: RenderStamp; onStampPress?: (stamp: StampView) => void };
-const defaultRender: RenderStamp = (stamp, p) => <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, neighborhoodId: stamp.place.neighborhoodId, neighborhoodName: stamp.place.neighborhood }} size={p.size} artwork={stamp.artwork} photoUrl={stamp.photoUrl} visitedAt={stamp.visitedAt} />;
+const defaultRender: RenderStamp = (stamp, p) => <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey: localityKey(stamp.place), localityName: localityLabel(stamp.place) }} size={p.size} artwork={stamp.artwork} photoUrl={stamp.photoUrl} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} />;
 
 export function PageView({ page, side, width, height, stamps, pinnedIds = [], renderStamp = defaultRender, onStampPress }: Props) {
   const ribbons = new Set(ribbonsOnPage(stamps, pinnedIds));

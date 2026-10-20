@@ -36,7 +36,6 @@ export async function deleteAccount(db: Db, actor: Actor | null, raw: unknown, n
     await tx.photo.updateMany({ where: { userId: user.id, removedAt: null }, data: { removedAt: now } });
     await tx.session.deleteMany({ where: { userId: user.id } });
     await tx.pinnedStamp.deleteMany({ where: { userId: user.id } });
-    await tx.neighborhoodCompletion.deleteMany({ where: { userId: user.id } });
     await tx.rateEvent.deleteMany({ where: { userId: user.id } });
     await tx.loginAttempt.deleteMany({ where: { email: user.email } });
     await tx.emailChallenge.deleteMany({ where: { email: user.email } });

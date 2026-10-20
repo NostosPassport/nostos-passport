@@ -31,11 +31,12 @@ describe("category ink stamp design v1", () => {
   });
   it("uses fixed dimensions for the approved restaurant and bar references", () => {
     expect(CATEGORY_STAMP_GEOMETRY.restaurant.photo).toEqual({x:22,y:21,s:110});
-    expect(CATEGORY_STAMP_GEOMETRY.bar.photo).toEqual({x:41,y:43,s:78});
+    expect(CATEGORY_STAMP_GEOMETRY.bar.photo).toEqual({x:46,y:47,s:68});
     expect(CATEGORY_STAMP_GEOMETRY.bar.titleArc).toMatch(/^M/);
     expect(resolveCategoryStamp({id:"o",category:"restaurant",primaryType:"italian_restaurant"})?.color).toBe("#143B2B");
     expect(resolveCategoryStamp({id:"b",category:"bar",primaryType:"cocktail_bar"})?.color).toBe("#7C1030");
     expect(categoryStampDateLabel("2026-10-20T12:00:00-04:00")).toBe("20 OCT 2026");
+    expect(categoryStampDateLabel("2026-10-20T23:30:00-04:00", "Europe/Rome")).toBe("21 OCT 2026");
   });
   it("categorizes French, American, Spanish and Lebanese without name inference", () => {
     for(const [kind,tag] of [["french","french_restaurant"],["american","american_restaurant"],["spanish","spanish_restaurant"],["lebanese","lebanese_restaurant"]] as const){

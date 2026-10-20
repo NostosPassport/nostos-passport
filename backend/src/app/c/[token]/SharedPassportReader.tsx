@@ -43,8 +43,9 @@ export type SharedPassportStamp = {
   place: {
     id: string;
     name: string;
-    neighborhood: string;
-    neighborhoodId: string | null;
+    localityName: string;
+    localityKey: string;
+    timeZone: string;
   };
 };
 
@@ -82,22 +83,22 @@ function wantsReducedMotion() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-function visitDate(value: string) {
+function visitDate(value: string, timeZone: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
-    timeZone: "America/New_York",
+    timeZone,
   }).format(new Date(value));
 }
 
 function StampArtwork({ stamp }: { stamp: SharedPassportStamp }) {
-  if (stamp.artwork) return <CategoryStampSvg artwork={stamp.artwork} name={stamp.place.name} locality={stamp.place.neighborhood} visitedAt={stamp.visitedAt} photoUrl={stamp.photos[0]?.url} />;
+  if (stamp.artwork) return <CategoryStampSvg artwork={stamp.artwork} name={stamp.place.name} locality={stamp.place.localityName} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} photoUrl={stamp.photos[0]?.url} />;
   const input = {
     placeId: stamp.place.id,
     placeName: stamp.place.name,
-    neighborhoodId: stamp.place.neighborhoodId,
-    neighborhoodName: stamp.place.neighborhood,
+    localityKey: stamp.place.localityKey,
+    localityName: stamp.place.localityName,
   };
   const design = stampDesign(input);
   const arcId = `stamp-arc-${stamp.id.replace(/[^A-Za-z0-9_-]/g, "")}`;
@@ -240,7 +241,7 @@ function PassportPage({
               height: `${height}%`,
               transform: `rotate(${placement.rotation}deg)`,
             }}
-            aria-label={`${stamp.place.name}, ${stamp.place.neighborhood}${stamp.verified ? ", verified visit" : ""}`}
+            aria-label={`${stamp.place.name}${stamp.place.localityName ? `, ${stamp.place.localityName}` : ""}${stamp.verified ? ", verified visit" : ""}`}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -534,7 +535,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
               </div>
             ) : null}
             <div className={styles.detailBody}>
-              <p className={styles.detailEyebrow}>{selected.place.neighborhood} · {visitDate(selected.visitedAt)}</p>
+              <p className={styles.detailEyebrow}>{[selected.place.localityName, visitDate(selected.visitedAt, selected.place.timeZone)].filter(Boolean).join(" · ")}</p>
               <h2 id="shared-stamp-title" className={styles.detailTitle}>{selected.place.name}</h2>
               {selected.caption ? <p className={styles.caption}>{selected.caption}</p> : null}
               {selected.song ? (

@@ -8,14 +8,14 @@ function bounded(value: string, size: number, width: number) {
   return output;
 }
 /** Pure SVG native counterpart of the shared-web ink stamp, with transparent background. */
-export function CategoryStampMark({ artwork, name, locality, visitedAt, photoUri, size }: {
-  artwork: CategoryStampArtwork; name: string; locality: string; visitedAt?: string | null; photoUri?: string | null; size: number;
+export function CategoryStampMark({ artwork, name, locality, visitedAt, timeZone, photoUri, size }: {
+  artwork: CategoryStampArtwork; name: string; locality: string; visitedAt?: string | null; timeZone?: string | null; photoUri?: string | null; size: number;
 }) {
   const id="nst-"+useId().replace(/[^a-zA-Z0-9_-]/g,"_");
   const bar=artwork.kind==="bar", g=bar?CATEGORY_STAMP_GEOMETRY.bar:CATEGORY_STAMP_GEOMETRY.restaurant;
   const p=g.photo, clip=photoClipPath(p.x,p.y,p.s);
   const title=layoutCategoryName(name,artwork.kind);
-  const photo=safeStampPhotoUrl(photoUri), ink=artwork.color, date=categoryStampDateLabel(visitedAt);
+  const photo=safeStampPhotoUrl(photoUri), ink=artwork.color, date=categoryStampDateLabel(visitedAt, timeZone ?? undefined);
   const serif=needsUnicodeFont(name)?undefined:fonts.serif;
   return <Svg width={size} height={size} viewBox={g.viewBox} preserveAspectRatio="xMidYMid meet"
     accessible accessibilityLabel={[name,artwork.label,locality,date].filter(Boolean).join(", ")}>

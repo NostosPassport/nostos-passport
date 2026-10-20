@@ -161,11 +161,11 @@ export const CATEGORY_STAMP_GEOMETRY = {
     iconX: 119, iconY: 82, dateY: 124, categoryY: 136, localityY: 146,
   },
 } as const;
-/** Date labels are about the New York visit day, never the rendering device's timezone. */
-export function categoryStampDateLabel(value: string | null | undefined): string {
+/** Date labels use the venue-local visit day, never the rendering device\'s timezone. */
+export function categoryStampDateLabel(value: string | null | undefined, timeZone = "America/New_York"): string {
   if (!value || Number.isNaN(Date.parse(value))) return "";
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York", day: "2-digit", month: "short", year: "numeric",
+    timeZone, day: "2-digit", month: "short", year: "numeric",
   }).formatToParts(new Date(value));
   const part=(kind: string) => parts.find(p=>p.type===kind)?.value ?? "";
   return `${part("day")} ${part("month").toUpperCase()} ${part("year")}`;

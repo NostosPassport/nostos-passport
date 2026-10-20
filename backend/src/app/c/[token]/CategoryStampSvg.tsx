@@ -10,8 +10,8 @@ function bounded(value: string, size: number, width: number) {
   return output;
 }
 /** Native and web share dimensions, names, photo cutout, categories and ink positions. */
-export function CategoryStampSvg({ artwork, name, locality, visitedAt, photoUrl, localPreviewPhotoUrl }: {
-  artwork: CategoryStampArtwork; name: string; locality: string; visitedAt: string; photoUrl?: string | null;
+export function CategoryStampSvg({ artwork, name, locality, visitedAt, timeZone, photoUrl, localPreviewPhotoUrl }: {
+  artwork: CategoryStampArtwork; name: string; locality: string; visitedAt: string; timeZone?: string | null; photoUrl?: string | null;
   /** Only for the dev preview's own locally selected File object URL. Never set on public collection pages. */
   localPreviewPhotoUrl?: string | null;
 }) {
@@ -19,7 +19,7 @@ export function CategoryStampSvg({ artwork, name, locality, visitedAt, photoUrl,
   const bar = artwork.kind === "bar", g = bar ? CATEGORY_STAMP_GEOMETRY.bar : CATEGORY_STAMP_GEOMETRY.restaurant;
   const p = g.photo, clip = photoClipPath(p.x,p.y,p.s);
   const title = layoutCategoryName(name, artwork.kind);
-  const ink = artwork.color, date = categoryStampDateLabel(visitedAt);
+  const ink = artwork.color, date = categoryStampDateLabel(visitedAt, timeZone ?? undefined);
   const photo = (process.env.NODE_ENV === "development" && localPreviewPhotoUrl?.startsWith("blob:") ? localPreviewPhotoUrl : null) ?? safeStampPhotoUrl(photoUrl);
   const serif = needsUnicodeFont(name) ? "system-ui, sans-serif" : "'Cormorant Garamond', Georgia, serif";
   const barLocal = bounded(locality,7.2,44);

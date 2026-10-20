@@ -1,7 +1,7 @@
 /**
- * Time conventions: everything is stored in UTC. "Tonight" is computed in America/New_York,
- * where a night runs from 5:00am local to 4:59:59.999am local the next day. A night is named by the
- * local calendar date it starts on, e.g. Friday night 11pm and Saturday 2am are both night "YYYY-MM-DD" of Friday.
+ * Time conventions: everything is stored in UTC. Historical "night" helpers below use America/New_York,
+ * where a night runs from 5:00am local to 4:59:59.999am local the next day. Place-specific visit dates should use
+ * `calendarDayKey` with the venue's IANA time zone instead of these New York night helpers.
  */
 export const NIGHT_TZ = "America/New_York";
 export const NIGHT_ROLLOVER_HOUR = 5;
@@ -12,21 +12,32 @@ export const DAY_MS = 24 * HOUR_MS;
 
 type LocalParts = { year: number; month: number; day: number; hour: number; minute: number; second: number };
 
-const partsFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: NIGHT_TZ,
-  hourCycle: "h23",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-});
+const formatters = new Map<string, Intl.DateTimeFormat>();
 
-/** Wall-clock components of an instant in America/New_York. */
-export function localParts(date: Date): LocalParts {
+function formatterFor(timeZone: string) {
+  const cached = formatters.get(timeZone);
+  if (cached) return cached;
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    formatters.set(timeZone, formatter);
+    return formatter;
+  } catch {
+    return formatterFor("UTC");
+  }
+}
+
+function partsInTimeZone(date: Date, timeZone: string): LocalParts {
   const out: Record<string, number> = {};
-  for (const p of partsFormatter.formatToParts(date)) {
+  for (const p of formatterFor(timeZone).formatToParts(date)) {
     if (p.type !== "literal") out[p.type] = Number(p.value);
   }
   return {
@@ -39,14 +50,24 @@ export function localParts(date: Date): LocalParts {
   };
 }
 
+/** Wall-clock components of an instant in America/New_York. */
+export function localParts(date: Date): LocalParts {
+  return partsInTimeZone(date, NIGHT_TZ);
+}
+
 function pad(n: number) {
   return String(n).padStart(2, "0");
+}
+
+/** Calendar date at a place, falling back to UTC when a venue has no usable IANA time zone. */
+export function calendarDayKey(date: Date, timeZone?: string | null): string {
+  const p = partsInTimeZone(date, timeZone?.trim() || "UTC");
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
 }
 
 /** The night an instant belongs to, as YYYY-MM-DD (local date the night started on). */
 export function nightKey(date: Date): string {
   const p = localParts(date);
-  // Use a UTC-date object purely for calendar arithmetic on the local wall date.
   const cal = new Date(Date.UTC(p.year, p.month - 1, p.day));
   if (p.hour < NIGHT_ROLLOVER_HOUR) cal.setUTCDate(cal.getUTCDate() - 1);
   return `${cal.getUTCFullYear()}-${pad(cal.getUTCMonth() + 1)}-${pad(cal.getUTCDate())}`;
@@ -69,7 +90,6 @@ function tzOffsetMs(date: Date): number {
 /** UTC instant of a local America/New_York wall-clock time (resolves DST gaps forward). */
 export function zonedTimeToUtc(year: number, month: number, day: number, hour: number, minute = 0): Date {
   const guess = Date.UTC(year, month - 1, day, hour, minute);
-  // Two passes handle the DST boundary correctly.
   let ts = guess - tzOffsetMs(new Date(guess));
   ts = guess - tzOffsetMs(new Date(ts));
   return new Date(ts);

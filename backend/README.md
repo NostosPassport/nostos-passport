@@ -8,11 +8,11 @@ The current product is personal and private by default. User-created collections
 
 - passwordless authentication and sessions
 - server-side stamp geofence verification
+- worldwide Google-backed restaurant/bar discovery and durable place locality
 - stamp creation with up to six photos, caption, and/or song metadata
 - image processing and EXIF/GPS stripping
 - private passport, stamp, pin, profile, place-history, and collection data
 - owner-controlled collection share links and read-only public collection resolution
-- neighborhoods and completion progress
 - account deletion and retained-content rules
 - legal/support web pages and operational endpoints
 
@@ -53,8 +53,7 @@ pnpm db:seed
 | `pnpm db:seed` | deterministic development seed |
 | `pnpm db:reset` | destructive local reset + seed |
 | `pnpm bundle` | regenerate backend review bundle |
-| `pnpm venues:import` | import places |
-| `pnpm neighborhoods:import` | import neighborhood boundaries |
+| `pnpm venues:import` | import legacy/development OSM places |
 | `pnpm user:geofence-exempt` | set or clear the App Review/QA geofence exemption for an account |
 
 ## Contracts

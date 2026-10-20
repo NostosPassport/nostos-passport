@@ -19,17 +19,18 @@ export default function TermsPage() {
 
       <h2>2. What Nostos provides</h2>
       <p>
-        Nostos is a personal passport for New York. It lets you save visits to places as stamps containing a photo, caption, rating,
-        song metadata, or a combination of those items. Nostos may also provide maps, nearby-place results, neighborhood progress,
+        Nostos is a personal passport for the places you go. It lets you save visits to places as stamps containing photos, a caption,
+        rating, song metadata, or a combination of those items. Nostos may also provide maps, nearby-place results, collections,
         and other tools related to your passport. Place, map, and venue information may be incomplete, outdated, or inaccurate and
         should not be treated as advice about safety, access, hours, pricing, or whether a place is suitable for you.
       </p>
 
-      <h2>3. Location-verified stamps</h2>
+      <h2>3. Location and verified stamps</h2>
       <ul>
-        <li>You may create a stamp only when you are actually at or sufficiently near the place.</li>
-        <li>Nostos may use your current location and server-side geofence checks to verify eligibility to create a stamp.</li>
-        <li>You may not spoof, falsify, manipulate, or bypass location checks, rate limits, or other integrity controls.</li>
+        <li>Location permission is optional. You can create an unverified stamp without sharing your current location.</li>
+        <li>For a current visit, Nostos may use your location and a server-side geofence check to mark the visit verified when your device is sufficiently near the selected place.</li>
+        <li>Past stamps are historical memories and are not location verified.</li>
+        <li>You may not spoof, falsify, manipulate, or bypass location checks, rate limits, or other integrity controls to obtain a verification status or interfere with the service.</li>
       </ul>
 
       <h2>4. Your content</h2>
@@ -65,10 +66,10 @@ export default function TermsPage() {
 
       <h2>7. Third-party services and data</h2>
       <p>
-        Nostos relies on third-party services and data. Place information may include data © OpenStreetMap contributors under the Open
-        Database License. Song titles, artist names, and album artwork may come from Apple&apos;s iTunes Search API and remain subject to
-        the rights of their respective owners. The app may use Apple Maps. Nostos does not control the availability or accuracy of
-        third-party services.
+        Nostos relies on third-party services and data. Restaurant, bar, and place information may come from Google Places. Legacy place
+        information may include data © OpenStreetMap contributors under the Open Database License. Song titles, artist names, and album
+        artwork may come from Apple&apos;s iTunes Search API and remain subject to the rights of their respective owners. The app may use
+        Apple Maps. Nostos does not control the availability or accuracy of third-party services.
       </p>
 
       <h2>8. Changes to the service</h2>

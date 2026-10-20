@@ -17,12 +17,13 @@ jest.mock("@/api", () => {
 });
 jest.mock("@/features/location/location-store", () => ({ useUserCoords: () => mockHere }));
 
+const locality = { area: "East Village", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York" } as const;
 const stamp = (id: string, visitedAt: string, caption = "", verified = false): StampView => ({
   id, photoUrl: null, photos: [], caption, song: null, page: 1, slot: 1,
   createdAt: "2026-10-08T20:00:00.000Z", visitedAt, verifiedAt: verified ? "2026-10-08T20:00:00.000Z" : null, verified, editedAt: null,
-  place: { id: "p1", slug: "katz", name: "Katz's", neighborhood: "East Village", neighborhoodId: "n1" },
+  place: { id: "p1", slug: "katz", name: "Katz's", ...locality },
 });
-const place = { id: "p1", slug: "katz", name: "Katz's", address: "205 E Houston St", neighborhood: "East Village", lat: 1, lng: 2, geofenceMeters: 100, neighborhoodId: "n1", fromOsm: false };
+const place = { id: "p1", slug: "katz", name: "Katz's", address: "205 E Houston St", ...locality, lat: 1, lng: 2, geofenceMeters: 100, fromOsm: false, googlePlaceId: null, category: "restaurant" as const, cuisines: [], primaryType: "restaurant", businessStatus: null };
 
 describe("place page words", () => {
   it("writes a day as a passport date, and leaves anything else alone", () => {

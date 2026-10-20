@@ -7,7 +7,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy Policy" updated={POLICY_UPDATED}>
       <p>
-        Nostos is a personal passport for New York that lets you save visits as stamps. This Privacy Policy explains what
+        Nostos is a personal passport for the places you go that lets you save visits as stamps. This Privacy Policy explains what
         information Nostos collects, how we use it, when it is shared, and the choices available to you.
       </p>
 
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <h2>How we use information</h2>
       <ul>
         <li>To create and operate your account, authenticate you, and deliver sign-in or verification emails.</li>
-        <li>To show your passport, collections, nearby places, neighborhood progress, and the stamps you have created.</li>
+        <li>To show your passport, collections, nearby places, maps, and the stamps you have created.</li>
         <li>When you choose to share a collection, to provide the read-only web page available through that collection&apos;s shared link.</li>
         <li>When you choose to share location for a Now stamp, to determine whether the visit qualifies for location verification.</li>
         <li>To process account changes, support requests, account deletion, and other actions you request.</li>
@@ -47,8 +47,9 @@ export default function PrivacyPage() {
       <h2>Service providers</h2>
       <p>
         Nostos uses service providers including Vercel for application hosting, Neon for database hosting, Cloudflare R2 for
-        private photo storage, and Resend for transactional email delivery. The iPhone app uses Apple Maps. Song searches are
-        sent through our backend to Apple&apos;s iTunes Search API using the search terms you enter.
+        private photo storage, Resend for transactional email delivery, and Google Places for restaurant and bar search and place information.
+        Nearby-place searches may send the location you provide for that request to Google through the Nostos backend. The iPhone app uses Apple Maps.
+        Song searches are sent through our backend to Apple&apos;s iTunes Search API using the search terms you enter.
       </p>
 
       <h2>Location information</h2>

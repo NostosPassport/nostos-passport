@@ -9,7 +9,7 @@ type MyPlacePageResponse = z.infer<typeof MyPlaceSchema>;
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
-/** "2026-10-03" as "03 OCT 2026". The server's day is already a New York calendar day, so it is read as written. */
+/** "2026-10-03" as "03 OCT 2026". The server's day is already the venue's local calendar day, so it is read as written. */
 export function dayLabel(day: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
   if (!m) return day;
@@ -31,9 +31,9 @@ export function standing(data: Pick<MyPlacePageResponse, "inside" | "distanceM">
   return { text: data.distanceM === null ? null : `${format(data.distanceM)} away`, canVerify: false };
 }
 
-/** One line for a stamp in the list: visit time, then caption/song/photo count. */
+/** One line for a stamp in the list: venue-local visit time, then caption/song/photo count. */
 export function stampLine(s: MyPlacePageResponse["stamps"][number]): string {
-  const { time } = visaStamp(s.visitedAt);
+  const { time } = visaStamp(s.visitedAt, s.place.timeZone);
   const what = s.caption.trim() || (s.song ? `${s.song.title}, ${s.song.artist}` : s.photos.length > 0 ? `${plural(s.photos.length, "photo")}` : "");
   return [time, what].filter(Boolean).join("  ·  ");
 }

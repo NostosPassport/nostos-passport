@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { useUserCoords } from "@/features/location/location-store";
 import { placesRegion } from "@/features/people/places";
 import { HOME_REGION } from "@/lib/geo";
+import { localityKey, localityLabel } from "@/lib/place";
 import { colors } from "@/theme";
 import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
@@ -127,8 +128,8 @@ export function MapScreen() {
                   input={{
                     placeId: place.id,
                     placeName: place.name,
-                    neighborhoodId: null,
-                    neighborhoodName: place.neighborhood,
+                    localityKey: localityKey(place),
+                    localityName: localityLabel(place),
                   }}
                 />
               </Marker>

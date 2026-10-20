@@ -1,14 +1,13 @@
-/** The map's logic, apart from the screen: which pins are lit, which are drawn, what the sheet says. Pure. */
 import type { Place, UserPlacesResponse } from "@/api/contracts";
-import { distanceMeters, type Coords } from "@/lib/geo";
 import { visaStamp } from "@/features/book/visa";
+import { distanceMeters, type Coords } from "@/lib/geo";
+import { localityLabel } from "@/lib/place";
 
 export type MapRegion = { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number };
-export type PlaceStat = { stamps: number; latestAt: string };
+export type PlaceStat = { stamps: number; latestAt: string; timeZone: string };
 
-/** What you have stamped, by place id. Places you have never stamped are not in it. */
 export function statsByPlace(userPlaces: UserPlacesResponse["places"]): Map<string, PlaceStat> {
-  return new Map(userPlaces.map((u) => [u.place.id, { stamps: u.stamps, latestAt: u.latestStamp.visitedAt }]));
+  return new Map(userPlaces.map((u) => [u.place.id, { stamps: u.stamps, latestAt: u.latestStamp.visitedAt, timeZone: u.place.timeZone }]));
 }
 
 export type PinKind = "lit" | "dim";
@@ -30,15 +29,14 @@ export type SheetModel = {
   status: string;
   distance: string | null;
   canVerify?: boolean;
-  /** @deprecated Gallery compatibility only. Stamp creation itself is never geofence-gated. */
   canStamp?: boolean;
 };
 
 export function sheetModel(place: Place, stat: PlaceStat | undefined, here: Coords | null, format: (m: number) => string): SheetModel {
   const meters = here ? distanceMeters(here, { lat: place.lat, lng: place.lng }) : null;
-  const status = stat ? `Stamped ${stat.stamps === 1 ? "once" : `${stat.stamps} times`}. Last on ${visaStamp(stat.latestAt).date}.` : "Not stamped yet.";
+  const status = stat ? `Stamped ${stat.stamps === 1 ? "once" : `${stat.stamps} times`}. Last on ${visaStamp(stat.latestAt, stat.timeZone).date}.` : "Not stamped yet.";
   const cuisine = place.cuisines.slice(0, 2).join(" · ");
-  return { title: place.name, subtitle: [cuisine, place.neighborhood, place.address].filter(Boolean).join(" · "), status, distance: meters === null ? null : `${format(meters)} away`, canVerify: meters !== null && meters <= place.geofenceMeters };
+  return { title: place.name, subtitle: [cuisine, localityLabel(place), place.address].filter(Boolean).join(" · "), status, distance: meters === null ? null : `${format(meters)} away`, canVerify: meters !== null && meters <= place.geofenceMeters };
 }
 
 export function sheetShouldClose(translationY: number, velocityY: number, sheetHeight: number): boolean {

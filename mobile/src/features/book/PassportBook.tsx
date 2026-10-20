@@ -49,7 +49,6 @@ function CollectionPassportBook({ collectionId }: { collectionId: string }) {
   const collection = collectionQuery.data?.collection ?? null;
   const customStamps = collection?.stamps ?? [];
   const customPlaces = new Set(customStamps.map((stamp) => stamp.place.id)).size;
-  const customNeighborhoods = new Set(customStamps.map((stamp) => stamp.place.neighborhoodId).filter(Boolean)).size;
   const customStatus = master.status === "error" || collectionQuery.isError
     ? "error"
     : master.status === "pending" || collectionQuery.isPending
@@ -59,7 +58,7 @@ function CollectionPassportBook({ collectionId }: { collectionId: string }) {
     ...master,
     status: customStatus,
     stamps: customStamps,
-    counts: { stamps: customStamps.length, places: customPlaces, neighborhoods: customNeighborhoods },
+    counts: { stamps: customStamps.length, places: customPlaces },
     retry: () => {
       master.retry();
       void collectionQuery.refetch();

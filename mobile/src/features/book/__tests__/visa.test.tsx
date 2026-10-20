@@ -24,7 +24,7 @@ const stamp = (over: Partial<StampView> = {}): StampView => ({
   verifiedAt: "2026-10-04T03:41:00.000Z",
   verified: true,
   editedAt: null,
-  place: { id: "p1", slug: "velvet", name: "Velvet", neighborhood: "East Village", neighborhoodId: "n1" },
+  place: { id: "p1", slug: "velvet", name: "Velvet", area: "East Village", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York" },
   ...over,
 });
 const wrap = (s: StampView) => render(<QueryClientProvider client={testQueryClient()}><VisaSpread stamp={s} /></QueryClientProvider>);

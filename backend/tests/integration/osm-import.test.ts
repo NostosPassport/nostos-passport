@@ -12,7 +12,7 @@ describe("venues:import", () => {
     expect(await importOsmVenues(prisma, sample)).toMatchObject({ fetched: 5, created: 5, updated: 0 });
     expect(await importOsmVenues(prisma, sample)).toMatchObject({ created: 0, updated: 0, unchanged: 5 });
     const v = await prisma.venue.findUniqueOrThrow({ where: { osmId: "node/1001" } });
-    expect(v).toMatchObject({ slug: "test-tavern-n1001", geofenceMeters: 100 });
+    expect(v).toMatchObject({ slug: "test-tavern-n1001", geofenceMeters: 100, city: "New York", countryCode: "US", timeZone: "America/New_York" });
     expect((await prisma.venue.findUniqueOrThrow({ where: { osmId: "way/2001" } })).slug).toBe("test-tavern-w2001");
   });
 
@@ -32,13 +32,12 @@ describe("venues:import", () => {
     expect(body.places.every((v: { fromOsm: boolean }) => v.fromOsm)).toBe(true);
   });
 
-  it("recomputes the neighborhood when coordinates move, and rolls back on failure", async () => {
+  it("updates coordinates atomically and rolls back on slug collision", async () => {
     await importOsmVenues(prisma, sample);
     const moved = sample.map((e) => (e.id === 1001 ? { ...e, lat: 40.7185, lon: -73.988 } : e));
     await importOsmVenues(prisma, moved);
-    expect((await prisma.venue.findUniqueOrThrow({ where: { osmId: "node/1001" } })).neighborhood).toBe("Lower East Side");
-    // A slug clash with an existing place makes the whole import fail with nothing written.
-    await prisma.venue.create({ data: { slug: "new-bar-n7777", name: "Squatter", address: "", neighborhood: "East Village", lat: 40.72, lng: -73.98 } });
+    expect((await prisma.venue.findUniqueOrThrow({ where: { osmId: "node/1001" } })).lat).toBe(40.7185);
+    await prisma.venue.create({ data: { slug: "new-bar-n7777", name: "Squatter", address: "", area: "East Village", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York", lat: 40.72, lng: -73.98 } });
     const before = await prisma.venue.count();
     const clash: OverpassElement[] = [...sample, { type: "node", id: 7777, lat: 40.7262, lon: -73.9848, tags: { amenity: "bar", name: "New Bar" } }, { type: "node", id: 7778, lat: 40.7263, lon: -73.9849, tags: { amenity: "pub", name: "Brand New" } }, { type: "node", id: 7779, lat: 40.7201, lon: -73.9880, tags: { amenity: "bar", name: "New Bar" } }];
     await expect(importOsmVenues(prisma, clash)).rejects.toThrow(/Slug collision/);
@@ -46,7 +45,7 @@ describe("venues:import", () => {
   });
 
   it("no attribution when no place came from OSM", async () => {
-    await prisma.venue.create({ data: { slug: "manual", name: "Manual", address: "1 St", neighborhood: "East Village", lat: 40.72, lng: -73.98 } });
+    await prisma.venue.create({ data: { slug: "manual", name: "Manual", address: "1 St", area: "East Village", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York", lat: 40.72, lng: -73.98 } });
     const body = await (await placesRoute(new Request("http://localhost/api/places"), undefined as never)).json();
     expect(body.attribution).toBeNull();
   });
