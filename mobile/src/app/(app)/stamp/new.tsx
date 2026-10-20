@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, Stack, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Keyboard, Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -70,8 +70,6 @@ function Composer() {
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
-  const [stampSaved, setStampSaved] = useState(false);
-  const createdStamp = useRef<CreateStampResponse | null>(null);
   const [now] = useState(Date.now);
   const photoWidth = Math.max(1, width - 48);
   const currentPhoto = photoUris.length > 0 ? Math.min(activePhoto, photoUris.length - 1) : 0;
@@ -89,23 +87,15 @@ function Composer() {
   const stamp = useMutation({
     mutationFn: async () => {
       if (!place) throw new Error("no place");
-      let result = createdStamp.current;
-      if (!result) {
-        const here = mode === "now" ? ((await locationStore.currentForPosting()) ?? coords) : null;
-        const visit = mode === "past" ? pastDate! : new Date();
-        const form = new FormData();
-        for (const [i, uri] of photoUris.entries()) form.append("photos", { uri, name: `photo-${i + 1}.jpg`, type: "image/jpeg" } as unknown as Blob);
-        for (const [k, v] of stampFields(draft, mode, visit, here)) form.append(k, v);
-        result = await api.upload(`/api/places/${encodeURIComponent(place.id)}/stamps`, CreateStampResponse, form, { onProgress: setProgress });
-        createdStamp.current = result;
-        setStampSaved(true);
-      }
-      if (collectionIds.length > 0) await api.collections.setForStamp(result.stamp.id, collectionIds);
-      return result;
+      const here = mode === "now" ? ((await locationStore.currentForPosting()) ?? coords) : null;
+      const visit = mode === "past" ? pastDate! : new Date();
+      const form = new FormData();
+      for (const [i, uri] of photoUris.entries()) form.append("photos", { uri, name: `photo-${i + 1}.jpg`, type: "image/jpeg" } as unknown as Blob);
+      for (const [k, v] of stampFields(draft, mode, visit, here)) form.append(k, v);
+      for (const collectionId of collectionIds) form.append("collectionId", collectionId);
+      return api.upload(`/api/places/${encodeURIComponent(place.id)}/stamps`, CreateStampResponse, form, { onProgress: setProgress });
     },
     onSuccess: (res) => {
-      createdStamp.current = null;
-      setStampSaved(false);
       haptics.success(); setDone(true); photoDraft.clear(); landingDraft.set(res.stamp, res.progress);
       void queryClient.invalidateQueries({ queryKey: ["user"] });
       void queryClient.invalidateQueries({ queryKey: qk.neighborhoods });
@@ -119,8 +109,8 @@ function Composer() {
   const problem = dateProblem ?? stampProblem(draft, place?.id ?? null);
   const readiness = stampReadiness({ problem, busy: stamp.isPending });
   const verifiedEligible = mode === "now" && permission === "granted" && nearMatch?.inside === true;
-  const resetPlace = () => { Keyboard.dismiss(); setPlace(null); setSearch(""); createdStamp.current = null; setStampSaved(false); stamp.reset(); };
-  const choosePlace = (next: Place) => { Keyboard.dismiss(); setPlace(next); createdStamp.current = null; setStampSaved(false); stamp.reset(); };
+  const resetPlace = () => { Keyboard.dismiss(); setPlace(null); setSearch(""); stamp.reset(); };
+  const choosePlace = (next: Place) => { Keyboard.dismiss(); setPlace(next); stamp.reset(); };
   const toggleCollection = (id: string) => setCollectionIds((ids) => ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]);
   const searching = search.trim().length >= 2;
   const results = searching ? (searchResults.data?.places ?? []) : [];
@@ -156,7 +146,7 @@ function Composer() {
           <View style={styles.captionBlock}><Kicker>A FEW WORDS</Kicker><TextInput value={caption} onChangeText={setCaption} maxLength={CAPTION_MAX} placeholder="An afternoon worth keeping." placeholderTextColor={colors.textSecondary} multiline inputAccessoryViewButtonLabel="Done" returnKeyType="done" submitBehavior="blurAndSubmit" style={styles.captionInput} accessibilityLabel="A few words" /><NativeText style={styles.counter}>{caption.length} / {CAPTION_MAX}</NativeText></View><Rule />
           {song ? <View style={styles.songWrap}><SongRow song={song} trailing={<Pressable onPress={() => setSong(null)} accessibilityRole="button" accessibilityLabel="Remove song" style={styles.hitTarget}><Icon name="xmark" color="textSecondary" size={18} /></Pressable>} /></View> : <Pressable style={styles.songAction} onPress={() => { Keyboard.dismiss(); router.push("/stamp/song"); }} accessibilityRole="button"><Icon name="music.note" color="textPrimary" size={23} /><NativeText style={styles.songLabel}>Add a song</NativeText></Pressable>}
           {(collections.data?.collections.length ?? 0) > 0 ? <><Rule /><View style={styles.collectionBlock}><Kicker>ADD TO COLLECTIONS · OPTIONAL</Kicker>{collections.data!.collections.map((collection) => { const selected = collectionIds.includes(collection.id); return <Pressable key={collection.id} onPress={() => toggleCollection(collection.id)} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} style={styles.collectionRow}><Icon name={selected ? "checkmark.circle.fill" : "circle"} color={selected ? "accent" : "textTertiary"} size={22} /><View style={styles.collectionText}><Text variant="body" weight="semibold">{collection.name}</Text><Text variant="footnote" color="textSecondary">{collection.stampCount} {collection.stampCount === 1 ? "stamp" : "stamps"}</Text></View></Pressable>; })}</View></> : null}
-          <Rule />{readiness.hint && !stamp.isPending ? <Text variant="footnote" color="textTertiary">{readiness.hint}</Text> : null}{stamp.error ? <InlineError message={errorText(stamp.error, stampSaved ? "The stamp was saved, but couldn't be added to those collections. Try again." : "Couldn't stamp that. Try again.")} onRetry={() => stamp.mutate()} retrying={stamp.isPending} /> : null}<EditorialButton label={stamp.isPending ? `Stamping…${photoUris.length ? ` ${Math.round(progress * 100)}%` : ""}` : "Stamp this place"} disabled={!readiness.ready} onPress={() => { Keyboard.dismiss(); haptics.select(); stamp.mutate(); }} />
+          <Rule />{readiness.hint && !stamp.isPending ? <Text variant="footnote" color="textTertiary">{readiness.hint}</Text> : null}{stamp.error ? <InlineError message={errorText(stamp.error, "Couldn't stamp that. Try again.")} onRetry={() => stamp.mutate()} retrying={stamp.isPending} /> : null}<EditorialButton label={stamp.isPending ? `Stamping…${photoUris.length ? ` ${Math.round(progress * 100)}%` : ""}` : "Stamp this place"} disabled={!readiness.ready} onPress={() => { Keyboard.dismiss(); haptics.select(); stamp.mutate(); }} />
         </>}
       </ScrollView>
       <PhotoViewer photos={photoUris.map((uri, index) => ({ id: `${uri}-${index}`, uri }))} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
