@@ -21,11 +21,18 @@ export const POST = route<Ctx>(async (req, { params }) => {
   try { form = await req.formData(); } catch { throw badRequest("Expected multipart/form-data"); }
   const files = [...form.getAll("photos"), ...form.getAll("photo")];
   if (files.some((f) => !(f instanceof Blob))) throw badRequest("photos must be files");
+  const collectionValues = form.getAll("collectionId");
+  if (collectionValues.some((value) => typeof value !== "string")) throw badRequest("collectionId must be text");
+  const collectionIds = collectionValues as string[];
   const meta: Record<string, string> = {};
   for (const name of ["caption", "mode", "visitedAt", "lat", "lng", "rating", "songTitle", "songArtist", "songArtUrl", "songSourceId"]) {
     const v = field(form, name); if (v !== undefined) meta[name] = v;
   }
   const place = await getPlace(prisma, id);
-  const { stamp, progress } = await createStampWithProgress(prisma, actor, place.id, { photos: await Promise.all((files as Blob[]).map(async (f) => Buffer.from(await f.arrayBuffer()))), meta });
+  const { stamp, progress } = await createStampWithProgress(prisma, actor, place.id, {
+    photos: await Promise.all((files as Blob[]).map(async (f) => Buffer.from(await f.arrayBuffer()))),
+    meta,
+    collectionIds,
+  });
   return ok({ stamp, progress }, 201);
 });
