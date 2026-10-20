@@ -29,12 +29,14 @@ describe("SinglePageFlipBook", () => {
   it("uses the current page as the turning sheet instead of duplicating the destination", async () => {
     await render(<SinglePageFlipBook pageWidth={PW} pageHeight={426} total={4} page={1} pageTaps onPageChange={jest.fn()} renderPage={(index) => <Text>{`page ${index}`}</Text>} />);
 
-    expect(within(screen.getByTestId("single-turn-current-next")).getByText("page 1")).toBeTruthy();
-    expect(within(screen.getByTestId("single-turn-current-next")).queryByText("page 2")).toBeNull();
-    expect(within(screen.getByTestId("single-turn-current-prev")).getByText("page 1")).toBeTruthy();
-    expect(within(screen.getByTestId("single-turn-current-prev")).queryByText("page 0")).toBeNull();
-    expect(screen.getAllByText("page 2")).toHaveLength(1);
-    expect(screen.getAllByText("page 0")).toHaveLength(1);
+    const next = screen.getByTestId("single-turn-current-next", { includeHiddenElements: true });
+    const prev = screen.getByTestId("single-turn-current-prev", { includeHiddenElements: true });
+    expect(within(next).getByText("page 1", { includeHiddenElements: true })).toBeTruthy();
+    expect(within(next).queryByText("page 2", { includeHiddenElements: true })).toBeNull();
+    expect(within(prev).getByText("page 1", { includeHiddenElements: true })).toBeTruthy();
+    expect(within(prev).queryByText("page 0", { includeHiddenElements: true })).toBeNull();
+    expect(screen.getAllByText("page 2", { includeHiddenElements: true })).toHaveLength(1);
+    expect(screen.getAllByText("page 0", { includeHiddenElements: true })).toHaveLength(1);
   });
 
   it("holds at the profile and final page boundaries", async () => {
