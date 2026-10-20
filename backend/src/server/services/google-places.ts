@@ -69,7 +69,7 @@ export type GooglePlace = PlaceLocality & {
   address: string;
   lat: number;
   lng: number;
-  timeZone: string | null;
+  timeZone: string;
   primaryType: string | null;
   types: string[];
   businessStatus: string | null;
@@ -215,7 +215,7 @@ function normalize(raw: z.infer<typeof googlePlaceSchema>): GooglePlace | null {
     lat: raw.location.latitude,
     lng: raw.location.longitude,
     ...localityFromAddressComponents(raw.addressComponents),
-    timeZone: raw.timeZone?.trim() || null,
+    timeZone: raw.timeZone?.trim() || "UTC",
     primaryType,
     types: [...new Set(raw.types)].slice(0, 32),
     businessStatus: raw.businessStatus ?? null,
