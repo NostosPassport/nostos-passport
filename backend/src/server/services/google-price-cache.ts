@@ -1,9 +1,10 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
 
 import type { Db } from "@/lib/db";
 import type { GooglePriceLevel } from "@/server/services/google-places";
 import type { PriceTier } from "../../../../shared/category-stamp-design";
 
+type CacheDb = Db | PrismaTypes.TransactionClient;
 type CacheRow = { venue_id: string; price_level: string };
 
 const PRICE: Record<string, PriceTier | null> = {
@@ -19,7 +20,7 @@ export function priceTierForGoogleLevel(level: string | null | undefined): Price
   return level ? PRICE[level] ?? null : null;
 }
 
-export async function cachedGooglePrice(db: Db, venueId: string): Promise<{ cached: boolean; priceTier: PriceTier | null }> {
+export async function cachedGooglePrice(db: CacheDb, venueId: string): Promise<{ cached: boolean; priceTier: PriceTier | null }> {
   const rows = await db.$queryRaw<CacheRow[]>`
     SELECT venue_id, price_level
     FROM google_place_price_cache
@@ -30,7 +31,7 @@ export async function cachedGooglePrice(db: Db, venueId: string): Promise<{ cach
   return row ? { cached: true, priceTier: priceTierForGoogleLevel(row.price_level) } : { cached: false, priceTier: null };
 }
 
-export async function cachedGooglePrices(db: Db, venueIds: readonly string[]): Promise<Map<string, PriceTier | null>> {
+export async function cachedGooglePrices(db: CacheDb, venueIds: readonly string[]): Promise<Map<string, PriceTier | null>> {
   const ids = [...new Set(venueIds.filter(Boolean))];
   if (!ids.length) return new Map();
   const rows = await db.$queryRaw<CacheRow[]>(Prisma.sql`
@@ -41,7 +42,7 @@ export async function cachedGooglePrices(db: Db, venueIds: readonly string[]): P
   return new Map(rows.map((row) => [row.venue_id, priceTierForGoogleLevel(row.price_level)]));
 }
 
-export async function cacheGooglePrice(db: Db, venueId: string, level: GooglePriceLevel | null): Promise<PriceTier | null> {
+export async function cacheGooglePrice(db: CacheDb, venueId: string, level: GooglePriceLevel | null): Promise<PriceTier | null> {
   const stored = level ?? "PRICE_LEVEL_UNSPECIFIED";
   await db.$executeRaw`
     INSERT INTO google_place_price_cache (venue_id, price_level)
