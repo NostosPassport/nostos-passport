@@ -10,14 +10,12 @@ import { distanceMeters } from "@/lib/geo";
 import { OSM_ATTRIBUTION, slugify } from "@/lib/osm";
 import { notFound } from "@/server/errors";
 import { googleNearby, googlePlaceDetails, googleTextSearch, type GooglePlace } from "@/server/services/google-places";
-import { loadNeighborhoods, locate } from "@/server/services/neighborhoods";
 
 const placeSelect = {
   id: true,
   slug: true,
   name: true,
   address: true,
-  neighborhood: true,
   area: true,
   city: true,
   region: true,
@@ -27,7 +25,6 @@ const placeSelect = {
   lat: true,
   lng: true,
   geofenceMeters: true,
-  neighborhoodId: true,
   osmId: true,
   googlePlaceId: true,
   googlePrimaryType: true,
@@ -42,17 +39,15 @@ type PlaceRow = {
   slug: string;
   name: string;
   address: string;
-  neighborhood: string;
   area: string | null;
   city: string | null;
   region: string | null;
   country: string | null;
   countryCode: string | null;
-  timeZone: string | null;
+  timeZone: string;
   lat: number;
   lng: number;
   geofenceMeters: number;
-  neighborhoodId: string | null;
   osmId: string | null;
   googlePlaceId: string | null;
   googlePrimaryType: string | null;
@@ -67,17 +62,15 @@ export type PlaceView = {
   slug: string;
   name: string;
   address: string;
-  neighborhood: string;
   area: string | null;
   city: string | null;
   region: string | null;
   country: string | null;
   countryCode: string | null;
-  timeZone: string | null;
+  timeZone: string;
   lat: number;
   lng: number;
   geofenceMeters: number;
-  neighborhoodId: string | null;
   fromOsm: boolean;
   googlePlaceId: string | null;
   category: "restaurant" | "bar" | null;
@@ -85,6 +78,9 @@ export type PlaceView = {
   primaryType: string | null;
   businessStatus: string | null;
 };
+
+export const localityLabel = (place: Pick<PlaceView, "area" | "city" | "region" | "country">) =>
+  place.area ?? place.city ?? place.region ?? place.country ?? "Unknown area";
 
 const category = (value: string | null): "restaurant" | "bar" | null => value === "restaurant" || value === "bar" ? value : null;
 const toView = ({ osmId, googlePrimaryType, googleBusinessStatus, ...p }: PlaceRow): PlaceView => ({
@@ -102,27 +98,12 @@ export async function listPlaces(db: Db): Promise<PlaceView[]> {
   return (await db.venue.findMany({ orderBy: { name: "asc" }, select: placeSelect })).map(toView);
 }
 
-function displayArea(place: GooglePlace, hood: { name: string } | null, existing?: PlaceRow) {
-  return hood?.name
-    ?? existing?.neighborhood
-    ?? place.area
-    ?? place.city
-    ?? place.region
-    ?? place.country
-    ?? "Unknown area";
-}
-
-function discoveryView(
-  place: GooglePlace,
-  hood: { id: string; name: string } | null,
-  existing: PlaceRow | undefined,
-): PlaceView {
+function discoveryView(place: GooglePlace, existing: PlaceRow | undefined): PlaceView {
   return {
     id: existing?.id ?? place.googlePlaceId,
     slug: existing?.slug ?? slugify(place.name),
     name: place.name,
     address: place.address,
-    neighborhood: displayArea(place, hood, existing),
     area: existing?.area ?? place.area,
     city: existing?.city ?? place.city,
     region: existing?.region ?? place.region,
@@ -132,7 +113,6 @@ function discoveryView(
     lat: place.lat,
     lng: place.lng,
     geofenceMeters: existing?.geofenceMeters ?? 100,
-    neighborhoodId: hood?.id ?? existing?.neighborhoodId ?? null,
     fromOsm: existing?.osmId != null,
     googlePlaceId: place.googlePlaceId,
     category: place.category,
@@ -144,14 +124,10 @@ function discoveryView(
 
 async function discoveryViews(db: Db, google: GooglePlace[]) {
   if (!google.length) return [];
-  const hoods = await loadNeighborhoods(db);
   const ids = google.map((place) => place.googlePlaceId);
   const stored = await db.venue.findMany({ where: { googlePlaceId: { in: ids } }, select: placeSelect });
   const byGoogle = new Map(stored.flatMap((row) => row.googlePlaceId ? [[row.googlePlaceId, row] as const] : []));
-  return google.map((place) => {
-    const hood = locate(hoods, place.lat, place.lng);
-    return discoveryView(place, hood, byGoogle.get(place.googlePlaceId));
-  });
+  return google.map((place) => discoveryView(place, byGoogle.get(place.googlePlaceId)));
 }
 
 /**
@@ -207,19 +183,16 @@ export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise
   if (already) return toView(already);
 
   const google = await googlePlaceDetails(googlePlaceId);
-  const hood = locate(await loadNeighborhoods(db), google.lat, google.lng);
   const old = await legacyMatch(db, google);
   const data = {
     name: google.name,
     address: google.address,
-    neighborhood: displayArea(google, hood, old ?? undefined),
     area: google.area,
     city: google.city,
     region: google.region,
     country: google.country,
     countryCode: google.countryCode,
     timeZone: google.timeZone,
-    neighborhoodId: hood?.id ?? null,
     lat: google.lat,
     lng: google.lng,
     googlePlaceId: google.googlePlaceId,
