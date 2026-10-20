@@ -39,13 +39,18 @@ const addressComponentSchema = z.object({
   types: z.array(z.string()).optional().default([]),
 }).passthrough();
 
+const timeZoneSchema = z.union([
+  z.string(),
+  z.object({ id: z.string().min(1), version: z.string().optional() }).passthrough(),
+]);
+
 const googlePlaceSchema = z.object({
   id: z.string().min(1),
   displayName: z.object({ text: z.string().min(1) }).passthrough(),
   formattedAddress: z.string().optional(),
   location: z.object({ latitude: z.number(), longitude: z.number() }).passthrough(),
   addressComponents: z.array(addressComponentSchema).optional().default([]),
-  timeZone: z.string().optional(),
+  timeZone: timeZoneSchema.optional(),
   primaryType: z.string().optional(),
   types: z.array(z.string()).optional().default([]),
   businessStatus: z.string().optional(),
@@ -211,6 +216,7 @@ function normalize(raw: z.infer<typeof googlePlaceSchema>): GooglePlace | null {
   const primaryType = raw.primaryType ?? null;
   const category = categoryFor(primaryType, raw.types);
   if (!category) return null;
+  const timeZone = typeof raw.timeZone === "string" ? raw.timeZone : raw.timeZone?.id;
   return {
     googlePlaceId: raw.id,
     name: raw.displayName.text.trim().slice(0, 160),
@@ -218,7 +224,7 @@ function normalize(raw: z.infer<typeof googlePlaceSchema>): GooglePlace | null {
     lat: raw.location.latitude,
     lng: raw.location.longitude,
     ...localityFromAddressComponents(raw.addressComponents),
-    timeZone: raw.timeZone?.trim() || "UTC",
+    timeZone: timeZone?.trim() || "UTC",
     primaryType,
     types: [...new Set(raw.types)].slice(0, 32),
     businessStatus: raw.businessStatus ?? null,
