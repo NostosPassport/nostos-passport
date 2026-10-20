@@ -102,6 +102,30 @@ export function inkTextWidth(value:string, fontSize:number):number {
  }
  return n*fontSize;
 }
+
+/** Requested SVG glyph advance is bounded across web and native by textLength. */
+export function categoryNameLineWidth(line:string,kind:CategoryStampKind,fontSize:number,index:number,count:number):number {
+ const limit=kind==="bar"?(count===1?68:index===0?54:86):103;
+ return Math.min(limit,Math.max(1,inkTextWidth(line,fontSize)));
+}
+export type StampLocalityLayout={text:string;fontSize:number;width:number};
+/** Account for tracking and ellipsis in the same bounded width passed to the SVG. */
+export function fitCategoryLocality(value:string,kind:CategoryStampKind):StampLocalityLayout {
+ const source=(value??"").normalize("NFC").trim().replace(/\s+/gu," ").toLocaleUpperCase("en");
+ const bar=kind==="bar",limit=bar?60:100,tracking=0.1;
+ const sizes=bar?[8.4,8.1,7.8,7.5]:[10.6,10.2,9.8,9.4];
+ const width=(text:string,fontSize:number)=>inkTextWidth(text,fontSize)+Math.max(0,Array.from(text).length-1)*tracking;
+ if(!source)return {text:"",fontSize:sizes[0]!,width:0};
+ for(const fontSize of sizes)if(width(source,fontSize)<=limit)return {text:source,fontSize,width:width(source,fontSize)};
+ const fontSize=sizes[sizes.length-1]!;
+ let prefix="";
+ for(const ch of Array.from(source)) {
+   if(width((prefix+ch).trimEnd()+"…",fontSize)>limit)break;
+   prefix+=ch;
+ }
+ const text=prefix.trimEnd()+"…";
+ return {text,fontSize,width:width(text,fontSize)};
+}
 export function needsUnicodeFont(value:string):boolean {
  return /[^\p{Script=Latin}\p{Mark}\p{Number}\p{Punctuation}\p{Separator}]/u.test(value);
 }
@@ -151,14 +175,14 @@ export const CATEGORY_STAMP_GEOMETRY = {
     photo: {x: 22, y: 21, s: 110},
     titleCenterX: 194,
     titleBaselines: {one: 56, two: [43, 63], three: [35, 51, 67]},
-    iconX: 180, iconY: 76, captionX: 194, cuisineY: 112, localityY: 130, dateY: 143,
+    iconX: 180, iconY: 76, captionX: 194, cuisineY: 111, localityY: 127, dateY: 142,
   },
   bar: {
     viewBox: "0 0 160 160",
-    photo: {x: 46, y: 47, s: 68},
+    photo: {x: 43, y: 40, s: 74},
     titleArc: "M30 56 A56 56 0 0 1 130 56",
     titleArcSize: 14,
-    iconX: 119, iconY: 82, dateY: 124, categoryY: 136, localityY: 146,
+    iconX: 120, iconY: 74, dateY: 124, categoryY: 134, localityY: 143,
   },
 } as const;
 /** Date labels use the venue-local visit day, never the rendering device\'s timezone. */
