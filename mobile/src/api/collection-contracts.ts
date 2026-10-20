@@ -35,8 +35,8 @@ export const CollectionsResponse = z.object({ collections: z.array(CollectionSum
 export const CollectionResponse = z.object({ collection: CollectionView }).strict();
 export const DeleteCollectionResponse = z.object({ deleted: z.literal(true) }).strict();
 
-export type CollectionColor = z.infer<typeof CollectionColor>;
-export type CollectionCreateRequest = z.infer<typeof CollectionCreateRequest>;
-export type CollectionUpdateRequest = z.infer<typeof CollectionUpdateRequest>;
-export type CollectionSummary = z.infer<typeof CollectionSummary>;
-export type CollectionView = z.infer<typeof CollectionView>;
+export type CollectionColorValue = z.infer<typeof CollectionColor>;
+export type CollectionCreateInput = z.infer<typeof CollectionCreateRequest>;
+export type CollectionUpdateInput = z.infer<typeof CollectionUpdateRequest>;
+export type CollectionSummaryData = z.infer<typeof CollectionSummary>;
+export type CollectionData = z.infer<typeof CollectionView>;
