@@ -22,7 +22,7 @@ const stamp = (id: string, page: number | null, slot: number | null, name = "Pla
   verifiedAt: verified ? "2026-10-03T00:00:00.000Z" : null,
   verified,
   editedAt: null,
-  place: { id: `p-${id}`, slug: id, name, neighborhood: "East Village", neighborhoodId: null },
+  place: { id: `p-${id}`, slug: id, name, area: "East Village", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York" },
 });
 
 describe("spreads", () => {
