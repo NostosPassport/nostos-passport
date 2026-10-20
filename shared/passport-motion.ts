@@ -1,3 +1,5 @@
+"worklet";
+
 export const SPAN = 1.7;
 export const DRAG_ZONE = 0.3;
 export const TAP_ZONE = 0.16;
