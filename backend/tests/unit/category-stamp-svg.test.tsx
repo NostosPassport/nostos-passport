@@ -12,9 +12,8 @@ function one(artwork:typeof italian, name:string, photoUrl:string|null=null, loc
  return createElement(CategoryStampSvg,{artwork,name,locality,visitedAt:AT,photoUrl});
 }
 describe("category stamp SVGs",()=>{
- it("never paints a backing: the only fills are ink text, the icon, the mark and the ink mask",()=>{
+ it("never paints a backing: the only fills are ink text, the icon, Michelin marks and the ink mask",()=>{
    const html=renderToStaticMarkup(createElement("div",null,one(italian,"Osteria"),one(bar,"Midnight Social")));
-   // white and black appear only as luminance-mask colours inside <mask>, never as a painted fill
    const outsideMasks=html.replace(/<mask[\s\S]*?<\/mask>/g,"");
    expect(outsideMasks).not.toMatch(/fill="(white|#fff|#FFFFFF|#000|#000000)"/i);
    expect(outsideMasks).not.toMatch(/<rect/);
@@ -38,11 +37,14 @@ describe("category stamp SVGs",()=>{
    expect(html).toContain("WEST VILLAGE");
    expect(html).toContain("<textPath");
    expect(html).toContain('aria-label="An Exceptionally Long Cocktail Lounge, BAR / CLUB, West Village, 20 OCT 2026"');
-   expect(html).not.toContain('lengthAdjust="spacingAndGlyphs"'); // Latin names are measured, never squeezed
+   expect(html).not.toContain('lengthAdjust="spacingAndGlyphs"');
  });
- it("renders a cached Google price tier carried by stamp artwork",()=>{
-   const html=renderToStaticMarkup(one({ ...italian, priceTier: "$$$" } as typeof italian & { priceTier: "$$$" },"Osteria"));
+ it("renders cached price and Michelin metadata carried by stamp artwork",()=>{
+   const html=renderToStaticMarkup(one({ ...italian, priceTier: "$$$", michelinStars: 3 } as typeof italian & { priceTier: "$$$"; michelinStars: 3 },"Osteria"));
    expect(html).toContain("$$$");
+   expect(html).toContain("3 Michelin stars");
+   const plain=renderToStaticMarkup(one(italian,"Osteria"));
+   expect(plain).not.toContain("Michelin star");
  });
  it("draws all four reference templates from design input",()=>{
    const html=REFERENCE.map(c=>renderToStaticMarkup(createElement(CategoryStampSvg,{design:c.design,visitedAt:c.visitedAt}))).join("");
