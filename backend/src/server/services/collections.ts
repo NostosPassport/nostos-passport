@@ -126,6 +126,15 @@ export async function deleteCollection(db: Db, actor: Actor | null, id: string) 
   return { deleted: true as const };
 }
 
+export async function appendStampToCollections(tx: Prisma.TransactionClient, userId: string, stampId: string, rawCollectionIds: string[], now: Date) {
+  const { collectionIds } = StampCollectionsRequest.parse({ collectionIds: rawCollectionIds });
+  await assertOwnCollections(tx, userId, collectionIds);
+  for (const collectionId of collectionIds) {
+    const last = await tx.collectionStamp.findFirst({ where: { collectionId }, orderBy: [{ position: "desc" }, { addedAt: "desc" }], select: { position: true } });
+    await tx.collectionStamp.create({ data: { collectionId, stampId, position: (last?.position ?? -1) + 1, addedAt: now } });
+  }
+}
+
 export async function setStampCollections(db: Db, actor: Actor | null, stampId: string, raw: unknown, now = new Date()) {
   const me = requireSignedIn(actor);
   const { collectionIds } = StampCollectionsRequest.parse(raw);
