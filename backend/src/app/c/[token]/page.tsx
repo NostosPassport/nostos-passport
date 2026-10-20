@@ -53,8 +53,8 @@ export default async function SharedCollectionPage({ params }: Ctx) {
     place: {
       id: stamp.place.id,
       name: stamp.place.name,
-      neighborhood: stamp.place.neighborhood,
-      neighborhoodId: stamp.place.neighborhoodId,
+      neighborhood: stamp.place.area ?? stamp.place.city ?? stamp.place.region ?? stamp.place.country ?? "",
+      neighborhoodId: null,
     },
   }));
 
