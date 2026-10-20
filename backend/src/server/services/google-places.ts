@@ -55,6 +55,7 @@ export const googlePriceLevelSchema = z.enum([
 ]);
 export type GooglePriceLevel = z.infer<typeof googlePriceLevelSchema>;
 
+const googlePriceOnlySchema = z.object({ priceLevel: googlePriceLevelSchema.optional() }).passthrough();
 const googlePlaceSchema = z.object({
   id: z.string().min(1),
   displayName: z.object({ text: z.string().min(1) }).passthrough(),
@@ -327,6 +328,18 @@ export async function googleTextSearch(
     fetchImpl,
   );
   return parseList(body);
+}
+
+export async function googlePlacePriceLevel(placeId: string, fetchImpl: typeof fetch = fetch): Promise<GooglePriceLevel | null> {
+  const body = await googleFetch(
+    `${PLACE_DETAILS_URL}/${encodeURIComponent(placeId)}`,
+    { method: "GET" },
+    "priceLevel",
+    fetchImpl,
+  );
+  const parsed = googlePriceOnlySchema.safeParse(body);
+  if (!parsed.success) throw new ServiceError(503, "places_bad_response", "Place price returned something unexpected.");
+  return parsed.data.priceLevel ?? null;
 }
 
 export async function googlePlaceDetails(placeId: string, fetchImpl: typeof fetch = fetch): Promise<GooglePlace> {
