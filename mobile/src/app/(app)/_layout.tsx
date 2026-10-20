@@ -18,6 +18,7 @@ export default function AppLayout() {
       <Stack.Screen name="collections/new" options={{ title: "Create collection", presentation: "modal" }} />
       <Stack.Screen name="collections/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="collections/[id]/edit" options={{ title: "Edit collection", presentation: "modal" }} />
+      <Stack.Screen name="collections/[id]/share" options={{ title: "Share collection", presentation: "modal" }} />
       <Stack.Screen
         name="location-permission"
         options={{ presentation: "formSheet", sheetAllowedDetents: [0.6], sheetGrabberVisible: true, sheetCornerRadius: radius.sheet, headerShown: false, contentStyle: { backgroundColor: colors.surface } }}

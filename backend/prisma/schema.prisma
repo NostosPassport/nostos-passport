@@ -151,9 +151,19 @@ model Collection {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   stamps    CollectionStamp[]
+  share     CollectionShare?
 
   @@index([userId, createdAt])
   @@map("collection")
+}
+
+model CollectionShare {
+  id           String     @id @default(cuid())
+  collectionId String     @unique @map("collection_id")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@map("collection_share")
 }
 
 model CollectionStamp {

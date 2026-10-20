@@ -13,7 +13,7 @@ Use the current repository state as the source of truth. Check code and package 
 - Default branch: `main`.
 - Mobile: Expo SDK 57, iOS only.
 - Current design authority: Figma pages 9 and 10 only. Earlier Figma pages are historical.
-- Current product is personal and owner-only. The old guest preview flow is removed from scope.
+- Current product is personal and private by default. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared. The old guest preview flow is removed from scope.
 - A stamp is a visit memory. Users may add a `Now` or `Past` stamp. Past stamps are unverified and limited to the previous year; a Now stamp is verified only when the server can confirm the submitted current position is within the place geofence.
 - Location is optional. Lack of location or being outside the geofence must not block stamp creation; it produces an unverified stamp instead.
 - Verification applies to the visit, not to individual photos. Photo Library selections are not authenticity-gated by EXIF/source/time/location evidence.
@@ -29,6 +29,7 @@ Use the current repository state as the source of truth. Check code and package 
 - Never commit secrets or `.env` files.
 - Never run destructive database reset commands against shared, preview, or production data.
 - Preserve server-side visit-verification decisions, upload metadata stripping, content visibility rules, account deletion behavior, and the rule that raw verification coordinates are not retained.
+- Preserve collection-sharing boundaries: only persisted user-created collections can be shared; the master Passport has no sharing primitive; public resolution must expose only the selected collection and stop working immediately after revocation or deletion.
 - Use targeted tests while iterating. For mobile implementation work, run `npm run check` before declaring it complete. Run broader repository checks when the change affects both lanes or shared contracts.
 - Documentation-only edits do not require pretending runtime tests were executed.
 

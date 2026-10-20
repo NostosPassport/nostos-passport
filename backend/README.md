@@ -2,7 +2,7 @@
 
 The backend is the Next.js/Prisma/Postgres API and web shell for Nostos.
 
-The current product is personal and owner-only. Feed, follows, likes, public/private profiles, reporting, moderation, verification, staff roles, and the old social feature flag are not part of the active backend architecture.
+The current product is personal and private by default. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared. Feed, follows, likes, public/private profiles, reporting, moderation, verification, staff roles, and the old social feature flag are not part of the active backend architecture.
 
 ## Core responsibilities
 
@@ -10,7 +10,8 @@ The current product is personal and owner-only. Feed, follows, likes, public/pri
 - server-side stamp geofence verification
 - stamp creation with up to six photos, caption, and/or song metadata
 - image processing and EXIF/GPS stripping
-- owner-only passport, stamp, pin, profile, and place-history data
+- private passport, stamp, pin, profile, place-history, and collection data
+- owner-controlled collection share links and read-only public collection resolution
 - neighborhoods and completion progress
 - account deletion and retained-content rules
 - legal/support web pages and operational endpoints
@@ -58,12 +59,12 @@ pnpm db:seed
 
 ## Contracts
 
-`src/contracts/api.ts` is the backend contract source. The mobile copy must remain byte-for-byte synchronized after contract changes.
+`src/contracts/api.ts` is the primary backend contract source; collection-specific contracts live in `src/contracts/collections.ts`. Matching mobile contract copies must remain synchronized after changes.
 
 ## Privacy
 
-Another account's passport, stamp, pin, place-history, and profile data must not be exposed. Stamp coordinates used for geofence verification are not normal response fields. Uploaded photos are re-encoded so EXIF/GPS does not survive.
+Another account's master Passport, private collection, stamp, pin, place-history, and profile data must not be exposed. The only signed-out stamp visibility is through an explicitly enabled collection share link, and that resolver may expose only the stamps currently in that collection. The master Passport has no sharing primitive. Stamp coordinates used for geofence verification are not normal response fields. Uploaded photos are re-encoded so EXIF/GPS does not survive.
 
-Open policy questions, including coordinate retention and legal copy, are tracked in `../OPEN-QUESTIONS.md`.
+Open policy questions are tracked in `../OPEN-QUESTIONS.md`.
 
 See `API.md`, `DEPLOY.md`, `DECISIONS.md`, and `REVIEW.md` for details. Dated reviews and AI logs describe historical sessions and should not be read as current runtime status.

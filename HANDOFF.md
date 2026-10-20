@@ -1,14 +1,33 @@
 # Nostos current handoff
 
-Updated 2026-10-08.
+Updated 2026-10-20.
 
 ## Current state
 
-Nostos is an iPhone-only personal passport for New York. The normal product experience requires an account. The previous guest `Look around first` preview flow has been removed from scope.
+Nostos is an iPhone-only personal passport for New York. The normal product experience requires an account and is private by default. The previous guest `Look around first` preview flow has been removed from scope.
 
-Primary app navigation is Passport, Stamp, and Map. Feed, follows, likes, Activity, public profiles, moderation, and other social architecture are not part of the active product. Passport, stamp, pin, place-history, profile, and neighborhood-progress data are owner-only.
+Primary app navigation is Passport, Stamp, and Map. Feed, follows, likes, Activity, public profiles, moderation, and other social architecture are not part of the active product. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared.
 
 The repository default branch is `main`. Ignore old handoff instructions that refer to `build`, `build-codex`, leaving a merge uncommitted, or a specific local checkout path.
+
+## Collection sharing
+
+- Sharing applies only to persisted user-created `Collection` rows. There is no master-Passport share model, nullable collection target, or special master identifier.
+- Each collection can have at most one active `CollectionShare` record. Enabling an already-shared collection preserves the same URL; disabling sharing deletes the share record and invalidates the old URL immediately.
+- Public URLs use a signed `cs1` token derived from the share-row ID and `SHARE_TOKEN_SECRET`; a reusable bearer token is not stored in plaintext in the database.
+- Shared pages live at `/c/[token]`, require no account, are read-only, dynamically rendered, and configured `noindex`/`nofollow`.
+- The public resolver loads only the stamps currently belonging to the selected collection. Collection edits, reorderings, removals, deleted stamps, collection deletion, and account deletion are reflected live.
+- Photo storage remains private. A valid shared collection view receives the existing short-lived signed media URLs after authorization.
+- The owner can create/share or disable the web link from the collection screen in the iOS app using the native share sheet.
+
+Relevant files:
+
+- `backend/prisma/schema.prisma`
+- `backend/src/server/services/collection-sharing.ts`
+- `backend/src/app/api/collections/[id]/share/route.ts`
+- `backend/src/app/c/[token]/page.tsx`
+- `mobile/src/app/(app)/collections/[id]/share.tsx`
+- `mobile/src/app/(app)/collections/[id].tsx`
 
 ## Stamp visits and verification
 
@@ -36,24 +55,11 @@ The stamp photo flow does not use the old custom in-app camera preview.
 - Owners may add, remove, and rearrange photos after the stamp has been created.
 - The Nostos camera watermark indicates capture through Nostos; it is not a claim that the image itself was authenticated.
 
-Relevant files:
-
-- `mobile/src/app/(app)/stamp/new.tsx`
-- `mobile/src/app/(app)/stamp/camera.tsx`
-- `mobile/src/app/(app)/stamp/edit.tsx`
-- `mobile/src/features/photos/pick.ts`
-- `mobile/src/features/photos/prepare.ts`
-- `mobile/src/features/photos/save-camera-photo.ts`
-- `mobile/src/features/stamps/photo-draft.ts`
-- `backend/src/server/services/stamps.ts`
-
-`mobile/src/features/photos/validate-library.ts` is historical implementation code from the old photo-authentication model and must not be reintroduced as an acceptance gate.
-
 ## Backend and database
 
-The backend exposes account/auth, owner profile/passport/stamp/pin/neighborhood endpoints, places, songs, media, health, and maintenance routes.
+The backend exposes account/auth, owner profile/passport/stamp/pin/neighborhood/collection endpoints, owner-controlled collection-share endpoints, the public collection-share web resolver, places, songs, media, health, and maintenance routes.
 
-The Prisma `photo` table remains the historical backing table for stamps. The current model adds `visited_at` and nullable `verified_at`; legacy `lat`/`lng` columns remain nullable for migration stability but a database constraint requires them to be null. A forward migration also removes the old creation-only stamp-photo trigger and replaces the old parent-only content check with a deferred cross-table content invariant.
+The Prisma `photo` table remains the historical backing table for stamps. Legacy `lat`/`lng` columns remain nullable for migration stability but a database constraint requires them to be null. Collection sharing adds a narrow one-to-one `collection_share` table related only to `collection`.
 
 The Prisma schema does not contain follows, follow requests, blocks, likes, reports, moderation events, staff roles, reputation, suspension state, private-account state, or stamp moderation state.
 
@@ -71,10 +77,11 @@ Committed defaults currently use:
 
 - backend dev server: port 3001
 - Docker Postgres host port: 5438
-- Expo SDK 57
+- Expo SDK 57 / React Native 0.86
+- local development share URLs at `http://localhost:3001` unless `PUBLIC_WEB_URL` is set
 
-Do not copy old LAN IPs, process status, or QR codes from dated deliveries. They were valid only for those sessions.
+Preview/production must provide a unique `SHARE_TOKEN_SECRET` in addition to the existing backend secrets.
 
 ## Verification note
 
-The visit-verification work is being developed on `feature/visit-verification` with draft PR #5. The forward database migration must be rehearsed on an isolated database branch before production application. Runtime/device behavior still requires the normal repository gate and physical-device checklist before release.
+Collection sharing is being implemented on `feature/collection-sharing`. Backend and mobile validation must pass before merge. The forward migration should be rehearsed on an isolated database branch before any non-local application, and the native iOS share-sheet flow should receive the normal physical-device smoke test before release.

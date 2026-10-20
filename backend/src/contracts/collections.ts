@@ -34,9 +34,15 @@ export const CollectionView = CollectionSummary.extend({ stamps: z.array(StampVi
 export const CollectionsResponse = z.object({ collections: z.array(CollectionSummary) }).strict();
 export const CollectionResponse = z.object({ collection: CollectionView }).strict();
 export const DeleteCollectionResponse = z.object({ deleted: z.literal(true) }).strict();
+export const CollectionShare = z.discriminatedUnion("enabled", [
+  z.object({ enabled: z.literal(false), url: z.null() }).strict(),
+  z.object({ enabled: z.literal(true), url: z.string().url() }).strict(),
+]);
+export const CollectionShareResponse = z.object({ share: CollectionShare }).strict();
 
 export type CollectionColor = z.infer<typeof CollectionColor>;
 export type CollectionCreateRequest = z.infer<typeof CollectionCreateRequest>;
 export type CollectionUpdateRequest = z.infer<typeof CollectionUpdateRequest>;
 export type CollectionSummary = z.infer<typeof CollectionSummary>;
 export type CollectionView = z.infer<typeof CollectionView>;
+export type CollectionShare = z.infer<typeof CollectionShare>;

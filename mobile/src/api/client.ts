@@ -174,6 +174,9 @@ export function createApi(config: ApiConfig) {
       create: (body: CC.CollectionCreateInput) => request("POST", "/api/collections", CC.CollectionResponse, body),
       update: (id: string, body: CC.CollectionUpdateInput) => request("PATCH", `/api/collections/${enc(id)}`, CC.CollectionResponse, body),
       remove: (id: string) => request("DELETE", `/api/collections/${enc(id)}`, CC.DeleteCollectionResponse),
+      shareStatus: (id: string) => request("GET", `/api/collections/${enc(id)}/share`, CC.CollectionShareResponse),
+      enableShare: (id: string) => request("POST", `/api/collections/${enc(id)}/share`, CC.CollectionShareResponse),
+      disableShare: (id: string) => request("DELETE", `/api/collections/${enc(id)}/share`, CC.CollectionShareResponse),
       setForStamp: (stampId: string, collectionIds: string[]) => request("PUT", `/api/stamps/${enc(stampId)}/collections`, CC.StampCollectionsResponse, { collectionIds }),
     },
 
