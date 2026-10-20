@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
 import { errorText } from "@/api";
-import { COLLECTION_NAME_MAX, type CollectionColor } from "@/api/collection-contracts";
+import { COLLECTION_NAME_MAX, type CollectionColorValue } from "@/api/collection-contracts";
 import type { StampView } from "@/api/contracts";
 import { Kicker, Rule } from "@/components/editorial/editorial";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,11 @@ import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { colors, fonts, hairlineWidth, size, space } from "@/theme";
+import { colors, hairlineWidth, radius, size, space, type as typeScale } from "@/theme";
 import { COLLECTION_COLORS } from "./colors";
 import { useMyStamps } from "./use-my-stamps";
 
-export type CollectionDraft = { name: string; color: CollectionColor; stampIds: string[] };
+export type CollectionDraft = { name: string; color: CollectionColorValue; stampIds: string[] };
 
 type Props = {
   initial: CollectionDraft;
@@ -31,7 +31,7 @@ const stampDate = (stamp: StampView) => new Date(stamp.visitedAt).toLocaleDateSt
 export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, onDelete, deleting }: Props) {
   const source = useMyStamps();
   const [name, setName] = useState(initial.name);
-  const [color, setColor] = useState<CollectionColor>(initial.color);
+  const [color, setColor] = useState<CollectionColorValue>(initial.color);
   const [stampIds, setStampIds] = useState(initial.stampIds);
   const byId = new Map(source.stamps.map((stamp) => [stamp.id, stamp]));
   const selected = stampIds.map((id) => byId.get(id)).filter((stamp): stamp is StampView => !!stamp);
@@ -133,16 +133,16 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
 }
 
 const styles = StyleSheet.create({
-  content: { padding: space.lg, paddingBottom: 48, gap: space.lg },
+  content: { padding: space.lg, paddingBottom: space.xxxl, gap: space.lg },
   field: { gap: space.sm },
-  nameInput: { minHeight: 52, borderBottomWidth: hairlineWidth, borderColor: colors.textPrimary, color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 32, paddingVertical: space.xs },
+  nameInput: { ...typeScale.title, minHeight: size.fieldHeight, borderBottomWidth: hairlineWidth, borderColor: colors.textPrimary, color: colors.textPrimary, paddingVertical: space.xs },
   colors: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  colorTarget: { width: 48, height: 48, borderWidth: hairlineWidth, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
-  colorTargetActive: { borderWidth: 2, borderColor: colors.accent },
-  swatch: { width: 34, height: 34, borderRadius: 17 },
-  stampRow: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: space.sm, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline },
-  addRow: { minHeight: 60, flexDirection: "row", alignItems: "center", gap: space.sm, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline },
-  stampText: { flex: 1, gap: 2 },
+  colorTarget: { width: size.hitTarget, height: size.hitTarget, borderWidth: hairlineWidth, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
+  colorTargetActive: { borderWidth: size.markerRing, borderColor: colors.accent },
+  swatch: { width: size.avatar, height: size.avatar, borderRadius: radius.pill },
+  stampRow: { minHeight: size.listRow, flexDirection: "row", alignItems: "center", gap: space.sm, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline },
+  addRow: { minHeight: size.listRow, flexDirection: "row", alignItems: "center", gap: space.sm, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline },
+  stampText: { flex: 1, gap: space.xxs },
   rowActions: { flexDirection: "row", alignItems: "center" },
   iconButton: { width: size.hitTarget, height: size.hitTarget, alignItems: "center", justifyContent: "center" },
   disabled: { opacity: 0.25 },
