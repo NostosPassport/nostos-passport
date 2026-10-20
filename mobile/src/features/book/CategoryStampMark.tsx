@@ -2,7 +2,7 @@ import { useId } from "react";
 import Svg, { Circle, ClipPath, Defs, G, Image as SvgImage, Mask, Path, Rect, Text as SvgText, TextPath } from "react-native-svg";
 import type { CategoryStampArtwork } from "../../../../shared/category-stamp-artwork";
 import { categoryStampDateLabel } from "../../../../shared/category-stamp-artwork";
-import { MASK_ERASE, MASK_KEEP, type StampDesignInput, buildStampScene, designFromArtwork, hasFallbackGlyphs } from "../../../../shared/category-stamp-design";
+import { MASK_ERASE, MASK_KEEP, type PriceTier, type StampDesignInput, buildStampScene, designFromArtwork, hasFallbackGlyphs } from "../../../../shared/category-stamp-design";
 
 export const STAMP_SERIF = "SourceSerif4_600SemiBold";
 const PETALS = [0, 72, 144, 216, 288];
@@ -12,7 +12,7 @@ type Props = {
   /** Width of the stamp in points; the height follows the template. */
   size: number;
 } & (
-  | { artwork: CategoryStampArtwork; name: string; locality: string; timeZone?: string | null; design?: undefined }
+  | { artwork: CategoryStampArtwork & { priceTier?: PriceTier | null }; name: string; locality: string; timeZone?: string | null; design?: undefined }
   | { design: StampDesignInput; artwork?: undefined }
 );
 
@@ -22,7 +22,7 @@ type Props = {
  */
 export function CategoryStampMark(props: Props) {
   const uid = "nst-" + useId().replace(/[^a-zA-Z0-9_-]/g, "_");
-  const design = props.design ?? designFromArtwork(props.artwork, { name: props.name, locality: props.locality, timeZone: props.timeZone });
+  const design = props.design ?? designFromArtwork(props.artwork, { name: props.name, locality: props.locality, timeZone: props.timeZone, priceTier: props.artwork.priceTier ?? null });
   const date = categoryStampDateLabel(props.visitedAt, design.timeZone);
   const scene = buildStampScene(design, { seed: props.seed ?? design.name, dateLabel: date });
   const ink = design.color, p = scene.photo, i = scene.icon;
