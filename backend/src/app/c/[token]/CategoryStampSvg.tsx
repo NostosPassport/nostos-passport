@@ -3,17 +3,12 @@ import React, { useId } from "react";
 import type { CategoryStampArtwork } from "@/lib/category-stamp-artwork";
 import { categoryStampDateLabel, safeStampPhotoUrl } from "@/lib/category-stamp-artwork";
 import { MASK_ERASE, MASK_KEEP, type PriceTier, type StampDesignInput, buildStampScene, designFromArtwork } from "@/lib/category-stamp-design";
-import { michelinMarkCenters, type MichelinStars } from "@/lib/michelin-stamp";
-
-/** Five small petals around a centre: the Michelin-like mark used by the approved restaurant stamp study. */
-const PETALS = [0, 72, 144, 216, 288];
+import { michelinMarkCenters, michelinStarPath, michelinStarStrokeWidth, type MichelinStars } from "@/lib/michelin-stamp";
 
 type Common = {
   visitedAt: string;
   photoUrl?: string | null;
-  /** Keeps the torn photo edge and ink specks stable for a place. Defaults to the name. */
   seed?: string;
-  /** Development preview only: a browser-local blob or a dev fixture path. Never set on public pages. */
   localPreviewPhotoUrl?: string | null;
 };
 type Props = Common & (
@@ -25,10 +20,6 @@ function validMichelinStars(value: number | null | undefined): MichelinStars | n
   return value === 1 || value === 2 || value === 3 ? value : null;
 }
 
-/**
- * Category stamp, web. Every position, size and string comes from buildStampScene (shared with Expo); this component only
- * turns that scene into SVG elements. The frame, photo window and interior stay transparent.
- */
 export function CategoryStampSvg(props: Props) {
   const uid = "nst-" + useId().replace(/[^a-zA-Z0-9_-]/g, "_");
   const design = props.design ?? designFromArtwork(props.artwork, { name: props.name, locality: props.locality, timeZone: props.timeZone, priceTier: props.artwork.priceTier ?? null });
@@ -66,6 +57,6 @@ export function CategoryStampSvg(props: Props) {
       fill={i.fill ? ink : "none"} stroke={ink} strokeWidth={i.fill ? 0.6 : i.strokeWidth} strokeLinecap="round" strokeLinejoin="round">
       <path d={i.d} />
     </g>
-    {michelinMarks.map((mark, index) => <g key={index} fill={ink}>{PETALS.map((a) => <circle key={a} cx={mark.cx + Math.sin((a * Math.PI) / 180) * mark.r * 0.62} cy={mark.cy - Math.cos((a * Math.PI) / 180) * mark.r * 0.62} r={mark.r * 0.42} />)}</g>)}
+    {michelinMarks.map((mark, index) => <path key={index} d={michelinStarPath(mark)} fill="none" stroke={ink} strokeWidth={michelinStarStrokeWidth(mark)} strokeLinecap="round" strokeLinejoin="round" />)}
   </svg>;
 }
