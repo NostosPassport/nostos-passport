@@ -171,8 +171,8 @@ export function createApi(config: ApiConfig) {
     collections: {
       list: () => request("GET", "/api/collections", CC.CollectionsResponse),
       get: (id: string) => request("GET", `/api/collections/${enc(id)}`, CC.CollectionResponse),
-      create: (body: CC.CollectionCreateRequest) => request("POST", "/api/collections", CC.CollectionResponse, body),
-      update: (id: string, body: CC.CollectionUpdateRequest) => request("PATCH", `/api/collections/${enc(id)}`, CC.CollectionResponse, body),
+      create: (body: CC.CollectionCreateInput) => request("POST", "/api/collections", CC.CollectionResponse, body),
+      update: (id: string, body: CC.CollectionUpdateInput) => request("PATCH", `/api/collections/${enc(id)}`, CC.CollectionResponse, body),
       remove: (id: string) => request("DELETE", `/api/collections/${enc(id)}`, CC.DeleteCollectionResponse),
       setForStamp: (stampId: string, collectionIds: string[]) => request("PUT", `/api/stamps/${enc(stampId)}/collections`, CC.StampCollectionsResponse, { collectionIds }),
     },
