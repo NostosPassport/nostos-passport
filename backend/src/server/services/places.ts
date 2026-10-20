@@ -9,7 +9,9 @@ import type { Db } from "@/lib/db";
 import { distanceMeters } from "@/lib/geo";
 import { OSM_ATTRIBUTION, slugify } from "@/lib/osm";
 import { notFound } from "@/server/errors";
+import { cacheGooglePrice, cachedGooglePrice, cachedGooglePrices } from "@/server/services/google-price-cache";
 import { googleNearby, googlePlaceDetails, googleTextSearch, type GooglePlace } from "@/server/services/google-places";
+import type { PriceTier } from "../../../../shared/category-stamp-design";
 
 const placeSelect = {
   id: true,
@@ -77,28 +79,32 @@ export type PlaceView = {
   cuisines: string[];
   primaryType: string | null;
   businessStatus: string | null;
+  priceTier: PriceTier | null;
 };
 
 export const localityLabel = (place: Pick<PlaceView, "area" | "city" | "region" | "country">) =>
   place.area ?? place.city ?? place.region ?? place.country ?? "Unknown area";
 
 const category = (value: string | null): "restaurant" | "bar" | null => value === "restaurant" || value === "bar" ? value : null;
-const toView = ({ osmId, googlePrimaryType, googleBusinessStatus, ...p }: PlaceRow): PlaceView => ({
+const toView = ({ osmId, googlePrimaryType, googleBusinessStatus, ...p }: PlaceRow, priceTier: PriceTier | null): PlaceView => ({
   ...p,
   fromOsm: osmId !== null,
   category: category(p.category),
   primaryType: googlePrimaryType,
   businessStatus: googleBusinessStatus,
+  priceTier,
 });
 
 /** Legacy ODbL attribution for stored OSM venues. New discovery comes from Google Places. */
 export const attributionFor = (places: readonly { fromOsm: boolean }[]) => (places.some((p) => p.fromOsm) ? OSM_ATTRIBUTION : null);
 
 export async function listPlaces(db: Db): Promise<PlaceView[]> {
-  return (await db.venue.findMany({ orderBy: { name: "asc" }, select: placeSelect })).map(toView);
+  const rows = await db.venue.findMany({ orderBy: { name: "asc" }, select: placeSelect });
+  const prices = await cachedGooglePrices(db, rows.map((row) => row.id));
+  return rows.map((row) => toView(row, prices.get(row.id) ?? null));
 }
 
-function discoveryView(place: GooglePlace, existing: PlaceRow | undefined): PlaceView {
+function discoveryView(place: GooglePlace, existing: PlaceRow | undefined, priceTier: PriceTier | null): PlaceView {
   return {
     id: existing?.id ?? place.googlePlaceId,
     slug: existing?.slug ?? slugify(place.name),
@@ -119,6 +125,7 @@ function discoveryView(place: GooglePlace, existing: PlaceRow | undefined): Plac
     cuisines: place.cuisines,
     primaryType: place.primaryType,
     businessStatus: place.businessStatus,
+    priceTier,
   };
 }
 
@@ -127,7 +134,11 @@ async function discoveryViews(db: Db, google: GooglePlace[]) {
   const ids = google.map((place) => place.googlePlaceId);
   const stored = await db.venue.findMany({ where: { googlePlaceId: { in: ids } }, select: placeSelect });
   const byGoogle = new Map(stored.flatMap((row) => row.googlePlaceId ? [[row.googlePlaceId, row] as const] : []));
-  return google.map((place) => discoveryView(place, byGoogle.get(place.googlePlaceId)));
+  const prices = await cachedGooglePrices(db, stored.map((row) => row.id));
+  return google.map((place) => {
+    const existing = byGoogle.get(place.googlePlaceId);
+    return discoveryView(place, existing, existing ? prices.get(existing.id) ?? null : null);
+  });
 }
 
 /**
@@ -174,13 +185,23 @@ async function legacyMatch(db: Db, place: GooglePlace) {
     .sort((a, b) => distanceMeters(place, a) - distanceMeters(place, b))[0] ?? null;
 }
 
+async function viewStoredGoogleVenue(db: Db, row: PlaceRow): Promise<PlaceView> {
+  if (!row.googlePlaceId) return toView(row, null);
+  const cached = await cachedGooglePrice(db, row.id);
+  if (cached.cached) return toView(row, cached.priceTier);
+  const google = await googlePlaceDetails(row.googlePlaceId);
+  const priceTier = await cacheGooglePrice(db, row.id, google.priceLevel);
+  return toView(row, priceTier);
+}
+
 /**
  * Beli-style get-or-create: a Google place_id becomes a durable Nostos venue only when the user actually uses it.
- * Cuisine/category and locality are snapshotted from Google's place data at that point.
+ * Cuisine/category, locality and price tier are snapshotted at that point. Price is cached after the first Details call,
+ * including a no-price result, so later stamps never pay to ask Google for it again.
  */
 export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise<PlaceView> {
   const already = await db.venue.findUnique({ where: { googlePlaceId }, select: placeSelect });
-  if (already) return toView(already);
+  if (already) return viewStoredGoogleVenue(db, already);
 
   const google = await googlePlaceDetails(googlePlaceId);
   const old = await legacyMatch(db, google);
@@ -204,13 +225,23 @@ export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise
     googleSyncedAt: new Date(),
   };
 
-  if (old) return toView(await db.venue.update({ where: { id: old.id }, data, select: placeSelect }));
+  if (old) {
+    const row = await db.venue.update({ where: { id: old.id }, data, select: placeSelect });
+    const priceTier = await cacheGooglePrice(db, row.id, google.priceLevel);
+    return toView(row, priceTier);
+  }
   const slug = await uniqueSlug(db, google.name, google.googlePlaceId);
   try {
-    return toView(await db.venue.create({ data: { ...data, slug, geofenceMeters: 100 }, select: placeSelect }));
+    const row = await db.venue.create({ data: { ...data, slug, geofenceMeters: 100 }, select: placeSelect });
+    const priceTier = await cacheGooglePrice(db, row.id, google.priceLevel);
+    return toView(row, priceTier);
   } catch (error) {
     const raced = await db.venue.findUnique({ where: { googlePlaceId }, select: placeSelect });
-    if (raced) return toView(raced);
+    if (raced) {
+      const cached = await cachedGooglePrice(db, raced.id);
+      const priceTier = cached.cached ? cached.priceTier : await cacheGooglePrice(db, raced.id, google.priceLevel);
+      return toView(raced, priceTier);
+    }
     throw error;
   }
 }
@@ -218,7 +249,7 @@ export async function resolveGoogleVenue(db: Db, googlePlaceId: string): Promise
 /** A durable place by Nostos id/slug, or a Google place_id that should be resolved on demand. */
 export async function getPlace(db: Db, key: string): Promise<PlaceView> {
   const stored = await db.venue.findFirst({ where: { OR: [{ id: key }, { slug: key }, { googlePlaceId: key }] }, select: placeSelect });
-  if (stored) return toView(stored);
+  if (stored) return viewStoredGoogleVenue(db, stored);
   if (!key.trim()) throw notFound("Place not found");
   return resolveGoogleVenue(db, key);
 }
