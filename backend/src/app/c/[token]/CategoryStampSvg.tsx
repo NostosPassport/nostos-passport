@@ -1,5 +1,5 @@
 "use client";
-import { useId } from "react";
+import React, { useId } from "react";
 import { type CategoryStampArtwork, CATEGORY_STAMP_GEOMETRY, CUISINE_PATHS, categoryStampDateLabel, categoryNameLineWidth, fitCategoryLocality, layoutCategoryName, needsUnicodeFont, photoClipPath, safeStampPhotoUrl } from "@/lib/category-stamp-artwork";
 /** Native and web share dimensions, names, photo cutout, categories and ink positions. */
 export function CategoryStampSvg({ artwork, name, locality, visitedAt, timeZone, photoUrl, localPreviewPhotoUrl }: {
