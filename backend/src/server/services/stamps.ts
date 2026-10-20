@@ -8,7 +8,6 @@ import { getStorage, newStorageKey, type BlobStorage } from "@/lib/storage";
 import type { Actor } from "@/server/actor";
 import { livePhotoCoverSelect, uploadUrl } from "@/server/media";
 import { appendStampToCollections } from "@/server/services/collection-membership";
-import { recordProgress } from "@/server/services/neighborhoods";
 import { assertCleanText, badRequest, notFound } from "@/server/errors";
 import { assertCanEditOwnContent, requireSignedIn } from "@/server/permissions";
 import { consumeRate } from "@/server/rate-limit";
@@ -78,15 +77,15 @@ function assertEditableVisitDate(d: Date, now: Date) {
   if (d.getTime() < now.getTime() - YEAR_MS) throw badRequest("Visit dates can only go back one year");
 }
 
-const samePlaceDay = (a: Date, b: Date, timeZone?: string | null) => stampDay(a, timeZone) === stampDay(b, timeZone);
+const samePlaceDay = (a: Date, b: Date, timeZone: string) => stampDay(a, timeZone) === stampDay(b, timeZone);
 
 type StampRow = {
   id: string; userId: string; caption: string; songTitle: string | null; songArtist: string | null; songArtUrl: string | null; songSourceId: string | null;
   createdAt: Date; visitedAt: Date; verifiedAt: Date | null; editedAt: Date | null; removedAt: Date | null;
   user: { deletedAt: Date | null };
   venue: {
-    id: string; slug: string; name: string; neighborhood: string; neighborhoodId: string | null;
-    area: string | null; city: string | null; region: string | null; country: string | null; countryCode: string | null; timeZone: string | null;
+    id: string; slug: string; name: string;
+    area: string | null; city: string | null; region: string | null; country: string | null; countryCode: string | null; timeZone: string;
   };
   photos: { id: string; storageKey: string; position: number; x: number | null; y: number | null; rotation: number | null }[];
 };
@@ -95,7 +94,7 @@ const stampSelect = {
   id: true, userId: true, caption: true, songTitle: true, songArtist: true, songArtUrl: true, songSourceId: true,
   createdAt: true, visitedAt: true, verifiedAt: true, editedAt: true, removedAt: true,
   user: { select: { deletedAt: true } },
-  venue: { select: { id: true, slug: true, name: true, neighborhood: true, neighborhoodId: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true } },
+  venue: { select: { id: true, slug: true, name: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true } },
   photos: { where: { removedAt: null }, orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }], select: { id: true, storageKey: true, position: true, x: true, y: true, rotation: true } },
 };
 
@@ -133,22 +132,17 @@ async function toStampViews(db: Db, rows: readonly StampRow[], now: Date) {
       id: r.venue.id,
       slug: r.venue.slug,
       name: r.venue.name,
-      neighborhood: r.venue.neighborhood,
-      neighborhoodId: r.venue.neighborhoodId,
       area: r.venue.area,
       city: r.venue.city,
       region: r.venue.region,
       country: r.venue.country,
       countryCode: r.venue.countryCode,
+      timeZone: r.venue.timeZone,
     },
   })));
 }
 
 export async function createStamp(db: Db, actor: Actor | null, venueId: string, input: CreateStampInput, now = new Date(), storage: BlobStorage = getStorage()) {
-  return (await createStampWithProgress(db, actor, venueId, input, now, storage)).stamp;
-}
-
-export async function createStampWithProgress(db: Db, actor: Actor | null, venueId: string, input: CreateStampInput, now = new Date(), storage: BlobStorage = getStorage()) {
   const me = requireSignedIn(actor);
   const meta = stampMetaSchema.parse(input.meta);
   const buffers = [...(input.bytes ? [input.bytes] : []), ...(input.photos ?? [])].filter((b) => b.length > 0);
@@ -167,7 +161,6 @@ export async function createStampWithProgress(db: Db, actor: Actor | null, venue
   const images = await Promise.all(buffers.map((b) => processImage(b)));
   const keys = images.map((img) => newStorageKey("photos", img.kind.ext));
   const written: string[] = [];
-  let progress: Awaited<ReturnType<typeof recordProgress>> = null;
   try {
     const row = await db.$transaction(async (tx) => {
       await lockAndCheckCooldown(tx, { userId: me.userId, venueId }, now);
@@ -181,11 +174,10 @@ export async function createStampWithProgress(db: Db, actor: Actor | null, venue
       });
       for (const [i, img] of images.entries()) await tx.stampPhoto.create({ data: { stampId: created.id, storageKey: keys[i]!, mimeType: img.kind.mime, position: i, createdAt: now } });
       await appendStampToCollections(tx, me.userId, created.id, input.collectionIds ?? [], now);
-      if (!me.geofenceExempt) progress = await recordProgress(tx, me.userId, venueId, created.id, now);
       for (const [i, img] of images.entries()) { await storage.put(keys[i]!, img.bytes, img.kind.mime); written.push(keys[i]!); }
       return tx.photo.findUniqueOrThrow({ where: { id: created.id }, select: stampSelect });
     });
-    return { stamp: (await toStampViews(db, [row], now))[0]!, progress };
+    return (await toStampViews(db, [row], now))[0]!;
   } catch (err) {
     await Promise.all(written.map((k) => storage.delete(k).catch(() => {})));
     throw err;
@@ -330,20 +322,27 @@ export async function listUserStamps(db: Db, actor: Actor | null, handle: string
 
 export async function listUserPlaces(db: Db, actor: Actor | null, handle: string, now = new Date()) {
   const user = await ownProfile(db, actor, handle);
-  const rows = await db.photo.findMany({ where: { userId: user.id, removedAt: null }, orderBy: [{ visitedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }], select: { id: true, createdAt: true, visitedAt: true, ...livePhotoCoverSelect, caption: true, venue: { select: { id: true, slug: true, name: true, neighborhood: true, lat: true, lng: true } } } });
+  const rows = await db.photo.findMany({
+    where: { userId: user.id, removedAt: null },
+    orderBy: [{ visitedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+    select: {
+      id: true, createdAt: true, visitedAt: true, ...livePhotoCoverSelect, caption: true,
+      venue: { select: { id: true, slug: true, name: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true, lat: true, lng: true } },
+    },
+  });
   const places = new Map<string, { place: (typeof rows)[number]["venue"]; stamps: number; latest: (typeof rows)[number] }>();
   for (const r of rows) { const p = places.get(r.venue.id); if (p) p.stamps++; else places.set(r.venue.id, { place: r.venue, stamps: 1, latest: r }); }
   return { places: await Promise.all([...places.values()].map(async ({ place, stamps, latest }) => ({ place, stamps, latestStamp: { id: latest.id, createdAt: latest.createdAt, visitedAt: latest.visitedAt, photoUrl: latest.photos[0] ? await uploadUrl(latest.photos[0].storageKey, now) : null, caption: latest.caption } }))) };
 }
 
-export const stampDay = (d: Date, timeZone: string | null = NIGHT_TZ) => calendarDayKey(d, timeZone ?? NIGHT_TZ);
+export const stampDay = (d: Date, timeZone: string = NIGHT_TZ) => calendarDayKey(d, timeZone);
 
 export async function getMyPlacePage(db: Db, actor: Actor | null, idOrSlug: string, pos?: { lat: number; lng: number } | null, now = new Date()) {
   const me = requireSignedIn(actor);
   const place = await db.venue.findFirst({
     where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
     select: {
-      id: true, slug: true, name: true, address: true, neighborhood: true, neighborhoodId: true,
+      id: true, slug: true, name: true, address: true,
       area: true, city: true, region: true, country: true, countryCode: true, timeZone: true,
       lat: true, lng: true, geofenceMeters: true, osmId: true,
     },
