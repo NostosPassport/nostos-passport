@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { Cormorant_Garamond } from "next/font/google";
+
+// The OFL-licensed semibold font is self-hosted by Next at build time, matching Expo.
+const stampSerif = Cormorant_Garamond({ subsets: ["latin", "latin-ext"], weight: "600", display: "swap", variable: "--font-stamp-serif" });
 
 export const metadata: Metadata = {
   title: "Nostos | A passport for the places you go",
@@ -21,7 +25,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={stampSerif.variable}>
       <body className="font-sans antialiased">
         {children}
       </body>
