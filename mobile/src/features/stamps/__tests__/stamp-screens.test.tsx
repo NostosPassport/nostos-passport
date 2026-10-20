@@ -18,7 +18,7 @@ const mockPickFromLibrary = jest.fn();
 const mockPrepareImage = jest.fn();
 const mockSaveCameraPhoto = jest.fn();
 let mockNearby: ReturnType<typeof near>[] = [];
-let mockAllPlaces: ReturnType<typeof near>[] = [];
+let mockSearchResults: ReturnType<typeof near>[] = [];
 let mockSourceIndex = 0;
 let mockPermission: "granted" | "denied" | "undetermined" = "granted";
 let mockCoords: { lat: number; lng: number } | null = { lat: 40.7, lng: -73.9 };
@@ -35,7 +35,7 @@ jest.mock("@/auth/account-state", () => ({ useAccountState: () => ({ state: "rea
 jest.mock("@/api/queries", () => ({
   qk: jest.requireActual("@/api/keys").qk,
   useNearbyPlaces: () => ({ data: { places: mockNearby }, isPending: false, isError: false, refetch: jest.fn() }),
-  usePlaces: () => ({ data: { places: mockAllPlaces }, isPending: false, isError: false, refetch: jest.fn() }),
+  usePlaceSearch: () => ({ data: { places: mockSearchResults }, isPending: false, isError: false, isSuccess: true, refetch: jest.fn() }),
 }));
 jest.mock("@/api", () => {
   const client = jest.requireActual("@/api/client");
@@ -60,11 +60,31 @@ jest.mock("@/features/photos/prepare", () => ({ prepareImage: (...a: unknown[]) 
 jest.mock("@/features/photos/save-camera-photo", () => ({ saveAcceptedCameraPhoto: (...a: unknown[]) => mockSaveCameraPhoto(...a) }));
 
 function near(over: Record<string, unknown> = {}) {
-  return { id: "p1", slug: "p1", name: "Katz's", address: "205 E Houston St", neighborhood: "East Village", lat: 40.7222, lng: -73.9874, geofenceMeters: 100, neighborhoodId: "n1", fromOsm: false, distanceM: 20, inside: true, ...over };
+  return {
+    id: "p1",
+    slug: "p1",
+    name: "Katz's",
+    address: "205 E Houston St",
+    neighborhood: "East Village",
+    lat: 40.7222,
+    lng: -73.9874,
+    geofenceMeters: 100,
+    neighborhoodId: "n1",
+    fromOsm: false,
+    googlePlaceId: "ChIJKatz",
+    category: "restaurant" as const,
+    cuisines: ["Deli"],
+    primaryType: "deli",
+    businessStatus: "OPERATIONAL",
+    distanceM: 20,
+    inside: true,
+    ...over,
+  };
 }
 const wrap = async (ui: React.ReactElement) => render(<QueryClientProvider client={testQueryClient()}>{ui}</QueryClientProvider>);
 const chooseKatz = async () => {
-  await fireEvent.press(screen.getAllByRole("button", { name: /^Katz's, East Village/ })[0]!);
+  await fireEvent.changeText(screen.getByLabelText("Search restaurants and bars"), "Katz");
+  await fireEvent.press(screen.getAllByRole("button", { name: /^Katz's,/ })[0]!);
   await screen.findByText(/Make it/);
 };
 const choosePast = async () => {
@@ -86,24 +106,26 @@ describe("the composer", () => {
     mockPermission = "granted";
     mockCoords = { lat: 40.7, lng: -73.9 };
     mockNearby = [near()];
-    mockAllPlaces = [near()];
+    mockSearchResults = [near()];
     mockUpload.mockResolvedValue({ stamp: flatStamp, progress: null });
   });
 
-  it("starts with Now/Past and a NYC place picker", async () => {
+  it("starts with Now/Past and Google-backed restaurant/bar search", async () => {
     await wrap(<NewStamp />);
     expect(screen.getByText(/Make a/)).toBeTruthy();
     expect(screen.getByText("NOW")).toBeTruthy();
     expect(screen.getByText("PAST")).toBeTruthy();
     expect(screen.getByText("Choose a place")).toBeTruthy();
-    expect(screen.getByLabelText("Search New York places")).toBeTruthy();
+    expect(screen.getByLabelText("Search restaurants and bars")).toBeTruthy();
+    expect(screen.getByText("Google Maps")).toBeTruthy();
   });
 
-  it("shows verification as a positive Now-state but only requires content to stamp", async () => {
+  it("shows cuisine and verification as a positive Now-state but only requires content to stamp", async () => {
     await wrap(<NewStamp />);
     await chooseKatz();
     expect(screen.getByText(/Make it/)).toBeTruthy();
     expect(screen.getByText("KATZ'S · TODAY")).toBeTruthy();
+    expect(screen.getByText("Deli")).toBeTruthy();
     expect(screen.getByText("Visit eligible for Nostos verification")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Stamp this place" }).props.accessibilityState.disabled).toBe(true);
     await fireEvent.changeText(screen.getByLabelText("A few words"), "good pastrami");

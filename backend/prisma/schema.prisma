@@ -80,19 +80,26 @@ model EmailChallenge {
 }
 
 model Venue {
-  id             String        @id @default(cuid())
-  slug           String        @unique
-  name           String
-  address        String
-  neighborhood   String
-  lat            Float
-  lng            Float
-  geofenceMeters Int           @default(100) @map("geofence_meters")
-  neighborhoodId String?       @map("neighborhood_id")
-  hood           Neighborhood? @relation(fields: [neighborhoodId], references: [id])
-  osmId          String?       @unique @map("osm_id")
-  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                   String        @id @default(cuid())
+  slug                 String        @unique
+  name                 String
+  address              String
+  neighborhood         String
+  lat                  Float
+  lng                  Float
+  geofenceMeters       Int           @default(100) @map("geofence_meters")
+  neighborhoodId       String?       @map("neighborhood_id")
+  hood                 Neighborhood? @relation(fields: [neighborhoodId], references: [id])
+  osmId                String?       @unique @map("osm_id")
+  googlePlaceId        String?       @unique @map("google_place_id")
+  googlePrimaryType    String?       @map("google_primary_type")
+  googleTypes          String[]      @default([]) @map("google_types")
+  cuisines             String[]      @default([])
+  category             String?
+  googleBusinessStatus String?       @map("google_business_status")
+  googleSyncedAt       DateTime?     @map("google_synced_at") @db.Timestamptz(3)
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   photos Photo[]
 

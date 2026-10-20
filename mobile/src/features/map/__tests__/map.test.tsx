@@ -1,36 +1,30 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { Keyboard, View } from "react-native";
-import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
-import { State } from "react-native-gesture-handler";
+import { View } from "react-native";
 
 import type { Place, UserPlacesResponse } from "@/api/contracts";
-import { formatDistance } from "@/lib/format";
 import { MapScreen } from "../MapScreen";
 import { PinMarker } from "../PinMarker";
-import { PlaceSheet } from "../PlaceSheet";
-import { pinKind, sheetModel, sheetShouldClose, statsByPlace, visiblePlaces, type MapRegion } from "../map-model";
 
 const mockPush = jest.fn();
+const mockAnimateToRegion = jest.fn();
 let mockPlaces: Place[] = [];
 let mockMine: UserPlacesResponse["places"] = [];
 let mockHere: { lat: number; lng: number } | null = null;
-let mockAttribution: { text: string } | null = null;
 
 jest.mock("expo-router", () => ({ router: { push: (...a: unknown[]) => mockPush(...a) } }));
 jest.mock("react-native-maps", () => {
   const React = jest.requireActual("react");
   const { View: V, Pressable: P } = jest.requireActual("react-native");
   const MapView = React.forwardRef(function MockMapView(
-    { children, onPress, showsUserLocation, ...rest }: { children?: ReactNode; onPress?: () => void; showsUserLocation?: boolean },
+    { children, showsUserLocation, ...rest }: { children?: ReactNode; showsUserLocation?: boolean },
     ref: unknown,
   ) {
-    React.useImperativeHandle(ref, () => ({ animateToRegion: jest.fn() }));
+    React.useImperativeHandle(ref, () => ({ animateToRegion: (...args: unknown[]) => mockAnimateToRegion(...args) }));
     return (
       <V {...rest} testID="map">
         {children}
         {showsUserLocation ? <V accessibilityLabel="You are here" /> : null}
-        <P testID="map-background" onPress={onPress} />
       </V>
     );
   });
@@ -41,148 +35,102 @@ jest.mock("react-native-maps", () => {
 });
 jest.mock("@/api/queries", () => ({
   useMe: () => ({ data: { user: { handle: "ava" } } }),
-  usePlaces: () => ({ data: { places: mockPlaces, attribution: mockAttribution } }),
+  usePlaces: () => ({ data: { places: mockPlaces, attribution: null } }),
   useUserPlaces: () => ({ data: { places: mockMine } }),
 }));
 jest.mock("@/features/location/location-store", () => ({ useUserCoords: () => mockHere }));
+jest.mock("../recenter", () => ({ mapRecenter: { subscribe: () => () => undefined } }));
 
-const place = (id: string, over: Partial<Place> = {}): Place => ({ id, slug: id, name: `Place ${id}`, address: "", neighborhood: "East Village", lat: 40.7222, lng: -73.9855, geofenceMeters: 100, neighborhoodId: "n1", fromOsm: false, ...over });
-const mineRow = (p: Place, stamps = 1): UserPlacesResponse["places"][number] => ({
+const place = (id: string, over: Partial<Place> = {}): Place => ({
+  id,
+  slug: id,
+  name: `Place ${id}`,
+  address: "",
+  neighborhood: "West Village",
+  lat: 40.7314,
+  lng: -74.0078,
+  geofenceMeters: 100,
+  neighborhoodId: "n1",
+  fromOsm: false,
+  googlePlaceId: `g-${id}`,
+  category: "restaurant",
+  cuisines: [],
+  primaryType: "restaurant",
+  businessStatus: "OPERATIONAL",
+  ...over,
+});
+
+const mineRow = (p: Place, latestStampId: string): UserPlacesResponse["places"][number] => ({
   place: { id: p.id, slug: p.slug, name: p.name, neighborhood: p.neighborhood, lat: p.lat, lng: p.lng },
-  stamps,
-  latestStamp: { id: "s", createdAt: "2026-10-04T03:41:00.000Z", visitedAt: "2026-10-04T03:41:00.000Z", photoUrl: null, caption: "" },
-});
-const region: MapRegion = { latitude: 40.7222, longitude: -73.9855, latitudeDelta: 0.02, longitudeDelta: 0.02 };
-
-describe("map model", () => {
-  it("lights the places you have stamped and dims the rest", () => {
-    const stats = statsByPlace([mineRow(place("a"), 3)]);
-    expect(pinKind("a", stats)).toBe("lit");
-    expect(pinKind("b", stats)).toBe("dim");
-    expect(stats.get("a")).toEqual({ stamps: 3, latestAt: "2026-10-04T03:41:00.000Z" });
-  });
-  it("draws only places in view, lit ones first, the selected one always, and never more than the cap", () => {
-    const near = Array.from({ length: 10 }, (_, i) => place(`n${i}`, { lat: 40.7222 + i * 0.0003 }));
-    const far = place("far", { lat: 41.5 });
-    const stats = statsByPlace([mineRow(near[9]!)]);
-    const out = visiblePlaces([...near, far], region, stats, null);
-    expect(out.map((p) => p.id)).not.toContain("far");
-    expect(out[0]!.id).toBe("n9");
-    expect(visiblePlaces([...near, far], region, stats, "far")[0]!.id).toBe("far");
-    expect(visiblePlaces(near, region, stats, null, 4)).toHaveLength(4);
-    expect(visiblePlaces([], region, stats, null)).toEqual([]);
-  });
-  it("describes proximity as verification eligibility without blocking stamp creation", () => {
-    const p = place("a", { name: "Katz's", address: "205 E Houston St", geofenceMeters: 100 });
-    const inside = sheetModel(p, { stamps: 1, latestAt: "2026-10-04T03:41:00.000Z" }, { lat: p.lat, lng: p.lng }, formatDistance);
-    expect(inside).toMatchObject({ title: "Katz's", subtitle: "East Village · 205 E Houston St", status: "Stamped once. Last on 03 OCT 2026.", canVerify: true });
-    const far = sheetModel(p, undefined, { lat: p.lat + 0.02, lng: p.lng }, formatDistance);
-    expect(far.status).toBe("Not stamped yet.");
-    expect(far.canVerify).toBe(false);
-    expect(far.distance).toMatch(/^2\.2 km away$/);
-    expect(sheetModel(p, { stamps: 4, latestAt: "2026-10-04T03:41:00.000Z" }, null, formatDistance)).toMatchObject({ distance: null, canVerify: false, status: "Stamped 4 times. Last on 03 OCT 2026." });
-  });
-  it("closes the sheet when it is dragged far enough down or flicked", () => {
-    expect(sheetShouldClose(100, 0, 220)).toBe(true);
-    expect(sheetShouldClose(40, 0, 220)).toBe(false);
-    expect(sheetShouldClose(10, 1200, 220)).toBe(true);
-    expect(sheetShouldClose(-50, -900, 220)).toBe(false);
-  });
+  stamps: 1,
+  latestStamp: {
+    id: latestStampId,
+    createdAt: "2026-10-19T20:00:00.000Z",
+    visitedAt: "2026-10-19T20:00:00.000Z",
+    photoUrl: null,
+    caption: "",
+  },
 });
 
-describe("pins and sheet", () => {
-  it("draws a lit pin as a stamp in a ring and a dim pin as a dot, without crashing", async () => {
-    const input = { placeId: "a", placeName: "A", neighborhoodId: null, neighborhoodName: "" };
-    await render(<View><PinMarker kind="lit" selected={false} input={input} /><PinMarker kind="lit" selected input={input} /><PinMarker kind="dim" selected={false} input={input} /><PinMarker kind="dim" selected input={input} /></View>);
-  });
-  it("always offers Stamp this place, while the note explains verification eligibility", async () => {
-    const onStamp = jest.fn();
-    const onClose = jest.fn();
-    const base = { title: "Katz's", subtitle: "East Village", status: "Not stamped yet.", distance: "30 m away", canVerify: false };
-    const none = await render(<PlaceSheet model={null} onClose={onClose} onStamp={onStamp} />);
-    expect(none.toJSON()).toBeNull();
-    await none.unmount();
-    const a = await render(<PlaceSheet model={base} onClose={onClose} onStamp={onStamp} />);
-    expect(screen.getByText("Katz's")).toBeTruthy();
-    expect(screen.getByText("Not stamped yet.")).toBeTruthy();
-    expect(screen.getByText(/unverified Now stamp or add a Past visit/)).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: "Stamp this place" }));
-    expect(onStamp).toHaveBeenCalledTimes(1);
-    await a.unmount();
-    await render(<PlaceSheet model={{ ...base, canVerify: true }} onClose={onClose} onStamp={onStamp} />);
-    expect(screen.getByText(/can be location verified/)).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText("Close"));
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-  it("closes when swiped down", async () => {
-    const onClose = jest.fn();
-    await render(<PlaceSheet model={{ title: "A", subtitle: "", status: "Not stamped yet.", distance: null, canVerify: false }} onClose={onClose} onStamp={jest.fn()} />);
-    await fireGestureHandler(getByGestureTestId("sheet-pan"), [
-      { state: State.BEGAN, translationY: 0, velocityY: 0 },
-      { state: State.ACTIVE, translationY: 120, velocityY: 200 },
-      { state: State.END, translationY: 120, velocityY: 200 },
-    ]);
-    expect(onClose).toHaveBeenCalledTimes(1);
+describe("PinMarker", () => {
+  it("renders a visited stamp marker", async () => {
+    const input = { placeId: "a", placeName: "A", neighborhoodId: null, neighborhoodName: "West Village" };
+    await render(<View><PinMarker kind="lit" selected={false} input={input} /></View>);
   });
 });
 
 describe("MapScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockPlaces = [place("a", { name: "Katz's" }), place("b", { name: "Cafe", lat: 40.7226 })];
-    mockMine = [mineRow(mockPlaces[0]!, 2)];
-    mockHere = { lat: 40.7222, lng: -73.9855 };
-    mockAttribution = null;
+    const restaurant = place("restaurant", { name: "Don Angie", category: "restaurant", cuisines: ["Italian"] });
+    const bar = place("bar", { name: "Employees Only", category: "bar", primaryType: "cocktail_bar", cuisines: ["Cocktail Bar"], lat: 40.7335 });
+    const unvisited = place("unvisited", { name: "Never Stamped", category: "restaurant", lat: 40.735 });
+    mockPlaces = [restaurant, bar, unvisited];
+    mockMine = [mineRow(restaurant, "stamp-restaurant"), mineRow(bar, "stamp-bar")];
+    mockHere = { lat: 40.7314, lng: -74.0078 };
   });
 
-  it("labels lit and dim pins in words, and marks where you are", async () => {
+  it("shows only stamped places and the user's location", async () => {
     await render(<MapScreen />);
-    expect(screen.getByLabelText("Katz's, stamped")).toBeTruthy();
-    expect(screen.getByLabelText("Cafe, not stamped yet")).toBeTruthy();
+    expect(screen.getByLabelText("Don Angie, open most recent stamp")).toBeTruthy();
+    expect(screen.getByLabelText("Employees Only, open most recent stamp")).toBeTruthy();
+    expect(screen.queryByLabelText("Never Stamped, open most recent stamp")).toBeNull();
     expect(screen.getByLabelText("You are here")).toBeTruthy();
   });
-  it("opens the sheet for a pin and goes to the composer whether or not verification is available", async () => {
+
+  it("opens the most recent stamp when a visited place is tapped", async () => {
     await render(<MapScreen />);
-    await fireEvent.press(screen.getByLabelText("Katz's, stamped"));
-    expect(screen.getByText("Stamped 2 times. Last on 03 OCT 2026.")).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: "Stamp this place" }));
-    expect(mockPush).toHaveBeenCalledWith("/stamp/new");
+    await fireEvent.press(screen.getByLabelText("Don Angie, open most recent stamp"));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: "/stamp/[id]", params: { id: "stamp-restaurant" } });
   });
-  it("closes the sheet when the map is tapped", async () => {
+
+  it("filters stamped places by restaurant and bar without changing the visited data", async () => {
     await render(<MapScreen />);
-    await fireEvent.press(screen.getByLabelText("Cafe, not stamped yet"));
-    expect(screen.getByText("Not stamped yet.")).toBeTruthy();
-    await fireEvent.press(screen.getByTestId("map-background"));
-    expect(screen.queryByText("Not stamped yet.")).toBeNull();
+
+    await fireEvent.press(screen.getByRole("button", { name: "RESTAURANTS" }));
+    expect(screen.getByLabelText("Don Angie, open most recent stamp")).toBeTruthy();
+    expect(screen.queryByLabelText("Employees Only, open most recent stamp")).toBeNull();
+
+    await fireEvent.press(screen.getByRole("button", { name: "BARS" }));
+    expect(screen.queryByLabelText("Don Angie, open most recent stamp")).toBeNull();
+    expect(screen.getByLabelText("Employees Only, open most recent stamp")).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole("button", { name: "ALL" }));
+    expect(screen.getByLabelText("Don Angie, open most recent stamp")).toBeTruthy();
+    expect(screen.getByLabelText("Employees Only, open most recent stamp")).toBeTruthy();
   });
-  it("clears search with the x button and dismisses the keyboard when the map is tapped", async () => {
-    const dismiss = jest.spyOn(Keyboard, "dismiss").mockImplementation(() => undefined);
+
+  it("recenters on the user's live location", async () => {
     await render(<MapScreen />);
-    const search = screen.getByLabelText("Find a place");
-    await fireEvent.changeText(search, "Cafe");
-    expect(screen.getByLabelText("Clear search")).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText("Clear search"));
-    expect(screen.getByLabelText("Find a place").props.value).toBe("");
-    await fireEvent.changeText(search, "Katz");
-    await fireEvent.press(screen.getByTestId("map-background"));
-    expect(dismiss).toHaveBeenCalled();
-    dismiss.mockRestore();
+    mockAnimateToRegion.mockClear();
+    await fireEvent.press(screen.getByRole("button", { name: "Recenter map on my location" }));
+    expect(mockAnimateToRegion).toHaveBeenCalledWith(expect.objectContaining({ latitude: 40.7314, longitude: -74.0078 }), 300);
   });
-  it("shows the OpenStreetMap credit when the data carries one, and not otherwise", async () => {
-    mockAttribution = { text: "© OpenStreetMap contributors" };
-    const a = await render(<MapScreen />);
-    expect(screen.getByText("© OpenStreetMap contributors")).toBeTruthy();
-    await a.unmount();
-    mockAttribution = null;
-    await render(<MapScreen />);
-    expect(screen.queryByText(/OpenStreetMap/)).toBeNull();
-  });
-  it("is still a map with no places and no position", async () => {
-    mockPlaces = [];
-    mockMine = [];
+
+  it("opens the location permission flow when recenter needs location", async () => {
     mockHere = null;
     await render(<MapScreen />);
-    expect(screen.getByTestId("map")).toBeTruthy();
-    expect(screen.queryByLabelText("You are here")).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Share location to recenter map" }));
+    expect(mockPush).toHaveBeenCalledWith("/location-permission");
   });
 });

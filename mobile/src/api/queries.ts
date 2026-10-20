@@ -1,4 +1,5 @@
 /** Query keys and shared hooks for server state. */
+import { useEffect, useState } from "react";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { api } from "./index";
@@ -12,14 +13,47 @@ export function useMe() {
   return useQuery({ queryKey: qk.me, queryFn: () => api.me.get(), enabled: status === "signedIn", staleTime: 60_000 });
 }
 
+/** Stored Nostos venues only. Kept for historical/admin-compatible surfaces; discovery should use nearby/search. */
 export function usePlaces() {
   return useQuery({ queryKey: qk.places, queryFn: api.places.list, staleTime: 5 * 60_000 });
 }
 
-export function useNearbyPlaces(pos: { lat: number; lng: number } | null) {
-  const lat = pos ? Math.round(pos.lat * 10_000) / 10_000 : 0;
-  const lng = pos ? Math.round(pos.lng * 10_000) / 10_000 : 0;
-  return useQuery({ queryKey: qk.nearby(lat, lng), queryFn: () => api.places.nearby({ lat, lng }), enabled: pos !== null, staleTime: 30_000 });
+export function useNearbyPlaces(pos: { lat: number; lng: number } | null, radiusM = 750, precision = 4) {
+  const factor = 10 ** Math.max(2, Math.min(5, precision));
+  const lat = pos ? Math.round(pos.lat * factor) / factor : 0;
+  const lng = pos ? Math.round(pos.lng * factor) / factor : 0;
+  const radius = Math.max(100, Math.min(5_000, Math.round(radiusM / 50) * 50));
+  return useQuery({
+    queryKey: qk.nearby(lat, lng, radius),
+    queryFn: () => api.places.nearby({ lat, lng }, radius),
+    enabled: pos !== null,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
+function useDebouncedText(raw: string, delayMs = 350) {
+  const next = raw.trim();
+  const [value, setValue] = useState(next);
+  useEffect(() => {
+    const timer = setTimeout(() => setValue(next), next.length === 0 ? 0 : delayMs);
+    return () => clearTimeout(timer);
+  }, [delayMs, next]);
+  return value;
+}
+
+export function usePlaceSearch(rawQuery: string, pos: { lat: number; lng: number } | null) {
+  const q = useDebouncedText(rawQuery);
+  const lat = pos ? Math.round(pos.lat * 1_000) / 1_000 : null;
+  const lng = pos ? Math.round(pos.lng * 1_000) / 1_000 : null;
+  return useQuery({
+    queryKey: qk.placeSearch(q, lat, lng),
+    queryFn: () => api.places.search(q, lat !== null && lng !== null ? { lat, lng } : undefined),
+    enabled: q.length >= 2,
+    staleTime: 2 * 60_000,
+    retry: false,
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useUserStamps(handle: string, enabled = true) {

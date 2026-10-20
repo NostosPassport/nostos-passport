@@ -3,12 +3,13 @@ import { MAX_UPLOAD_BYTES } from "@/lib/storage";
 import { badRequest, ServiceError } from "@/server/errors";
 import { getActor, ok, route } from "@/server/http";
 import { requireSignedIn } from "@/server/permissions";
+import { getPlace } from "@/server/services/places";
 import { createStampWithProgress, MAX_STAMP_PHOTOS } from "@/server/services/stamps";
 
 type Ctx = { params: Promise<{ id: string }> };
 const field = (form: FormData, name: string) => { const v = form.get(name); return typeof v === "string" ? v : undefined; };
 
-/** Create a stamp. Location is optional: a current in-geofence location makes a `mode=now` stamp verified. */
+/** Create a stamp. A Google place_id is get-or-created as a durable Nostos venue before the stamp is written. */
 export const POST = route<Ctx>(async (req, { params }) => {
   const { id } = await params;
   const actor = requireSignedIn(await getActor(req));
@@ -24,6 +25,7 @@ export const POST = route<Ctx>(async (req, { params }) => {
   for (const name of ["caption", "mode", "visitedAt", "lat", "lng", "rating", "songTitle", "songArtist", "songArtUrl", "songSourceId"]) {
     const v = field(form, name); if (v !== undefined) meta[name] = v;
   }
-  const { stamp, progress } = await createStampWithProgress(prisma, actor, id, { photos: await Promise.all((files as Blob[]).map(async (f) => Buffer.from(await f.arrayBuffer()))), meta });
+  const place = await getPlace(prisma, id);
+  const { stamp, progress } = await createStampWithProgress(prisma, actor, place.id, { photos: await Promise.all((files as Blob[]).map(async (f) => Buffer.from(await f.arrayBuffer()))), meta });
   return ok({ stamp, progress }, 201);
 });

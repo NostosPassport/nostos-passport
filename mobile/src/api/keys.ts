@@ -2,7 +2,8 @@
 export const qk = {
   me: ["me"] as const,
   places: ["places"] as const,
-  nearby: (lat: number, lng: number) => ["places", "nearby", lat, lng] as const,
+  nearby: (lat: number, lng: number, radiusM: number) => ["places", "nearby", lat, lng, radiusM] as const,
+  placeSearch: (q: string, lat: number | null, lng: number | null) => ["places", "search", q, lat, lng] as const,
   profileSettings: ["me", "profile"] as const,
   placePage: (id: string, lat: number | null, lng: number | null) => ["places", "mine", id, lat, lng] as const,
   pins: ["me", "pins"] as const,

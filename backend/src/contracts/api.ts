@@ -44,7 +44,21 @@ export const DeleteAccountRequest = z.object({ challengeId: ChallengeId, code: V
 export const DeleteAccountResponse = z.object({ deleted: z.literal(true) }).strict();
 
 export const Place = z.object({
-  id: z.string(), slug: z.string(), name: z.string(), address: z.string(), neighborhood: z.string(), lat: z.number(), lng: z.number(), geofenceMeters: z.number().int(), neighborhoodId: z.string().nullable(), fromOsm: z.boolean(),
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  address: z.string(),
+  neighborhood: z.string(),
+  lat: z.number(),
+  lng: z.number(),
+  geofenceMeters: z.number().int(),
+  neighborhoodId: z.string().nullable(),
+  fromOsm: z.boolean(),
+  googlePlaceId: z.string().nullable().default(null),
+  category: z.enum(["restaurant", "bar"]).nullable().default(null),
+  cuisines: z.array(z.string()).default([]),
+  primaryType: z.string().nullable().default(null),
+  businessStatus: z.string().nullable().default(null),
 }).strict();
 export const PlacesResponse = z.object({ places: z.array(Place), attribution: Attribution.nullable() }).strict();
 export const PlaceResponse = z.object({ place: Place }).strict();
