@@ -40,7 +40,7 @@ export default async function SharedCollectionPage({ params }: Ctx) {
   }
 
   const { collection, owner } = shared;
-  const coverColor = coverColors[collection.color] ?? coverColors.blue;
+  const coverColor = coverColors[collection.color] ?? "#5F84D7";
   const stamps = collection.stamps.map((stamp) => ({
     id: stamp.id,
     caption: stamp.caption,
