@@ -1,8 +1,8 @@
 # Nostos API
 
-The Zod schemas in [`src/contracts/api.ts`](src/contracts/api.ts) are the API source of truth. The mobile app keeps an identical copy at `mobile/src/api/contracts.ts`, and the contract-sync test requires the files to remain byte-for-byte equal.
+The Zod schemas in [`src/contracts/api.ts`](src/contracts/api.ts) and [`src/contracts/collections.ts`](src/contracts/collections.ts) are the API source of truth. The mobile app keeps matching contract copies under `mobile/src/api/`, and contract changes must remain synchronized.
 
-Nostos is owner-only. A signed-in account can read and mutate its own passport, stamps, pins, place history, profile, and neighborhood progress. There is no feed, follow graph, likes, people search, public/private passport mode, reporting, moderation, or staff-role API.
+Nostos is private by default. A signed-in account can read and mutate its own passport, stamps, pins, place history, profile, neighborhood progress, and collections. A user-created collection may be explicitly shared through the dedicated share endpoints; the resulting signed web link exposes only that collection in a read-only view. The master Passport cannot be shared. There is no feed, follow graph, likes, people search, public/private passport mode, reporting, moderation, or staff-role API.
 
 A **stamp** is one visit to a **place**. It can contain up to six photos, a caption, a song, or any combination of those, with at least one kind of content. In the database, stamps remain rows in `photo` and places remain rows in `venue` for migration continuity.
 
@@ -39,10 +39,11 @@ The client must not duplicate these as security checks:
 - **Visit-date edits:** a user may edit `visitedAt` within the same one-year/future bounds. Moving a verified visit to another New York calendar day clears verification.
 - **Coordinate minimization:** coordinates submitted for verification are used for the server-side geofence decision and are not retained on the stamp.
 - **Cooldown/rate limit:** one new stamp per place every 15 minutes and 20 stamps per hour across places.
-- **Ownership:** another account receives 404 for an owner's stamp/passport/place-history resources.
+- **Ownership:** another account receives 404 for an owner's master Passport, private collection, stamp, and place-history resources. The only signed-out stamp visibility is through a valid explicitly enabled collection share, and it resolves only that collection's current stamp membership.
+- **Collection sharing:** share management always targets a real `Collection` owned by the caller. There is no endpoint, missing-parameter behavior, or special identifier that shares the master Passport.
 - **Removal:** deleting a stamp means setting final `removed_at`; the content row is retained and cannot be restored.
 - **Images:** uploads are decoded and re-encoded; EXIF/GPS metadata is stripped.
-- **Sensitive data:** stamp payloads never expose raw storage keys or internal user ids.
+- **Sensitive data:** normal and shared stamp payloads never expose raw storage keys, precise verification coordinates, or internal user ids.
 - **Age gate:** sign-up eligibility is checked before a sign-up email challenge is created; birthdate is not persisted.
 - **Text filtering:** blocked text is rejected with `objectionable_content`.
 
@@ -76,7 +77,7 @@ When `GET /api/places` returns non-null `attribution`, display the supplied Open
 | `PUT /api/me/pins` | `PinsRequest` | `PinsResponse` |
 | `GET /api/me/neighborhoods` | none | `NeighborhoodIndexResponse` |
 
-Account deletion requires a fresh email challenge for the account's current email. It revokes sessions, anonymizes identity fields, clears profile media, marks live stamps removed, and deletes stored photo/avatar files.
+Account deletion requires a fresh email challenge for the account's current email. It revokes sessions, anonymizes identity fields, clears profile media, marks live stamps removed, disables access to shared collections, and deletes stored photo/avatar files.
 
 ### Places
 
@@ -117,6 +118,26 @@ Passport ordering, page/slot placement, place visit groups, and user-facing visi
 Owners may add photos after creation until the six-live-photo limit. Layout (`position`, `x`, `y`, `rotation`) may be edited later. Removing a photo sets final `removed_at`; photo rows are retained. Removing the final photo is refused if it would leave the stamp without a caption or song.
 
 Nostos verifies the visit, not individual photo provenance. The server does not require Photo Library EXIF location/time/source evidence.
+
+### Collections and sharing
+
+| Method and path | Body | Response |
+|---|---|---|
+| `GET /api/collections` | none | `CollectionsResponse`, owner only |
+| `POST /api/collections` | `CollectionCreateRequest` | `CollectionResponse` |
+| `GET /api/collections/:id` | none | `CollectionResponse`, owner only |
+| `PATCH /api/collections/:id` | `CollectionUpdateRequest` | `CollectionResponse` |
+| `DELETE /api/collections/:id` | none | `DeleteCollectionResponse` |
+| `PUT /api/stamps/:id/collections` | `StampCollectionsRequest` | `StampCollectionsResponse` |
+| `GET /api/collections/:id/share` | none | `CollectionShareResponse`, owner only |
+| `POST /api/collections/:id/share` | none | `CollectionShareResponse`, creates/reuses the active link |
+| `DELETE /api/collections/:id/share` | none | `CollectionShareResponse`, revokes the link |
+
+A collection can contain only the owner's live stamps. Its member ordering is explicit and independent from the master Passport chronology.
+
+`CollectionShareResponse` is either `{ share: { enabled: false, url: null } }` or `{ share: { enabled: true, url } }`. The URL is a signed, unguessable capability for the one collection. Calling `POST` again while sharing is enabled returns the same active URL. Calling `DELETE` deletes the share record, so the old URL immediately stops resolving.
+
+The public web route is `GET /c/:token`. It is not an authenticated JSON API and is intentionally server-rendered. A valid token exposes the collection owner's display name plus the collection's current name, color, and current live stamps. It does not expose an email address, internal owner id, collection id, raw storage key, or master-Passport stamp set. The page is dynamic and marked `noindex`/`nofollow`.
 
 ### Songs
 
