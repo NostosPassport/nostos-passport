@@ -25,6 +25,7 @@ const required = [
   "RESEND_VERIFY_EMAIL_TEMPLATE_ID",
   "AUTH_CODE_SECRET",
   "CRON_SECRET",
+  "SHARE_TOKEN_SECRET",
 ];
 
 for (const name of required) {
@@ -40,16 +41,17 @@ for (const name of ["DATABASE_URL", "DIRECT_URL"]) {
   if (/localhost|127\.0\.0\.1/.test(value)) errors.push(`${name} must not point to localhost`);
 }
 
-if ((process.env.AUTH_CODE_SECRET ?? "").length < 32) {
-  errors.push("AUTH_CODE_SECRET must be at least 32 characters");
+for (const name of ["AUTH_CODE_SECRET", "CRON_SECRET", "SHARE_TOKEN_SECRET"]) {
+  if ((process.env[name] ?? "").length < 32) errors.push(`${name} must be at least 32 characters`);
 }
 
-if ((process.env.CRON_SECRET ?? "").length < 32) {
-  errors.push("CRON_SECRET must be at least 32 characters");
-}
-
-if (process.env.AUTH_CODE_SECRET && process.env.AUTH_CODE_SECRET === process.env.CRON_SECRET) {
-  errors.push("AUTH_CODE_SECRET and CRON_SECRET must be different values");
+const secrets = ["AUTH_CODE_SECRET", "CRON_SECRET", "SHARE_TOKEN_SECRET"];
+for (let i = 0; i < secrets.length; i++) {
+  for (let j = i + 1; j < secrets.length; j++) {
+    const a = secrets[i];
+    const b = secrets[j];
+    if (process.env[a] && process.env[a] === process.env[b]) errors.push(`${a} and ${b} must be different values`);
+  }
 }
 
 if ((process.env.AUTH_COMPANY_ADDRESS ?? "").trim() === "New York, NY") {
