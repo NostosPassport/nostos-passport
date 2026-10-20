@@ -4,8 +4,8 @@ import type { NeighborhoodProgress, StampView } from "@/api/contracts";
 let landed: { stamp: StampView; progress: NeighborhoodProgress | null } | null = null;
 
 export const landingDraft = {
-  set(stamp: StampView, progress: NeighborhoodProgress | null) {
-    landed = { stamp, progress };
+  set(stamp: StampView, progress?: NeighborhoodProgress | null) {
+    landed = { stamp, progress: progress ?? null };
   },
   /** Read without clearing, so the screen can re-render. */
   peek: () => landed,
