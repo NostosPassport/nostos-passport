@@ -24,7 +24,7 @@ const PAPER_RGB = "247,244,238";
 
 export const colors = {
   background: palette.ink,
-  surface: palette.black,
+  surface: palette.ink,
   elevated: palette.inkRaised,
   hairline: `rgba(${INK_RGB},0.38)`,
 
