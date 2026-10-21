@@ -117,7 +117,7 @@ export function MapScreen() {
                 key={`${place.id}-${artworkByPlace.get(place.id)?.icon ?? "legacy"}`}
                 coordinate={{ latitude: place.lat, longitude: place.lng }}
                 onPress={() => router.push({ pathname: "/stamp/[id]", params: { id: latestStamp.id } })}
-                tracksViewChanges={false}
+                tracksViewChanges
                 anchor={{ x: 0.5, y: 0.5 }}
                 accessibilityLabel={`${place.name}, open most recent stamp`}
               >
