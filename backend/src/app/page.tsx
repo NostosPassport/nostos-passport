@@ -39,7 +39,7 @@ const USE_CASES = [
 function Logo() {
   return (
     <span className={styles.logo} aria-label="Nostos">
-      <span className={styles.logoMark} aria-hidden="true">N</span>
+      <img src="/nostos-logo.png" className={styles.logoMark} style={{ objectFit: "contain", border: 0 }} alt="" aria-hidden="true" />
       <span className={styles.logoWord}>Nostos</span>
     </span>
   );
