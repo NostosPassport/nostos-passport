@@ -1,68 +1,84 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
 
+import { CategoryStampSvg } from "./c/[token]/CategoryStampSvg";
 import styles from "./LandingPage.module.css";
 
-const destinations = [
-  "New York",
-  "Rome",
-  "Florence",
-  "Paris",
-  "London",
-  "Tokyo",
-  "Chicago",
-  "Barcelona",
+const SAMPLE_STAMPS = [
+  {
+    name: "Trattoria Sostanza",
+    locality: "Florence, Italy",
+    visitedAt: "2026-06-18T19:30:00.000Z",
+    timeZone: "Europe/Rome",
+    artwork: { version: "category-ink/1" as const, kind: "restaurant" as const, cuisine: "italian", label: "ITALIAN", color: "#143B2B", icon: "pasta" as const },
+  },
+  {
+    name: "Sunday Brunch",
+    locality: "A favorite neighborhood",
+    visitedAt: "2026-09-20T15:00:00.000Z",
+    timeZone: "America/New_York",
+    artwork: { version: "category-ink/1" as const, kind: "restaurant" as const, cuisine: "french", label: "FRENCH", color: "#385478", icon: "croissant" as const },
+  },
+  {
+    name: "Nightcap",
+    locality: "Somewhere worth returning to",
+    visitedAt: "2026-10-03T02:15:00.000Z",
+    timeZone: "America/New_York",
+    artwork: { version: "category-ink/1" as const, kind: "bar" as const, cuisine: "bar", label: "BAR · CLUB", color: "#7C1030", icon: "glass" as const },
+  },
 ];
 
-const stampAngle = (angle: string) => ({ "--stamp-angle": angle } as CSSProperties);
+const USE_CASES = [
+  "Favorite Brunch Spots",
+  "Italy Trip",
+  "Best Cocktail Bars",
+  "Date Nights",
+  "Coffee Shops Worth Returning To",
+  "Places I Keep Recommending",
+];
 
-function DestinationTicker() {
-  const items = [...destinations, ...destinations];
+function Logo() {
   return (
-    <div className={styles.ticker} aria-hidden="true">
-      <div className={styles.tickerTrack}>
-        {items.map((name, index) => (
-          <span key={`${name}-${index}`} className={styles.tickerItem}>{name}</span>
-        ))}
-      </div>
+    <span className={styles.logo} aria-label="Nostos">
+      <span className={styles.logoMark} aria-hidden="true">N</span>
+      <span className={styles.logoWord}>Nostos</span>
+    </span>
+  );
+}
+
+function StampCard({ index }: { index: number }) {
+  const stamp = SAMPLE_STAMPS[index]!;
+  return (
+    <div className={`${styles.stampCard} ${styles[`stampCard${index + 1}`]}`}>
+      <CategoryStampSvg
+        artwork={stamp.artwork}
+        name={stamp.name}
+        locality={stamp.locality}
+        visitedAt={stamp.visitedAt}
+        timeZone={stamp.timeZone}
+        seed={`landing-${index}`}
+      />
     </div>
   );
 }
 
-function HeroPassport() {
+function HeroVisual() {
   return (
-    <div className={styles.heroVisual} aria-hidden="true">
-      <div className={styles.heroOrbit} />
-      <div className={styles.heroOrbitTwo} />
-      <div className={styles.bookScene}>
-        <div className={styles.bookShadow} />
-        <div className={styles.book}>
-          <div className={styles.page}>
-            <div className={styles.pageRule} />
-            <div className={styles.guilloche} />
-            <div className={`${styles.stamp} ${styles.stampOne}`} style={stampAngle("-7deg")}>
-              <span>Morning coffee<span className={styles.stampDate}>Oct · 18</span></span>
-            </div>
-            <div className={`${styles.stamp} ${styles.stampThree}`} style={stampAngle("5deg")}>
-              <span>Sunday walk<span className={styles.stampDate}>Oct · 19</span></span>
-            </div>
-            <span className={styles.pageNumber}>07</span>
-          </div>
-          <div className={styles.page}>
-            <div className={styles.pageRule} />
-            <div className={styles.guilloche} />
-            <div className={`${styles.stamp} ${styles.stampTwo}`} style={stampAngle("8deg")}>
-              <span>Dinner<span className={styles.stampDate}>Oct · 20</span></span>
-            </div>
-            <span className={styles.pageNumber}>08</span>
-          </div>
-          <div className={styles.bookSpine} />
+    <div className={styles.heroVisual} aria-label="Examples of Nostos stamps">
+      <div className={styles.heroGlow} />
+      <div className={styles.passportFrame}>
+        <div className={styles.passportTopline}>
+          <span>NOSTOS PASSPORT</span>
+          <span>MASTER</span>
         </div>
-        <div className={styles.floatingTicket}>
-          Visit memory
-          <strong>Rome, Italy</strong>
+        <div className={styles.passportPages}>
+          <div className={styles.passportPage}>
+            <StampCard index={0} />
+            <StampCard index={2} />
+          </div>
+          <div className={styles.passportPage}>
+            <StampCard index={1} />
+          </div>
         </div>
-        <div className={styles.floatingPin} />
       </div>
     </div>
   );
@@ -73,11 +89,12 @@ export default function Home() {
     <main className={styles.site}>
       <div className={styles.navWrap}>
         <nav className={styles.nav} aria-label="Main navigation">
-          <Link href="/" className={styles.wordmark}>Nostos</Link>
+          <Link href="/" className={styles.brandLink}><Logo /></Link>
           <div className={styles.navLinks}>
             <a href="#how-it-works">How it works</a>
+            <a href="#collections">Collections</a>
             <a href="#privacy">Privacy</a>
-            <span className={styles.navBadge}><span className={styles.navBadgeDot} />Made for iPhone</span>
+            <span className={styles.navBadge}>Made for iPhone</span>
           </div>
         </nav>
       </div>
@@ -87,113 +104,93 @@ export default function Home() {
           <p className={styles.kicker}>A passport for the places you go</p>
           <h1 className={styles.heroTitle}>Go somewhere. <em>Keep the story.</em></h1>
           <p className={styles.heroBody}>
-            Nostos turns the places you actually visit into a personal passport. Stamp the moment, add the memory, and watch the places you have been take shape page by page.
+            Nostos turns restaurants, bars, trips, and everyday favorites into a visual record of where you have actually been. Every visit becomes a stamp, and every stamp becomes part of your passport.
           </p>
           <div className={styles.heroActions}>
-            <a className={styles.primaryCta} href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
-            <a className={styles.secondaryCta} href="#privacy">Private by default</a>
-            <p className={styles.heroNote}>Passport · Stamp · Map</p>
+            <a className={styles.primaryCta} href="#how-it-works">See how it works</a>
+            <a className={styles.secondaryCta} href="#collections">Ways to use Nostos</a>
           </div>
+          <p className={styles.heroNote}>Passport · Gallery · Map · Collections</p>
         </div>
-        <HeroPassport />
+        <HeroVisual />
       </section>
 
-      <DestinationTicker />
-
-      <section id="how-it-works" className={styles.sectionWide}>
-        <header className={styles.sectionHeader}>
-          <div>
-            <p className={styles.sectionKicker}>How Nostos works</p>
-          </div>
-          <div>
-            <h2 className={styles.sectionTitle}>Your travels, printed into pages.</h2>
-            <p className={styles.sectionLead}>
-              Nostos is built around the visit itself. No feed to perform for, no follower count to chase. Just places, memories, and a passport that becomes more yours every time you go somewhere.
-            </p>
-          </div>
-        </header>
-
-        <div className={styles.steps}>
-          <article className={styles.step}>
-            <div className={styles.stepIndex}><span>01</span><span>Stamp</span></div>
-            <div className={styles.stepVisual}>
-              <div className={styles.stampDemo} />
-            </div>
-            <h3 className={styles.stepTitle}>Stamp the visit.</h3>
-            <p className={styles.stepBody}>
-              Add a place you are at now or a memory from the past year. Include up to six photos, a caption, a song, or keep it simple.
-            </p>
+      <section id="how-it-works" className={styles.section}>
+        <div className={styles.sectionIntro}>
+          <p className={styles.sectionKicker}>How it works</p>
+          <h2 className={styles.sectionTitle}>Your places, rendered into something worth keeping.</h2>
+          <p className={styles.sectionLead}>Nostos is built around your own history, not a public feed. Stamp a visit, browse the passport or gallery, and return to it later through collections and the map.</p>
+        </div>
+        <div className={styles.featureGrid}>
+          <article className={styles.featureCard}>
+            <span className={styles.featureNumber}>01</span>
+            <h3>Stamp the visit.</h3>
+            <p>Save a restaurant or bar with the stamp design generated for that kind of place. Add photos, a memory, or a song when you want more context.</p>
           </article>
-
-          <article className={styles.step}>
-            <div className={styles.stepIndex}><span>02</span><span>Passport</span></div>
-            <div className={styles.stepVisual}>
-              <div className={styles.passportMini}><span /><span /></div>
-            </div>
-            <h3 className={styles.stepTitle}>Build your passport.</h3>
-            <p className={styles.stepBody}>
-              Visits settle into chronological passport pages, each with its own stamp. When Nostos can confirm a current visit, it adds a verification seal.
-            </p>
+          <article className={styles.featureCard}>
+            <span className={styles.featureNumber}>02</span>
+            <h3>Browse it your way.</h3>
+            <p>Flip through the passport, scan every stamp in the gallery, filter restaurants and bars, or see your visited places on the map.</p>
           </article>
-
-          <article className={styles.step}>
-            <div className={styles.stepIndex}><span>03</span><span>Map</span></div>
-            <div className={styles.stepVisual}>
-              <div className={styles.mapDemo}>
-                <span className={styles.mapDemoPin} />
-                <span className={styles.mapDemoPinTwo} />
-                <span className={styles.mapDemoPinThree} />
-              </div>
-            </div>
-            <h3 className={styles.stepTitle}>See where you have been.</h3>
-            <p className={styles.stepBody}>
-              Return to the places behind the pages through the map. Your passport remembers places the way you experienced them, not as a recommendation feed.
-            </p>
+          <article className={styles.featureCard}>
+            <span className={styles.featureNumber}>03</span>
+            <h3>Make smaller stories.</h3>
+            <p>Turn any group of stamps into a collection for a trip, a type of place, a person, a neighborhood, or whatever else matters to you.</p>
           </article>
         </div>
+      </section>
+
+      <section id="collections" className={styles.collectionsSection}>
+        <div className={styles.collectionCopy}>
+          <p className={styles.sectionKicker}>Collections</p>
+          <h2 className={styles.sectionTitle}>A trip. A ritual. A list you actually lived.</h2>
+          <p className={styles.sectionLead}>Collections can be as practical or personal as you want. Use them to organize a journey, remember your regular spots, or package the places you keep sending to friends.</p>
+        </div>
+        <div className={styles.useCases}>
+          {USE_CASES.map((label, index) => (
+            <div className={styles.useCase} key={label}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <strong>{label}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.stampStrip} aria-label="Nostos stamp design examples">
+        {SAMPLE_STAMPS.map((stamp, index) => (
+          <div className={styles.stripStamp} key={`${stamp.name}-${index}`}>
+            <CategoryStampSvg artwork={stamp.artwork} name={stamp.name} locality={stamp.locality} visitedAt={stamp.visitedAt} timeZone={stamp.timeZone} seed={`strip-${index}`} />
+          </div>
+        ))}
       </section>
 
       <section id="privacy" className={styles.privacy}>
-        <div className={styles.privacyGrid}>
-          <div>
-            <p className={styles.sectionKicker}>Private by default</p>
-            <h2 className={styles.privacyTitle}>Your passport is yours.</h2>
-          </div>
-          <div className={styles.privacyCopy}>
-            <p className={styles.privacyLead}>
-              Nostos is a personal product first. Your master Passport stays private. There are no public profiles, followers, likes, or activity feeds. When you want to share, you can choose a collection and create a revocable, unlisted read-only link.
-            </p>
-            <div className={styles.privacyFacts}>
-              <p className={styles.privacyFact}>Master Passport cannot be shared</p>
-              <p className={styles.privacyFact}>Location is optional for creating a stamp</p>
-              <p className={styles.privacyFact}>Raw verification coordinates are not kept on stamps</p>
-              <p className={styles.privacyFact}>Shared collection links can be disabled at any time</p>
-            </div>
+        <div>
+          <p className={styles.sectionKicker}>Private by default</p>
+          <h2 className={styles.privacyTitle}>Your master passport stays yours.</h2>
+        </div>
+        <div className={styles.privacyCopy}>
+          <p>Nostos has no follower count, likes, or public activity feed. Your master Passport stays private. When you want to share something, you choose a collection and create a revocable, unlisted read-only link.</p>
+          <div className={styles.privacyFacts}>
+            <span>Master Passport cannot be shared</span>
+            <span>Location is optional for creating a stamp</span>
+            <span>Raw verification coordinates are not kept on stamps</span>
+            <span>Collection links can be disabled at any time</span>
           </div>
         </div>
-      </section>
-
-      <section className={styles.quoteSection}>
-        <div className={styles.quoteMark}>N</div>
-        <h2 className={styles.quote}>A memory app for the places you <em>actually went.</em></h2>
-        <p className={styles.quoteSub}>
-          Save the dinner you still talk about, the bar you stumbled into, the coffee you kept coming back for, and the ordinary afternoons that made a place feel like yours.
-        </p>
       </section>
 
       <footer className={styles.footer}>
-        <div className={styles.footerTop}>
-          <div>
-            <div className={styles.footerWordmark}>Nostos</div>
-            <p className={styles.footerTagline}>A passport for the places you go. Go somewhere, get a stamp.</p>
-          </div>
-          <nav className={styles.footerLinks} aria-label="Legal and support">
-            <Link href="/privacy">Privacy Policy</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/support">Support</Link>
-            <Link href="/delete-account">Delete Account</Link>
-          </nav>
+        <div className={styles.footerBrand}>
+          <Logo />
+          <p>A visual record of the places you have actually been.</p>
         </div>
+        <nav className={styles.footerLinks} aria-label="Legal and support">
+          <Link href="/privacy">Privacy Policy</Link>
+          <Link href="/terms">Terms</Link>
+          <Link href="/support">Support</Link>
+          <Link href="/delete-account">Delete Account</Link>
+        </nav>
         <div className={styles.footerBottom}>
           <span>Designed for iPhone</span>
           <span>© {new Date().getFullYear()} Nostos</span>
