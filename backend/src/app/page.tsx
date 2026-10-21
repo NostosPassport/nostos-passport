@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { CategoryStampSvg } from "./c/[token]/CategoryStampSvg";
@@ -39,7 +40,7 @@ const USE_CASES = [
 function Logo() {
   return (
     <span className={styles.logo} aria-label="Nostos">
-      <img src="/nostos-logo.png" className={styles.logoMark} style={{ objectFit: "contain", border: 0 }} alt="" aria-hidden="true" />
+      <Image src="/nostos-logo.png" width={32} height={32} className={styles.logoMark} alt="" aria-hidden="true" />
       <span className={styles.logoWord}>Nostos</span>
     </span>
   );
