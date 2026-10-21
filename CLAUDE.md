@@ -10,7 +10,7 @@ Users choose `Now` or `Past` when creating a stamp. A Now stamp may be location 
 
 Google-backed restaurant and bar discovery is worldwide. Durable place locality uses optional `area`, `city`, `region`, `country`, and `countryCode` metadata from Google Places plus an IANA `timeZone`. `area` is descriptive and may represent a neighborhood, district, sublocality, quartiere, or similar label; it is not a required hierarchy. The old NYC neighborhood polygon tables, completion records, API, and required venue neighborhood fields have been removed.
 
-The product is private by default. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared. Feed, follows, likes, Activity, other-user passports, public profiles, moderation/admin social tooling, and guest preview are not part of the product or active architecture.
+The product is private by default. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared. Feed, follows, likes, Activity, other-user passports, public profiles, moderation/admin social tooling, pinning, and guest preview are not part of the product or active architecture.
 
 ## Photos
 
@@ -29,9 +29,9 @@ Do not rebuild the old custom `expo-camera` CameraView/shutter flow unless the u
 
 Only Figma pages 9 and 10 are current. Earlier Figma explorations are historical.
 
-The active design language is editorial: warm ivory paper, dark ink, and electric blue accent. `mobile/src/theme/midnight.ts` keeps its historical filename for import stability, but its exported theme is now Editorial.
+The active design language is editorial: warm cream paper, dark ink, and electric blue accent. The theme is implemented in `mobile/src/theme/editorial.ts`; the app background is `#F3EFE5`, raised paper is `#F7F4EE`, deeper paper is `#EEE9DD`, and the primary accent is `#123BFF`.
 
-Verified visits use the Nostos mark as a positive verification seal. Unverified status is intentionally low-emphasis fine print and must not read as an error or punishment.
+Verified visits use the Nostos mark as a positive verification seal. On stamp detail surfaces, verification status belongs with compact bottom metadata. Unverified status is intentionally low-emphasis fine print and must not read as an error or punishment.
 
 ## Repository
 
@@ -51,7 +51,7 @@ Preserve these unless the user explicitly changes product behavior and the corre
 
 1. Visit verification is decided server-side from submitted current coordinates and the venue geofence. Outside/no-location Now stamps remain valid but unverified. `geofenceExempt` remains the App Review/QA exception.
 2. Raw device coordinates used for visit verification are not retained on stamps. The stored trust artifact is verification status/time.
-3. One account never receives another account's master Passport, private collection, stamp, pin, place-history, or profile data. The only cross-account/signed-out stamp visibility is an explicitly enabled collection share link, which exposes only that collection's current stamps through the dedicated read-only web resolver.
+3. One account never receives another account's master Passport, private collection, stamp, place-history, or profile data. The only cross-account/signed-out stamp visibility is an explicitly enabled collection share link, which exposes only that collection's current stamps through the dedicated read-only web resolver.
 4. The master Passport has no sharing primitive. Share records may reference only persisted `Collection` rows, are owner-controlled, and must become unavailable immediately when disabled or when their collection/account is deleted.
 5. Removing a stamp is final and retained as `removed_at`; user content is not silently hard-deleted.
 6. Uploaded images are re-encoded so EXIF/GPS does not survive the upload.
