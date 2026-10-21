@@ -1,6 +1,6 @@
 # Current design scope
 
-Updated 2026-10-07.
+Updated 2026-10-20.
 
 ## Authority
 
@@ -10,9 +10,9 @@ Earlier Figma pages, the black/silver exploration, the original black/brass pass
 
 ## Current direction
 
-The active direction is the refined editorial Nostos system: warm ivory/paper surfaces, dark ink, and electric-blue accent, with restrained print/travel-journal character.
+The active direction is the refined editorial Nostos system: warm cream/paper surfaces, dark ink, and electric-blue accent, with restrained print/travel-journal character.
 
-The native theme has already begun this migration. `mobile/src/theme/midnight.ts` intentionally keeps a historical filename and token names while exporting current Editorial values.
+The native theme lives in `mobile/src/theme/editorial.ts`. The app background is `#F3EFE5`, raised paper is `#F7F4EE`, deeper paper is `#EEE9DD`, and the electric-blue accent is `#123BFF`.
 
 ## Product behavior to preserve
 
