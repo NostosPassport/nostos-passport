@@ -81,11 +81,6 @@ export function usePlacePage(id: string, pos: { lat: number; lng: number } | nul
   });
 }
 
-export function usePins() {
-  const { status } = useAuth();
-  return useQuery({ queryKey: qk.pins, queryFn: api.pins.get, enabled: status === "signedIn", staleTime: 60_000 });
-}
-
 export function useCollections() {
   const { status } = useAuth();
   return useQuery({ queryKey: qk.collections, queryFn: api.collections.list, enabled: status === "signedIn", staleTime: 30_000 });
