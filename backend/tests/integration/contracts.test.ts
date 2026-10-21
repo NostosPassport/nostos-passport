@@ -28,6 +28,7 @@ const REGISTRY = new Map<string, Contract>([
   ["GET /api/collections/[id]/share", Collections.CollectionShareResponse],
   ["POST /api/collections/[id]/share", Collections.CollectionShareResponse],
   ["DELETE /api/collections/[id]/share", Collections.CollectionShareResponse],
+  ["GET /api/health", C.HealthResponse],
   ["GET /api/me", C.MeResponse],
   ["POST /api/me/terms", C.AcceptTermsResponse],
   ["POST /api/me/email/start", C.EmailChallengeResponse],
