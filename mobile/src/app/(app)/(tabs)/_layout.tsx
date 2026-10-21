@@ -12,7 +12,7 @@ export default function TabsLayout() {
       initialRouteName="passport"
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: colors.transparent },
+        sceneStyle: { backgroundColor: colors.background },
         tabBarStyle: styles.bar,
         tabBarItemStyle: styles.item,
         tabBarLabelStyle: styles.label,
