@@ -1,6 +1,6 @@
 export * from "./colors";
 export * from "./layout";
-export { bookMotion, bookStyle, scene3d, fonts, midnight, shadows, stampStyle } from "./midnight";
-export type { Theme } from "./midnight";
+export { bookMotion, bookStyle, scene3d, fonts, editorial, shadows, stampStyle } from "./editorial";
+export type { Theme } from "./editorial";
 export * from "./motion";
 export * from "./typography";
