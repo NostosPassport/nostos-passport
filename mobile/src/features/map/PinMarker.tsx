@@ -1,6 +1,7 @@
 import { StyleSheet, View } from "react-native";
-import Svg, { Path } from "react-native-svg";
-import { type CategoryStampArtwork, CUISINE_PATHS } from "../../../../shared/category-stamp-artwork";
+import Svg, { G, Path } from "react-native-svg";
+import type { CategoryStampArtwork } from "../../../../shared/category-stamp-artwork";
+import { buildStampScene, designFromArtwork } from "../../../../shared/category-stamp-design";
 
 import { StampMark } from "@/features/book/StampMark";
 import type { StampInput } from "@/features/book/stamp-design";
@@ -10,23 +11,40 @@ import type { PinKind } from "./map-model";
 const LIT = size.marker;
 const DIM = size.vibeDot;
 
-/**
- * A pin on the map. Lit (you've stamped the place): a little brass stamp of that place in a glowing ring. Dim: a small dot.
- * Selected pins are drawn larger by the screen (it passes `selected`); a key change redraws the snapshot the map keeps.
- */
 export function PinMarker({ kind, selected, input, artwork }: { kind: PinKind; selected: boolean; input: StampInput; artwork?: CategoryStampArtwork | null }) {
   if (kind === "dim") {
     return <View style={[styles.dim, selected && styles.dimSelected]} />;
   }
+
   const box = selected ? Math.round(LIT * 1.25) : LIT;
   const iconSize = box - size.markerRing * 5;
+
+  if (!artwork) {
+    return (
+      <View style={[styles.lit, shadows.glow, { width: box, height: box, borderRadius: box / 2 }]}>
+        <StampMark input={input} size={box - size.markerRing * 2} />
+      </View>
+    );
+  }
+
+  const design = designFromArtwork(artwork, { name: input.placeName, locality: input.localityName, timeZone: "UTC", priceTier: null });
+  const icon = buildStampScene(design, { seed: input.placeId, dateLabel: "" }).icon;
+  const rotation = icon.rotate ? `rotate(${icon.rotate} 12 12)` : undefined;
+
   return (
-    <View style={[styles.lit, shadows.glow, { width: box, height: box, borderRadius: box / 2, ...(artwork ? { borderColor: artwork.color } : {}) }]}>
-      {artwork ? (
-        <Svg width={iconSize} height={iconSize} viewBox="-1 -1 26 26" preserveAspectRatio="xMidYMid meet">
-          <Path d={CUISINE_PATHS[artwork.icon]} fill="none" stroke={artwork.color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-        </Svg>
-      ) : <StampMark input={input} size={box - size.markerRing * 2} />}
+    <View style={[styles.lit, shadows.glow, { width: box, height: box, borderRadius: box / 2, borderColor: design.color }]}>
+      <Svg width={iconSize} height={iconSize} viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" pointerEvents="none">
+        <G
+          transform={rotation}
+          fill={icon.fill ? design.color : "none"}
+          stroke={design.color}
+          strokeWidth={icon.fill ? 0.6 : icon.strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d={icon.d} />
+        </G>
+      </Svg>
     </View>
   );
 }
