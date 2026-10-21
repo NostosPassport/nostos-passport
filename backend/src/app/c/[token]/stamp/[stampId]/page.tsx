@@ -90,7 +90,6 @@ export default async function SharedStampPage({ params }: Ctx) {
           <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">{shared.collection.name} · {visited}</p>
           <h1 className="font-serif text-5xl leading-none tracking-tight text-text sm:text-7xl">{stamp.place.name}</h1>
           {area ? <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em] text-muted">{area}</p> : null}
-          <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">{stamp.verified ? "Visit verified" : "Visit not location verified"}</p>
         </div>
 
         <div className="grid gap-10 lg:grid-cols-[minmax(300px,420px)_1fr] lg:items-start">
@@ -120,6 +119,11 @@ export default async function SharedStampPage({ params }: Ctx) {
               <StampPhotoGallery photos={stamp.photos.map((photo) => ({ id: photo.id, url: photo.url }))} />
             </div>
           </section>
+        </div>
+
+        <div className="mt-12 flex items-center gap-2 border-t border-line pt-4 font-mono text-[9px] uppercase tracking-[0.14em] text-muted">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: stamp.verified ? "#5FA37D" : "#D09A52" }} aria-hidden="true" />
+          <span>{stamp.verified ? "Location verified by Nostos" : "Visit not location verified"}</span>
         </div>
       </article>
     </main>
