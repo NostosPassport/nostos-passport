@@ -8,20 +8,21 @@ The app is being migrated screen by screen to the current editorial system. Exis
 
 ## Editorial visual language
 
-The current shared theme is implemented in `mobile/src/theme/midnight.ts`. The filename is historical and intentionally retained for import stability. The exported theme name is `Editorial`.
+The current shared theme is implemented in `mobile/src/theme/editorial.ts` and exported as `Editorial`.
 
 Current core colors:
 
 | Role | Value |
 |---|---|
-| paper/background | `#F7F4EE` |
-| raised paper | `#F3EFE5`, `#EEE9DD` |
+| cream/background | `#F3EFE5` |
+| raised paper | `#F7F4EE` |
+| deeper paper | `#EEE9DD` |
 | ink | `#171714` |
 | secondary ink | `#5A5A55` |
 | electric-blue accent | `#123BFF` |
 | danger | `#B3261E` |
 
-Some token names such as `brass`, `bone`, and `midnight` are legacy identifiers. Their names do not describe the current colors and should not be used as evidence that black/brass is still the active direction.
+Some lower-level token names such as `brass` and `bone` remain for compatibility inside the theme module, but they do not describe the current colors and should not be used as evidence that black/brass is still the active direction.
 
 Typography currently uses Cormorant Garamond, Courier Prime, and the system sans in the native app. Figma may use visually compatible fonts for specific editorial compositions. Match the approved current frames rather than old font notes.
 
@@ -33,6 +34,7 @@ Important current routes include:
 
 - `mobile/src/app/(app)/(tabs)/passport.tsx`
 - `mobile/src/app/(app)/(tabs)/map.tsx`
+- `mobile/src/app/(app)/gallery.tsx`
 - `mobile/src/app/(app)/stamp/new.tsx`
 - `mobile/src/app/(app)/stamp/camera.tsx`
 - `mobile/src/app/(app)/stamp/landed.tsx`
@@ -50,7 +52,7 @@ Nostos verifies **visits, not photographs**.
 - `Now` means the user is adding a current visit. If current device location is available and the server confirms proximity to the venue, the visit receives the Nostos verification seal.
 - A Now stamp still works without location or outside the verification radius; it is simply unverified.
 - `Past` means a historical memory from the previous year. Past stamps are always unverified.
-- Verified status is a positive treatment. Use the Nostos mark prominently enough to feel collectible and trustworthy.
+- Verified status is a positive treatment, but stamp-detail verification UI should remain compact and sit with bottom metadata rather than dominate the memory.
 - Unverified is neutral, not a warning state. It should be absent from the Passport stamp face and appear only as low-emphasis fine print where explanation is useful.
 - Changing the calendar day on a verified stamp removes verification.
 
