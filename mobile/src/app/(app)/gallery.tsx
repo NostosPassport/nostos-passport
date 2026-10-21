@@ -45,6 +45,7 @@ export default function StampGallery() {
           </View>
         ) : (
           <FlatList
+            style={styles.listView}
             data={stamps}
             keyExtractor={(stamp) => stamp.id}
             contentContainerStyle={stamps.length ? styles.list : styles.emptyList}
@@ -94,7 +95,7 @@ function GalleryStamp({ stamp }: { stamp: StampView }) {
           {stamp.artwork?.kind ? <Text style={styles.kind}>{stamp.artwork.kind.toUpperCase()}</Text> : null}
         </View>
       </View>
-      <Icon name="chevron.right" color="textMuted" size={16} />
+      <Icon name="chevron.right" color="textTertiary" size={16} />
     </Pressable>
   );
 }
@@ -105,6 +106,7 @@ const styles = StyleSheet.create({
   filters: { height: 54, flexDirection: "row", gap: 8, marginTop: 12, marginBottom: 4 },
   filter: { flex: 1, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
   filterActive: { borderBottomColor: colors.accent },
+  listView: { flex: 1 },
   list: { paddingTop: 6, paddingBottom: space.xl },
   emptyList: { flexGrow: 1, alignItems: "center", justifyContent: "center", paddingBottom: 80 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.md },
@@ -115,7 +117,7 @@ const styles = StyleSheet.create({
   name: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 27, lineHeight: 29 },
   locality: { marginTop: 5, color: colors.textSecondary, fontFamily: fonts.sans, fontSize: 13 },
   meta: { marginTop: 12, flexDirection: "row", alignItems: "center", gap: 10 },
-  date: { color: colors.textMuted, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8, textTransform: "uppercase" },
-  kind: { color: colors.accentMuted, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8 },
+  date: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8, textTransform: "uppercase" },
+  kind: { color: colors.dimBrass, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8 },
   pressed: { opacity: 0.7 },
 });
