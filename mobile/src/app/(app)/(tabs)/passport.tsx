@@ -22,6 +22,15 @@ export default function Passport() {
         <Icon name="book" color="textPrimary" size={size.icon} />
       </Pressable>
       <Pressable
+        onPress={() => router.push("/gallery")}
+        accessibilityRole="button"
+        accessibilityLabel="Stamp gallery"
+        hitSlop={space.xs}
+        style={[styles.gallery, { top }]}
+      >
+        <Icon name="square.grid.2x2" color="textPrimary" size={size.iconSmall} />
+      </Pressable>
+      <Pressable
         onPress={() => router.push("/settings")}
         accessibilityRole="button"
         accessibilityLabel="Settings"
@@ -35,7 +44,8 @@ export default function Passport() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.transparent },
+  root: { flex: 1, backgroundColor: colors.background },
   collections: { position: "absolute", left: space.md, minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
+  gallery: { position: "absolute", left: space.md + size.hitTarget + space.xs, minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
   gear: { position: "absolute", right: space.md, minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
 });
