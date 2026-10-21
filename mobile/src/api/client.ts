@@ -188,10 +188,6 @@ export function createApi(config: ApiConfig) {
       remove: (id: string) => request("POST", `/api/stamps/${enc(id)}/remove`, C.RemoveStampResponse),
     },
 
-    pins: {
-      get: () => request("GET", "/api/me/pins", C.PinsResponse),
-      set: (stampIds: string[]) => request("PUT", "/api/me/pins", C.PinsResponse, { stampIds }),
-    },
     songs: { search: (q: string) => request("GET", `/api/songs/search?q=${enc(q)}`, C.SongSearchResponse) },
     users: {
       stamps: (handle: string, after?: string | null) => request("GET", `/api/users/${enc(handle)}/stamps${after ? `?after=${enc(after)}` : ""}`, C.UserStampsResponse),
