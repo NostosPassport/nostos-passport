@@ -63,8 +63,8 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F3EFE5",
-          "image": "./assets/images/icon.png",
+          "backgroundColor": "#F4EEDE",
+          "image": "./assets/images/nostos-watermark.png",
           "imageWidth": 120
         }
       ],
