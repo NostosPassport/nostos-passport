@@ -85,7 +85,7 @@ export default async function SharedStampPage({ params }: Ctx) {
         <Link href="/" className="font-serif text-2xl tracking-tight text-text">Nostos</Link>
       </header>
 
-      <article className="mx-auto w-full max-w-6xl">
+      <article className="mx-auto flex min-h-[calc(100vh-9rem)] w-full max-w-6xl flex-col">
         <div className="mb-8 border-b border-line pb-8">
           <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">{shared.collection.name} · {visited}</p>
           <h1 className="font-serif text-5xl leading-none tracking-tight text-text sm:text-7xl">{stamp.place.name}</h1>
@@ -121,8 +121,8 @@ export default async function SharedStampPage({ params }: Ctx) {
           </section>
         </div>
 
-        <div className="mt-12 flex items-center gap-2 border-t border-line pt-4 font-mono text-[9px] uppercase tracking-[0.14em] text-muted">
-          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: stamp.verified ? "#5FA37D" : "#D09A52" }} aria-hidden="true" />
+        <div className="mt-auto flex items-center gap-1.5 border-t border-line pt-8 font-mono text-[7px] uppercase tracking-[0.12em] text-muted">
+          <span className="h-1 w-1 rounded-full" style={{ backgroundColor: stamp.verified ? "#5FA37D" : "#D09A52" }} aria-hidden="true" />
           <span>{stamp.verified ? "Location verified by Nostos" : "Visit not location verified"}</span>
         </div>
       </article>
