@@ -14,16 +14,16 @@ const SAMPLE_STAMPS = [
   },
   {
     name: "Sunday Brunch",
-    locality: "A favorite neighborhood",
+    locality: "Paris, France",
     visitedAt: "2026-09-20T15:00:00.000Z",
-    timeZone: "America/New_York",
+    timeZone: "Europe/Paris",
     artwork: { version: "category-ink/1" as const, kind: "restaurant" as const, cuisine: "french", label: "FRENCH", color: "#385478", icon: "croissant" as const },
   },
   {
     name: "Nightcap",
-    locality: "Somewhere worth returning to",
+    locality: "Lisbon, Portugal",
     visitedAt: "2026-10-03T02:15:00.000Z",
-    timeZone: "America/New_York",
+    timeZone: "Europe/Lisbon",
     artwork: { version: "category-ink/1" as const, kind: "bar" as const, cuisine: "bar", label: "BAR · CLUB", color: "#7C1030", icon: "glass" as const },
   },
 ];
