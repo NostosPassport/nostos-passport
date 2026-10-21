@@ -9,6 +9,7 @@ export default function AppLayout() {
     <AppBackground>
       <Stack screenOptions={{ ...stackOptions, contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="gallery" options={{ headerShown: false }} />
         <Stack.Screen name="place/[id]" options={{ title: "Place" }} />
         <Stack.Screen name="stamp/[id]" options={{ title: "Stamp" }} />
         <Stack.Screen name="stamp/new" options={{ presentation: "modal", headerShown: false, headerBackButtonMenuEnabled: false }} />
