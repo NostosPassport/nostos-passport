@@ -34,8 +34,6 @@ const REGISTRY = new Map<string, Contract>([
   ["PATCH /api/me/email", C.EmailChangeResponse],
   ["POST /api/me/delete/start", C.EmailChallengeResponse],
   ["POST /api/me/delete", C.DeleteAccountResponse],
-  ["GET /api/me/pins", C.PinsResponse],
-  ["PUT /api/me/pins", C.PinsResponse],
   ["GET /api/me/profile", C.ProfileSettingsResponse],
   ["PATCH /api/me/profile", C.ProfileSettingsResponse],
   ["POST /api/me/avatar", C.AvatarResponse],
