@@ -2,7 +2,7 @@ import type { NativeStackNavigationOptions } from "expo-router";
 
 import { colors, type } from "@/theme";
 
-/** Native iOS stack chrome on the dark palette. */
+/** Native iOS stack chrome on the editorial cream palette. */
 export const stackOptions: NativeStackNavigationOptions = {
   contentStyle: { backgroundColor: colors.background },
   headerStyle: { backgroundColor: colors.background },
