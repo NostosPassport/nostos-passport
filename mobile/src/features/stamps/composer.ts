@@ -1,5 +1,5 @@
-/** Pure rules for the stamp composer. Nostos verifies visits, never individual photos. */
 import type { NearbyPlacesResponse, Song, StampEditRequest, StampView } from "@/api/contracts";
+import { michelinPreviewDraft } from "@/features/stamps/michelin-preview";
 import type { Coords } from "@/lib/geo";
 
 export const CAPTION_MAX = 280;
@@ -32,6 +32,8 @@ export function stampFields(
     if (d.song.artUrl) fields.push(["songArtUrl", d.song.artUrl]);
     if (d.song.sourceId) fields.push(["songSourceId", d.song.sourceId]);
   }
+  const michelinProof = michelinPreviewDraft.proof();
+  if (michelinProof) fields.push(["michelinProof", michelinProof]);
   return fields;
 }
 

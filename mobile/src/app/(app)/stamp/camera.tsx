@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { PhotoViewer } from "@/features/book/PhotoViewer";
-import { CAMERA_NOTE, pickFromLibrary, takePhoto } from "@/features/photos/pick";
+import { CAMERA_NOTE, pickFromLibrary, pickManyFromLibrary, takePhoto } from "@/features/photos/pick";
 import { prepareImage } from "@/features/photos/prepare";
 import { saveAcceptedCameraPhoto } from "@/features/photos/save-camera-photo";
 import { photoDraft, usePhotoDraft } from "@/features/stamps/photo-draft";
@@ -50,23 +50,32 @@ export default function StampCamera() {
     } catch { setNote("Couldn't add that photo. Try again."); } finally { finishWork(); }
   }, [finishWork, startWork]);
 
-  const chooseLibraryPhoto = useCallback(async () => {
+  const chooseLibraryPhotos = useCallback(async () => {
     if (!startWork()) return;
     try {
-      const picked = await pickFromLibrary();
-      if (!picked) return;
-      const prepared = await prepareImage(picked.uri);
-      if (photoDraft.add(prepared.uri)) haptics.select();
-    } catch { setNote("Couldn't add that photo. Try again."); } finally { finishWork(); }
+      const remaining = MAX_STAMP_PHOTOS - photoDraft.get().length;
+      let picked = typeof pickManyFromLibrary === "function" ? await pickManyFromLibrary(remaining) : [];
+      if (!picked.length && typeof pickManyFromLibrary !== "function") {
+        const single = await pickFromLibrary();
+        picked = single ? [single] : [];
+      }
+      if (!picked.length) return;
+      let added = 0;
+      for (const item of picked.slice(0, remaining)) {
+        const prepared = await prepareImage(item.uri);
+        if (photoDraft.add(prepared.uri)) added += 1;
+      }
+      if (added > 0) haptics.select();
+    } catch { setNote("Couldn't add those photos. Try again."); } finally { finishWork(); }
   }, [finishWork, startWork]);
 
   const chooseSource = useCallback(() => {
     if (busyRef.current || photoDraft.get().length >= MAX_STAMP_PHOTOS) return;
     ActionSheetIOS.showActionSheetWithOptions({ title: "Add photo", options: ["Take Photo", "Choose from Photo Library", "Cancel"], cancelButtonIndex: 2 }, (index) => {
       if (index === 0) void capture();
-      else if (index === 1) void chooseLibraryPhoto();
+      else if (index === 1) void chooseLibraryPhotos();
     });
-  }, [capture, chooseLibraryPhoto]);
+  }, [capture, chooseLibraryPhotos]);
 
   const viewerPhotos = photos.map((uri, index) => ({ id: `${uri}-${index}`, uri }));
   return (

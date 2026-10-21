@@ -30,7 +30,7 @@ const ready = (over: Partial<PassportData> = {}): PassportData => ({
   counts: { stamps: 7, places: 5 }, retry: jest.fn(), ...over,
 });
 const COUNTS = "7 stamps, 5 places";
-const tapPage = async (x: number) => { await act(() => fireGestureHandler(getByGestureTestId("flip-tap"), [{ state: State.BEGAN, x, y: 15 }, { state: State.ACTIVE, x, y: 15 }, { state: State.END, x, y: 15 }])); };
+const tapPage = async (x: number) => { await act(() => fireGestureHandler(getByGestureTestId("single-flip-tap"), [{ state: State.BEGAN, x, y: 15 }, { state: State.ACTIVE, x, y: 15 }, { state: State.END, x, y: 15 }])); };
 
 describe("tapping the 3D passport: the cover opens, then the reader takes over", () => {
   beforeEach(() => { mockPush.mockClear(); mockReduced = false; Dimensions.set({ window: { width: 390, height: 844, scale: 3, fontScale: 1 }, screen: { width: 390, height: 844, scale: 3, fontScale: 1 } }); });
@@ -103,18 +103,19 @@ describe("tapping the 3D passport: the cover opens, then the reader takes over",
     expect(screen.getByLabelText("Close passport")).toBeTruthy();
   });
 
-  it("opening a stamp keeps the 3D passport open behind it, and coming back restores the reader on the same spread", async () => {
+  it("opening a stamp keeps the 3D passport open behind it, and coming back restores the reader on the same page", async () => {
     mockData = ready({ stamps: [stamp("s1", 1, 1, "First"), stamp("s2", 1, 2, "Second"), stamp("s3", 1, 3, "Third"), stamp("s4", 2, 1, "Fourth")], counts: { stamps: 4, places: 4 } });
     await render(<PassportBook />);
     await act(() => mockView.onReady({}));
     await fireEvent.press(screen.getByLabelText("Open your passport"));
     await act(() => mockView.onOpenProgress(0.9));
     await tapPage(300);
+    await tapPage(300);
     await fireEvent.press(screen.getByRole("button", { name: "Stamp, Fourth, page 2, slot 1" }));
     expect(mockPush).toHaveBeenCalledWith({ pathname: "/stamp/[id]", params: { id: "s4" } });
     expect(mockView.open).toBe(true);
     await act(() => mockFocus());
-    expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(2);
+    expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(3);
     expect(screen.getByLabelText("Close passport")).toBeTruthy();
   });
 });

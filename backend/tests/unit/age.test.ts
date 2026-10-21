@@ -23,20 +23,20 @@ describe("ageOn", () => {
   });
 });
 
-describe("isOldEnough (21+, New York today)", () => {
-  it("is true on the 21st birthday and false the day before", () => {
-    expect(isOldEnough("2005-10-02", NOW)).toBe(true);
-    expect(isOldEnough("2005-10-03", NOW)).toBe(false);
-    expect(isOldEnough("2005-10-01", NOW)).toBe(true);
+describe("isOldEnough (13+, New York today)", () => {
+  it("is true on the 13th birthday and false the day before", () => {
+    expect(isOldEnough("2013-10-02", NOW)).toBe(true);
+    expect(isOldEnough("2013-10-03", NOW)).toBe(false);
+    expect(isOldEnough("2013-10-01", NOW)).toBe(true);
   });
   it("handles leap-day birthdays", () => {
-    expect(isOldEnough("2004-02-29", new Date("2025-03-01T17:00:00Z"))).toBe(true);
-    expect(isOldEnough("2008-02-29", new Date("2029-02-28T17:00:00Z"))).toBe(false);
+    expect(isOldEnough("2012-02-29", new Date("2025-03-01T17:00:00Z"))).toBe(true);
+    expect(isOldEnough("2016-02-29", new Date("2029-02-28T17:00:00Z"))).toBe(false);
   });
   it("uses the New York date, not UTC: 11pm in New York is already the next day in UTC", () => {
-    // 2026-10-02 23:30 in New York (EDT) is 2026-10-03 03:30Z. The 21st birthday on the 3rd is not here yet.
-    expect(isOldEnough("2005-10-03", new Date("2026-10-03T03:30:00Z"))).toBe(false);
-    expect(isOldEnough("2005-10-02", new Date("2026-10-03T03:30:00Z"))).toBe(true);
+    // 2026-10-02 23:30 in New York (EDT) is 2026-10-03 03:30Z. The 13th birthday on the 3rd is not here yet.
+    expect(isOldEnough("2013-10-03", new Date("2026-10-03T03:30:00Z"))).toBe(false);
+    expect(isOldEnough("2013-10-02", new Date("2026-10-03T03:30:00Z"))).toBe(true);
   });
   it("refuses future dates, nonsense and absurd ages", () => {
     expect(isOldEnough("2030-01-01", NOW)).toBe(false);

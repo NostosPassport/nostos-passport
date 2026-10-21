@@ -20,6 +20,6 @@ export function FormScreen({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: colors.transparent },
   content: { paddingHorizontal: screenPadding, paddingTop: space.xs, gap: space.xl, paddingBottom: space.xxxl },
 });

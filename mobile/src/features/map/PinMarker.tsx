@@ -1,4 +1,6 @@
 import { StyleSheet, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
+import { type CategoryStampArtwork, CUISINE_PATHS } from "../../../../shared/category-stamp-artwork";
 
 import { StampMark } from "@/features/book/StampMark";
 import type { StampInput } from "@/features/book/stamp-design";
@@ -12,14 +14,14 @@ const DIM = size.vibeDot;
  * A pin on the map. Lit (you've stamped the place): a little brass stamp of that place in a glowing ring. Dim: a small dot.
  * Selected pins are drawn larger by the screen (it passes `selected`); a key change redraws the snapshot the map keeps.
  */
-export function PinMarker({ kind, selected, input }: { kind: PinKind; selected: boolean; input: StampInput }) {
+export function PinMarker({ kind, selected, input, artwork }: { kind: PinKind; selected: boolean; input: StampInput; artwork?: CategoryStampArtwork | null }) {
   if (kind === "dim") {
     return <View style={[styles.dim, selected && styles.dimSelected]} />;
   }
   const box = selected ? Math.round(LIT * 1.25) : LIT;
   return (
-    <View style={[styles.lit, shadows.glow, { width: box, height: box, borderRadius: box / 2 }]}>
-      <StampMark input={input} size={box - size.markerRing * 2} />
+    <View style={[styles.lit, shadows.glow, { width: box, height: box, borderRadius: box / 2, ...(artwork ? { borderColor: artwork.color } : {}) }]}>
+      {artwork ? <Svg width={box - size.markerRing * 5} height={box - size.markerRing * 5} viewBox="0 0 24 24"><Path d={CUISINE_PATHS[artwork.icon]} fill="none" stroke={artwork.color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" /></Svg> : <StampMark input={input} size={box - size.markerRing * 2} />}
     </View>
   );
 }

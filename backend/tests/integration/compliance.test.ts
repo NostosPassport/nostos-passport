@@ -72,13 +72,17 @@ describe("terms acceptance", () => {
 });
 
 describe("geofence-exempt review accounts", () => {
-  it("can stamp outside the geofence and those stamps are marked non-countable", async () => {
+  it("keeps outside stamps unverified and review-account stamps non-countable", async () => {
     const venue = await makeVenue();
     const reviewer = await makeActor({ geofenceExempt: true });
     const normal = await makeActor();
 
-    await expect(makeStamp(normal, venue.id, { at: OUTSIDE })).rejects.toMatchObject({ status: 403 });
+    const normalStamp = await makeStamp(normal, venue.id, { at: OUTSIDE });
+    expect(normalStamp.verified).toBe(false);
+    expect((await prisma.photo.findUniqueOrThrow({ where: { id: normalStamp.id } })).countable).toBe(true);
+
     const stamp = await makeStamp(reviewer, venue.id, { at: OUTSIDE });
+    expect(stamp.verified).toBe(false);
     expect((await prisma.photo.findUniqueOrThrow({ where: { id: stamp.id } })).countable).toBe(false);
   });
 
@@ -94,6 +98,6 @@ describe("geofence-exempt review accounts", () => {
 
     expect((await prisma.photo.findUniqueOrThrow({ where: { id: exemptStamp.id } })).countable).toBe(false);
     expect((await prisma.photo.findUniqueOrThrow({ where: { id: realStamp.id } })).countable).toBe(true);
-    await expect(prisma.photo.update({ where: { id: exemptStamp.id }, data: { countable: true } })).rejects.toThrow(/immutable/);
+    await expect(prisma.photo.update({ where: { id: exemptStamp.id }, data: { countable: true } })).rejects.toThrow(/write-time snapshot/);
   });
 });

@@ -1,10 +1,17 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { ZodTypeAny } from "zod";
+import { z, type ZodTypeAny } from "zod";
 import * as C from "@/contracts/api";
+import * as Collections from "@/contracts/collections";
 
 type Contract = ZodTypeAny | "binary";
+
+const MichelinPreviewResponse = z.object({
+  venueId: z.string(),
+  stars: z.union([z.literal(1), z.literal(2), z.literal(3)]).nullable(),
+  proof: z.string().nullable(),
+}).strict();
 
 const REGISTRY = new Map<string, Contract>([
   ["POST /api/auth/login/start", C.EmailChallengeResponse],
@@ -13,6 +20,14 @@ const REGISTRY = new Map<string, Contract>([
   ["POST /api/auth/signup", C.TokenResponse],
   ["POST /api/auth/logout", C.OkResponse],
   ["POST /api/auth/logout-all", C.LogoutAllResponse],
+  ["GET /api/collections", Collections.CollectionsResponse],
+  ["POST /api/collections", Collections.CollectionResponse],
+  ["GET /api/collections/[id]", Collections.CollectionResponse],
+  ["PATCH /api/collections/[id]", Collections.CollectionResponse],
+  ["DELETE /api/collections/[id]", Collections.DeleteCollectionResponse],
+  ["GET /api/collections/[id]/share", Collections.CollectionShareResponse],
+  ["POST /api/collections/[id]/share", Collections.CollectionShareResponse],
+  ["DELETE /api/collections/[id]/share", Collections.CollectionShareResponse],
   ["GET /api/me", C.MeResponse],
   ["POST /api/me/terms", C.AcceptTermsResponse],
   ["POST /api/me/email/start", C.EmailChallengeResponse],
@@ -27,11 +42,14 @@ const REGISTRY = new Map<string, Contract>([
   ["DELETE /api/me/avatar", C.AvatarResponse],
   ["GET /api/places", C.PlacesResponse],
   ["GET /api/places/[id]", C.PlaceResponse],
+  ["GET /api/places/[id]/michelin", MichelinPreviewResponse],
   ["GET /api/places/nearby", C.NearbyPlacesResponse],
+  ["GET /api/places/search", C.PlacesResponse],
   ["GET /api/places/[id]/mine", C.MyPlacePageResponse],
   ["POST /api/places/[id]/stamps", C.CreateStampResponse],
   ["GET /api/stamps/[id]", C.StampResponse],
   ["PATCH /api/stamps/[id]", C.StampResponse],
+  ["PUT /api/stamps/[id]/collections", Collections.StampCollectionsResponse],
   ["POST /api/stamps/[id]/photos", C.ErrorResponse],
   ["PATCH /api/stamps/[id]/photos", C.StampResponse],
   ["POST /api/stamps/[id]/photos/[photoId]/remove", C.StampResponse],
@@ -39,7 +57,6 @@ const REGISTRY = new Map<string, Contract>([
   ["GET /api/songs/search", C.SongSearchResponse],
   ["GET /api/users/[handle]/stamps", C.UserStampsResponse],
   ["GET /api/users/[handle]/places", C.UserPlacesResponse],
-  ["GET /api/health", C.HealthResponse],
   ["GET /api/cron/maintenance", C.CronResponse],
   ["POST /api/cron/maintenance", C.CronResponse],
   ["GET /api/uploads/[...key]", "binary"],

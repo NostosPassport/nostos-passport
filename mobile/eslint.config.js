@@ -31,7 +31,9 @@ module.exports = defineConfig([
       "src/app/(app)/(tabs)/_layout.tsx",
       "src/app/(app)/(tabs)/passport.tsx",
       "src/app/(app)/stamp/*.tsx",
-      "src/features/map/MapScreen.tsx"
+      "src/features/map/MapScreen.tsx",
+      "src/features/book/CategoryStampMark.tsx",
+      "src/features/map/PinMarker.tsx"
     ],
     rules: { "local/no-raw-design-values": "off" },
   },

@@ -46,9 +46,11 @@ export default async function SharedCollectionPage({ params }: Ctx) {
     const localityKey = stamp.place.area ?? stamp.place.city ?? stamp.place.countryCode ?? stamp.place.country ?? stamp.place.id;
     return {
       id: stamp.id,
+      href: `/c/${encodeURIComponent(token)}/stamp/${encodeURIComponent(stamp.id)}`,
       caption: stamp.caption,
       visitedAt: new Date(stamp.visitedAt).toISOString(),
       verified: stamp.verified,
+      artwork: stamp.artwork,
       page: stamp.page ?? 1,
       slot: stamp.slot ?? 1,
       photos: stamp.photos.map((photo) => ({ id: photo.id, url: photo.url })),

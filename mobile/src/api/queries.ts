@@ -28,6 +28,7 @@ export function useNearbyPlaces(pos: { lat: number; lng: number } | null, radius
     queryFn: () => api.places.nearby({ lat, lng }, radius),
     enabled: pos !== null,
     staleTime: 30_000,
+    retry: false,
     placeholderData: keepPreviousData,
   });
 }

@@ -8,7 +8,7 @@ export default defineConfig({
     projects: [
       {
         plugins: [tsconfigPaths()],
-        test: { name: "unit", include: ["tests/unit/**/*.test.ts"], environment: "node" },
+        test: { name: "unit", include: ["tests/unit/**/*.test.{ts,tsx}"], environment: "node" },
       },
       {
         plugins: [tsconfigPaths()],

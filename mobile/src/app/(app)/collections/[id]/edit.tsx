@@ -60,6 +60,6 @@ export default function EditCollectionScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
-  loading: { flex: 1, backgroundColor: colors.background, padding: space.lg },
+  root: { flex: 1, backgroundColor: colors.transparent },
+  loading: { flex: 1, backgroundColor: colors.transparent, padding: space.lg },
 });

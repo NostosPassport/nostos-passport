@@ -16,7 +16,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { Field, FieldGroup } from "@/components/ui/text-field";
 import { Text } from "@/components/ui/text";
 import { toast } from "@/components/ui/toast";
-import { CAMERA_NOTE, pickFromLibrary, takePhoto } from "@/features/photos/pick";
+import { CAMERA_NOTE, pickManyFromLibrary, takePhoto } from "@/features/photos/pick";
 import { prepareImage } from "@/features/photos/prepare";
 import { saveAcceptedCameraPhoto } from "@/features/photos/save-camera-photo";
 import { CAPTION_MAX, stampChanges } from "@/features/stamps/composer";
@@ -75,14 +75,28 @@ function EditForm({ stamp }: { stamp: StampView }) {
     onSuccess: (res) => { haptics.success(); patchStamp(queryClient, stamp.id, () => res.stamp); },
     onError: (e) => { haptics.warning(); toast.show(errorText(e, "Couldn't remove that photo."), "neutral"); },
   });
+  const reorderPhotos = useMutation({
+    mutationFn: (ids: string[]) => api.stamps.layout(stamp.id, { photos: ids.map((id, position) => ({ id, position })) }),
+    onSuccess: (res) => { haptics.select(); patchStamp(queryClient, stamp.id, () => res.stamp); },
+    onError: (e) => { haptics.warning(); toast.show(errorText(e, "Couldn't reorder those photos."), "neutral"); },
+  });
 
-  const appendUri = async (uri: string, watermark: boolean) => {
-    const prepared = await prepareImage(uri, { watermark });
+  const appendUris = async (items: { uri: string; watermark: boolean }[]) => {
+    const prepared = [];
+    for (const item of items) prepared.push(await prepareImage(item.uri, { watermark: item.watermark }));
     const form = new FormData();
-    form.append("photos", { uri: prepared.uri, name: "photo.jpg", type: "image/jpeg" } as unknown as Blob);
+    for (const [index, photo] of prepared.entries()) form.append("photos", { uri: photo.uri, name: `photo-${index + 1}.jpg`, type: "image/jpeg" } as unknown as Blob);
     const res = await api.upload(`/api/stamps/${encodeURIComponent(stamp.id)}/photos`, StampResponse, form);
     patchStamp(queryClient, stamp.id, () => res.stamp);
-    return prepared.uri;
+    return prepared.map((photo) => photo.uri);
+  };
+
+  const movePhoto = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= stamp.photos.length || reorderPhotos.isPending) return;
+    const photos = [...stamp.photos];
+    [photos[index], photos[target]] = [photos[target]!, photos[index]!];
+    reorderPhotos.mutate(photos.map((photo) => photo.id));
   };
 
   const addPhoto = () => {
@@ -96,15 +110,16 @@ function EditForm({ stamp }: { stamp: StampView }) {
             const result = await takePhoto();
             if (result === "cancelled") return;
             if (typeof result === "string") { toast.show(CAMERA_NOTE[result], "neutral"); return; }
-            const uri = await appendUri(result.uri, true);
-            await saveAcceptedCameraPhoto(uri);
+            const [uri] = await appendUris([{ uri: result.uri, watermark: true }]);
+            if (uri) await saveAcceptedCameraPhoto(uri);
           } else {
-            const picked = await pickFromLibrary();
-            if (!picked) return;
-            await appendUri(picked.uri, false);
+            const remaining = 6 - stamp.photos.length;
+            const picked = await pickManyFromLibrary(remaining);
+            if (!picked.length) return;
+            await appendUris(picked.slice(0, remaining).map((photo) => ({ uri: photo.uri, watermark: false })));
           }
           haptics.success();
-        } catch (e) { haptics.warning(); toast.show(errorText(e, "Couldn't add that photo."), "neutral"); }
+        } catch (e) { haptics.warning(); toast.show(errorText(e, "Couldn't add those photos."), "neutral"); }
         finally { busyRef.current = false; setPhotoBusy(false); }
       })();
     });
@@ -133,16 +148,24 @@ function EditForm({ stamp }: { stamp: StampView }) {
       <View style={styles.photoBlock}>
         <View style={styles.photoHeader}><Text variant="headline">Photos</Text><Text variant="footnote" color="textSecondary">{stamp.photos.length} / 6</Text></View>
         {stamp.photos.length ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoStrip}>
-            {stamp.photos.map((photo) => (
-              <View key={photo.id} style={styles.thumb}>
-                <Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                <Pressable onPress={() => Alert.alert("Remove photo?", "This removes it from the stamp.", [{ text: "Cancel", style: "cancel" }, { text: "Remove", style: "destructive", onPress: () => removePhoto.mutate(photo.id) }])} accessibilityRole="button" accessibilityLabel="Remove photo" style={styles.removePhoto}><Icon name="xmark" color="onAccent" size={16} /></Pressable>
-              </View>
-            ))}
-          </ScrollView>
+          <>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoStrip}>
+              {stamp.photos.map((photo, index) => (
+                <View key={photo.id} style={styles.thumb}>
+                  <Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                  {index === 0 ? <View style={styles.coverBadge}><Text variant="caption" color="onAccent" weight="semibold">COVER</Text></View> : null}
+                  <Pressable onPress={() => Alert.alert("Remove photo?", "This removes it from the stamp.", [{ text: "Cancel", style: "cancel" }, { text: "Remove", style: "destructive", onPress: () => removePhoto.mutate(photo.id) }])} accessibilityRole="button" accessibilityLabel="Remove photo" style={styles.removePhoto}><Icon name="xmark" color="onAccent" size={16} /></Pressable>
+                  <View style={styles.orderControls}>
+                    <Pressable disabled={index === 0 || reorderPhotos.isPending} onPress={() => movePhoto(index, -1)} accessibilityRole="button" accessibilityLabel={`Move photo ${index + 1} earlier`} style={[styles.orderButton, index === 0 && styles.orderDisabled]}><Icon name="chevron.left" color="onAccent" size={15} /></Pressable>
+                    <Pressable disabled={index === stamp.photos.length - 1 || reorderPhotos.isPending} onPress={() => movePhoto(index, 1)} accessibilityRole="button" accessibilityLabel={`Move photo ${index + 1} later`} style={[styles.orderButton, index === stamp.photos.length - 1 && styles.orderDisabled]}><Icon name="chevron.right" color="onAccent" size={15} /></Pressable>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+            <Text variant="footnote" color="textSecondary">The first photo is the stamp cover. Use the arrows to reorder photos.</Text>
+          </>
         ) : <Text variant="callout" color="textSecondary">No photos on this stamp.</Text>}
-        {stamp.photos.length < 6 ? <Button title="Add photo" icon="plus" variant="secondary" onPress={addPhoto} loading={photoBusy} /> : null}
+        {stamp.photos.length < 6 ? <Button title="Add photos" icon="plus" variant="secondary" onPress={addPhoto} loading={photoBusy} /> : null}
       </View>
 
       <FieldGroup footer={`${caption.length}/${CAPTION_MAX}`} errors={[empty ? "Add a photo, caption or song." : null]}>
@@ -161,5 +184,9 @@ const styles = StyleSheet.create({
   photoHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   photoStrip: { gap: space.sm },
   thumb: { width: 112, height: 112, borderRadius: radius.card, overflow: "hidden", backgroundColor: colors.elevated },
+  coverBadge: { position: "absolute", left: 6, top: 6, minHeight: 24, paddingHorizontal: 7, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.scrim },
   removePhoto: { position: "absolute", right: 6, top: 6, width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: colors.scrim },
+  orderControls: { position: "absolute", left: 6, right: 6, bottom: 6, flexDirection: "row", justifyContent: "space-between" },
+  orderButton: { width: 32, height: 30, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.scrim },
+  orderDisabled: { opacity: 0.3 },
 });

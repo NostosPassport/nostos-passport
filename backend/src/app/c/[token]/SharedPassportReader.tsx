@@ -2,12 +2,16 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CategoryStampArtwork as CategoryArtwork } from "@/lib/category-stamp-artwork";
+import { CategoryStampSvg } from "./CategoryStampSvg";
 import type { CSSProperties, PointerEvent as ReactPointerEvent, TransitionEvent as ReactTransitionEvent } from "react";
 
 import {
   PASSPORT_PAGE_ASPECT,
   STAMP_ARTWORK_STYLE,
   STAMP_BOX,
+  footprintOf,
+  placementHeight,
   motifPath,
   ringsFor,
   rosettePath,
@@ -30,12 +34,14 @@ import styles from "./SharedPassportReader.module.css";
 
 export type SharedPassportStamp = {
   id: string;
+  href: string;
   caption: string;
   visitedAt: string;
   verified: boolean;
   page: number;
   slot: number;
   photos: { id: string; url: string }[];
+  artwork?: CategoryArtwork | null;
   song: { title: string; artist: string } | null;
   place: {
     id: string;
@@ -90,6 +96,7 @@ function visitDate(value: string, timeZone: string) {
 }
 
 function StampArtwork({ stamp }: { stamp: SharedPassportStamp }) {
+  if (stamp.artwork) return <CategoryStampSvg artwork={stamp.artwork} name={stamp.place.name} locality={stamp.place.localityName} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} photoUrl={stamp.photos[0]?.url} seed={stamp.place.id} />;
   const input = {
     placeId: stamp.place.id,
     placeName: stamp.place.name,
@@ -220,11 +227,12 @@ function PassportPage({
       {emptyMessage ? <div className={styles.emptyPageLabel}>{emptyMessage}</div> : null}
 
       {stamps.map((stamp) => {
-        const placement = slotPlacement(stamp.id, stamp.slot, PAGE_WIDTH, PAGE_HEIGHT);
+        const placement = slotPlacement(stamp.id, stamp.slot, PAGE_WIDTH, PAGE_HEIGHT, footprintOf(stamp.artwork));
+        const stampHeight = placementHeight(placement);
         const left = ((placement.cx - placement.size / 2) / PAGE_WIDTH) * 100;
-        const top = ((placement.cy - placement.size / 2) / PAGE_HEIGHT) * 100;
+        const top = ((placement.cy - stampHeight / 2) / PAGE_HEIGHT) * 100;
         const width = (placement.size / PAGE_WIDTH) * 100;
-        const height = (placement.size / PAGE_HEIGHT) * 100;
+        const height = (stampHeight / PAGE_HEIGHT) * 100;
         return (
           <button
             key={stamp.id}
@@ -245,7 +253,6 @@ function PassportPage({
             }}
           >
             <StampArtwork stamp={stamp} />
-            {stamp.verified ? <span className={styles.verifiedMark}>N</span> : null}
           </button>
         );
       })}
@@ -277,6 +284,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
   const maxPage = Math.max(2, ...stamps.map((stamp) => stamp.page));
   const totalSpreads = Math.max(1, Math.ceil(maxPage / 2));
   const safeSpread = Math.min(spread, totalSpreads - 1);
+  const openStamp = (stamp: SharedPassportStamp) => window.location.assign(stamp.href);
 
   useEffect(() => {
     if (!selected) return;
@@ -439,7 +447,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
             page={baseLeft}
             side="left"
             stamps={byPage.get(baseLeft) ?? []}
-            onStamp={setSelected}
+            onStamp={openStamp}
             onNavigate={!turn && safeSpread > 0 ? () => animateTo(safeSpread - 1) : undefined}
             emptyMessage={stamps.length === 0 && baseLeft === 1 ? "No stamps in this collection yet." : undefined}
           />
@@ -447,7 +455,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
             page={baseRight}
             side="right"
             stamps={byPage.get(baseRight) ?? []}
-            onStamp={setSelected}
+            onStamp={openStamp}
             onNavigate={!turn && safeSpread < totalSpreads - 1 ? () => animateTo(safeSpread + 1) : undefined}
           />
 
@@ -470,7 +478,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
                   side={turnFront.side}
                   stamps={byPage.get(turnFront.page) ?? []}
                   embedded
-                  onStamp={setSelected}
+                  onStamp={openStamp}
                 />
                 <div className={styles.turnShade} style={{ opacity: flipShade(turn.progress) }} />
               </div>
@@ -480,7 +488,7 @@ export function SharedPassportReader({ collectionName, ownerName, coverColor, st
                   side={turnBack.side}
                   stamps={byPage.get(turnBack.page) ?? []}
                   embedded
-                  onStamp={setSelected}
+                  onStamp={openStamp}
                 />
                 <div className={styles.turnShade} style={{ opacity: flipShade(turn.progress) }} />
               </div>

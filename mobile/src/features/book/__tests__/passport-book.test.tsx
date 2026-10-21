@@ -24,7 +24,8 @@ const ready = (over: Partial<PassportData> = {}): PassportData => ({
   counts: { stamps: 0, places: 0 }, retry: jest.fn(), ...over,
 });
 
-const tapPage=async(x:number)=>{await act(()=>fireGestureHandler(getByGestureTestId("flip-tap"),[{state:State.BEGAN,x,y:15},{state:State.ACTIVE,x,y:15},{state:State.END,x,y:15}]));};
+const tapSingle=async(x:number)=>{await act(()=>fireGestureHandler(getByGestureTestId("single-flip-tap"),[{state:State.BEGAN,x,y:15},{state:State.ACTIVE,x,y:15},{state:State.END,x,y:15}]));};
+const tapSpread=async(x:number)=>{await act(()=>fireGestureHandler(getByGestureTestId("flip-tap"),[{state:State.BEGAN,x,y:15},{state:State.ACTIVE,x,y:15},{state:State.END,x,y:15}]));};
 describe("PassportBook focused reading",()=>{
  beforeEach(()=>{mockPush.mockClear();mockReduced=false;Dimensions.set({window:{width:390,height:844,scale:3,fontScale:1},screen:{width:390,height:844,scale:3,fontScale:1}});});afterEach(()=>jest.restoreAllMocks());
  it("loading and failed fetch never show a model or trap the user",async()=>{
@@ -43,26 +44,43 @@ describe("PassportBook focused reading",()=>{
   expect(screen.queryByLabelText("Next page")).toBeNull();expect(screen.queryByLabelText("Previous page")).toBeNull();expect(screen.queryByLabelText("Index")).toBeNull();
   await fireEvent.press(close);expect(screen.getByLabelText("7 stamps, 5 places")).toBeVisible();
  });
- it("an empty passport holds on the bearer spread instead of adding an empty spread",async()=>{
+ it("an empty phone passport holds on the profile page",async()=>{
   mockData=ready();await render(<PassportBook/>);await fireEvent.press(screen.getByLabelText("Open your passport"));
-  await tapPage(10);await tapPage(300);
+  await tapSingle(10);await tapSingle(300);
   expect(screen.getByLabelText("Passport pages").props.accessibilityValue).toMatchObject({now:1,max:1});
+  expect(screen.queryByLabelText("Nostos. The longing to return home.")).toBeNull();
+  expect(screen.getByText("NOSTOS PASSPORT")).toBeVisible();
   expect(screen.queryByLabelText("Page 1")).toBeNull();expect(screen.getByLabelText("Close passport")).toBeTruthy();
  });
- it.each([false,true])("four stamps: both boundary faces and final right stamp work with Reduce Motion=%s",async(reduced)=>{
+ it.each([false,true])("phone reader shows one portrait page at a time with Reduce Motion=%s",async(reduced)=>{
   mockReduced=reduced;
   mockData=ready({stamps:[stamp("s1",1,1,"First"),stamp("s2",1,2,"Second"),stamp("s3",1,3,"Third"),stamp("s4",2,1,"Fourth")],counts:{stamps:4,places:4}});
   await render(<PassportBook/>);await fireEvent.press(screen.getByLabelText("Open your passport"));
-  expect(screen.getByLabelText("Nostos. The longing to return home.")).toBeVisible();expect(screen.getByText("NOSTOS PASSPORT")).toBeVisible();
-  await tapPage(300);
+  expect(screen.queryByLabelText("Nostos. The longing to return home.")).toBeNull();expect(screen.getByText("NOSTOS PASSPORT")).toBeVisible();
+  expect(screen.getByLabelText("Passport pages").props.accessibilityValue).toMatchObject({now:1,max:3});
+  await tapSingle(300);
   expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(2);
-  expect(screen.getByLabelText("Page 1")).toBeVisible();expect(screen.getByLabelText("Page 2")).toBeVisible();
+  expect(screen.getByLabelText("Page 1")).toBeVisible();expect(screen.queryByLabelText("Page 2")).toBeNull();
+  await tapSingle(300);
+  expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(3);
+  expect(screen.getByLabelText("Page 2")).toBeVisible();expect(screen.queryByLabelText("Page 1")).toBeNull();
   const fourth=screen.getByRole("button",{name:"Stamp, Fourth, page 2, slot 1"});expect(fourth).toBeVisible();await fireEvent.press(fourth);
   expect(mockPush).toHaveBeenCalledWith({pathname:"/stamp/[id]",params:{id:"s4"}});
-  await act(()=>mockFocus());expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(2);
+  await act(()=>mockFocus());expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(3);
   expect(screen.getByLabelText("Page 2")).toBeVisible();
   await fireEvent.press(screen.getByLabelText("Close passport"));await fireEvent.press(screen.getByLabelText("Open your passport"));
+  expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(3);
+  await tapSingle(10);expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(2);
+  expect(screen.getByLabelText("Page 1")).toBeVisible();
+ });
+ it("iPad-sized readers keep the two-page spread and Nostos inside cover",async()=>{
+  Dimensions.set({window:{width:834,height:1194,scale:2,fontScale:1},screen:{width:834,height:1194,scale:2,fontScale:1}});
+  mockData=ready({stamps:[stamp("s1",1,1,"First"),stamp("s2",2,1,"Second")]});
+  await render(<PassportBook/>);await fireEvent.press(screen.getByLabelText("Open your passport"));
+  expect(screen.getByLabelText("Nostos. The longing to return home.")).toBeVisible();expect(screen.getByText("NOSTOS PASSPORT")).toBeVisible();
+  expect(screen.getByLabelText("Passport pages").props.accessibilityValue).toMatchObject({now:1,max:2});
+  await tapSpread(650);
   expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(2);
-  await tapPage(10);expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(1);
+  expect(screen.getByLabelText("Page 1")).toBeVisible();expect(screen.getByLabelText("Page 2")).toBeVisible();
  });
 });

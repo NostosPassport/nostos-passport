@@ -31,6 +31,7 @@ const DETAIL_FIELD_MASK = [
   "primaryType",
   "types",
   "businessStatus",
+  "priceLevel",
 ].join(",");
 
 const addressComponentSchema = z.object({
@@ -39,16 +40,33 @@ const addressComponentSchema = z.object({
   types: z.array(z.string()).optional().default([]),
 }).passthrough();
 
+const timeZoneSchema = z.union([
+  z.string(),
+  z.object({ id: z.string().min(1), version: z.string().optional() }).passthrough(),
+]);
+
+export const googlePriceLevelSchema = z.enum([
+  "PRICE_LEVEL_UNSPECIFIED",
+  "PRICE_LEVEL_FREE",
+  "PRICE_LEVEL_INEXPENSIVE",
+  "PRICE_LEVEL_MODERATE",
+  "PRICE_LEVEL_EXPENSIVE",
+  "PRICE_LEVEL_VERY_EXPENSIVE",
+]);
+export type GooglePriceLevel = z.infer<typeof googlePriceLevelSchema>;
+
+const googlePriceOnlySchema = z.object({ priceLevel: googlePriceLevelSchema.optional() }).passthrough();
 const googlePlaceSchema = z.object({
   id: z.string().min(1),
   displayName: z.object({ text: z.string().min(1) }).passthrough(),
   formattedAddress: z.string().optional(),
   location: z.object({ latitude: z.number(), longitude: z.number() }).passthrough(),
   addressComponents: z.array(addressComponentSchema).optional().default([]),
-  timeZone: z.string().optional(),
+  timeZone: timeZoneSchema.optional(),
   primaryType: z.string().optional(),
   types: z.array(z.string()).optional().default([]),
   businessStatus: z.string().optional(),
+  priceLevel: googlePriceLevelSchema.optional(),
 }).passthrough();
 
 const googleListSchema = z.object({ places: z.array(googlePlaceSchema).optional().default([]) }).passthrough();
@@ -73,6 +91,7 @@ export type GooglePlace = PlaceLocality & {
   primaryType: string | null;
   types: string[];
   businessStatus: string | null;
+  priceLevel: GooglePriceLevel | null;
   category: "restaurant" | "bar";
   cuisines: string[];
 };
@@ -91,6 +110,9 @@ const BAR_TYPES = new Set([
   "snack_bar",
   "sports_bar",
   "wine_bar",
+  "night_club",
+  "nightclub",
+  "dance_club",
 ]);
 
 const TYPE_LABELS: Record<string, string> = {
@@ -208,6 +230,7 @@ function normalize(raw: z.infer<typeof googlePlaceSchema>): GooglePlace | null {
   const primaryType = raw.primaryType ?? null;
   const category = categoryFor(primaryType, raw.types);
   if (!category) return null;
+  const timeZone = typeof raw.timeZone === "string" ? raw.timeZone : raw.timeZone?.id;
   return {
     googlePlaceId: raw.id,
     name: raw.displayName.text.trim().slice(0, 160),
@@ -215,10 +238,11 @@ function normalize(raw: z.infer<typeof googlePlaceSchema>): GooglePlace | null {
     lat: raw.location.latitude,
     lng: raw.location.longitude,
     ...localityFromAddressComponents(raw.addressComponents),
-    timeZone: raw.timeZone?.trim() || "UTC",
+    timeZone: timeZone?.trim() || "UTC",
     primaryType,
     types: [...new Set(raw.types)].slice(0, 32),
     businessStatus: raw.businessStatus ?? null,
+    priceLevel: raw.priceLevel ?? null,
     category,
     cuisines: cuisineTags(primaryType, raw.types),
   };
@@ -304,6 +328,18 @@ export async function googleTextSearch(
     fetchImpl,
   );
   return parseList(body);
+}
+
+export async function googlePlacePriceLevel(placeId: string, fetchImpl: typeof fetch = fetch): Promise<GooglePriceLevel | null> {
+  const body = await googleFetch(
+    `${PLACE_DETAILS_URL}/${encodeURIComponent(placeId)}`,
+    { method: "GET" },
+    "priceLevel",
+    fetchImpl,
+  );
+  const parsed = googlePriceOnlySchema.safeParse(body);
+  if (!parsed.success) throw new ServiceError(503, "places_bad_response", "Place price returned something unexpected.");
+  return parsed.data.priceLevel ?? null;
 }
 
 export async function googlePlaceDetails(placeId: string, fetchImpl: typeof fetch = fetch): Promise<GooglePlace> {

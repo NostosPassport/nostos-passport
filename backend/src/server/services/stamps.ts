@@ -13,6 +13,8 @@ import { assertCanEditOwnContent, requireSignedIn } from "@/server/permissions";
 import { consumeRate } from "@/server/rate-limit";
 import { lockAndCheckCooldown } from "@/server/services/geofence";
 import { processImage } from "@/server/services/image";
+import { cachedGooglePrices } from "@/server/services/google-price-cache";
+import { resolveCategoryStamp } from "@/lib/category-stamp-artwork";
 
 export const CAPTION_MAX = 280;
 export const STAMPS_PAGE = 30;
@@ -86,6 +88,7 @@ type StampRow = {
   venue: {
     id: string; slug: string; name: string;
     area: string | null; city: string | null; region: string | null; country: string | null; countryCode: string | null; timeZone: string;
+    category: string | null; cuisines: string[]; googlePrimaryType: string | null; michelinStars: number | null;
   };
   photos: { id: string; storageKey: string; position: number; x: number | null; y: number | null; rotation: number | null }[];
 };
@@ -94,7 +97,7 @@ const stampSelect = {
   id: true, userId: true, caption: true, songTitle: true, songArtist: true, songArtUrl: true, songSourceId: true,
   createdAt: true, visitedAt: true, verifiedAt: true, editedAt: true, removedAt: true,
   user: { select: { deletedAt: true } },
-  venue: { select: { id: true, slug: true, name: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true } },
+  venue: { select: { id: true, slug: true, name: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true, category: true, cuisines: true, googlePrimaryType: true, michelinStars: true } },
   photos: { where: { removedAt: null }, orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }], select: { id: true, storageKey: true, position: true, x: true, y: true, rotation: true } },
 };
 
@@ -116,30 +119,41 @@ async function ordinals(db: Db, rows: readonly StampRow[]) {
 
 async function toStampViews(db: Db, rows: readonly StampRow[], now: Date) {
   const places = await ordinals(db, rows);
-  return Promise.all(rows.map(async (r) => ({
-    id: r.id,
-    photoUrl: r.photos[0] ? await uploadUrl(r.photos[0].storageKey, now) : null,
-    photos: await Promise.all(r.photos.map(async (p) => ({ id: p.id, url: await uploadUrl(p.storageKey, now), position: p.position, x: p.x, y: p.y, rotation: p.rotation }))),
-    caption: r.caption,
-    song: r.songTitle ? { title: r.songTitle, artist: r.songArtist!, artUrl: r.songArtUrl, sourceId: r.songSourceId } : null,
-    ...(places.has(r.id) ? pageAndSlot(places.get(r.id)!) : { page: null, slot: null }),
-    createdAt: r.createdAt,
-    visitedAt: r.visitedAt,
-    verifiedAt: r.verifiedAt,
-    verified: r.verifiedAt !== null,
-    editedAt: r.editedAt,
-    place: {
+  const prices = await cachedGooglePrices(db, rows.map((r) => r.venue.id));
+  return Promise.all(rows.map(async (r) => {
+    const artwork = resolveCategoryStamp({
       id: r.venue.id,
-      slug: r.venue.slug,
-      name: r.venue.name,
-      area: r.venue.area,
-      city: r.venue.city,
-      region: r.venue.region,
-      country: r.venue.country,
-      countryCode: r.venue.countryCode,
-      timeZone: r.venue.timeZone,
-    },
-  })));
+      category: r.venue.category,
+      cuisines: r.venue.cuisines,
+      primaryType: r.venue.googlePrimaryType,
+    });
+    const michelinStars = r.venue.michelinStars === 1 || r.venue.michelinStars === 2 || r.venue.michelinStars === 3 ? r.venue.michelinStars : null;
+    return {
+      id: r.id,
+      photoUrl: r.photos[0] ? await uploadUrl(r.photos[0].storageKey, now) : null,
+      artwork: artwork ? { ...artwork, priceTier: prices.get(r.venue.id) ?? null, michelinStars } : null,
+      photos: await Promise.all(r.photos.map(async (p) => ({ id: p.id, url: await uploadUrl(p.storageKey, now), position: p.position, x: p.x, y: p.y, rotation: p.rotation }))),
+      caption: r.caption,
+      song: r.songTitle ? { title: r.songTitle, artist: r.songArtist!, artUrl: r.songArtUrl, sourceId: r.songSourceId } : null,
+      ...(places.has(r.id) ? pageAndSlot(places.get(r.id)!) : { page: null, slot: null }),
+      createdAt: r.createdAt,
+      visitedAt: r.visitedAt,
+      verifiedAt: r.verifiedAt,
+      verified: r.verifiedAt !== null,
+      editedAt: r.editedAt,
+      place: {
+        id: r.venue.id,
+        slug: r.venue.slug,
+        name: r.venue.name,
+        area: r.venue.area,
+        city: r.venue.city,
+        region: r.venue.region,
+        country: r.venue.country,
+        countryCode: r.venue.countryCode,
+        timeZone: r.venue.timeZone,
+      },
+    };
+  }));
 }
 
 export async function createStamp(db: Db, actor: Actor | null, venueId: string, input: CreateStampInput, now = new Date(), storage: BlobStorage = getStorage()) {

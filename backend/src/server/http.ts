@@ -84,6 +84,7 @@ export function route<C>(handler: Handler<C>): Handler<C> {
 
 export function errorResponse(err: unknown): Response {
   if (err instanceof ServiceError) {
+    if (err.status >= 500) console.error("[api] service error", { status: err.status, code: err.code, message: err.message });
     const headers: Record<string, string> = {};
     if (err.code === "invalid_token") headers["www-authenticate"] = 'Bearer error="invalid_token"';
     else if (err.status === 401) headers["www-authenticate"] = 'Bearer realm="nostos"';

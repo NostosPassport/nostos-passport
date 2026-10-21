@@ -24,21 +24,57 @@ describe("multi-photo stamps", () => {
     await expect(addStampPhotos(prisma, me, stamp.id, many(1))).rejects.toMatchObject({ status: 400 });
     await expect(
       prisma.$transaction(async (tx) => {
-        const parent = await tx.photo.create({ data: { userId: me.userId, venueId: venue.id, caption: "batch", ...INSIDE } });
+        const parent = await tx.photo.create({ data: { userId: me.userId, venueId: venue.id, caption: "batch" } });
         for (let i = 0; i < 7; i++) await tx.stampPhoto.create({ data: { stampId: parent.id, storageKey: `photos/limit${i}.png`, mimeType: "image/png", position: i % 6 } });
       }),
     ).rejects.toThrow(/at most 6 photos/);
     await expect(prisma.stampPhoto.create({ data: { stampId: stamp.id, storageKey: "photos/x8.png", mimeType: "image/png", position: 6 } })).rejects.toThrow();
   });
 
-  it("refuses later additions and keeps original positions after a removal", async () => {
+  it("allows later additions up to the cap and keeps original positions after a removal", async () => {
     const me = await makeActor();
     const stamp = await stampWith(me, (await makeVenue()).id, 3);
     const removed = await removeStampPhoto(prisma, me, stamp.id, stamp.photos[1]!.id);
     expect(removed.stamp.photos.map((p) => p.position)).toEqual([0, 2]);
-    await expect(addStampPhotos(prisma, me, stamp.id, many(2))).rejects.toMatchObject({ status: 400 });
+    expect(removed.stamp.photoUrl).toBe(removed.stamp.photos[0]!.url);
+    // Photos may be added after creation, up to the 6-photo cap; the freed slot is reused and survivors keep their positions.
+    await expect(addStampPhotos(prisma, me, stamp.id, many(5))).rejects.toMatchObject({ status: 400 });
     expect((await getStamp(prisma, me, stamp.id)).stamp.photos.map((p) => p.position)).toEqual([0, 2]);
+    const added = await addStampPhotos(prisma, me, stamp.id, many(1));
+    expect(added.stamp.photos.map((p) => p.position)).toEqual([0, 1, 2]);
     expect(removed.stamp.editedAt).not.toBeNull();
+  });
+
+  it("moves the first photograph later and immediately changes the thumbnail", async () => {
+    const me=await makeActor();
+    const stamp=await stampWith(me,(await makeVenue()).id,3);
+    const [a,b,c]=stamp.photos;
+    const result=await setPhotoLayout(prisma,me,stamp.id,{
+      photos:[{id:a!.id,position:2},{id:b!.id,position:0},{id:c!.id,position:1}],
+    });
+    expect(result.stamp.photos.map(p=>p.id)).toEqual([b!.id,c!.id,a!.id]);
+    expect(result.stamp.photoUrl).toBe(result.stamp.photos[0]!.url);
+    const saved=await getStamp(prisma,me,stamp.id);
+    expect(saved.stamp.photos[0]!.id).toBe(b!.id);
+    expect(saved.stamp.photoUrl).toBe(saved.stamp.photos[0]!.url);
+  });
+
+  it("removes the first photo, shows the next one, then allows caption-only no-photo stamps", async () => {
+    const me=await makeActor();
+    const stamp=await createStamp(prisma,me,(await makeVenue()).id,{
+      photos:many(2),meta:{caption:"A visit worth remembering",lat:String(INSIDE.lat),lng:String(INSIDE.lng)},
+    });
+    const [first,second]=stamp.photos;
+    const changed=await removeStampPhoto(prisma,me,stamp.id,first!.id);
+    expect(changed.stamp.photos.map(p=>p.id)).toEqual([second!.id]);
+    expect(changed.stamp.photoUrl).toBe(changed.stamp.photos[0]!.url);
+    const empty=await removeStampPhoto(prisma,me,stamp.id,second!.id);
+    expect(empty.stamp.photos).toEqual([]);
+    expect(empty.stamp.photoUrl).toBeNull();
+    const saved=await getStamp(prisma,me,stamp.id);
+    expect(saved.stamp.photos).toEqual([]);
+    expect(saved.stamp.photoUrl).toBeNull();
+    expect(saved.stamp.caption).toBe("A visit worth remembering");
   });
 
   it("strips EXIF and GPS from every photo", async () => {
@@ -68,6 +104,7 @@ describe("multi-photo stamps", () => {
       photos: [{ id: a!.id, x: 0.2, y: 0.3, rotation: 5 }, { id: b!.id, position: 2 }, { id: c!.id, position: 1 }],
     });
     expect(out.stamp.photos.map((p) => p.id)).toEqual([a!.id, c!.id, b!.id]);
+    expect(out.stamp.photoUrl).toBe(out.stamp.photos[0]!.url);
     expect(out.stamp.photos[0]).toMatchObject({ x: 0.2, y: 0.3, rotation: 5 });
     expect(out.stamp.photos.map((p) => p.url.split("?")[0]).sort()).toEqual(stamp.photos.map((p) => p.url.split("?")[0]).sort());
     expect((await getStamp(prisma, me, stamp.id)).stamp.photos[0]).toMatchObject({ x: 0.2, y: 0.3, rotation: 5 });

@@ -41,7 +41,7 @@ export default function CollectionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: colors.transparent },
   content: { padding: space.lg, paddingBottom: space.xxxl, gap: space.lg },
   list: { gap: space.sm },
   row: { minHeight: size.listRow, flexDirection: "row", alignItems: "center", gap: space.md, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline, paddingVertical: space.sm },

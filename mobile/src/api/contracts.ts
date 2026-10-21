@@ -89,9 +89,21 @@ export const AppleArtUrl = z.string().trim().max(500).refine((u) => {
 }, "Song art must be an https link from Apple's artwork servers");
 export const Song = z.object({ title: z.string(), artist: z.string(), artUrl: z.string().nullable(), sourceId: z.string().nullable() }).strict();
 export const StampPhotoView = z.object({ id: z.string(), url: z.string(), position: z.number().int().min(0).max(5), x: z.number().nullable(), y: z.number().nullable(), rotation: z.number().nullable() }).strict();
+export const CategoryStampArtwork = z.object({
+  version: z.literal("category-ink/1"),
+  kind: z.enum(["restaurant", "bar"]),
+  cuisine: z.string(),
+  label: z.string(),
+  color: z.string(),
+  icon: z.enum(["croissant", "burger", "tapas", "mezze", "restaurant", "pasta", "taco", "sushi", "noodles", "curry", "pizza", "bread", "fish", "leaf", "bowl", "grill", "glass", "music"]),
+  priceTier: z.enum(["$", "$$", "$$$", "$$$$"]).nullable().optional(),
+  michelinStars: z.union([z.literal(1), z.literal(2), z.literal(3)]).nullable().optional(),
+}).strict();
+export type CategoryStampArtwork = z.infer<typeof CategoryStampArtwork>;
 export const StampView = z.object({
   id: z.string(),
   photoUrl: z.string().nullable(),
+  artwork: CategoryStampArtwork.nullable().optional(),
   photos: z.array(StampPhotoView).max(6),
   caption: z.string(),
   song: Song.nullable(),

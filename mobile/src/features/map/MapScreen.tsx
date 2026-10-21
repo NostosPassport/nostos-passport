@@ -14,10 +14,11 @@ import { localityKey, localityLabel } from "@/lib/place";
 import { colors } from "@/theme";
 import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
+import { resolveCategoryStamp } from "../../../../shared/category-stamp-artwork";
 
 type MapFilter = "all" | "restaurant" | "bar";
 
-const BAR_TYPES = new Set(["bar", "bar_and_grill", "beer_garden", "brewpub", "cocktail_bar", "gastropub", "hookah_bar", "irish_pub", "lounge_bar", "pub", "snack_bar", "sports_bar", "wine_bar"]);
+const BAR_TYPES = new Set(["bar", "bar_and_grill", "beer_garden", "brewpub", "cocktail_bar", "gastropub", "hookah_bar", "irish_pub", "lounge_bar", "pub", "snack_bar", "sports_bar", "wine_bar","night_club","nightclub","dance_club"]);
 
 function effectiveCategory(place: Place): Exclude<MapFilter, "all"> | null {
   if (place.category) return place.category;
@@ -42,6 +43,7 @@ export function MapScreen() {
     () => new Map((storedPlaces.data?.places ?? []).map((place) => [place.id, effectiveCategory(place)] as const)),
     [storedPlaces.data?.places],
   );
+  const artworkByPlace = useMemo(() => new Map((storedPlaces.data?.places ?? []).map(place => [place.id, resolveCategoryStamp(place)] as const)), [storedPlaces.data?.places]);
   const filteredVisited = useMemo(
     () => filter === "all" ? visited : visited.filter(({ place }) => categoryByPlace.get(place.id) === filter),
     [categoryByPlace, filter, visited],
@@ -112,7 +114,7 @@ export function MapScreen() {
           >
             {filteredVisited.map(({ place, latestStamp }) => (
               <Marker
-                key={place.id}
+                key={`${place.id}-${artworkByPlace.get(place.id)?.icon ?? "legacy"}`}
                 coordinate={{ latitude: place.lat, longitude: place.lng }}
                 onPress={() => router.push({ pathname: "/stamp/[id]", params: { id: latestStamp.id } })}
                 tracksViewChanges={false}
@@ -120,6 +122,7 @@ export function MapScreen() {
                 accessibilityLabel={`${place.name}, open most recent stamp`}
               >
                 <PinMarker
+                  artwork={artworkByPlace.get(place.id)}
                   kind="lit"
                   selected={false}
                   input={{
