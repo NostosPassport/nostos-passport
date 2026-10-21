@@ -143,7 +143,6 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
     else if (!isOpen) { readerRequested.current = false; setModelClosing(false); }
   };
   const byPage = useMemo(() => groupByPage(data.stamps), [data.stamps]);
-  const pinnedIds = useMemo(() => data.pins.map((s) => s.id), [data.pins]);
   const stampTargets = useMemo(() => {
     if (compactReader) {
       if (current === 0) return [];
@@ -164,11 +163,11 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
   const renderFace = (face: PageFace, side: "left" | "right") => {
     if (face.kind === "inside-cover") return <InsideCover width={book.pageWidth} height={book.pageHeight} />;
     if (face.kind === "bearer") return bearerPage;
-    return <PageView page={face.page} side={side} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(face.page) ?? []} pinnedIds={pinnedIds} onStampPress={(s) => openStamp(s.id)} />;
+    return <PageView page={face.page} side={side} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(face.page) ?? []} onStampPress={(s) => openStamp(s.id)} />;
   };
   const renderSinglePage = (index: number) => {
     if (index === 0) return bearerPage;
-    return <PageView page={index} side={index % 2 === 1 ? "left" : "right"} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(index) ?? []} pinnedIds={pinnedIds} onStampPress={(s) => openStamp(s.id)} />;
+    return <PageView page={index} side={index % 2 === 1 ? "left" : "right"} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(index) ?? []} onStampPress={(s) => openStamp(s.id)} />;
   };
   if (data.status === "error") return <View style={styles.center}><InlineError message="Couldn't open your passport. Your connection may be down." onRetry={data.retry} /></View>;
   if (data.status === "pending") return <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Opening your passport"><Skeleton width={width * .8} height={height * .5} /></View>;
@@ -195,7 +194,7 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.transparent },
+  root: { flex: 1, backgroundColor: colors.background },
   home: { flex: 1, paddingHorizontal: space.md, paddingBottom: space.xs, alignItems: "center" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: space.lg },
   model: { flex: 1, width: "100%", minHeight: 0 },
