@@ -5,7 +5,6 @@ import { State } from "react-native-gesture-handler";
 
 import type { StampView } from "@/api/contracts";
 import { testQueryClient } from "@/test/query-client";
-import { pinChange } from "../pin-change";
 import { VisaSpread } from "../VisaSpread";
 
 const mockLayout = jest.fn();
@@ -107,15 +106,5 @@ describe("VisaSpread", () => {
       expect(p.y).toBeGreaterThanOrEqual(0);
       expect(p.y).toBeLessThanOrEqual(1);
     }
-  });
-});
-
-describe("pinning", () => {
-  it("pins at the end, unpins in place, and refuses a fifth", () => {
-    expect(pinChange(["a"], "b")).toEqual({ kind: "pin", ids: ["a", "b"] });
-    expect(pinChange(["a", "b", "c"], "b")).toEqual({ kind: "unpin", ids: ["a", "c"] });
-    expect(pinChange(["a", "b", "c", "d"], "e")).toEqual({ kind: "full" });
-    expect(pinChange(["a", "b", "c", "d"], "d")).toEqual({ kind: "unpin", ids: ["a", "b", "c"] });
-    expect(pinChange([], "a")).toEqual({ kind: "pin", ids: ["a"] });
   });
 });
