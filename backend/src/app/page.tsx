@@ -7,21 +7,21 @@ import styles from "./LandingPage.module.css";
 const SAMPLE_STAMPS = [
   {
     name: "Trattoria Sostanza",
-    locality: "Florence, Italy",
+    locality: "Florence",
     visitedAt: "2026-06-18T19:30:00.000Z",
     timeZone: "Europe/Rome",
     artwork: { version: "category-ink/1" as const, kind: "restaurant" as const, cuisine: "italian", label: "ITALIAN", color: "#143B2B", icon: "pasta" as const },
   },
   {
     name: "Sunday Brunch",
-    locality: "Paris, France",
+    locality: "Paris",
     visitedAt: "2026-09-20T15:00:00.000Z",
     timeZone: "Europe/Paris",
     artwork: { version: "category-ink/1" as const, kind: "restaurant" as const, cuisine: "french", label: "FRENCH", color: "#385478", icon: "croissant" as const },
   },
   {
     name: "Nightcap",
-    locality: "Lisbon, Portugal",
+    locality: "Lisbon",
     visitedAt: "2026-10-03T02:15:00.000Z",
     timeZone: "Europe/Lisbon",
     artwork: { version: "category-ink/1" as const, kind: "bar" as const, cuisine: "bar", label: "BAR · CLUB", color: "#7C1030", icon: "glass" as const },
