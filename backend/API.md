@@ -2,7 +2,7 @@
 
 The Zod schemas in [`src/contracts/api.ts`](src/contracts/api.ts) and [`src/contracts/collections.ts`](src/contracts/collections.ts) are the API source of truth. The mobile app keeps matching contract copies under `mobile/src/api/`, and contract changes must remain synchronized.
 
-Nostos is private by default. A signed-in account can read and mutate its own passport, stamps, pins, place history, profile, and collections. A user-created collection may be explicitly shared through the dedicated share endpoints; the resulting signed web link exposes only that collection in a read-only view. The master Passport cannot be shared. There is no feed, follow graph, likes, people search, public/private passport mode, reporting, moderation, or staff-role API.
+Nostos is private by default. A signed-in account can read and mutate its own passport, stamps, place history, profile, and collections. A user-created collection may be explicitly shared through the dedicated share endpoints; the resulting signed web link exposes only that collection in a read-only view. The master Passport cannot be shared. There is no feed, follow graph, likes, people search, public/private passport mode, reporting, moderation, or staff-role API.
 
 A **stamp** is one visit to a **place**. It can contain up to six photos, a caption, a song, or any combination of those, with at least one kind of content. In the database, stamps remain rows in `photo` and places remain rows in `venue` for migration continuity.
 
@@ -73,8 +73,6 @@ When `GET /api/places` returns non-null `attribution`, display the supplied Open
 | `PATCH /api/me/profile` | `ProfileSettingsRequest` | `ProfileSettingsResponse` |
 | `POST /api/me/avatar` | multipart `photo` | `AvatarResponse` |
 | `DELETE /api/me/avatar` | none | `AvatarResponse` |
-| `GET /api/me/pins` | none | `PinsResponse` |
-| `PUT /api/me/pins` | `PinsRequest` | `PinsResponse` |
 
 Account deletion requires a fresh email challenge for the account's current email. It revokes sessions, anonymizes identity fields, clears profile media, marks live stamps removed, disables access to shared collections, and deletes stored photo/avatar files.
 
