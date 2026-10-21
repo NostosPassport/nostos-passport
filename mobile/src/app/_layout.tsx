@@ -6,6 +6,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
 import { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -20,6 +21,7 @@ import { initErrorReporting } from "@/lib/report-error";
 import { colors } from "@/theme";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+void SystemUI.setBackgroundColorAsync(colors.background).catch(() => undefined);
 initErrorReporting();
 
 export default function RootLayout() {
