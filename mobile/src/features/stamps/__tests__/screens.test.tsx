@@ -24,14 +24,12 @@ jest.mock("expo-router", () => ({
   useFocusEffect: jest.fn(),
 }));
 jest.mock("@/api/queries", () => ({
-  qk: jest.requireActual("@/api/keys").qk,
   useStamp: () => mockStamp,
-  usePins: () => ({ data: { stamps: [] } }),
   useSongSearch: (query: string) => { mockSongQueries.push(query); return mockSongs; },
 }));
 jest.mock("@/api", () => {
   const client = jest.requireActual("@/api/client");
-  return { api: { pins: { set: jest.fn() }, stamps: { remove: jest.fn() } }, mediaUrl: (u: string) => u, ApiError: client.ApiError, errorText: client.errorText };
+  return { api: { stamps: { remove: jest.fn() } }, mediaUrl: (u: string) => u, ApiError: client.ApiError, errorText: client.errorText };
 });
 
 const stamp: StampView = {
@@ -81,14 +79,13 @@ describe("Stamp detail", () => {
     expect(screen.getByText("hello there")).toBeTruthy();
     expect(screen.getByText("David Bowie")).toBeTruthy();
     expect(screen.getByText("EAST VILLAGE")).toBeTruthy();
-    expect(screen.getByText("VISIT VERIFIED")).toBeTruthy();
-    expect(screen.getByText(/confirmed this device was near the venue/)).toBeTruthy();
+    expect(screen.getByText("LOCATION VERIFIED BY NOSTOS")).toBeTruthy();
   });
 
   it("shows unverified only as fine-print metadata", async () => {
     mockStamp = { data: { stamp: { ...stamp, verified: false, verifiedAt: null } } };
     await wrap(<StampDetail />);
-    expect(screen.queryByText("VISIT VERIFIED")).toBeNull();
+    expect(screen.queryByText("LOCATION VERIFIED BY NOSTOS")).toBeNull();
     expect(screen.getByText("VISIT NOT LOCATION VERIFIED")).toBeTruthy();
   });
 
