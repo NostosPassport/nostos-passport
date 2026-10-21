@@ -44,7 +44,6 @@ model User {
   sessions    Session[]
   photos      Photo[]
   rateEvents  RateEvent[]
-  pinned      PinnedStamp[]
   collections Collection[]
 
   @@map("app_user")
@@ -138,7 +137,6 @@ model Photo {
   user                User      @relation(fields: [userId], references: [id])
   venue               Venue     @relation(fields: [venueId], references: [id])
   photos              StampPhoto[]
-  pins                PinnedStamp[]
   collections         CollectionStamp[]
 
   @@index([venueId, createdAt])
@@ -202,19 +200,6 @@ model StampPhoto {
 
   @@index([stampId, position])
   @@map("stamp_photo")
-}
-
-model PinnedStamp {
-  userId   String   @map("user_id")
-  stampId  String   @map("stamp_id")
-  position Int      @db.SmallInt
-  pinnedAt DateTime @default(now()) @map("pinned_at") @db.Timestamptz(3)
-  user     User     @relation(fields: [userId], references: [id])
-  stamp    Photo    @relation(fields: [stampId], references: [id])
-
-  @@id([userId, stampId])
-  @@unique([userId, position])
-  @@map("pinned_stamp")
 }
 
 model RateEvent {
