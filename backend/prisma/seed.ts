@@ -12,7 +12,6 @@ import { CAPTIONS, PEOPLE, PLACES, SONGS } from "./seed-data";
 const TABLES = [
   "rate_event",
   "login_attempt",
-  "pinned_stamp",
   "stamp_photo",
   "photo",
   "venue",
