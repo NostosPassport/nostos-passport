@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import type { StampView } from "@/api/contracts";
-import { useMe, usePins, useUserStamps } from "@/api/queries";
+import { useMe, useUserStamps } from "@/api/queries";
 
 export type PassportData = {
   status: "pending" | "error" | "ready";
@@ -11,7 +11,6 @@ export type PassportData = {
   bio: string;
   memberSince: string;
   stamps: StampView[];
-  pins: StampView[];
   counts: { stamps: number; places: number; neighborhoods?: number };
   retry: () => void;
 };
@@ -20,7 +19,6 @@ export function usePassport(): PassportData {
   const me = useMe();
   const handle = me.data?.user.handle ?? "";
   const stamps = useUserStamps(handle, handle !== "");
-  const pins = usePins();
 
   useEffect(() => {
     if (stamps.hasNextPage && !stamps.isFetchingNextPage && !stamps.isFetchNextPageError) void stamps.fetchNextPage();
@@ -38,12 +36,10 @@ export function usePassport(): PassportData {
     bio: me.data?.user.bio ?? "",
     memberSince: me.data?.user.memberSince ?? "",
     stamps: flat,
-    pins: pins.data?.stamps ?? [],
     counts: { stamps: flat.length, places: uniquePlaces },
     retry: () => {
       void me.refetch();
       void stamps.refetch();
-      void pins.refetch();
     },
   };
 }
