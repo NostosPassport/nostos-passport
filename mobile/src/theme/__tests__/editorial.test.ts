@@ -34,7 +34,7 @@ describe("the Editorial palette", () => {
     ]);
     expect(editorial.name).toBe("Editorial");
     expect(colors.background).toBe("#F3EFE5");
-    expect(colors.surface).toBe("#F7F4EE");
+    expect(colors.surface).toBe("#F3EFE5");
   });
 
   it("keeps every literal inside the approved palette", () => {
