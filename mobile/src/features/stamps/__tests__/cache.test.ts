@@ -28,5 +28,6 @@ describe("stamp cache", () => {
       { id: "d", page: 1, slot: 3 },
       { id: "e", page: 2, slot: 1 },
     ]);
+    client.clear();
   });
 });
