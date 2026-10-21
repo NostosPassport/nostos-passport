@@ -10,7 +10,7 @@ The production app centers on three tabs:
 - Stamp
 - Map
 
-Feed and Activity routes may remain in the source behind the social feature flag, but they are not part of the current personal product.
+The Passport also provides a stamp gallery for scanning all visits in a single newest-first list with category filters.
 
 ## Stamp photo flow
 
@@ -29,7 +29,7 @@ Do not restore the historical `CameraView`/custom-shutter implementation unless 
 
 Only Figma pages **9 and 10** are current. Earlier pages are historical.
 
-The active native theme is the editorial ivory/electric-blue system. The file `src/theme/midnight.ts` retains an old filename and token names for compatibility, but its current values are editorial.
+The active native theme is the editorial cream/electric-blue system implemented in `src/theme/editorial.ts`. The default app background is `#F3EFE5`, raised paper is `#F7F4EE`, and the primary accent is `#123BFF`.
 
 ## Run
 
