@@ -30,7 +30,7 @@ The default branch is `main`. Do not treat old `build`, `build-codex`, local che
 
 Only Figma pages **9 and 10** are current design references. Earlier Figma pages and the old black/silver and black/brass directions are historical. See `DESIGN.md` and `design/editorial/CURRENT-SCOPE.md`.
 
-The current app theme is the ivory/electric-blue editorial system. The historical module name `mobile/src/theme/midnight.ts` is intentionally retained while screens migrate.
+The current app theme is the cream/electric-blue editorial system implemented in `mobile/src/theme/editorial.ts`. The app background is warm cream `#F3EFE5`, raised paper is `#F7F4EE`, and the primary accent is `#123BFF`.
 
 ## Run locally
 
