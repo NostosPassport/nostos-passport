@@ -6,7 +6,8 @@ This file contains the current mobile decisions. Older session-specific decision
 
 - Nostos is currently a personal, owner-only product.
 - Signed-out users sign in or create an account. The old `Look around first` guest preview is removed from scope.
-- Production navigation is Passport, Stamp, and Map. Social Feed/Activity code may remain behind a feature flag but is not part of the current personal experience.
+- Production navigation is Passport, Stamp, and Map. The Passport also exposes the master stamp gallery.
+- Pinned stamps are removed from the product and active architecture.
 
 ## Photo flow
 
@@ -14,8 +15,7 @@ This file contains the current mobile decisions. Older session-specific decision
 - `stamp/camera.tsx` is a photo manager, not a live custom camera.
 - Take Photo launches the native iOS camera through `expo-image-picker`.
 - Choose from Photo Library is supported.
-- Library selections are validated locally using available source, timestamp, and location metadata plus the selected stamp/place context.
-- Screenshots and clearly incompatible library photos are rejected before being added to the draft.
+- Photo Library images are memories attached to the visit and are not rejected based on EXIF GPS, timestamp, source application, screenshot status, or editing software.
 - Accepted images are prepared for upload and EXIF/GPS is stripped from the uploaded representation.
 - Camera captures receive the Nostos watermark.
 - The app attempts to save an accepted camera capture to Photos using add-only permission; failure to save the extra copy does not remove the draft photo.
@@ -26,13 +26,14 @@ This file contains the current mobile decisions. Older session-specific decision
 
 - Only Figma pages 9 and 10 are current design authority.
 - Earlier black/silver and black/brass work is historical.
-- The active design language is editorial ivory paper, dark ink, and electric blue.
-- `src/theme/midnight.ts` keeps historical naming for import compatibility while exporting current Editorial values.
+- The active design language is editorial cream paper, dark ink, and electric blue.
+- `src/theme/editorial.ts` is the current theme module.
+- The default app background is `#F3EFE5`; lighter raised paper is `#F7F4EE`; electric blue is `#123BFF`.
 
 ## Location and privacy
 
 - The server remains authoritative for geofence acceptance.
-- Selected Photo Library metadata is used locally for validation. The prepared uploaded image does not keep its original EXIF/GPS metadata.
+- Prepared uploaded images do not keep their original EXIF/GPS metadata.
 - Camera, Photo Library, Photos-add, and Location permissions must fail gracefully and remain recoverable.
 - Coordinate retention and final privacy/legal wording remain open questions in `../OPEN-QUESTIONS.md`.
 
