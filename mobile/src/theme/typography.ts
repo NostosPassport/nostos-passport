@@ -1,7 +1,7 @@
 /** SF Pro (the system font) on the iOS type scale. Sizes are size/line-height in points. */
 import type { TextStyle } from "react-native";
 
-import { fonts } from "./midnight";
+import { fonts } from "./editorial";
 
 const scale = {
   // Titles are set in the serif (the family carries the weight, so fontWeight stays regular).
