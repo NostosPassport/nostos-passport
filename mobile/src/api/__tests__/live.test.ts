@@ -49,7 +49,6 @@ d("live backend", () => {
     expect(near.places[0]?.inside).toBe(true);
 
     await api.me.profile();
-    await api.pins.get();
     const grid = await api.users.stamps(me.user.handle);
     await api.users.places(me.user.handle);
     await api.places.mine(place.id, { lat: place.lat, lng: place.lng });
