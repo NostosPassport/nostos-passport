@@ -21,7 +21,7 @@ Library validation intentionally reads available metadata before preparation. Up
 
 ## Design
 
-Only Figma pages 9 and 10 are current. Earlier Figma work is historical. The active theme is Editorial even though `src/theme/midnight.ts` keeps a legacy filename/token vocabulary.
+Only Figma pages 9 and 10 are current. Earlier Figma work is historical. The active theme is the Editorial cream/electric-blue system in `src/theme/editorial.ts`.
 
 ## Commands
 
