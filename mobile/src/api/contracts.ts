@@ -1,6 +1,3 @@
-/**
- * COPIED VERBATIM from backend/src/contracts/api.ts.
- */
 import { z } from "zod";
 
 export const IsoDate = z.string().datetime({ offset: true });
@@ -124,8 +121,6 @@ export const StampEditRequest = z.object({
   visitedAt: IsoDate,
 }).partial().strict().refine((v) => Object.keys(v).length > 0, "Nothing to change");
 export const PhotoLayoutRequest = z.object({ photos: z.array(z.object({ id: z.string().min(1).max(64), position: z.number().int().min(0).max(5).optional(), x: z.number().min(0).max(1).nullable().optional(), y: z.number().min(0).max(1).nullable().optional(), rotation: z.number().min(-45).max(45).nullable().optional() }).strict()).min(1).max(6) }).strict();
-export const PinsRequest = z.object({ stampIds: z.array(z.string().min(1).max(64)).max(4) }).strict();
-export const PinsResponse = z.object({ stamps: z.array(StampView).max(4) }).strict();
 export const RemoveStampResponse = z.object({ removed: z.literal(true) }).strict();
 export const UserStampsResponse = z.object({ stamps: z.array(StampView), nextAfter: z.string().nullable() }).strict();
 export const UserPlacesResponse = z.object({ places: z.array(z.object({ place: z.object({ id: z.string(), slug: z.string(), name: z.string(), area: z.string().nullable(), city: z.string().nullable(), region: z.string().nullable(), country: z.string().nullable(), countryCode: z.string().nullable(), timeZone: z.string(), lat: z.number(), lng: z.number() }).strict(), stamps: z.number().int(), latestStamp: z.object({ id: z.string(), createdAt: IsoDate, visitedAt: IsoDate, photoUrl: z.string().nullable(), caption: z.string() }).strict() }).strict()) }).strict();
@@ -172,5 +167,4 @@ export type DeleteAccountResponse = z.infer<typeof DeleteAccountResponse>;
 export type TokenResponse = z.infer<typeof TokenResponse>;
 export type MeResponse = z.infer<typeof MeResponse>;
 export type MyPlacePageResponse = z.infer<typeof MyPlacePageResponse>;
-export type PinsResponse = z.infer<typeof PinsResponse>;
 export type CreateStampResponse = z.infer<typeof CreateStampResponse>;
