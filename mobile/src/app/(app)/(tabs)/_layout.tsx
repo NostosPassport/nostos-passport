@@ -6,10 +6,12 @@ import { Icon } from "@/components/ui/icon";
 import { mapRecenter } from "@/features/map/recenter";
 import { colors } from "@/theme";
 
+/** Passport is the tab the app opens on. SDK 58 moved this from the `initialRouteName` prop to `unstable_settings.anchor`. */
+export const unstable_settings = { anchor: "passport" };
+
 export default function TabsLayout() {
   return (
     <Tabs
-      initialRouteName="passport"
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },

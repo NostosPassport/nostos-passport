@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text as NativeText, View, type TextInputInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { errorText } from "@/api";
@@ -31,11 +31,11 @@ export default function SignUp() {
   const [consentError, setConsentError] = useState<string | null>(null);
   const [challenge, setChallenge] = useState<EmailChallenge | null>(null);
   const [code, setCode] = useState("");
-  const emailRef = useRef<TextInput>(null);
-  const handleRef = useRef<TextInput>(null);
-  const displayNameRef = useRef<TextInput>(null);
-  const birthdateRef = useRef<TextInput>(null);
-  const codeRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInputInstance>(null);
+  const handleRef = useRef<TextInputInstance>(null);
+  const displayNameRef = useRef<TextInputInstance>(null);
+  const birthdateRef = useRef<TextInputInstance>(null);
+  const codeRef = useRef<TextInputInstance>(null);
   useAnnounce(consentError);
 
   const set = (key: keyof SignupFields) => (value: string) => {

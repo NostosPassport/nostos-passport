@@ -11,7 +11,7 @@ Use the current repository state as the source of truth. Check code and package 
 ## Current scope
 
 - Default branch: `main`.
-- Mobile: Expo SDK 57, iOS only.
+- Mobile: Expo SDK 58, iOS only.
 - Current design authority: Figma pages 9 and 10 only. Earlier Figma pages are historical.
 - Current product is personal and private by default. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared. The old guest preview flow is removed from scope.
 - A stamp is a visit memory. Users may add a `Now` or `Past` stamp. Past stamps are unverified and limited to the previous year; a Now stamp is verified only when the server can confirm the submitted current position is within the place geofence.
@@ -24,7 +24,7 @@ Use the current repository state as the source of truth. Check code and package 
 - Follow explicit current user instructions over historical session notes.
 - Do not recreate historical review/delivery artifacts as current instructions; use git history when that evidence is needed.
 - Do not edit generated native `ios/` or `android/` directories. Configure Expo native behavior through `app.json` and config plugins.
-- For Expo/React Native APIs, inspect the installed package version and use the matching Expo SDK 57 documentation rather than memory.
+- For Expo/React Native APIs, inspect the installed package version and use the matching Expo SDK 58 documentation rather than memory.
 - Use `npx expo install` for native Expo dependencies.
 - Never commit secrets or `.env` files.
 - Never run destructive database reset commands against shared, preview, or production data.

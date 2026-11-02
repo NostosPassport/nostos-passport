@@ -37,7 +37,7 @@ Verified visits use the Nostos mark as a positive verification seal. On stamp de
 
 - Default branch: `main`.
 - `backend/`: Next.js 15, Prisma, Postgres.
-- `mobile/`: Expo SDK 57, Expo Router, React Native.
+- `mobile/`: Expo SDK 58, Expo Router, React Native.
 - Historical review/delivery artifacts and superseded build prompts are retained in git history rather than the working tree.
 
 Current local defaults in committed configuration:
@@ -63,4 +63,4 @@ Preserve these unless the user explicitly changes product behavior and the corre
 
 ## Engineering rules
 
-Use current code and tests as truth. Old review test counts and local paths are historical evidence only. Never commit secrets. Never reset shared or production databases. For Expo APIs, check the installed SDK 57 docs. For mobile code changes, run `npm run check` before declaring completion.
+Use current code and tests as truth. Old review test counts and local paths are historical evidence only. Never commit secrets. Never reset shared or production databases. For Expo APIs, check the installed SDK 58 docs. For mobile code changes, run `npm run check` before declaring completion.

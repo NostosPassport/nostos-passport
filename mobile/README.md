@@ -1,6 +1,6 @@
 # Nostos iOS app
 
-Nostos is an iPhone-only Expo SDK 57 app. The current product is a personal owner-only passport for the places a user goes. Signed-out users sign in or create an account; the old guest preview flow is no longer part of the root navigation.
+Nostos is an iPhone-only Expo SDK 58 app. The current product is a personal owner-only passport for the places a user goes. Signed-out users sign in or create an account; the old guest preview flow is no longer part of the root navigation.
 
 ## Current navigation
 
@@ -75,4 +75,4 @@ npm run sync:contracts
 | `src/theme/` | design tokens and typography |
 | `src/components/ui/` | shared native UI |
 
-For Expo APIs, use the SDK 57 documentation. See `AGENTS.md`, `DEVICE-CHECKLIST.md`, `REVIEW.md`, and `../DESIGN.md`.
+For Expo APIs, use the SDK 58 documentation. See `AGENTS.md`, `DEVICE-CHECKLIST.md`, `REVIEW.md`, and `../DESIGN.md`.

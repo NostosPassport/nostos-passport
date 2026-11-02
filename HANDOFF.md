@@ -91,7 +91,7 @@ Committed defaults currently use:
 
 - backend dev server: port 3001
 - Docker Postgres host port: 5438
-- Expo SDK 57 / React Native 0.86
+- Expo SDK 58 / React Native 0.88
 - local development share URLs at `http://localhost:3001` unless `PUBLIC_WEB_URL` is set
 
 Preview/production must provide a unique `SHARE_TOKEN_SECRET` in addition to the existing backend secrets.

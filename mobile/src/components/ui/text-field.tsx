@@ -1,5 +1,5 @@
 import { Children, forwardRef, Fragment, isValidElement, type ReactNode } from "react";
-import { StyleSheet, TextInput, View, type TextInputProps } from "react-native";
+import { StyleSheet, TextInput, View, type TextInputInstance, type TextInputProps } from "react-native";
 
 import { useAnnounce } from "@/lib/a11y";
 import { colors, fonts, hairlineWidth, maxFontSizeMultiplier, space, type as typeScale } from "@/theme";
@@ -11,7 +11,7 @@ type FieldProps = TextInputProps & {
   error?: string | null;
 };
 
-export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, invalid, error, style, accessibilityHint, ...rest }, ref) {
+export const Field = forwardRef<TextInputInstance, FieldProps>(function Field({ label, invalid, error, style, accessibilityHint, ...rest }, ref) {
   const hasError = !!invalid || !!error;
   useAnnounce(error ?? null);
   return (
