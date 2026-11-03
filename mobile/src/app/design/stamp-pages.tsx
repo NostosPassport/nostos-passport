@@ -17,10 +17,12 @@ const photo = (name: string) => [{ id: `p-${name}`, url: `${HOST}/dev/stamp-temp
 const ITALIAN = resolveCategoryStamp({ id: "it", category: "restaurant", primaryType: "italian_restaurant" });
 const BAR = resolveCategoryStamp({ id: "br", category: "bar", primaryType: "cocktail_bar" });
 const FRENCH = resolveCategoryStamp({ id: "fr", category: "restaurant", primaryType: "french_restaurant" });
+const HOTEL = resolveCategoryStamp({ id: "ht", category: "hotel", primaryType: "hotel" });
 
 const MIXES: Record<string, { name: string; art: typeof ITALIAN; photo: string; area?: string }[]> = {
   a: [{ name: "Osteria della Piazza", art: ITALIAN, photo: "restaurant" }, { name: "Midnight Social", art: BAR, photo: "bar", area: "West Village" }, { name: "Café de l'Étoile", art: FRENCH, photo: "airport" }],
   b: [{ name: "The Extraordinary Restaurant at Washington Square", art: FRENCH, photo: "portrait" }, { name: "An Exceptionally Long Cocktail Lounge", art: BAR, photo: "lowres" }, { name: "Joe's", art: ITALIAN, photo: "dark" }],
+  c: [{ name: "Public Hotel", art: HOTEL, photo: "hotel", area: "Lower East Side" }, { name: "Midnight Social", art: BAR, photo: "bar" }, { name: "Osteria della Piazza", art: ITALIAN, photo: "restaurant" }],
 };
 
 export default function Pages() {

@@ -136,6 +136,21 @@ describe("MapScreen", () => {
     expect(screen.getByLabelText("Employees Only, open most recent stamp")).toBeTruthy();
   });
 
+  it("filters stamped places to hotels", async () => {
+    const hotel = place("hotel", { name: "Public Hotel", category: "hotel", primaryType: "hotel", cuisines: [], lat: 40.7224 });
+    mockPlaces = [...mockPlaces, hotel];
+    mockMine = [...mockMine, mineRow(hotel, "stamp-hotel")];
+    await render(<MapScreen />);
+
+    await fireEvent.press(screen.getByRole("button", { name: "HOTELS" }));
+    expect(screen.getByLabelText("Public Hotel, open most recent stamp")).toBeTruthy();
+    expect(screen.queryByLabelText("Don Angie, open most recent stamp")).toBeNull();
+    expect(screen.queryByLabelText("Employees Only, open most recent stamp")).toBeNull();
+
+    await fireEvent.press(screen.getByRole("button", { name: "RESTAURANTS" }));
+    expect(screen.queryByLabelText("Public Hotel, open most recent stamp")).toBeNull();
+  });
+
   it("recenters on the user's live location", async () => {
     await render(<MapScreen />);
     mockAnimateToRegion.mockClear();

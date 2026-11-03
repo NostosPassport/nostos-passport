@@ -1,7 +1,7 @@
 /** Versioned, pure stamp classification and SVG geometry shared by backend, Expo and web. */
 export const CATEGORY_STAMP_VERSION = "category-ink/1" as const;
-export type CategoryStampKind = "restaurant" | "bar";
-export type CuisineIcon = "croissant" | "burger" | "tapas" | "mezze" | "restaurant" | "pasta" | "taco" | "sushi" | "noodles" | "curry" | "pizza" | "bread" | "fish" | "leaf" | "bowl" | "grill" | "glass" | "music";
+export type CategoryStampKind = "restaurant" | "bar" | "hotel";
+export type CuisineIcon = "croissant" | "burger" | "tapas" | "mezze" | "restaurant" | "pasta" | "taco" | "sushi" | "noodles" | "curry" | "pizza" | "bread" | "fish" | "leaf" | "bowl" | "grill" | "glass" | "music" | "key";
 export type CategoryStampArtwork = { version: typeof CATEGORY_STAMP_VERSION; kind: CategoryStampKind; cuisine: string; label: string; color: string; icon: CuisineIcon };
 export type CategoryVenue = { id: string; category?: string | null; primaryType?: string | null; cuisines?: readonly string[] | null };
 const CATALOG: Record<string, { label: string; color: string; icon: CuisineIcon }> = {
@@ -23,6 +23,10 @@ const CATALOG: Record<string, { label: string; color: string; icon: CuisineIcon 
   steakhouse: {label:"Steakhouse",color:"#7C5249",icon:"grill"}, restaurant: {label:"Restaurant",color:"#4A514F",icon:"restaurant"},
 };
 const BAR_TYPES = new Set(["bar","bar_and_grill","beer_garden","brewpub","cocktail_bar","gastropub","hookah_bar","irish_pub","lounge_bar","pub","snack_bar","sports_bar","wine_bar","night_club","nightclub","dance_club"]);
+/** Google lodging types Nostos stamps as hotels. Generic "lodging" is left out: Google also tags campgrounds, RV parks and
+ * private rooms in homes with it, and those are not hotels. */
+export const HOTEL_TYPES = new Set(["hotel","motel","resort_hotel","inn","bed_and_breakfast","hostel","extended_stay_hotel","guest_house","japanese_inn","budget_japanese_inn"]);
+const HOTEL_INK = "#5B2A22";
 const PRIMARY: Record<string,string> = {
  french_restaurant:"french",american_restaurant:"american",new_american_restaurant:"american",
  spanish_restaurant:"spanish",tapas_restaurant:"spanish",lebanese_restaurant:"lebanese",
@@ -46,6 +50,9 @@ export function resolveCategoryStamp(venue:CategoryVenue):CategoryStampArtwork|n
  if(venue.category==="bar"||BAR_TYPES.has(primary)){
    const club=["night_club","nightclub","dance_club"].includes(primary);
    return {version:CATEGORY_STAMP_VERSION,kind:"bar",cuisine:club?"nightclub":"bar",label:club?"NIGHTCLUB":"BAR · CLUB",color:club?"#7C1030":"#7C1030",icon:club?"music":"glass"};
+ }
+ if(venue.category==="hotel"||(!venue.category&&HOTEL_TYPES.has(primary))){
+   return {version:CATEGORY_STAMP_VERSION,kind:"hotel",cuisine:"hotel",label:"HOTEL",color:HOTEL_INK,icon:"key"};
  }
  const tags=(venue.cuisines??[]).map(cuisineKey).filter((v):v is string=>!!v);
  if(venue.category!=="restaurant"&&!primary.includes("restaurant")&&primary!=="steak_house"&&!tags.length)return null;
@@ -72,6 +79,7 @@ export const CUISINE_PATHS:Record<CuisineIcon,string>={
  bowl:"M3 13 Q12 23 21 13 M5 13 H19 M7 8 Q9 5 11 8 M13 8 Q15 5 17 8",
  grill:"M4 8 H20 V13 H4 Z M7 15 V20 M17 15 V20 M8 10 V12 M12 10 V12 M16 10 V12",
  glass:"M5 5 H19 L17 14 Q12 19 7 14 Z M12 17 V21 M8 21 H16",
+ key:"M15.5 6a3.5 3.5 0 11-7 0 3.5 3.5 0 017 0zM12 9.5V21M12 14.5h3.2M12 18h2.6",
  music:"M10 5 V18 Q4 15 4 20 Q4 23 9 21 Q11 20 11 17 V8 L20 6 V16 Q14 13 14 19 Q14 22 19 20 Q21 19 21 16 V3 Z",
 };
 /** Lightly uneven square boundary; no shredded edge, shadow, or photo distress. */

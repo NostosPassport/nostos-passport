@@ -44,7 +44,7 @@ The app defaults to the current local backend configuration on port 3001 in deve
 
 The Map tab uses the default iOS map provider from `react-native-maps`, which is Apple Maps on iOS. It displays Nostos-owned visited venues and does not call Google Places while panning, zooming, filtering, or recentering.
 
-Google Places is used by the backend for worldwide restaurant/bar discovery, text search, and resolving a selected Google place into a durable Nostos venue. Durable place locality may include area, city, region, country, and country code. NYC neighborhood data is optional legacy enrichment and does not gate whether a place may be stamped. Configure `GOOGLE_PLACES_API_KEY` on the backend only. The Places key must never be exposed as an `EXPO_PUBLIC_*` mobile variable.
+Google Places is used by the backend for worldwide restaurant/bar/hotel discovery, text search, and resolving a selected Google place into a durable Nostos venue. Durable place locality may include area, city, region, country, and country code. NYC neighborhood data is optional legacy enrichment and does not gate whether a place may be stamped. Configure `GOOGLE_PLACES_API_KEY` on the backend only. The Places key must never be exposed as an `EXPO_PUBLIC_*` mobile variable.
 
 No Google Maps SDK for iOS key is required.
 

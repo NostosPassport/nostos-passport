@@ -8,7 +8,7 @@ Nostos is an iPhone-only personal passport for the places a user goes. The norma
 
 Primary app navigation is Passport, Stamp, and Map. Feed, follows, likes, Activity, public profiles, moderation, and other social architecture are not part of the active product. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared.
 
-Google-backed restaurant and bar discovery is worldwide. Durable venues carry optional `area`, `city`, `region`, `country`, and `countryCode` locality metadata plus an IANA `timeZone`. The former NYC neighborhood polygon/completion system has been removed rather than retained as a product layer.
+Google-backed restaurant, bar, and hotel discovery is worldwide. Durable venues carry optional `area`, `city`, `region`, `country`, and `countryCode` locality metadata plus an IANA `timeZone`. The former NYC neighborhood polygon/completion system has been removed rather than retained as a product layer.
 
 The repository default branch is `main`. Ignore old handoff instructions that refer to `build`, `build-codex`, leaving a merge uncommitted, or a specific local checkout path.
 
@@ -33,7 +33,7 @@ Relevant files:
 
 ## Places and locality
 
-- Google Places is the discovery source for restaurants and bars.
+- Google Places is the discovery source for restaurants, bars, and hotels.
 - Nearby search uses the location supplied for that request and is not constrained to NYC or the United States.
 - Text search is not given an artificial NYC fallback or forced US region code. When a real device-location bias is available it may still be used to improve relevance.
 - Google `addressComponents` are normalized into optional `area`, `city`, `region`, `country`, and `countryCode` fields in the same Places request; no extra reverse-geocoding call is required.

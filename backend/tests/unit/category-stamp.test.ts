@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveCategoryStamp, inkTextWidth, fitCategoryLocality, categoryNameLineWidth, CATEGORY_STAMP_GEOMETRY, categoryStampDateLabel, photoClipPath, layoutCategoryName, safeStampPhotoUrl } from "../../../shared/category-stamp-artwork";
+import { designFromArtwork } from "../../../shared/category-stamp-design";
 
 describe("category ink stamp design v1", () => {
   it("uses specific primary type rather than generic tags", () => {
@@ -12,6 +13,14 @@ describe("category ink stamp design v1", () => {
   it("bar and club primary types take precedence over food tags", () => {
     expect(resolveCategoryStamp({id:"bar",category:"restaurant",primaryType:"night_club",cuisines:["Italian"]})?.kind).toBe("bar");
     expect(resolveCategoryStamp({id:"bar",category:"bar",primaryType:"cocktail_bar",cuisines:["Thai"]})?.icon).toBe("glass");
+  });
+  it("hotels get the hotel stamp with the key icon; food and drink inside hotels keep their own", () => {
+    const hotel=resolveCategoryStamp({id:"h",category:"hotel",primaryType:"hotel",cuisines:[]});
+    expect(hotel).toMatchObject({kind:"hotel",cuisine:"hotel",label:"HOTEL",icon:"key"});
+    expect(resolveCategoryStamp({id:"h",category:null,primaryType:"boutique",cuisines:[]})).toBeNull();
+    expect(resolveCategoryStamp({id:"h",category:null,primaryType:"resort_hotel",cuisines:[]})?.kind).toBe("hotel");
+    expect(resolveCategoryStamp({id:"r",category:"restaurant",primaryType:"hotel",cuisines:["Italian"]})?.kind).toBe("restaurant");
+    expect(designFromArtwork(hotel!,{name:"Public Hotel",locality:"Lower East Side"})).toMatchObject({template:"hotel",label:"HOTEL",icon:"key"});
   });
   it("unknown cuisines get neutral restaurant ink; unsupported places retain legacy", () => {
     expect(resolveCategoryStamp({id:"x",category:"restaurant",cuisines:[]})?.cuisine).toBe("restaurant");
