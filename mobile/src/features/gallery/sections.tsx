@@ -179,7 +179,7 @@ function PagesSection() {
   return (
     <Spread pageWidth={pageW} pageHeight={pageH} spreadIndex={1} spreadTotal={4}>
       <View style={styles.pair}>
-        <PageView page={1} side="left" width={pageW} height={pageH} stamps={BY_PAGE.get(1) ?? []} pinnedIds={["sample-1"]} />
+        <PageView page={1} side="left" width={pageW} height={pageH} stamps={BY_PAGE.get(1) ?? []} />
         <PageView page={2} side="right" width={pageW} height={pageH} stamps={BY_PAGE.get(2) ?? []} />
       </View>
     </Spread>
@@ -191,7 +191,7 @@ function FlipSection() {
   const [spread, setSpread] = useState(0);
   const total = spreadCountFor(STAMPS.length);
   const face = (f: PageFace, side: "left" | "right") =>
-    f.kind === "inside-cover" ? <InsideCover width={pageW} height={pageH} /> : f.kind === "bearer" ? <BearerPage width={pageW} height={pageH} bearer={SAMPLE_USER} avatarUrl={null} /> : <PageView page={f.page} side={side} width={pageW} height={pageH} stamps={BY_PAGE.get(f.page) ?? []} pinnedIds={["sample-4"]} />;
+    f.kind === "inside-cover" ? <InsideCover width={pageW} height={pageH} /> : f.kind === "bearer" ? <BearerPage width={pageW} height={pageH} bearer={SAMPLE_USER} avatarUrl={null} /> : <PageView page={f.page} side={side} width={pageW} height={pageH} stamps={BY_PAGE.get(f.page) ?? []} />;
   return (
     <>
       <FlipBook pageWidth={pageW} pageHeight={pageH} total={total} spread={spread} onSpreadChange={setSpread} renderFace={face} />

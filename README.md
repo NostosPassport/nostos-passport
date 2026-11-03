@@ -9,7 +9,7 @@ A stamp can contain up to six photos, a caption, a song, or a combination. For a
 | Folder | Purpose | Tooling |
 |---|---|---|
 | `backend/` | Next.js API/web shell, Prisma, Postgres | pnpm |
-| `mobile/` | Expo SDK 57 iPhone app with Expo Router | npm |
+| `mobile/` | Expo SDK 58 iPhone app with Expo Router | npm |
 | `design/` | Design handoffs and source material | varies |
 | `reviews/`, `deliveries/` | dated historical evidence and handoffs | read-only history |
 

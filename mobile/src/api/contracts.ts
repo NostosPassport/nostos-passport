@@ -1,3 +1,7 @@
+/**
+ * COPIED VERBATIM from backend/src/contracts/api.ts (this repo, commit b85563d).
+ * Do not edit here: change the backend contract, then re-copy with `npm run sync:contracts`.
+ */
 import { z } from "zod";
 
 export const IsoDate = z.string().datetime({ offset: true });

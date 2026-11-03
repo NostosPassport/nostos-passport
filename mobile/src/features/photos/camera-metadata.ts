@@ -66,5 +66,5 @@ export async function addNostosCameraMetadata(uri: string, metadata: NostosCamer
 
   const exifBytes = piexif.dump({ "0th": zeroth, Exif: exif, GPS: gps });
   const tagged = piexif.insert(exifBytes, bytesToBinary(bytes));
-  file.write(binaryToBytes(tagged));
+  file.writeSync(binaryToBytes(tagged));
 }

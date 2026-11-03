@@ -71,7 +71,7 @@ export async function addNostosWatermark(input: { uri: string; width: number; he
     snapshot = surface.makeImageSnapshot();
     const bytes = snapshot.encodeToBytes(ImageFormat.JPEG, JPEG_QUALITY);
     const output = new File(Paths.cache, `nostos-camera-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
-    output.write(bytes);
+    output.writeSync(bytes);
     return { uri: output.uri, width: input.width, height: input.height };
   } finally {
     snapshot?.dispose();

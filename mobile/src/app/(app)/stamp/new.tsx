@@ -102,7 +102,6 @@ function Composer() {
     onSuccess: (res) => {
       haptics.success(); setDone(true); photoDraft.clear(); landingDraft.set(res.stamp);
       void queryClient.invalidateQueries({ queryKey: ["user"] });
-      void queryClient.invalidateQueries({ queryKey: qk.pins });
       void queryClient.invalidateQueries({ queryKey: qk.collections });
       requestAnimationFrame(() => router.replace("/stamp/landed"));
     },
