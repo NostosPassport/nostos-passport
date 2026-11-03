@@ -8,7 +8,7 @@ The current product is personal and private by default. User-created collections
 
 - passwordless authentication and sessions
 - server-side stamp geofence verification
-- worldwide Google-backed restaurant/bar discovery and durable place locality
+- worldwide Google-backed restaurant/bar/hotel discovery and durable place locality
 - stamp creation with up to six photos, caption, and/or song metadata
 - image processing and EXIF/GPS stripping
 - private passport, stamp, pin, profile, place-history, and collection data

@@ -9,7 +9,7 @@ import type { Db } from "@/lib/db";
 import { distanceMeters } from "@/lib/geo";
 import { OSM_ATTRIBUTION, slugify } from "@/lib/osm";
 import { notFound } from "@/server/errors";
-import { googleNearby, googlePlaceDetails, googlePlacePriceLevel, googleTextSearch, type GooglePlace } from "@/server/services/google-places";
+import { googleNearby, googlePlaceDetails, googlePlacePriceLevel, googleTextSearch, type GooglePlace, type PlaceCategory } from "@/server/services/google-places";
 
 const placeSelect = {
   id: true,
@@ -77,7 +77,7 @@ export type PlaceView = {
   geofenceMeters: number;
   fromOsm: boolean;
   googlePlaceId: string | null;
-  category: "restaurant" | "bar" | null;
+  category: PlaceCategory | null;
   cuisines: string[];
   primaryType: string | null;
   businessStatus: string | null;
@@ -86,7 +86,7 @@ export type PlaceView = {
 export const localityLabel = (place: Pick<PlaceView, "area" | "city" | "region" | "country">) =>
   place.area ?? place.city ?? place.region ?? place.country ?? "Unknown area";
 
-const category = (value: string | null): "restaurant" | "bar" | null => value === "restaurant" || value === "bar" ? value : null;
+const category = (value: string | null): PlaceCategory | null => value === "restaurant" || value === "bar" || value === "hotel" ? value : null;
 const toView = (row: PlaceRow): PlaceView => ({
   id: row.id,
   slug: row.slug,

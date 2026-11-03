@@ -22,7 +22,8 @@ This file summarizes current backend decisions. Earlier build-session detail rem
 
 ## Places and locality
 
-- Google Places is the primary discovery source for restaurants and bars and is not restricted to NYC or the United States.
+- Google Places is the primary discovery source for restaurants, bars, and hotels and is not restricted to NYC or the United States.
+- Hotels (2026-11-03): Google `hotel`, `motel`, `resort_hotel`, `inn`, `bed_and_breakfast`, `hostel`, `extended_stay_hotel`, `guest_house`, `japanese_inn` and `budget_japanese_inn` places are category `hotel` and get the hotel stamp (key icon). Generic `lodging` alone is not enough, because Google also applies it to campgrounds, RV parks and private rooms in homes. A place whose own primary type is a restaurant or bar keeps that category even when it sits inside a hotel.
 - A durable `venue` stores optional `area`, `city`, `region`, `country`, and `countryCode` plus an IANA `timeZone`.
 - `area` is descriptive only. It may represent a neighborhood, district, sublocality, quartiere, or similar label, and may be null.
 - Nostos does not maintain a universal neighborhood hierarchy or polygon membership system. The former NYC `Neighborhood` / `NeighborhoodCompletion` models and `/api/me/neighborhoods` endpoint are removed.

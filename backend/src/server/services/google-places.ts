@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { HOTEL_TYPES as SHARED_HOTEL_TYPES } from "@/lib/category-stamp-artwork";
 import { ServiceError } from "@/server/errors";
 
 export const GOOGLE_MAPS_ATTRIBUTION = "Google Maps" as const;
@@ -92,9 +93,11 @@ export type GooglePlace = PlaceLocality & {
   types: string[];
   businessStatus: string | null;
   priceLevel: GooglePriceLevel | null;
-  category: "restaurant" | "bar";
+  category: PlaceCategory;
   cuisines: string[];
 };
+
+export type PlaceCategory = "restaurant" | "bar" | "hotel";
 
 const BAR_TYPES = new Set([
   "bar",
@@ -114,6 +117,11 @@ const BAR_TYPES = new Set([
   "nightclub",
   "dance_club",
 ]);
+
+/** Google lodging types Nostos treats as hotels (shared with stamp artwork so search and stamps agree). */
+const HOTEL_TYPES = SHARED_HOTEL_TYPES;
+/** Nearby search asks Google for these. Text search is unfiltered and relies on categoryFor() below. */
+export const NEARBY_INCLUDED_TYPES = ["restaurant", "bar", "hotel", "motel", "resort_hotel", "inn", "bed_and_breakfast", "hostel", "extended_stay_hotel"] as const;
 
 const TYPE_LABELS: Record<string, string> = {
   asian_fusion_restaurant: "Asian Fusion",
@@ -186,11 +194,14 @@ function labelForType(type: string): string | null {
   return null;
 }
 
-function categoryFor(primaryType: string | null, types: readonly string[]): "restaurant" | "bar" | null {
+/** A place's own primary type decides first; otherwise food, then drink, then lodging tags. */
+export function categoryFor(primaryType: string | null, types: readonly string[]): PlaceCategory | null {
   if (primaryType && BAR_TYPES.has(primaryType)) return "bar";
   if (primaryType === "restaurant" || primaryType?.endsWith("_restaurant") || primaryType === "steak_house") return "restaurant";
+  if (primaryType && HOTEL_TYPES.has(primaryType)) return "hotel";
   if (types.some((type) => type === "restaurant" || type.endsWith("_restaurant") || type === "steak_house")) return "restaurant";
   if (types.some((type) => BAR_TYPES.has(type))) return "bar";
+  if (types.some((type) => HOTEL_TYPES.has(type))) return "hotel";
   return null;
 }
 
@@ -293,7 +304,7 @@ export async function googleNearby(
     {
       method: "POST",
       body: JSON.stringify({
-        includedTypes: ["restaurant", "bar"],
+        includedTypes: [...NEARBY_INCLUDED_TYPES],
         maxResultCount: GOOGLE_NEARBY_MAX_RESULTS,
         rankPreference: "DISTANCE",
         languageCode: "en",
