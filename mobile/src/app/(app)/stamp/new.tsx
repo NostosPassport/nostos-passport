@@ -101,7 +101,7 @@ function Composer() {
   // Location on but no fix yet: show the Nearby skeleton for a while, then fall back to "search by name" (P-097).
   const waitingForFix = permission === "granted" && !coords;
   useEffect(() => {
-    if (!waitingForFix) { setLocateGaveUp(false); return; }
+    if (!waitingForFix) return;
     const t = setTimeout(() => setLocateGaveUp(true), LOCATE_PATIENCE_MS);
     return () => clearTimeout(t);
   }, [waitingForFix]);

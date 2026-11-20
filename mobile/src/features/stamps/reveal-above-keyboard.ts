@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Keyboard, type ScrollViewInstance } from "react-native";
 
 import { space } from "@/theme";
@@ -14,18 +14,21 @@ const KEYBOARD_WAIT_MS = 1000;
 export function useRevealAboveKeyboard(scroller: React.RefObject<ScrollViewInstance | null>) {
   const pending = useRef<{ remove: () => void } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const cancel = useCallback(() => {
+  const cancel = () => {
     pending.current?.remove();
     pending.current = null;
     clearTimeout(timer.current);
+  };
+  useEffect(() => () => {
+    pending.current?.remove();
+    clearTimeout(timer.current);
   }, []);
-  useEffect(() => cancel, [cancel]);
 
-  return useCallback((y: number) => {
+  return (y: number) => {
     cancel();
     const go = () => scroller.current?.scrollTo({ y: Math.max(0, y - space.sm), animated: true });
     if (Keyboard.isVisible()) { go(); return; }
     pending.current = Keyboard.addListener("keyboardDidShow", () => { cancel(); go(); });
     timer.current = setTimeout(cancel, KEYBOARD_WAIT_MS);
-  }, [cancel, scroller]);
+  };
 }
