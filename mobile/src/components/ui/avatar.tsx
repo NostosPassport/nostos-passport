@@ -13,11 +13,13 @@ type Props = {
   uri?: string | null;
   size?: number;
   variant?: TypeVariant;
+  /** Square corners, for a passport-photo frame. */
+  square?: boolean;
 };
 
 /** Profile photo, or the initial on an elevated circle. With no name either, a generic person symbol. */
-export function Avatar({ name, uri, size = sizes.avatar, variant = "headline" }: Props) {
-  const circle = [styles.circle, { width: size, height: size, borderRadius: size / 2 }];
+export function Avatar({ name, uri, size = sizes.avatar, variant = "headline", square }: Props) {
+  const circle = [styles.circle, { width: size, height: size, borderRadius: square ? 0 : size / 2 }];
   if (uri) {
     return <Image source={{ uri: mediaUrl(uri) }} style={circle} contentFit="cover" transition={150} accessible={false} />;
   }
