@@ -24,12 +24,12 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
   return <Text style={[styles.wordmark, compact && styles.wordmarkCompact]}>NOSTOS</Text>;
 }
 
-export function DisplayTitle({ children, size = 58, style }: PropsWithChildren<{ size?: number; style?: TextStyle }>) {
-  return <Text style={[styles.display, { fontSize: size, lineHeight: size * 1.02 }, style]}>{children}</Text>;
+export function DisplayTitle({ children, size = 58, style, ...rest }: PropsWithChildren<{ size?: number; style?: TextStyle } & Omit<TextProps, "style">>) {
+  return <Text accessibilityRole="header" {...rest} style={[styles.display, { fontSize: size, lineHeight: size * 1.02 }, style]}>{children}</Text>;
 }
 
-export function Kicker({ children, muted = false }: PropsWithChildren<{ muted?: boolean }>) {
-  return <Text style={[styles.kicker, muted && styles.muted]}>{children}</Text>;
+export function Kicker({ children, muted = false, style, ...rest }: PropsWithChildren<{ muted?: boolean; style?: TextStyle } & Omit<TextProps, "style">>) {
+  return <Text {...rest} style={[styles.kicker, muted && styles.muted, style]}>{children}</Text>;
 }
 
 export function Body({ children, muted = false, size = 14 }: PropsWithChildren<{ muted?: boolean; size?: number }>) {

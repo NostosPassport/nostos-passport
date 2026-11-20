@@ -53,9 +53,11 @@ type GroupProps = {
   children: ReactNode;
   footer?: string;
   errors?: (string | null | undefined)[];
+  /** A character counter (e.g. "12 / 280"), shown right-aligned in tabular figures. */
+  counter?: string;
 };
 
-export function FieldGroup({ children, footer, errors }: GroupProps) {
+export function FieldGroup({ children, footer, errors, counter }: GroupProps) {
   const messages = (errors ?? []).filter((e): e is string => !!e);
   useAnnounce(messages.join(" "));
   const rows = Children.toArray(children).filter(isValidElement);
@@ -66,6 +68,11 @@ export function FieldGroup({ children, footer, errors }: GroupProps) {
           <Fragment key={child.key ?? i}>{child}</Fragment>
         ))}
       </View>
+      {counter ? (
+        <Text variant="footnote" color="textTertiary" tabular align="right">
+          {counter}
+        </Text>
+      ) : null}
       {messages.length > 0
         ? messages.map((m) => (
             <Text key={m} variant="footnote" color="danger" style={styles.footer}>
