@@ -13,6 +13,8 @@ type Props = Omit<PressableProps, "children" | "style"> & {
   loading?: boolean;
   block?: boolean;
   compact?: boolean;
+  /** A plain text action that sits on the content edge: no side padding, left-aligned (only with variant="plain"). */
+  link?: boolean;
 };
 
 const fg: Record<Variant, ColorToken> = {
@@ -22,7 +24,7 @@ const fg: Record<Variant, ColorToken> = {
   destructive: "danger",
 };
 
-export function Button({ title, variant = "primary", icon, loading, block = true, compact, disabled, accessibilityLabel, ...rest }: Props) {
+export function Button({ title, variant = "primary", icon, loading, block = true, compact, link, disabled, accessibilityLabel, ...rest }: Props) {
   const inactive = disabled || loading;
   return (
     <Pressable
@@ -35,6 +37,7 @@ export function Button({ title, variant = "primary", icon, loading, block = true
       style={({ pressed }) => [
         styles.base,
         compact && styles.compact,
+        link && styles.link,
         block ? styles.block : styles.inline,
         variant === "primary" && styles.primary,
         (variant === "secondary" || variant === "destructive") && styles.outline,
@@ -72,6 +75,7 @@ const styles = StyleSheet.create({
   destructive: { borderColor: colors.danger },
   plain: { backgroundColor: colors.transparent, paddingHorizontal: space.md },
   compact: { minHeight: size.hitTarget, paddingHorizontal: space.md },
+  link: { paddingHorizontal: 0, alignSelf: "flex-start" },
   block: { alignSelf: "stretch" },
   inline: { alignSelf: "flex-start" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.xs, paddingVertical: space.xs },
