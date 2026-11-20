@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { Stack } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -18,7 +18,11 @@ import { colors, fonts, radius, screenPadding, size, space } from "@/theme";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
 
-/** Search songs (Apple's iTunes catalog, through Nostos) and pick one for the stamp. Metadata only: nothing plays. */
+/**
+ * Search songs (Apple's iTunes catalog, through Nostos) and pick one for the stamp. Metadata only: nothing plays.
+ * Openers only show this when no song is attached and offer their own Remove song, so there is no "No song" row
+ * here: Cancel leaves the stamp as it was (P-107).
+ */
 export default function SongPicker() {
   const insets = useSafeAreaInsets();
   const [input, setInput] = useState("");
@@ -30,7 +34,11 @@ export default function SongPicker() {
     return () => clearTimeout(t);
   }, [input]);
 
+  // The first pick wins: a fast second tap on another row can't swap the song while the sheet is closing (P-105).
+  const chosen = useRef(false);
   const choose = (r: SongResult) => {
+    if (chosen.current) return;
+    chosen.current = true;
     const song: Song = { title: r.title, artist: r.artist, artUrl: r.artUrl, sourceId: r.sourceId };
     songDraft.choose(song);
     nav.back();
@@ -97,17 +105,6 @@ export default function SongPicker() {
             ))}
           </ListGroup>
         )}
-        <Tappable
-          onPress={() => {
-            songDraft.choose(null);
-            nav.back();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="No song"
-          style={styles.none}
-        >
-          <NativeText style={styles.noneText}>No song</NativeText>
-        </Tappable>
       </ScrollView>
     </View>
   );
@@ -134,6 +131,4 @@ const styles = StyleSheet.create({
   searchField: { gap: 7 },
   searchInput: { minHeight: 50, borderBottomWidth: 1, borderBottomColor: colors.textPrimary, color: colors.textPrimary, fontSize: 17, paddingHorizontal: 0, paddingVertical: 0 },
   art: { width: size.avatarLarge - space.md, height: size.avatarLarge - space.md, borderRadius: radius.chip, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  none: { minHeight: 48, alignItems: "center", justifyContent: "center" },
-  noneText: { color: colors.textPrimary, fontSize: 14, fontWeight: "500" },
 });
