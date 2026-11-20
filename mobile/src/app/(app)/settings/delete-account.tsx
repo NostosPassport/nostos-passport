@@ -77,7 +77,7 @@ export default function DeleteAccount() {
       <View style={styles.warning}>
         <Icon name="exclamationmark.triangle.fill" color="danger" size={size.iconLarge} />
         <Text variant="title2" accessibilityRole="header">
-          Delete your account
+          What gets deleted
         </Text>
         {WHAT_HAPPENS.map((line) => (
           <View key={line} style={styles.bullet}>

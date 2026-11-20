@@ -7,7 +7,7 @@ import { completeAccountEmailChange, startAccountEmailChange, type EmailChalleng
 import { qk } from "@/api/keys";
 import { useMe } from "@/api/queries";
 import { FormScreen } from "@/components/ui/form-screen";
-import { HeaderButton } from "@/components/ui/header-button";
+import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
 import { InlineError } from "@/components/ui/inline-error";
 import { Text } from "@/components/ui/text";
 import { Field, FieldGroup } from "@/components/ui/text-field";
@@ -73,8 +73,7 @@ export default function ChangeEmail() {
       <Stack.Screen
         options={{
           title: "Email",
-          headerLeft: () => <HeaderButton label="Cancel" onPress={() => nav.back()} />,
-          headerRight: () => <HeaderButton label={challenge ? "Save" : "Verify"} bold onPress={submit} disabled={unchanged || (challenge ? code.length !== 6 : false)} loading={busy} />,
+          ...headerTextButtons({ right: <HeaderButton label={challenge ? "Save" : "Verify"} bold onPress={submit} disabled={unchanged || (challenge ? code.length !== 6 : false)} loading={busy} /> }),
         }}
       />
       <Text variant="callout" color="textSecondary">Change the email you use to sign in. We’ll send a verification code to the new address before changing it.</Text>

@@ -18,7 +18,7 @@ export default function CollectionsScreen() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: "Collections", headerLargeTitle: true }} />
+      <Stack.Screen options={{ title: "Collections" }} />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         <Text variant="callout" color="textSecondary">Build smaller passports from stamps in your master Passport. A stamp can appear in as many collections as you want.</Text>
         {query.isPending ? <SkeletonRows count={3} /> : null}

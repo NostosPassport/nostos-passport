@@ -9,7 +9,7 @@ import { StampResponse, type Song, type StampView } from "@/api/contracts";
 import { useStamp } from "@/api/queries";
 import { Button } from "@/components/ui/button";
 import { FormScreen } from "@/components/ui/form-screen";
-import { HeaderButton } from "@/components/ui/header-button";
+import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
 import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
@@ -140,7 +140,7 @@ function EditForm({ stamp }: { stamp: StampView }) {
 
   return (
     <FormScreen>
-      <Stack.Screen options={{ title: "Edit memory", headerLeft: () => <HeaderButton label="Cancel" onPress={() => nav.back()} />, headerRight: () => <HeaderButton label="Save" bold onPress={doSave} disabled={!dirty || invalidDate || empty} loading={save.isPending} /> }} />
+      <Stack.Screen options={{ title: "Edit memory", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} />, right: <HeaderButton label="Save" bold onPress={doSave} disabled={!dirty || invalidDate || empty} loading={save.isPending} /> }) }} />
 
       <FieldGroup footer="Visit date, up to one year ago" errors={[invalidDate ? "Use MM/DD/YYYY, within the last year and not in the future." : null]}>
         <TextInput value={dateValue} onChangeText={(value) => setDateValue(formatBirthdateInput(value))} keyboardType="number-pad" maxLength={10} placeholder="MM/DD/YYYY" placeholderTextColor={colors.textTertiary} style={styles.dateInput} accessibilityLabel="Visit date" />

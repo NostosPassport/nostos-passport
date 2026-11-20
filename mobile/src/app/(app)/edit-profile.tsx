@@ -8,7 +8,7 @@ import { AvatarResponse, type ProfileSettingsResponse } from "@/api/contracts";
 import { qk, useProfileSettings } from "@/api/queries";
 import { Avatar } from "@/components/ui/avatar";
 import { FormScreen } from "@/components/ui/form-screen";
-import { HeaderButton } from "@/components/ui/header-button";
+import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
 import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
@@ -98,8 +98,10 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
     <FormScreen>
       <Stack.Screen
         options={{
-          headerLeft: () => <HeaderButton label="Cancel" onPress={() => nav.back()} />,
-          headerRight: () => <HeaderButton label="Save" bold onPress={() => save.mutate()} disabled={!dirty || !!problem} loading={save.isPending} />,
+          ...headerTextButtons({
+            left: <HeaderButton label="Cancel" onPress={() => nav.back()} />,
+            right: <HeaderButton label="Save" bold onPress={() => save.mutate()} disabled={!dirty || !!problem} loading={save.isPending} />,
+          }),
         }}
       />
       <Tappable onPress={choosePhoto} disabled={photo.isPending} accessibilityRole="button" accessibilityLabel={avatarUrl ? "Change profile photo" : "Add profile photo"} accessibilityState={{ busy: photo.isPending }} style={styles.photo}>
