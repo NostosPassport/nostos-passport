@@ -70,7 +70,7 @@ export function LandingScene({ stamp, others, pageWidth: pw, pageHeight: ph, onD
         <Animated.View pointerEvents="none" style={[styles.pins, pin$]}>
           {pins.map((p, i) => (
             <View key={i} style={[styles.photo, { left: p.cx - p.size / 2, width: p.size, height: p.size, transform: [{ rotate: `${p.rotation}deg` }] }]}>
-              <Image source={{ uri: mediaUrl(stamp.photos[i]!.url) }} style={styles.fill} contentFit="cover" accessible={false} />
+              <Image source={{ uri: mediaUrl(stamp.photos[i]!.url) }} style={styles.print} contentFit="cover" accessible={false} />
               <View style={styles.pin} />
             </View>
           ))}
@@ -91,8 +91,9 @@ const styles = StyleSheet.create({
   glow: { backgroundColor: colors.brassGlow, ...shadows.glow },
   ink: { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.brass, backgroundColor: colors.brassGlowSoft },
   pins: { position: "absolute", left: 0, right: 0, bottom: space.xl, height: space.xxxl * 2 },
-  photo: { position: "absolute", top: 0, borderRadius: radius.chip / 4, overflow: "hidden", backgroundColor: colors.elevated, ...shadows.contact },
-  fill: { width: "100%", height: "100%" },
+  // A print on a paper mat. No overflow clipping here: on iOS it would also clip the contact shadow.
+  photo: { position: "absolute", top: 0, padding: space.xxs, borderRadius: radius.chip / 4, backgroundColor: colors.paperRaised, ...shadows.contact },
+  print: { flex: 1, borderRadius: radius.chip / 8, backgroundColor: colors.elevated },
   pin: { position: "absolute", top: space.xxs, alignSelf: "center", width: space.xs, height: space.xs, borderRadius: space.xxs, backgroundColor: colors.brass },
   words: { alignItems: "center", gap: space.xs, paddingHorizontal: space.lg },
   done: { width: size.heroHeight },

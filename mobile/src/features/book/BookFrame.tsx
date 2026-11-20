@@ -58,7 +58,7 @@ export function BookFrame({ pageWidth, pageHeight, page, total, coverColor = sce
           <Rect x={0} y={0} width={FRAME_SPINE + 18} height={pageHeight + FRAME_BOARD * 2} fill="url(#book-spine)" />
         </Svg>
       </View>
-      <Text variant="typewriterSmall" color="dimBrass" tabular style={styles.counter} accessibilityElementsHidden importantForAccessibility="no">
+      <Text variant="typewriterSmall" color="dimBrass" tabular maxFontSizeMultiplier={1.15} style={styles.counter} accessibilityElementsHidden importantForAccessibility="no">
         {page === 0 ? "BEARER" : `${page} / ${total - 1}`}
       </Text>
     </View>

@@ -36,7 +36,7 @@ export function PageView({ page, side, width, height, stamps, renderStamp = defa
           </Pressable>
         );
       })}
-      <Text variant="typewriterSmall" color="dimBrass" tabular style={[styles.number, { bottom: inset, [side === "left" ? "left" : "right"]: inset * 1.4 }]} accessibilityLabel={`Page ${page}`}>{page}</Text>
+      <Text variant="typewriterSmall" color="dimBrass" tabular maxFontSizeMultiplier={1.15} style={[styles.number, { bottom: inset, [side === "left" ? "left" : "right"]: inset * 1.4 }]} accessibilityLabel={`Page ${page}`}>{page}</Text>
     </PageStock>
   );
 }
