@@ -1,25 +1,37 @@
-import { useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import { useMemo, useRef, useState } from "react";
+import { FlatList, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 
 import type { StampView } from "@/api/contracts";
-import { Body, DisplayTitle, EditorialHeader, EditorialSafeContent, EditorialScreen, Kicker, Rule } from "@/components/editorial/editorial";
+import { Body, DisplayTitle, EditorialButton, EditorialHeader, EditorialSafeContent, EditorialScreen, Kicker, Rule } from "@/components/editorial/editorial";
 import { Icon } from "@/components/ui/icon";
 import { StampMark } from "@/features/book/StampMark";
+import { useCollections } from "@/api/queries";
+import { InlineError } from "@/components/ui/inline-error";
+import { SkeletonRows } from "@/components/ui/skeleton";
+import { Text as UIText } from "@/components/ui/text";
+import { collectionColorValue } from "@/features/collections/colors";
 import { usePassport } from "@/features/book/use-passport";
 import { localityKey, localityLabel } from "@/lib/place";
-import { colors, fonts, size, space, pressedOpacity } from "@/theme";
+import { colors, fonts, hairlineWidth, radius, size, space, pressedOpacity } from "@/theme";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
 
 type Filter = "all" | "restaurant" | "bar" | "hotel";
+type Tab = "stamps" | "collections";
+const TABS: { key: Tab; label: string }[] = [{ key: "stamps", label: "STAMPS" }, { key: "collections", label: "COLLECTIONS" }];
 
-export default function StampGallery() {
-  const passport = usePassport();
-  const [filter, setFilter] = useState<Filter>("all");
-  const stamps = useMemo(() => {
-    const sorted = [...passport.stamps].sort((a, b) => Date.parse(b.visitedAt) - Date.parse(a.visitedAt));
-    return filter === "all" ? sorted : sorted.filter((stamp) => stamp.artwork?.kind === filter);
-  }, [filter, passport.stamps]);
+/** The gallery: two swipeable pages, every stamp and every collection. */
+export default function Gallery() {
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const initial: Tab = params.tab === "collections" ? "collections" : "stamps";
+  const [tab, setTab] = useState<Tab>(initial);
+  const [pageWidth, setPageWidth] = useState(0);
+  const pager = useRef<ScrollViewInstance>(null);
+  const show = (next: Tab) => {
+    setTab(next);
+    pager.current?.scrollTo({ x: next === "collections" ? pageWidth : 0, animated: true });
+  };
 
   return (
     <EditorialScreen>
@@ -30,8 +42,44 @@ export default function StampGallery() {
           </Tappable>
         } />
         <Rule />
-        <DisplayTitle size={48} style={styles.title}>Stamp gallery.</DisplayTitle>
-        <Body muted size={13}>Every stamp in one scrolling view, newest first.</Body>
+        <DisplayTitle size={48} style={styles.title}>Gallery.</DisplayTitle>
+        <View style={styles.tabs} accessibilityRole="tablist">
+          {TABS.map((t) => (
+            <Tappable key={t.key} onPress={() => show(t.key)} accessibilityRole="tab" accessibilityState={{ selected: tab === t.key }} style={[styles.tab, tab === t.key && styles.tabActive]}>
+              <Kicker muted={tab !== t.key}>{t.label}</Kicker>
+            </Tappable>
+          ))}
+        </View>
+        <View style={styles.listView} onLayout={(e) => setPageWidth(e.nativeEvent.layout.width)}>
+          {pageWidth > 0 ? (
+            <ScrollView
+              ref={pager}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              contentOffset={{ x: initial === "collections" ? pageWidth : 0, y: 0 }}
+              onMomentumScrollEnd={(e) => setTab(e.nativeEvent.contentOffset.x > pageWidth / 2 ? "collections" : "stamps")}
+            >
+              <View style={{ width: pageWidth }}><StampsPage /></View>
+              <View style={{ width: pageWidth }}><CollectionsList /></View>
+            </ScrollView>
+          ) : null}
+        </View>
+      </EditorialSafeContent>
+    </EditorialScreen>
+  );
+}
+
+function StampsPage() {
+  const passport = usePassport();
+  const [filter, setFilter] = useState<Filter>("all");
+  const stamps = useMemo(() => {
+    const sorted = [...passport.stamps].sort((a, b) => Date.parse(b.visitedAt) - Date.parse(a.visitedAt));
+    return filter === "all" ? sorted : sorted.filter((stamp) => stamp.artwork?.kind === filter);
+  }, [filter, passport.stamps]);
+
+  return (
+    <View style={styles.listView}>
         <View style={styles.filters}>
           <FilterButton label="ALL" active={filter === "all"} onPress={() => setFilter("all")} />
           <FilterButton label="RESTAURANTS" active={filter === "restaurant"} onPress={() => setFilter("restaurant")} />
@@ -56,8 +104,7 @@ export default function StampGallery() {
             ListEmptyComponent={<Body muted>{filter === "all" ? "Your stamps will appear here." : `No ${filter} stamps yet.`}</Body>}
           />
         )}
-      </EditorialSafeContent>
-    </EditorialScreen>
+    </View>
   );
 }
 
@@ -105,6 +152,9 @@ function GalleryStamp({ stamp }: { stamp: StampView }) {
 const styles = StyleSheet.create({
   title: { marginTop: 18, marginBottom: 4 },
   iconTarget: { width: size.hitTarget, height: size.hitTarget, alignItems: "center", justifyContent: "center" },
+  tabs: { flexDirection: "row", gap: space.lg, marginTop: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
+  tab: { minHeight: size.hitTarget, justifyContent: "center", borderBottomWidth: 2, borderBottomColor: colors.transparent, marginBottom: -StyleSheet.hairlineWidth },
+  tabActive: { borderBottomColor: colors.accent },
   filters: { height: 54, flexDirection: "row", gap: 8, marginTop: 12, marginBottom: 4 },
   filter: { flexGrow: 1, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
   filterActive: { borderBottomColor: colors.accent },
@@ -122,4 +172,55 @@ const styles = StyleSheet.create({
   date: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8, textTransform: "uppercase" },
   kind: { color: colors.dimBrass, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8 },
   pressed: { opacity: pressedOpacity },
+});
+
+
+function CollectionsList() {
+  const query = useCollections();
+  const collections = query.data?.collections ?? [];
+  const empty = !query.isPending && !query.isError && collections.length === 0;
+  return (
+    <ScrollView contentContainerStyle={collectionStyles.content} showsVerticalScrollIndicator={false}>
+      <Body muted size={13}>Smaller passports built from your stamps. A stamp can sit in as many as you like.</Body>
+      {query.isPending ? <SkeletonRows count={3} /> : null}
+      {query.isError ? <InlineError message="Couldn't load your collections." onRetry={() => void query.refetch()} /> : null}
+      {empty ? (
+        <View style={collectionStyles.empty}>
+          <Icon name="book" color="accent" size={size.iconLarge} />
+          <UIText variant="title2">No collections yet</UIText>
+          <UIText variant="callout" color="textSecondary" align="center">Make one for favorites, date nights, a trip, or anything you want to keep together.</UIText>
+        </View>
+      ) : null}
+      <View>
+        {collections.map((collection) => (
+          <Tappable
+            key={collection.id}
+            onPress={() => nav.push({ pathname: "/collections/[id]", params: { id: collection.id } })}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${collection.name}, ${collection.stampCount} ${collection.stampCount === 1 ? "stamp" : "stamps"}`}
+            style={collectionStyles.row}
+          >
+            <View style={[collectionStyles.book, { backgroundColor: collectionColorValue(collection.color) }]}><View style={collectionStyles.bookRule} /></View>
+            <View style={collectionStyles.rowText}>
+              <UIText style={collectionStyles.name} numberOfLines={2}>{collection.name}</UIText>
+              <UIText style={collectionStyles.count}>{collection.stampCount} {collection.stampCount === 1 ? "STAMP" : "STAMPS"}</UIText>
+            </View>
+            <Icon name="chevron.right" color="textTertiary" size={16} />
+          </Tappable>
+        ))}
+      </View>
+      <EditorialButton label="New collection" outline onPress={() => nav.push("/collections/new")} />
+    </ScrollView>
+  );
+}
+
+const collectionStyles = StyleSheet.create({
+  content: { paddingTop: space.sm, paddingBottom: space.xxxl, gap: space.lg },
+  row: { minHeight: 112, flexDirection: "row", alignItems: "center", gap: 14, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline, paddingVertical: 14 },
+  book: { width: 58, height: 82, borderRadius: radius.chip / 2, paddingLeft: space.xs, justifyContent: "center" },
+  bookRule: { width: hairlineWidth, height: "80%", backgroundColor: colors.foilHighlight },
+  rowText: { flex: 1, minWidth: 0, gap: space.xs },
+  name: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 27, lineHeight: 29 },
+  count: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8 },
+  empty: { minHeight: size.heroHeight, alignItems: "center", justifyContent: "center", gap: space.sm, paddingHorizontal: space.xl },
 });
