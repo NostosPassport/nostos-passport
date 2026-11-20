@@ -23,5 +23,5 @@ export default function Customize() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", gap: space.sm, paddingHorizontal: screenPadding },
+  root: { backgroundColor: colors.surface, alignItems: "center", gap: space.sm, paddingHorizontal: screenPadding, paddingTop: space.xl, paddingBottom: space.xxl },
 });

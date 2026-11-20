@@ -29,6 +29,8 @@ export const hairlineWidth = StyleSheet.hairlineWidth;
 /** Fixed component sizes. Hit targets are never below `hitTarget`. */
 export const size = {
   hitTarget: 44,
+  /** Tab bar height above the home-indicator inset. */
+  tabBar: 56,
   buttonHeight: 50,
   fieldHeight: 50,
   /** Width of the inline label column in grouped forms. */

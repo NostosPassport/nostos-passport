@@ -123,15 +123,15 @@ describe("MapScreen", () => {
   it("filters stamped places by restaurant and bar without changing the visited data", async () => {
     await render(<MapScreen />);
 
-    await fireEvent.press(screen.getByRole("button", { name: "RESTAURANTS" }));
+    await fireEvent.press(screen.getByRole("tab", { name: "RESTAURANTS" }));
     expect(screen.getByLabelText("Don Angie, open most recent stamp")).toBeTruthy();
     expect(screen.queryByLabelText("Employees Only, open most recent stamp")).toBeNull();
 
-    await fireEvent.press(screen.getByRole("button", { name: "BARS" }));
+    await fireEvent.press(screen.getByRole("tab", { name: "BARS" }));
     expect(screen.queryByLabelText("Don Angie, open most recent stamp")).toBeNull();
     expect(screen.getByLabelText("Employees Only, open most recent stamp")).toBeTruthy();
 
-    await fireEvent.press(screen.getByRole("button", { name: "ALL" }));
+    await fireEvent.press(screen.getByRole("tab", { name: "ALL" }));
     expect(screen.getByLabelText("Don Angie, open most recent stamp")).toBeTruthy();
     expect(screen.getByLabelText("Employees Only, open most recent stamp")).toBeTruthy();
   });
@@ -142,12 +142,12 @@ describe("MapScreen", () => {
     mockMine = [...mockMine, mineRow(hotel, "stamp-hotel")];
     await render(<MapScreen />);
 
-    await fireEvent.press(screen.getByRole("button", { name: "HOTELS" }));
+    await fireEvent.press(screen.getByRole("tab", { name: "HOTELS" }));
     expect(screen.getByLabelText("Public Hotel, open most recent stamp")).toBeTruthy();
     expect(screen.queryByLabelText("Don Angie, open most recent stamp")).toBeNull();
     expect(screen.queryByLabelText("Employees Only, open most recent stamp")).toBeNull();
 
-    await fireEvent.press(screen.getByRole("button", { name: "RESTAURANTS" }));
+    await fireEvent.press(screen.getByRole("tab", { name: "RESTAURANTS" }));
     expect(screen.queryByLabelText("Public Hotel, open most recent stamp")).toBeNull();
   });
 

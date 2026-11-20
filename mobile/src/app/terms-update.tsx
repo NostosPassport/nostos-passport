@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
@@ -24,7 +24,7 @@ export default function TermsUpdate() {
   });
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.md }]}>
+    <ScrollView style={styles.scroll} contentContainerStyle={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.md }]}>
       <View style={styles.body}>
         <Text style={styles.title} accessibilityRole="header">Updated terms</Text>
         <Text color="textSecondary">We&apos;ve updated our Terms and Privacy policy. Review them to keep using Nostos.</Text>
@@ -38,12 +38,13 @@ export default function TermsUpdate() {
         <Button title="Agree and continue" onPress={() => accept.mutate()} loading={accept.isPending} disabled={!version} />
         <Button title="Sign out" variant="secondary" onPress={() => void signOut()} />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background, paddingHorizontal: screenPadding, justifyContent: "space-between" },
+  scroll: { flex: 1, backgroundColor: colors.background },
+  root: { flexGrow: 1, paddingHorizontal: screenPadding, justifyContent: "space-between", gap: space.xl },
   body: { gap: space.md, paddingTop: space.xl },
   title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 48, lineHeight: 50, letterSpacing: -1.1 },
   links: { gap: space.sm, marginTop: space.sm },

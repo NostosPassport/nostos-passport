@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { Alert, Share, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, Share, StyleSheet, View } from "react-native";
 
 import { api } from "@/api";
 import { qk } from "@/api/keys";
@@ -62,7 +62,7 @@ export default function ShareCollectionScreen() {
   const share = shareQuery.data.share;
 
   return (
-    <View style={styles.root}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.root} contentInsetAdjustmentBehavior="automatic">
       <Stack.Screen options={{ title: "Share collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} />
       <View style={styles.hero}>
         <Text variant="title">{collection.name}</Text>
@@ -97,12 +97,13 @@ export default function ShareCollectionScreen() {
       <Text variant="caption" color="textSecondary">
         Removing a stamp from this collection removes it from the shared page. Deleting the collection or disabling its link makes the shared page unavailable.
       </Text>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.transparent, padding: space.lg, gap: space.lg },
+  scroll: { flex: 1, backgroundColor: colors.transparent },
+  root: { padding: space.lg, paddingBottom: space.xxxl, gap: space.lg },
   loading: { flex: 1, backgroundColor: colors.transparent, padding: space.lg },
   hero: { gap: space.xs },
   card: { borderTopWidth: hairlineWidth, borderBottomWidth: hairlineWidth, borderColor: colors.hairline, paddingVertical: space.lg, gap: space.md },
