@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ApiError, errorText } from "@/api";
@@ -26,6 +26,7 @@ function isLoginIdentifier(value: string) {
 }
 
 export default function SignIn() {
+  const { height: windowHeight } = useWindowDimensions();
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
   const [farewell] = useState(() => farewellNotice.take());
@@ -88,7 +89,7 @@ export default function SignIn() {
           <Text style={styles.wordmark}>NOSTOS</Text>
           <Image
             source={SIGN_IN_ART}
-            style={styles.collage}
+            style={[styles.collage, { height: Math.round(Math.min(299, windowHeight * 0.3)) }]}
             resizeMode="cover"
             accessibilityLabel="Original Greek engraved-eye newspaper collage"
             accessibilityIgnoresInvertColors
@@ -211,8 +212,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { flexGrow: 1 },
   wordmark: { color: colors.accent, fontFamily: fonts.serifRegular, fontSize: 72, lineHeight: 76, letterSpacing: -2.8, paddingHorizontal: 24, paddingBottom: 4 },
-  collage: { width: "100%", height: 299, backgroundColor: colors.elevated },
-  headline: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 67, lineHeight: 64, letterSpacing: -1.7, paddingHorizontal: 24, paddingTop: 12 },
+  collage: { width: "100%", backgroundColor: colors.elevated },
+  headline: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 67, lineHeight: 68, letterSpacing: -1.7, paddingHorizontal: 24, paddingTop: 12 },
   form: { paddingHorizontal: 24, paddingTop: 18, gap: 16 },
   formHeading: { gap: 3 },
   formTitle: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 28, lineHeight: 31 },

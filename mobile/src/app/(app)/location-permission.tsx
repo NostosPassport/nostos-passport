@@ -21,7 +21,7 @@ export default function LocationPermission() {
   };
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.md }]}>
+    <View style={[styles.root, { paddingBottom: insets.bottom + space.md }]}>
       <View style={styles.body}>
         <Text style={styles.title} accessibilityRole="header">
           {denied ? "Location is off" : "Verify where you've been"}
@@ -45,8 +45,8 @@ export default function LocationPermission() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background, paddingHorizontal: screenPadding, justifyContent: "space-between" },
-  body: { gap: space.md, paddingTop: space.xl },
-  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 48, lineHeight: 50, letterSpacing: -1.1 },
+  root: { backgroundColor: colors.background, paddingHorizontal: screenPadding, paddingTop: space.xl, gap: space.xl },
+  body: { gap: space.md },
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 40, lineHeight: 44, letterSpacing: -0.9 },
   actions: { gap: space.sm },
 });

@@ -10,7 +10,7 @@ export default function AppLayout() {
       <Stack screenOptions={{ ...stackOptions, contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="gallery" options={{ headerShown: false }} />
-        <Stack.Screen name="place/[id]" options={{ title: "Place" }} />
+        <Stack.Screen name="place/[id]" options={{ title: "" }} />
         <Stack.Screen name="stamp/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="stamp/new" options={{ presentation: "modal", headerShown: false, headerBackButtonMenuEnabled: false }} />
         <Stack.Screen name="stamp/camera" options={{ presentation: "fullScreenModal", headerShown: false }} />
@@ -24,11 +24,11 @@ export default function AppLayout() {
         <Stack.Screen name="collections/[id]/share" options={{ title: "Share collection", presentation: "modal" }} />
         <Stack.Screen
           name="location-permission"
-          options={{ presentation: "formSheet", sheetAllowedDetents: [0.6], sheetGrabberVisible: true, sheetCornerRadius: radius.sheet, headerShown: false, contentStyle: { backgroundColor: colors.surface } }}
+          options={{ presentation: "formSheet", sheetAllowedDetents: "fitToContents", sheetGrabberVisible: true, sheetCornerRadius: radius.sheet, headerShown: false, contentStyle: { backgroundColor: colors.surface } }}
         />
         <Stack.Screen
           name="customize"
-          options={{ presentation: "formSheet", sheetAllowedDetents: [0.4], sheetGrabberVisible: true, sheetCornerRadius: radius.sheet, headerShown: false, contentStyle: { backgroundColor: colors.surface } }}
+          options={{ presentation: "formSheet", sheetAllowedDetents: "fitToContents", sheetGrabberVisible: true, sheetCornerRadius: radius.sheet, headerShown: false, contentStyle: { backgroundColor: colors.surface } }}
         />
         <Stack.Screen name="settings/index" options={{ headerShown: false }} />
         <Stack.Screen name="edit-profile" options={{ title: "Edit profile", presentation: "modal" }} />

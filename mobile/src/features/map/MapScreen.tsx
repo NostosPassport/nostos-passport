@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import MapView, { Marker, type Region } from "react-native-maps";
 
 import type { Place } from "@/api/contracts";
@@ -10,7 +10,7 @@ import { useUserCoords } from "@/features/location/location-store";
 import { placesRegion } from "@/features/people/places";
 import { HOME_REGION } from "@/lib/geo";
 import { localityKey, localityLabel } from "@/lib/place";
-import { colors } from "@/theme";
+import { colors, shadows } from "@/theme";
 import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
 import { HOTEL_TYPES, resolveCategoryStamp } from "../../../../shared/category-stamp-artwork";
@@ -31,6 +31,8 @@ function effectiveCategory(place: Place): Exclude<MapFilter, "all"> | null {
 }
 
 export function MapScreen() {
+  // iPhone SE-class heights: a smaller display title so the map keeps most of the screen (P-044).
+  const compact = useWindowDimensions().height < 740;
   const me = useMe();
   const storedPlaces = usePlaces();
   const mine = useUserPlaces(me.data?.user.handle ?? "", !!me.data);
@@ -88,10 +90,10 @@ export function MapScreen() {
 
   return (
     <EditorialScreen>
-      <EditorialSafeContent bottom>
+      <EditorialSafeContent>
         <EditorialHeader compact action={<GearButton onPress={() => nav.push("/settings")} />} />
         <Rule />
-        <DisplayTitle size={52} style={styles.title}>Where you&apos;ve been.</DisplayTitle>
+        <DisplayTitle size={compact ? 38 : 52} style={styles.title}>Where you&apos;ve been.</DisplayTitle>
         <Body muted size={13}>Tap a place to open your most recent stamp there.</Body>
         <View style={styles.filters}>
           <FilterButton label="ALL" active={filter === "all"} onPress={() => setFilter("all")} />
@@ -156,7 +158,7 @@ function FilterButton({ label, active, onPress }: { label: string; active: boole
   return (
     <Tappable
       onPress={onPress}
-      accessibilityRole="button"
+      accessibilityRole="tab"
       accessibilityState={{ selected: active }}
       style={[styles.filter, active && styles.filterActive]}
     >
@@ -168,9 +170,10 @@ function FilterButton({ label, active, onPress }: { label: string; active: boole
 const styles = StyleSheet.create({
   title: { marginTop: 8, marginBottom: 4 },
   filters: { height: 48, flexDirection: "row", gap: 8, marginTop: 6 },
-  filter: { flexGrow: 1, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
+  // Content-sized cells: "RESTAURANTS" does not fit a quarter of an iPhone SE, so equal widths would wrap it.
+  filter: { flexGrow: 1, flexShrink: 0, alignItems: "center", justifyContent: "center", borderBottomWidth: 2, borderBottomColor: colors.transparent },
   filterActive: { borderBottomColor: colors.accent },
-  mapFrame: { flex: 1, minHeight: 300, overflow: "hidden", marginTop: 4, marginBottom: 4 },
+  mapFrame: { flex: 1, minHeight: 200, overflow: "hidden", marginTop: 4, marginBottom: 12, backgroundColor: colors.paperDeep },
   recenter: {
     position: "absolute",
     right: 14,
@@ -183,6 +186,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
+    ...shadows.soft,
   },
   recenterPressed: { opacity: 0.75 },
 });

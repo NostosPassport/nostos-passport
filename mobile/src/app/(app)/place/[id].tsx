@@ -37,7 +37,7 @@ function Page() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: data?.place.name ?? "Place" }} />
+      <Stack.Screen options={{ title: "" }} />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         {data ? (
           <>
