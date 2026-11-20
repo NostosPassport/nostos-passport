@@ -7,7 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { Tappable } from "@/components/ui/tappable";
 import { Text } from "@/components/ui/text";
 import { PassportBook } from "@/features/book/PassportBook";
-import { StampMark } from "@/features/book/StampMark";
+import { StampMark, fitStampSize } from "@/features/book/StampMark";
 import { usePassport } from "@/features/book/use-passport";
 import { nav } from "@/lib/nav";
 import { localityKey, localityLabel } from "@/lib/place";
@@ -27,8 +27,9 @@ export default function Passport() {
 
 const SHELF_LIMIT = 12;
 const CARD_WIDTH = 112;
-const MARK_SIZE = 96;
-const MARK_BOX = 78;
+/** The stamp's box inside a card: the full inner width, and tall enough for a hotel stamp at that width. */
+const MARK_WIDTH = CARD_WIDTH - space.xs * 2;
+const MARK_BOX = 68;
 
 function firstName(displayName: string): string {
   return displayName.trim().split(/\s+/)[0] ?? "";
@@ -104,7 +105,7 @@ function ShelfCard({ stamp }: { stamp: StampView }) {
       <View style={styles.markBox}>
         <StampMark
           input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey: localityKey(stamp.place), localityName: locality }}
-          size={MARK_SIZE}
+          size={fitStampSize(stamp.artwork, MARK_WIDTH, MARK_BOX)}
           artwork={stamp.artwork}
           photoUrl={stamp.photoUrl}
           visitedAt={stamp.visitedAt}
@@ -112,7 +113,7 @@ function ShelfCard({ stamp }: { stamp: StampView }) {
         />
       </View>
       <Text style={styles.cardName} numberOfLines={1} maxFontSizeMultiplier={1.2}>{stamp.place.name}</Text>
-      <Text style={styles.cardDate} numberOfLines={1} maxFontSizeMultiplier={1.2}>{date.toUpperCase()}</Text>
+      <Text style={styles.cardDate} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} maxFontSizeMultiplier={1.2}>{date.toUpperCase()}</Text>
     </Tappable>
   );
 }
@@ -128,9 +129,9 @@ const styles = StyleSheet.create({
   seeAll: { minHeight: size.hitTarget, flexDirection: "row", alignItems: "center", gap: space.xxs },
   list: { marginHorizontal: -space.md, flexGrow: 0 },
   row: { paddingHorizontal: space.md + space.xs, gap: space.sm, paddingBottom: space.sm },
-  card: { width: CARD_WIDTH, padding: space.xs, gap: 2, borderRadius: radius.chip, backgroundColor: colors.paperRaised, borderWidth: hairlineWidth, borderColor: colors.hairline, ...shadows.contact },
+  card: { width: CARD_WIDTH, padding: space.xs, gap: space.xxs / 2, borderRadius: radius.chip, backgroundColor: colors.paperRaised, borderWidth: hairlineWidth, borderColor: colors.hairline, ...shadows.contact },
   emptyCard: { width: "auto", minHeight: MARK_BOX + 40, paddingHorizontal: space.lg, alignItems: "center", justifyContent: "center", gap: space.xs, marginHorizontal: space.xs },
   markBox: { height: MARK_BOX, alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: space.xxs },
   cardName: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 15, lineHeight: 18 },
-  cardDate: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8 },
+  cardDate: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 11, lineHeight: 14, letterSpacing: 0.5 },
 });

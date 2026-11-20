@@ -4,10 +4,21 @@ import { colors, fonts, stampStyle } from "@/theme";
 import type { CategoryStampArtwork } from "@/api/contracts";
 import { mediaUrl } from "@/api";
 import { safeStampPhotoUrl } from "../../../../shared/category-stamp-artwork";
+import { STAMP_GEOMETRY } from "../../../../shared/category-stamp-design";
 import { CategoryStampMark } from "./CategoryStampMark";
 import { STAMP_BOX, type StampDesign, type StampInput, motifPath, ringsFor, shapePath, stampDesign } from "./stamp-design";
 
 const MID = STAMP_BOX / 2;
+
+/**
+ * The width to pass as `size` so a stamp fits inside a `maxWidth` x `maxHeight` box. Category stamps are landscape
+ * (restaurant, hotel) or square (bar), and the legacy mark is square, so a fixed width alone overflows a short box.
+ */
+export function fitStampSize(artwork: Pick<CategoryStampArtwork, "kind"> | null | undefined, maxWidth: number, maxHeight: number): number {
+  const geo = !artwork ? null : STAMP_GEOMETRY[artwork.kind === "bar" ? "bar" : artwork.kind === "hotel" ? "hotel" : "restaurant"];
+  const aspect = geo ? geo.w / geo.h : 1;
+  return Math.floor(Math.min(maxWidth, maxHeight * aspect));
+}
 
 /** A stamp inked on the page: brass, drawn from the place's design. The same place always looks the same. */
 export function StampMark({ input, size, design, artwork, photoUrl, visitedAt, timeZone }: { input: StampInput; size: number; design?: StampDesign; artwork?: CategoryStampArtwork | null; photoUrl?: string | null; visitedAt?: string | null; timeZone?: string | null }) {

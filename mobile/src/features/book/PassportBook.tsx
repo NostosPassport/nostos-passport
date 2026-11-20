@@ -217,7 +217,8 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
         ) : null}
         {modelError ? <Tappable onPress={() => { setModelError(false); setModelKey((k) => k + 1); }} accessibilityRole="button" accessibilityLabel="Retry the 3D passport" style={[styles.close, styles.retry3d]}><Icon name="arrow.clockwise" size={size.iconSmall} color="textTertiary" /></Tappable> : null}
       </Animated.View>
-      <Animated.View style={[styles.counts, chromeMotion]}>{collectionTitle ? <NativeText numberOfLines={2} maxFontSizeMultiplier={maxFontSizeMultiplier} style={styles.collectionTitle}>{collectionTitle}</NativeText> : null}{bottom === undefined ? <Counts counts={data.counts} /> : null}{!collectionId && bottom === undefined && firstRun.show && data.counts.stamps === 0 ? <FirstRunHint onDismiss={firstRun.dismiss} /> : null}</Animated.View>
+      {/* On home the shelf replaces the counts; an empty counts block would only push the passport up by its padding. */}
+      {collectionTitle || bottom === undefined ? <Animated.View style={[styles.counts, chromeMotion]}>{collectionTitle ? <NativeText numberOfLines={2} maxFontSizeMultiplier={maxFontSizeMultiplier} style={styles.collectionTitle}>{collectionTitle}</NativeText> : null}{bottom === undefined ? <Counts counts={data.counts} /> : null}{!collectionId && bottom === undefined && firstRun.show && data.counts.stamps === 0 ? <FirstRunHint onDismiss={firstRun.dismiss} /> : null}</Animated.View> : null}
       {bottom !== undefined ? <Animated.View style={[styles.slot, chromeMotion]}>{bottom}</Animated.View> : null}
     </View>
     <Modal visible={focused} transparent presentationStyle="overFullScreen" animationType="none" onRequestClose={close}>
