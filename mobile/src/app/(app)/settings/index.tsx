@@ -12,7 +12,7 @@ import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
 import { Text } from "@/components/ui/text";
 import { LEGAL, openWebPage } from "@/lib/links";
-import { colors, fonts, screenPadding, space, pressedOpacity } from "@/theme";
+import { colors, fonts, maxFontSizeMultiplier, screenPadding, size, space, pressedOpacity, type as typeScale } from "@/theme";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
 
@@ -50,15 +50,15 @@ export default function Settings() {
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.nav, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.nav, { paddingTop: insets.top, height: insets.top + size.hitTarget }]}>
         <Tappable onPress={() => nav.back()} style={styles.hitTarget} accessibilityRole="button" accessibilityLabel="Back">
           <Icon name="chevron.left" color="textPrimary" size={22} />
         </Tappable>
       </View>
-      <NativeText style={styles.title}>Settings</NativeText>
+      <NativeText style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={maxFontSizeMultiplier}>Settings</NativeText>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + space.xl }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.textSecondary} />}
       >
         {me.isError && !user ? (
@@ -105,27 +105,29 @@ function SettingsRow({ title, subtitle, subtitleEllipsis = "tail", trailing, bad
   return (
     <Tappable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label} accessibilityHint={accessibilityHint}>
       <View style={styles.rowCopy}>
-        <NativeText style={styles.rowTitle}>{title}</NativeText>
-        {subtitle ? <NativeText style={styles.rowSubtitle} numberOfLines={1} ellipsizeMode={subtitleEllipsis}>{subtitle}</NativeText> : null}
+        <NativeText style={styles.rowTitle} maxFontSizeMultiplier={maxFontSizeMultiplier}>{title}</NativeText>
+        {subtitle ? <NativeText style={styles.rowSubtitle} numberOfLines={1} ellipsizeMode={subtitleEllipsis} maxFontSizeMultiplier={maxFontSizeMultiplier}>{subtitle}</NativeText> : null}
       </View>
-      {badge ? <Badge label={badge} /> : trailing ? <Icon name={trailing} color="textTertiary" size={16} /> : null}
+      {badge ? <Badge label={badge} /> : trailing ? <Icon name={trailing} color="textTertiary" size={size.iconSmall} /> : null}
     </Tappable>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.transparent },
-  nav: { height: 92, paddingHorizontal: screenPadding, justifyContent: "flex-end" },
-  hitTarget: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginLeft: -11 },
-  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 50, lineHeight: 52, letterSpacing: -0.7, paddingHorizontal: screenPadding, marginTop: 10, marginBottom: 42 },
+  // Same top bar as sign-up: a 44pt row under the status bar, so the back chevron never overflows a fixed height.
+  nav: { paddingHorizontal: screenPadding, flexDirection: "row", alignItems: "flex-end" },
+  hitTarget: { width: size.hitTarget, height: size.hitTarget, alignItems: "center", justifyContent: "center", marginLeft: -11 },
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 50, lineHeight: 52, letterSpacing: -0.7, paddingHorizontal: screenPadding, paddingTop: space.md, paddingBottom: space.xl },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: screenPadding, gap: 8 },
-  row: { minHeight: 64, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, flexDirection: "row", alignItems: "center", gap: 12 },
-  rowCopy: { flex: 1, gap: 7 },
-  rowTitle: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 27, lineHeight: 28, letterSpacing: -0.5 },
-  rowSubtitle: { color: colors.textSecondary, fontSize: 12, lineHeight: 15 },
-  privacyNote: { paddingVertical: 3 },
-  actions: { gap: space.sm, paddingTop: space.sm },
-  danger: { paddingTop: space.xl, paddingBottom: space.sm },
+  // Rows sit flush, each closed by its hairline; groups are separated by the note and the action blocks below.
+  content: { paddingHorizontal: screenPadding },
+  row: { minHeight: 64, paddingVertical: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, flexDirection: "row", alignItems: "center", gap: space.sm },
+  rowCopy: { flex: 1, gap: space.xxs },
+  rowTitle: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 27, lineHeight: 30, letterSpacing: -0.5 },
+  rowSubtitle: { color: colors.textSecondary, ...typeScale.footnote },
+  privacyNote: { paddingTop: space.md, paddingBottom: space.lg },
+  actions: { paddingTop: space.xl },
+  danger: { paddingTop: space.lg, paddingBottom: space.md },
   pressed: { opacity: pressedOpacity },
 });
