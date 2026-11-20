@@ -1,5 +1,10 @@
 import { STAMP_ARTWORK_STYLE } from "../../../shared/passport-artwork";
 
+/**
+ * Raw palette. The names are historical (the app was once dark): `black` is raised paper, `ink` is the base paper
+ * and `bone` is the ink text colour. Prefer the semantic `colors` aliases (`paper`, `paperRaised`, `paperDeep`,
+ * `textPrimary`, `pageShade`) in new code.
+ */
 export const palette = {
   black: "#F7F4EE",
   ink: "#F3EFE5",
@@ -66,6 +71,12 @@ export const colors = {
   bookAccentSoft: `rgba(${ACCENT_RGB},0.30)`,
   bookShade: `rgba(${INK_RGB},0.075)`,
   bookFold: `rgba(${INK_RGB},0.08)`,
+
+  paper: palette.ink,
+  paperRaised: palette.black,
+  paperDeep: palette.inkRaised,
+  /** Page-turn shadow. Ink, so a turning page darkens; animated opacity peaks around 0.65. */
+  pageShade: `rgba(${INK_RGB},0.28)`,
 } as const;
 
 export type ColorToken = keyof typeof colors;

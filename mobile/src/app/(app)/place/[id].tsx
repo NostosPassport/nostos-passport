@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.transparent },
   content: { padding: screenPadding, gap: space.lg, paddingBottom: space.xxxl },
   head: { gap: space.xs },
-  visit: { gap: space.xs, padding: space.md, borderRadius: radius.card, backgroundColor: colors.surface },
+  visit: { gap: space.xs, padding: space.md, borderRadius: radius.card, backgroundColor: colors.paperDeep },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: size.hitTarget },
   line: { flex: 1, gap: space.xxs },
 });

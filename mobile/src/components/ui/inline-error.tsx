@@ -25,7 +25,7 @@ export function InlineError({ message, onRetry, retrying }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: space.xs, padding: space.md, borderRadius: radius.card, backgroundColor: colors.surface },
+  wrap: { gap: space.xs, padding: space.md, borderRadius: radius.card, backgroundColor: colors.paperDeep },
   row: { flexDirection: "row", gap: space.sm, alignItems: "flex-start" },
   text: { flex: 1 },
 });
