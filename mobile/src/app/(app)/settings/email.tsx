@@ -92,6 +92,8 @@ export default function ChangeEmail() {
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
+          autoCorrect={false}
+          spellCheck={false}
           textContentType="emailAddress"
           returnKeyType={challenge ? "next" : "done"}
           onSubmitEditing={challenge ? undefined : submit}

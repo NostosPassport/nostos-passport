@@ -65,6 +65,10 @@ export default function SongPicker() {
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
+            autoFocus
+            spellCheck={false}
+            clearButtonMode="while-editing"
+            selectionColor={colors.accent}
             style={styles.searchInput}
             accessibilityLabel="Song or artist"
           />
@@ -128,7 +132,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: screenPadding, gap: 12 },
   searchField: { gap: 7 },
-  searchInput: { height: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, color: colors.textPrimary, fontSize: 14, paddingHorizontal: 10, paddingVertical: 0 },
+  searchInput: { minHeight: 50, borderBottomWidth: 1, borderBottomColor: colors.textPrimary, color: colors.textPrimary, fontSize: 17, paddingHorizontal: 0, paddingVertical: 0 },
   art: { width: size.avatarLarge - space.md, height: size.avatarLarge - space.md, borderRadius: radius.chip, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   none: { minHeight: 48, alignItems: "center", justifyContent: "center" },
   noneText: { color: colors.textPrimary, fontSize: 14, fontWeight: "500" },

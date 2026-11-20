@@ -31,7 +31,7 @@ import { formatDistance } from "@/lib/format";
 import { haptics } from "@/lib/haptics";
 import { localityLabel } from "@/lib/place";
 import { useConfirmDiscard } from "@/lib/use-confirm-discard";
-import { colors, fonts, size, space } from "@/theme";
+import { colors, fonts, maxFontSizeMultiplier, size, space } from "@/theme";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
 
@@ -146,7 +146,7 @@ function Composer() {
             <Tappable style={[styles.modeCard, mode === "past" && styles.modeCardActive]} onPress={() => setMode("past")} accessibilityRole="button" accessibilityState={{ selected: mode === "past" }}><NativeText style={[styles.modeTitle, mode === "past" && styles.modeTitleActive]}>PAST</NativeText><Text variant="footnote" color={mode === "past" ? "onAccent" : "textSecondary"}>Add a memory from the last year.</Text></Tappable>
           </View>
           {mode === "past" ? <View style={styles.dateBlock}><Kicker>VISIT DATE · MM/DD/YYYY</Kicker><TextInput value={pastDateText} onChangeText={(value) => setPastDateText(formatBirthdateInput(value))} keyboardType="number-pad" maxLength={10} placeholder="MM/DD/YYYY" placeholderTextColor={colors.textTertiary} style={styles.dateInput} accessibilityLabel="Visit date" />{dateProblem ? <Text variant="footnote" color="danger">{dateProblem}</Text> : <Text variant="footnote" color="textTertiary">Past stamps are not location verified.</Text>}</View> : permission !== "granted" ? <View style={styles.notice}><Text variant="callout" color="textSecondary">You can stamp without sharing location. It just won&apos;t show as verified.</Text><Button title={permission === "denied" ? "Location settings" : "Use my location"} variant="secondary" onPress={() => nav.push("/location-permission")} /></View> : null}
-          <Rule /><NativeText style={styles.sectionTitle}>Choose a place</NativeText><TextInput value={search} onChangeText={setSearch} placeholder="Search restaurants & bars" placeholderTextColor={colors.textTertiary} style={styles.searchInput} accessibilityLabel="Search restaurants and bars" />
+          <Rule /><NativeText style={styles.sectionTitle}>Choose a place</NativeText><TextInput value={search} onChangeText={setSearch} returnKeyType="search" autoCorrect={false} spellCheck={false} clearButtonMode="while-editing" selectionColor={colors.accent} maxFontSizeMultiplier={maxFontSizeMultiplier} placeholder="Search restaurants & bars" placeholderTextColor={colors.textTertiary} style={styles.searchInput} accessibilityLabel="Search restaurants and bars" />
           {!search.trim() && mode === "now" && coords && nearby.isPending ? <SkeletonRows count={3} /> : null}
           {!search.trim() && mode === "now" && (nearby.data?.places.length ?? 0) > 0 ? <><ListGroup header="Nearby">{nearby.data!.places.map((candidate) => <ListRow key={providerKey(candidate)} icon={candidate.inside ? "checkmark.seal.fill" : "location"} iconColor="accent" title={candidate.name} subtitle={[placeSubtitle(candidate), candidate.inside ? "visit can be verified" : `${formatDistance(candidate.distanceM)} away`].filter(Boolean).join(" · ")} onPress={() => choosePlace(candidate)} />)}</ListGroup><Text variant="footnote" color="textTertiary">Google Maps</Text></> : null}
           {searching && searchResults.isPending ? <SkeletonRows count={4} /> : null}

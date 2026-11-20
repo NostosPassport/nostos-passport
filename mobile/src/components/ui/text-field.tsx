@@ -1,4 +1,4 @@
-import { Children, forwardRef, Fragment, isValidElement, type ReactNode } from "react";
+import { Children, forwardRef, Fragment, isValidElement, useState, type ReactNode } from "react";
 import { StyleSheet, TextInput, View, type TextInputInstance, type TextInputProps } from "react-native";
 
 import { useAnnounce } from "@/lib/a11y";
@@ -11,8 +11,9 @@ type FieldProps = TextInputProps & {
   error?: string | null;
 };
 
-export const Field = forwardRef<TextInputInstance, FieldProps>(function Field({ label, invalid, error, style, accessibilityHint, ...rest }, ref) {
+export const Field = forwardRef<TextInputInstance, FieldProps>(function Field({ label, invalid, error, style, accessibilityHint, onFocus, onBlur, ...rest }, ref) {
   const hasError = !!invalid || !!error;
+  const [focused, setFocused] = useState(false);
   useAnnounce(error ?? null);
   return (
     <View style={styles.row}>
@@ -32,8 +33,12 @@ export const Field = forwardRef<TextInputInstance, FieldProps>(function Field({ 
         placeholderTextColor={colors.textSecondary}
         selectionColor={colors.accent}
         maxFontSizeMultiplier={maxFontSizeMultiplier}
+        autoCorrect={rest.keyboardType === "email-address" ? false : undefined}
+        spellCheck={rest.keyboardType === "email-address" ? false : undefined}
         {...rest}
-        style={[styles.input, hasError && styles.inputInvalid, style]}
+        onFocus={(e) => { setFocused(true); onFocus?.(e); }}
+        onBlur={(e) => { setFocused(false); onBlur?.(e); }}
+        style={[styles.input, !rest.multiline && styles.singleLine, rest.editable === false && styles.locked, focused && styles.inputFocused, hasError && styles.inputInvalid, style]}
       />
       {error ? (
         <Text variant="footnote" color="danger" style={styles.fieldError}>
@@ -79,18 +84,22 @@ export function FieldGroup({ children, footer, errors }: GroupProps) {
 const styles = StyleSheet.create({
   groupWrap: { gap: space.xs },
   group: { gap: space.sm },
-  row: { minHeight: 66, gap: 7 },
+  row: { minHeight: 66, gap: space.xxs },
   label: { fontFamily: fonts.monoBold, letterSpacing: 1.35 },
   input: {
     minHeight: 44,
     borderBottomWidth: hairlineWidth,
     borderBottomColor: colors.hairline,
     color: colors.textPrimary,
-    paddingHorizontal: 10,
+    paddingHorizontal: 0,
     paddingVertical: space.xs,
     ...typeScale.body,
   },
+  // A single-line TextInput with lineHeight can misplace the cursor on iOS (P-030k).
+  singleLine: { lineHeight: undefined },
+  inputFocused: { borderBottomColor: colors.accent, borderBottomWidth: 1.5 },
+  locked: { color: colors.textSecondary, borderBottomColor: colors.transparent },
   inputInvalid: { borderBottomColor: colors.danger },
-  fieldError: { marginTop: -2 },
+  fieldError: {},
   footer: { paddingHorizontal: 0 },
 });
