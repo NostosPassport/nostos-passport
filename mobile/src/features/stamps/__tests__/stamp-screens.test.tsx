@@ -29,7 +29,7 @@ jest.mock("expo-router", () => ({
   router: { push: (...a: unknown[]) => mockPush(...a), back: (...a: unknown[]) => mockBack(...a), replace: (...a: unknown[]) => mockReplace(...a), dismissAll: jest.fn() },
   Stack: { Screen: () => null },
   useFocusEffect: jest.fn(),
-  useNavigation: () => ({ addListener: () => () => undefined, dispatch: jest.fn() }),
+  usePreventRemove: () => () => undefined,
 }));
 jest.mock("@/auth/account-state", () => ({ useAccountState: () => ({ state: "ready", retry: jest.fn(), retrying: false }) }));
 jest.mock("@/api/queries", () => ({

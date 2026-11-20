@@ -14,9 +14,9 @@ import { localityKey, localityLabel } from "@/lib/place";
 import { colors } from "@/theme";
 import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
-import { resolveCategoryStamp } from "../../../../shared/category-stamp-artwork";
+import { HOTEL_TYPES, resolveCategoryStamp } from "../../../../shared/category-stamp-artwork";
 
-type MapFilter = "all" | "restaurant" | "bar";
+type MapFilter = "all" | "restaurant" | "bar" | "hotel";
 
 const BAR_TYPES = new Set(["bar", "bar_and_grill", "beer_garden", "brewpub", "cocktail_bar", "gastropub", "hookah_bar", "irish_pub", "lounge_bar", "pub", "snack_bar", "sports_bar", "wine_bar","night_club","nightclub","dance_club"]);
 
@@ -24,6 +24,7 @@ function effectiveCategory(place: Place): Exclude<MapFilter, "all"> | null {
   if (place.category) return place.category;
   if (place.primaryType && BAR_TYPES.has(place.primaryType)) return "bar";
   if (place.primaryType === "restaurant" || place.primaryType?.endsWith("_restaurant") || place.primaryType === "steak_house") return "restaurant";
+  if (place.primaryType && HOTEL_TYPES.has(place.primaryType)) return "hotel";
   if (place.cuisines.length > 0) return "restaurant";
   return null;
 }
@@ -95,6 +96,7 @@ export function MapScreen() {
           <FilterButton label="ALL" active={filter === "all"} onPress={() => setFilter("all")} />
           <FilterButton label="RESTAURANTS" active={filter === "restaurant"} onPress={() => setFilter("restaurant")} />
           <FilterButton label="BARS" active={filter === "bar"} onPress={() => setFilter("bar")} />
+          <FilterButton label="HOTELS" active={filter === "hotel"} onPress={() => setFilter("hotel")} />
         </View>
         <View style={styles.mapFrame}>
           <MapView
@@ -165,7 +167,7 @@ function FilterButton({ label, active, onPress }: { label: string; active: boole
 const styles = StyleSheet.create({
   title: { marginTop: 8, marginBottom: 4 },
   filters: { height: 48, flexDirection: "row", gap: 8, marginTop: 6 },
-  filter: { flex: 1, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
+  filter: { flexGrow: 1, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
   filterActive: { borderBottomColor: colors.accent },
   mapFrame: { flex: 1, minHeight: 300, overflow: "hidden", marginTop: 4, marginBottom: 4 },
   recenter: {

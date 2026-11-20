@@ -26,7 +26,7 @@ const stamp = (id: string, page: number, slot: number, name: string): StampView 
   place: { id: `p-${id}`, slug: id, name, area: "East Village", city: "New York", region: "New York", country: "United States", countryCode: "US", timeZone: "America/New_York" },
 });
 const ready = (over: Partial<PassportData> = {}): PassportData => ({
-  status: "ready", handle: "ava", displayName: "Ava Lee", avatarUrl: null, bio: "", memberSince: "2026-10-03T04:00:00.000Z", stamps: [], pins: [],
+  status: "ready", handle: "ava", displayName: "Ava Lee", avatarUrl: null, bio: "", memberSince: "2026-10-03T04:00:00.000Z", stamps: [],
   counts: { stamps: 7, places: 5 }, retry: jest.fn(), ...over,
 });
 const COUNTS = "7 stamps, 5 places";

@@ -8,7 +8,7 @@ Nostos is an iPhone-only personal passport for the places a user goes. A signed-
 
 Users choose `Now` or `Past` when creating a stamp. A Now stamp may be location verified when the server confirms the current device position is inside the selected place geofence. Location is optional: missing location or an out-of-geofence position produces a normal unverified stamp instead of blocking creation. Past stamps are unverified, may be dated up to one year back, and cannot use a future date. Visit dates can be edited later; changing the calendar day of a verified stamp removes verification.
 
-Google-backed restaurant and bar discovery is worldwide. Durable place locality uses optional `area`, `city`, `region`, `country`, and `countryCode` metadata from Google Places plus an IANA `timeZone`. `area` is descriptive and may represent a neighborhood, district, sublocality, quartiere, or similar label; it is not a required hierarchy. The old NYC neighborhood polygon tables, completion records, API, and required venue neighborhood fields have been removed.
+Google-backed restaurant, bar, and hotel discovery is worldwide. Durable place locality uses optional `area`, `city`, `region`, `country`, and `countryCode` metadata from Google Places plus an IANA `timeZone`. `area` is descriptive and may represent a neighborhood, district, sublocality, quartiere, or similar label; it is not a required hierarchy. The old NYC neighborhood polygon tables, completion records, API, and required venue neighborhood fields have been removed.
 
 The product is private by default. User-created collections may be explicitly shared through signed, revocable, unlisted read-only web links. The master Passport cannot be shared. Feed, follows, likes, Activity, other-user passports, public profiles, moderation/admin social tooling, pinning, and guest preview are not part of the product or active architecture.
 
@@ -37,7 +37,7 @@ Verified visits use the Nostos mark as a positive verification seal. On stamp de
 
 - Default branch: `main`.
 - `backend/`: Next.js 15, Prisma, Postgres.
-- `mobile/`: Expo SDK 57, Expo Router, React Native.
+- `mobile/`: Expo SDK 58, Expo Router, React Native.
 - Historical review/delivery artifacts and superseded build prompts are retained in git history rather than the working tree.
 
 Current local defaults in committed configuration:
@@ -63,4 +63,4 @@ Preserve these unless the user explicitly changes product behavior and the corre
 
 ## Engineering rules
 
-Use current code and tests as truth. Old review test counts and local paths are historical evidence only. Never commit secrets. Never reset shared or production databases. For Expo APIs, check the installed SDK 57 docs. For mobile code changes, run `npm run check` before declaring completion.
+Use current code and tests as truth. Old review test counts and local paths are historical evidence only. Never commit secrets. Never reset shared or production databases. For Expo APIs, check the installed SDK 58 docs. For mobile code changes, run `npm run check` before declaring completion.

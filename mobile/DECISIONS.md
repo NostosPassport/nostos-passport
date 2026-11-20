@@ -39,7 +39,7 @@ This file contains the current mobile decisions. Older session-specific decision
 
 ## Engineering
 
-- Expo SDK 57 documentation is the API authority.
+- Expo SDK 58 documentation is the API authority.
 - Native behavior is configured through Expo config rather than hand-editing generated iOS/Android projects.
 - `npm run check` is the standard mobile validation command for implementation changes.
 - Dated reviews/test counts are historical evidence, not reusable proof for a new change.

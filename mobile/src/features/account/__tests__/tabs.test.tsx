@@ -2,16 +2,14 @@
 import { render } from "@testing-library/react-native";
 import type { ReactElement } from "react";
 
-import TabsLayout from "@/app/(app)/(tabs)/_layout";
+import TabsLayout, { unstable_settings } from "@/app/(app)/(tabs)/_layout";
 
 type ScreenProps = { name: string; options?: { href?: null; title?: string } };
 const mockScreens: ScreenProps[] = [];
-let mockInitial = "";
 
 jest.mock("@/auth/auth-context", () => ({ useAuth: () => ({ status: "signedIn" }) }));
 jest.mock("expo-router", () => {
-  const Tabs = function MockTabs({ children, initialRouteName }: { children: ReactElement[]; initialRouteName: string }) {
-    mockInitial = initialRouteName;
+  const Tabs = function MockTabs({ children }: { children: ReactElement[] }) {
     return <>{children}</>;
   };
   Tabs.Screen = function MockScreen(props: ScreenProps) {
@@ -26,13 +24,13 @@ const visible = () => mockScreens.filter((s) => s.options?.href !== null).map((s
 describe("tabs", () => {
   beforeEach(() => {
     mockScreens.length = 0;
-    mockInitial = "";
   });
 
   it("renders exactly Passport, Stamp and Map, with Passport as home", async () => {
     await render(<TabsLayout />);
     expect(visible()).toEqual(["passport", "stamp", "map"]);
-    expect(mockInitial).toBe("passport");
+    // SDK 58: the home tab is the layout's `unstable_settings.anchor`, not a `<Tabs initialRouteName>` prop.
+    expect(unstable_settings.anchor).toBe("passport");
     expect(visible()).not.toContain("index");
     expect(visible()).not.toContain("activity");
   });

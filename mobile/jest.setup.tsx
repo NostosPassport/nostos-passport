@@ -41,6 +41,10 @@ jest.mock("expo-symbols", () => {
   return { SymbolView: (props: object) => <View {...props} /> };
 });
 
+// Gesture Handler 3 throws when a GestureDetector renders outside GestureHandlerRootView. The app root
+// (src/app/_layout.tsx) always provides it; tests render screens without that root, so provide the same context here.
+jest.mock("react-native-gesture-handler/lib/module/GestureHandlerRootViewContext", () => ({ __esModule: true, default: require("react").createContext(true) }));
+
 jest.mock("react-native-worklets", () => require("react-native-worklets/src/mock"));
 jest.mock("react-native-reanimated", () => ({ ...require("react-native-reanimated/mock"), useSharedValue: (value: unknown) => require("react").useState(() => ({ value }))[0], useReducedMotion: () => false }));
 

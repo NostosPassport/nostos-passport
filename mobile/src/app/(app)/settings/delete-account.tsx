@@ -126,7 +126,7 @@ export default function DeleteAccount() {
 }
 
 const styles = StyleSheet.create({
-  warning: { gap: space.sm, padding: space.md, borderRadius: radius.card, backgroundColor: colors.surface },
+  warning: { gap: space.sm, padding: space.md, borderRadius: radius.card, backgroundColor: colors.paperDeep },
   bullet: { flexDirection: "row", alignItems: "flex-start", gap: space.sm },
   dot: { width: space.xs, height: space.xs, borderRadius: radius.pill, backgroundColor: colors.textTertiary, marginTop: space.xs },
   flex: { flex: 1 },

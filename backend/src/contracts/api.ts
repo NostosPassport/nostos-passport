@@ -69,7 +69,7 @@ export const Place = z.object({
   geofenceMeters: z.number().int(),
   fromOsm: z.boolean(),
   googlePlaceId: z.string().nullable().default(null),
-  category: z.enum(["restaurant", "bar"]).nullable().default(null),
+  category: z.enum(["restaurant", "bar", "hotel"]).nullable().default(null),
   cuisines: z.array(z.string()).default([]),
   primaryType: z.string().nullable().default(null),
   businessStatus: z.string().nullable().default(null),
@@ -88,11 +88,11 @@ export const Song = z.object({ title: z.string(), artist: z.string(), artUrl: z.
 export const StampPhotoView = z.object({ id: z.string(), url: z.string(), position: z.number().int().min(0).max(5), x: z.number().nullable(), y: z.number().nullable(), rotation: z.number().nullable() }).strict();
 export const CategoryStampArtwork = z.object({
   version: z.literal("category-ink/1"),
-  kind: z.enum(["restaurant", "bar"]),
+  kind: z.enum(["restaurant", "bar", "hotel"]),
   cuisine: z.string(),
   label: z.string(),
   color: z.string(),
-  icon: z.enum(["croissant", "burger", "tapas", "mezze", "restaurant", "pasta", "taco", "sushi", "noodles", "curry", "pizza", "bread", "fish", "leaf", "bowl", "grill", "glass", "music"]),
+  icon: z.enum(["croissant", "burger", "tapas", "mezze", "restaurant", "pasta", "taco", "sushi", "noodles", "curry", "pizza", "bread", "fish", "leaf", "bowl", "grill", "glass", "music", "key"]),
   priceTier: z.enum(["$", "$$", "$$$", "$$$$"]).nullable().optional(),
   michelinStars: z.union([z.literal(1), z.literal(2), z.literal(3)]).nullable().optional(),
 }).strict();

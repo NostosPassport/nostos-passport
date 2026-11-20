@@ -1,6 +1,6 @@
 # Nostos iOS app
 
-Nostos is an iPhone-only Expo SDK 57 app. The current product is a personal owner-only passport for the places a user goes. Signed-out users sign in or create an account; the old guest preview flow is no longer part of the root navigation.
+Nostos is an iPhone-only Expo SDK 58 app. The current product is a personal owner-only passport for the places a user goes. Signed-out users sign in or create an account; the old guest preview flow is no longer part of the root navigation.
 
 ## Current navigation
 
@@ -44,7 +44,7 @@ The app defaults to the current local backend configuration on port 3001 in deve
 
 The Map tab uses the default iOS map provider from `react-native-maps`, which is Apple Maps on iOS. It displays Nostos-owned visited venues and does not call Google Places while panning, zooming, filtering, or recentering.
 
-Google Places is used by the backend for worldwide restaurant/bar discovery, text search, and resolving a selected Google place into a durable Nostos venue. Durable place locality may include area, city, region, country, and country code. NYC neighborhood data is optional legacy enrichment and does not gate whether a place may be stamped. Configure `GOOGLE_PLACES_API_KEY` on the backend only. The Places key must never be exposed as an `EXPO_PUBLIC_*` mobile variable.
+Google Places is used by the backend for worldwide restaurant/bar/hotel discovery, text search, and resolving a selected Google place into a durable Nostos venue. Durable place locality may include area, city, region, country, and country code. NYC neighborhood data is optional legacy enrichment and does not gate whether a place may be stamped. Configure `GOOGLE_PLACES_API_KEY` on the backend only. The Places key must never be exposed as an `EXPO_PUBLIC_*` mobile variable.
 
 No Google Maps SDK for iOS key is required.
 
@@ -75,4 +75,4 @@ npm run sync:contracts
 | `src/theme/` | design tokens and typography |
 | `src/components/ui/` | shared native UI |
 
-For Expo APIs, use the SDK 57 documentation. See `AGENTS.md`, `DEVICE-CHECKLIST.md`, `REVIEW.md`, and `../DESIGN.md`.
+For Expo APIs, use the SDK 58 documentation. See `AGENTS.md`, `DEVICE-CHECKLIST.md`, `REVIEW.md`, and `../DESIGN.md`.

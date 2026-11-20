@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { priceTierForGoogleLevel } from "@/server/services/google-price-cache";
-import { cuisineTags, googleNearby, googlePlaceDetails, googleTextSearch, localityFromAddressComponents } from "@/server/services/google-places";
+import { categoryFor, cuisineTags, googleNearby, googlePlaceDetails, googleTextSearch, localityFromAddressComponents } from "@/server/services/google-places";
 
 const originalKey = process.env.GOOGLE_PLACES_API_KEY;
 afterEach(() => {
@@ -77,6 +77,39 @@ describe("Google Places normalization", () => {
       timeZone: "America/New_York",
       priceLevel: null,
     })]);
+  });
+
+  it("classifies hotels without taking over restaurants and bars", () => {
+    expect(categoryFor("hotel", ["hotel", "lodging"])).toBe("hotel");
+    expect(categoryFor("resort_hotel", ["resort_hotel", "lodging"])).toBe("hotel");
+    expect(categoryFor(null, ["bed_and_breakfast", "lodging"])).toBe("hotel");
+    // A place whose own type is food or drink stays food or drink, even inside a hotel.
+    expect(categoryFor("italian_restaurant", ["italian_restaurant", "hotel"])).toBe("restaurant");
+    expect(categoryFor("cocktail_bar", ["cocktail_bar", "hotel"])).toBe("bar");
+    expect(categoryFor("hotel", ["hotel", "restaurant"])).toBe("hotel");
+    // Generic lodging (campgrounds, RV parks, rooms in private homes) is not a hotel.
+    expect(categoryFor("campground", ["campground", "lodging"])).toBeNull();
+    expect(categoryFor("private_guest_room", ["private_guest_room", "lodging"])).toBeNull();
+    expect(categoryFor("park", ["park"])).toBeNull();
+  });
+
+  it("asks nearby search for hotels and keeps hotel results from text search", async () => {
+    process.env.GOOGLE_PLACES_API_KEY = "test-key";
+    const bodies: Record<string, unknown>[] = [];
+    const hotel = { id: "public", displayName: { text: "Public Hotel" }, formattedAddress: "215 Chrystie St", location: { latitude: 40.72, longitude: -73.99 }, primaryType: "hotel", types: ["hotel", "lodging"], businessStatus: "OPERATIONAL" };
+    const camp = { id: "camp", displayName: { text: "Camp Site" }, location: { latitude: 40.72, longitude: -73.99 }, primaryType: "campground", types: ["campground", "lodging"] };
+    const fetchImpl = (async (_input: string | URL | Request, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>);
+      return response({ places: [hotel, camp] });
+    }) as unknown as typeof fetch;
+
+    const nearby = await googleNearby({ lat: 40.72, lng: -73.99 }, 750, fetchImpl);
+    expect(bodies[0]!.includedTypes).toEqual(expect.arrayContaining(["restaurant", "bar", "hotel"]));
+    expect(bodies[0]!.includedTypes).not.toContain("lodging");
+    expect(nearby.map((p) => [p.googlePlaceId, p.category])).toEqual([["public", "hotel"]]);
+
+    const text = await googleTextSearch("public hotel", null, fetchImpl);
+    expect(text.map((p) => [p.googlePlaceId, p.category, p.cuisines])).toEqual([["public", "hotel", []]]);
   });
 
   it("does not force an un-biased text search into the US or New York", async () => {

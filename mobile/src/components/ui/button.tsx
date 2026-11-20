@@ -19,7 +19,7 @@ const fg: Record<Variant, ColorToken> = {
   primary: "onAccent",
   secondary: "textPrimary",
   plain: "accent",
-  destructive: "textPrimary",
+  destructive: "danger",
 };
 
 export function Button({ title, variant = "primary", icon, loading, block = true, compact, disabled, accessibilityLabel, ...rest }: Props) {
@@ -38,6 +38,7 @@ export function Button({ title, variant = "primary", icon, loading, block = true
         block ? styles.block : styles.inline,
         variant === "primary" && styles.primary,
         (variant === "secondary" || variant === "destructive") && styles.outline,
+        variant === "destructive" && styles.destructive,
         variant === "plain" && styles.plain,
         pressed && !inactive && styles.pressed,
         inactive && styles.disabled,
@@ -68,6 +69,7 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: colors.accent },
   outline: { backgroundColor: colors.transparent, borderWidth: hairlineWidth, borderColor: colors.hairline },
+  destructive: { borderColor: colors.danger },
   plain: { backgroundColor: colors.transparent, paddingHorizontal: space.md },
   compact: { minHeight: size.hitTarget, paddingHorizontal: space.md },
   block: { alignSelf: "stretch" },

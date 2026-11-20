@@ -13,7 +13,7 @@ jest.mock("../use-passport", () => ({ usePassport: () => mockData }));
 jest.mock("@/api", () => ({ api: {}, mediaUrl: (u: string) => u }));
 
 const ready = (): PassportData => ({
-  status: "ready", handle: "ava", displayName: "Ava Lee", avatarUrl: null, bio: "", memberSince: "2026-10-03T04:00:00.000Z", stamps: [], pins: [],
+  status: "ready", handle: "ava", displayName: "Ava Lee", avatarUrl: null, bio: "", memberSince: "2026-10-03T04:00:00.000Z", stamps: [],
   counts: { stamps: 0, places: 0 }, retry: jest.fn(),
 });
 

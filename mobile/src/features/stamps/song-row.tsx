@@ -36,7 +36,7 @@ export function SongRow({ song, trailing }: { song: Pick<Song, "title" | "artist
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.xs, borderRadius: radius.card, backgroundColor: colors.surface },
+  row: { flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.xs, borderRadius: radius.card, backgroundColor: colors.paperDeep },
   art: { width: size.listRow - space.md, height: size.listRow - space.md, borderRadius: radius.chip, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   text: { flex: 1, gap: space.xxs },
 });

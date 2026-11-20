@@ -71,6 +71,10 @@ function RootNavigator() {
     if (ready) SplashScreen.hide();
   }, [ready]);
 
+  // Screens that render before the fonts register keep the system font, so hold the splash until they load
+  // (or fail). Over Expo Go on a real device the fonts download from Metro and arrive after the first frame.
+  if (!fontsLoaded && !fontError) return null;
+
   return (
     <Stack screenOptions={stackOptions}>
       <Stack.Protected guard={status === "signedOut" || status === "loading"}>

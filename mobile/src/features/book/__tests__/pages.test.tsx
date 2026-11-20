@@ -130,11 +130,11 @@ describe("edges and ribbons", () => {
 });
 
 describe("PageView and Spread", () => {
-  it("shows the page number, verification accessibility, and pinned state", async () => {
-    await render(<PageView page={4} side="right" width={300} height={426} stamps={[stamp("a", 4, 1, "Katz's", true), stamp("b", 4, 2, "Cafe")]} pinnedIds={["b"]} />);
+  it("shows the page number and verification accessibility", async () => {
+    await render(<PageView page={4} side="right" width={300} height={426} stamps={[stamp("a", 4, 1, "Katz's", true), stamp("b", 4, 2, "Cafe")]} />);
     expect(screen.getByLabelText("Page 4")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Stamp, Katz's, page 4, slot 1, visit verified" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Stamp, Cafe, page 4, slot 2, pinned" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Stamp, Cafe, page 4, slot 2" })).toBeTruthy();
   });
   it("shows an empty page with only its number", async () => {
     await render(<PageView page={5} side="left" width={300} height={426} stamps={[]} />);

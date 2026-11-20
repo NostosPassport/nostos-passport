@@ -10,7 +10,7 @@ import { usePassport } from "@/features/book/use-passport";
 import { localityKey, localityLabel } from "@/lib/place";
 import { colors, fonts, size, space } from "@/theme";
 
-type Filter = "all" | "restaurant" | "bar";
+type Filter = "all" | "restaurant" | "bar" | "hotel";
 
 export default function StampGallery() {
   const passport = usePassport();
@@ -35,6 +35,7 @@ export default function StampGallery() {
           <FilterButton label="ALL" active={filter === "all"} onPress={() => setFilter("all")} />
           <FilterButton label="RESTAURANTS" active={filter === "restaurant"} onPress={() => setFilter("restaurant")} />
           <FilterButton label="BARS" active={filter === "bar"} onPress={() => setFilter("bar")} />
+          <FilterButton label="HOTELS" active={filter === "hotel"} onPress={() => setFilter("hotel")} />
         </View>
         {passport.status === "pending" ? (
           <View style={styles.empty}><Body muted>Loading your stamps…</Body></View>
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
   title: { marginTop: 18, marginBottom: 4 },
   iconTarget: { width: size.hitTarget, height: size.hitTarget, alignItems: "center", justifyContent: "center" },
   filters: { height: 54, flexDirection: "row", gap: 8, marginTop: 12, marginBottom: 4 },
-  filter: { flex: 1, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
+  filter: { flexGrow: 1, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
   filterActive: { borderBottomColor: colors.accent },
   listView: { flex: 1 },
   list: { paddingTop: 6, paddingBottom: space.xl },

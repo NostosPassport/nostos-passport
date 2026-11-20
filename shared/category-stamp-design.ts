@@ -6,8 +6,8 @@
  * lives in a renderer, so native and web cannot drift. Text is measured with the real Source Serif 4 SemiBold advances.
  *
  * Rendering only: the backend still sends the same artwork descriptor (kind, cuisine, label, color, icon) and the stamp is
- * drawn from it plus the place name, locality, visit date and first photo. Hotel and airport are drawn when a design input
- * asks for them; the backend does not classify those categories today.
+ * drawn from it plus the place name, locality, visit date and first photo. Hotels come from artwork kind "hotel"; airport is
+ * drawn only when a design input asks for it, since the backend does not classify airports today.
  */
 import { STAMP_FONT_ADVANCE, STAMP_FONT_CAP_HEIGHT } from "./stamp-font-metrics";
 import type { CategoryStampArtwork } from "./category-stamp-artwork";
@@ -69,7 +69,7 @@ export function inkAtContrast(hex: string, paper = STAMP_PAPER, min = MIN_INK_CO
 export function designFromArtwork(art: Pick<CategoryStampArtwork, "kind" | "cuisine" | "label" | "color" | "icon">, text: { name: string; locality: string; timeZone?: string | null; priceTier?: PriceTier | null }): StampDesignInput {
   const bar = art.kind === "bar";
   return {
-    template: bar ? "bar" : "restaurant",
+    template: bar ? "bar" : art.kind === "hotel" ? "hotel" : "restaurant",
     cuisine: art.cuisine,
     label: bar ? (art.cuisine === "nightclub" ? "NIGHTCLUB" : "BAR / CLUB") : art.label,
     icon: art.icon,

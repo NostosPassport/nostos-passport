@@ -86,7 +86,7 @@ Account deletion requires a fresh email challenge for the account's current emai
 | `GET /api/places/:id/mine?lat=&lng=` | `MyPlacePageResponse`, containing only the signed-in owner's stamps at that place |
 | `POST /api/places/:id/stamps` | `CreateStampResponse` |
 
-Google-backed restaurant and bar discovery is worldwide. Place responses include optional `area`, `city`, `region`, `country`, and `countryCode` fields plus an IANA `timeZone`. `area` is descriptive only and may represent a neighborhood, district, sublocality, quartiere, or similar label; no geographic hierarchy or polygon membership is required for a place to exist.
+Google-backed restaurant, bar, and hotel discovery is worldwide. Place responses include optional `area`, `city`, `region`, `country`, and `countryCode` fields plus an IANA `timeZone`. `area` is descriptive only and may represent a neighborhood, district, sublocality, quartiere, or similar label; no geographic hierarchy or polygon membership is required for a place to exist.
 
 Stamp creation is multipart. It accepts repeated `photos` fields, `caption`, optional song metadata (`songTitle`, `songArtist`, `songArtUrl`, `songSourceId`), optional internal `rating`, and:
 

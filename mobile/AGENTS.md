@@ -1,13 +1,13 @@
 # Mobile agent guidance
 
-This is an Expo SDK 57, React Native, iOS-only application.
+This is an Expo SDK 58, React Native, iOS-only application.
 
 ## Expo APIs
 
 Do not rely on remembered Expo APIs. Before modifying Expo, EAS, or React Native integration:
 
 1. Read the installed `expo` version in `package.json`.
-2. Use the matching SDK 57 documentation at `https://docs.expo.dev/versions/v57.0.0/`.
+2. Use the matching SDK 58 documentation at `https://docs.expo.dev/versions/v58.0.0/`.
 3. Prefer Expo modules already in the app.
 4. Use `npx expo install <package>` for native Expo dependencies.
 
