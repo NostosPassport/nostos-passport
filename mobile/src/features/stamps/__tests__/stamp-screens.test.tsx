@@ -34,7 +34,7 @@ jest.mock("expo-router", () => ({
 jest.mock("@/auth/account-state", () => ({ useAccountState: () => ({ state: "ready", retry: jest.fn(), retrying: false }) }));
 jest.mock("@/api/queries", () => ({
   qk: jest.requireActual("@/api/keys").qk,
-  useNearbyPlaces: () => ({ data: { places: mockNearby }, isPending: false, isError: false, refetch: jest.fn() }),
+  useNearbyPlaces: () => ({ data: { places: mockNearby }, isPending: false, isError: false, isSuccess: true, refetch: jest.fn() }),
   usePlaceSearch: () => ({ data: { places: mockSearchResults }, isPending: false, isError: false, isSuccess: true, refetch: jest.fn() }),
   useCollections: () => ({ data: { collections: [] }, isPending: false, isError: false, refetch: jest.fn() }),
 }));
@@ -84,12 +84,12 @@ function near(over: Record<string, unknown> = {}) {
 }
 const wrap = async (ui: React.ReactElement) => render(<QueryClientProvider client={testQueryClient()}>{ui}</QueryClientProvider>);
 const chooseKatz = async () => {
-  await fireEvent.changeText(screen.getByLabelText("Search restaurants and bars"), "Katz");
+  await fireEvent.changeText(screen.getByLabelText("Search restaurants, bars and hotels"), "Katz");
   await fireEvent.press(screen.getAllByRole("button", { name: /^Katz's,/ })[0]!);
   await screen.findByText(/Make it/);
 };
 const choosePast = async () => {
-  await fireEvent.press(screen.getByRole("button", { name: /PAST/ }));
+  await fireEvent.press(screen.getByRole("radio", { name: /^Past/ }));
   await screen.findByLabelText("Visit date");
 };
 const flatStamp = {
@@ -111,13 +111,13 @@ describe("the composer", () => {
     mockUpload.mockResolvedValue({ stamp: flatStamp, progress: null });
   });
 
-  it("starts with Now/Past and Google-backed restaurant/bar search", async () => {
+  it("starts with Now/Past and Google-backed restaurant, bar and hotel search", async () => {
     await wrap(<NewStamp />);
     expect(screen.getByText(/Make a/)).toBeTruthy();
     expect(screen.getByText("NOW")).toBeTruthy();
     expect(screen.getByText("PAST")).toBeTruthy();
     expect(screen.getByText("Choose a place")).toBeTruthy();
-    expect(screen.getByLabelText("Search restaurants and bars")).toBeTruthy();
+    expect(screen.getByLabelText("Search restaurants, bars and hotels")).toBeTruthy();
     expect(screen.getByText("Google Maps")).toBeTruthy();
   });
 
@@ -184,13 +184,34 @@ describe("the composer", () => {
     await chooseKatz();
     await fireEvent.changeText(screen.getByLabelText("A few words"), "future");
     expect(screen.getByRole("button", { name: "Stamp this place" }).props.accessibilityState.disabled).toBe(true);
-    expect(screen.getByText(/Choose a date from the last year/)).toBeTruthy();
+    expect(screen.getAllByText("That date is in the future.").length).toBeGreaterThan(0);
+  });
+
+  it("announces Now/Past as a choice and only flags the date once it is complete", async () => {
+    await wrap(<NewStamp />);
+    expect(screen.getByRole("radio", { name: /^Now/ }).props.accessibilityState.checked).toBe(true);
+    await choosePast();
+    expect(screen.getByRole("radio", { name: /^Past/ }).props.accessibilityState.checked).toBe(true);
+    await fireEvent.changeText(screen.getByLabelText("Visit date"), "01/01/20");
+    expect(screen.queryByText(/Enter the date|in the future|within the last year/)).toBeNull();
+    await fireEvent.changeText(screen.getByLabelText("Visit date"), "01/01/2020");
+    expect(screen.getByText("Pick a date within the last year.")).toBeTruthy();
+  });
+
+  it("keeps Nearby up for a one-letter search and says so when nothing is nearby", async () => {
+    const view = await wrap(<NewStamp />);
+    await fireEvent.changeText(screen.getByLabelText("Search restaurants, bars and hotels"), "k");
+    expect(screen.getByText("Keep typing to search.")).toBeTruthy();
+    expect(screen.getByText("YOU'RE HERE · VISIT CAN BE VERIFIED")).toBeTruthy();
+    mockNearby = [];
+    await view.rerender(<QueryClientProvider client={testQueryClient()}><NewStamp /></QueryClientProvider>);
+    expect(screen.getByText("No restaurants, bars or hotels nearby. Search by name instead.")).toBeTruthy();
   });
 
   it("opens the photo manager without venue-authentication parameters", async () => {
     await wrap(<NewStamp />);
     await chooseKatz();
-    await fireEvent.press(screen.getByLabelText("Add a photo"));
+    await fireEvent.press(screen.getByLabelText("Add photos"));
     expect(mockPush).toHaveBeenCalledWith("/stamp/camera");
   });
 
@@ -217,8 +238,9 @@ describe("the composer", () => {
     for (let i = 0; i < 6; i++) photoDraft.add(`file://${i}.jpg`);
     await wrap(<NewStamp />);
     await chooseKatz();
-    expect(screen.getByText("6 / 6")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Add another photo/ })).toBeNull();
+    expect(screen.getByText("1 of 6", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByText("6 of 6 photos. Remove one to add another.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Add more photos/ })).toBeNull();
   });
 });
 
@@ -267,6 +289,8 @@ describe("the photo source flow", () => {
     }
     expect(screen.getByText("6 of 6")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Add another photo" })).toBeNull();
+    expect(screen.getByText("6 of 6. Remove one to add another.")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Done" })).toHaveLength(1);
   });
 
   it("keeps existing photos when the native camera fails", async () => {

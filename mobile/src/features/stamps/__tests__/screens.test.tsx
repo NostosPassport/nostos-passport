@@ -155,16 +155,28 @@ describe("Song picker", () => {
     await act(async () => jest.advanceTimersByTime(350));
   };
 
-  it("starts with an in-content search field and can clear the selected song", async () => {
+  it("starts with an in-content search field, and Cancel leaves without picking anything", async () => {
     mockSongs = { isPending: true, fetchStatus: "idle" };
     const a = await wrap(<SongPicker />);
     expect(screen.getByText("SONG OR ARTIST")).toBeTruthy();
     expect(screen.getByLabelText("Song or artist")).toBeTruthy();
-    expect(screen.getByText("No song")).toBeTruthy();
-    await fireEvent.press(screen.getByText("No song"));
-    expect(songDraft.take()).toEqual({ song: null });
+    expect(screen.queryByText("No song")).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
+    expect(songDraft.take()).toBeUndefined();
     expect(router.back).toHaveBeenCalledTimes(1);
     await a.unmount();
+  });
+
+  it("keeps the first pick when two rows are tapped quickly", async () => {
+    mockSongs = { data: { songs: [
+      { title: "Heroes", artist: "David Bowie", album: null, artUrl: null, sourceId: "1" },
+      { title: "Changes", artist: "David Bowie", album: null, artUrl: null, sourceId: "2" },
+    ] } };
+    await wrap(<SongPicker />);
+    await searchFor("Bowie");
+    await fireEvent.press(screen.getByLabelText("Heroes by David Bowie"));
+    await fireEvent.press(screen.getByLabelText("Changes by David Bowie"));
+    expect(songDraft.take()?.song?.title).toBe("Heroes");
   });
 
   it("debounces typing and shows a searching state without results or an empty message", async () => {
