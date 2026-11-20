@@ -83,7 +83,7 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
   const choosePhoto = () => {
     const options = avatarUrl ? ["Choose photo", "Remove photo", "Cancel"] : ["Choose photo", "Cancel"];
     ActionSheetIOS.showActionSheetWithOptions(
-      { options, cancelButtonIndex: options.length - 1, destructiveButtonIndex: avatarUrl ? 1 : undefined, tintColor: colors.accent, userInterfaceStyle: "dark" },
+      { options, cancelButtonIndex: options.length - 1, destructiveButtonIndex: avatarUrl ? 1 : undefined, tintColor: colors.accent, userInterfaceStyle: "light" },
       (i) => {
         if (i === 0) photo.mutate("choose");
         if (avatarUrl && i === 1) photo.mutate("remove");
