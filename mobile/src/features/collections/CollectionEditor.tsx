@@ -12,11 +12,15 @@ import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { localityLabel } from "@/lib/place";
-import { colors, hairlineWidth, radius, size, space, type as typeScale, maxFontSizeMultiplier } from "@/theme";
+import { StampMark } from "@/features/book/StampMark";
+import { localityKey, localityLabel } from "@/lib/place";
+import { colors, hairlineWidth, radius, size, space, type as typeScale, maxFontSizeMultiplier, pressedOpacity } from "@/theme";
 import { COLLECTION_COLORS } from "./colors";
 import { useMyStamps } from "./use-my-stamps";
 import { Tappable } from "@/components/ui/tappable";
+
+/** Stamp mark size in the editor rows; fits inside a standard list row. */
+const THUMB = size.hitTarget + space.xs;
 
 export type CollectionDraft = { name: string; color: CollectionColorValue; stampIds: string[] };
 
@@ -37,6 +41,22 @@ type Props = {
 
 const stampDate = (stamp: StampView) => new Date(stamp.visitedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: stamp.place.timeZone });
 const stampSubtitle = (stamp: StampView) => [localityLabel(stamp.place), stampDate(stamp)].filter(Boolean).join(" · ");
+
+/** The stamp's own mark, so rows read like the Gallery's rather than a bare list of names. */
+function StampThumb({ stamp }: { stamp: StampView }) {
+  return (
+    <View style={styles.thumb} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <StampMark
+        input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey: localityKey(stamp.place), localityName: localityLabel(stamp.place) }}
+        size={THUMB}
+        artwork={stamp.artwork}
+        photoUrl={stamp.photoUrl}
+        visitedAt={stamp.visitedAt}
+        timeZone={stamp.place.timeZone}
+      />
+    </View>
+  );
+}
 
 export function CollectionEditor({ initial, submitLabel, busy, error, errorFallback, onSubmit, onDelete, deleting, knownStamps }: Props) {
   const source = useMyStamps();
@@ -120,6 +140,7 @@ export function CollectionEditor({ initial, submitLabel, busy, error, errorFallb
         {!source.pending && !source.error && stampIds.length === 0 ?<Text variant="callout" color="textSecondary">No stamps yet. Add any stamp from your master Passport below.</Text> : null}
         {selected.map((stamp, index) => (
           <View key={stamp.id} style={styles.stampRow}>
+            <StampThumb stamp={stamp} />
             <View style={styles.stampText}>
               <Text variant="body" weight="semibold" numberOfLines={1}>{stamp.place.name}</Text>
               <Text variant="footnote" color="textSecondary" numberOfLines={1}>{stampSubtitle(stamp)}</Text>
@@ -138,7 +159,8 @@ export function CollectionEditor({ initial, submitLabel, busy, error, errorFallb
         <View style={styles.field}>
           <Kicker>ADD STAMPS</Kicker>
           {available.map((stamp) => (
-            <Tappable key={stamp.id} onPress={() => add(stamp.id)} accessibilityRole="button" accessibilityLabel={`Add ${stamp.place.name} to collection`} style={styles.addRow}>
+            <Tappable key={stamp.id} onPress={() => add(stamp.id)} accessibilityRole="button" accessibilityLabel={`Add ${stamp.place.name} to collection`} style={({ pressed }) => [styles.stampRow, pressed && styles.pressed]}>
+              <StampThumb stamp={stamp} />
               <View style={styles.stampText}>
                 <Text variant="body" weight="semibold" numberOfLines={1}>{stamp.place.name}</Text>
                 <Text variant="footnote" color="textSecondary" numberOfLines={1}>{stampSubtitle(stamp)}</Text>
@@ -161,13 +183,16 @@ const styles = StyleSheet.create({
   nameMeta: { flexDirection: "row", justifyContent: "flex-end", gap: space.sm },
   hint: { flex: 1 },
   more: { paddingVertical: space.sm },
-  nameInput: { ...typeScale.title, minHeight: size.fieldHeight, borderBottomWidth: hairlineWidth, borderColor: colors.textPrimary, color: colors.textPrimary, paddingVertical: space.xs },
+  // No lineHeight: on a single-line iOS input it pushes the caret off the placeholder's baseline.
+  nameInput: { fontFamily: typeScale.title.fontFamily, fontSize: typeScale.title.fontSize, minHeight: size.fieldHeight, borderBottomWidth: hairlineWidth, borderColor: colors.textPrimary, color: colors.textPrimary, paddingVertical: space.xs },
   colors: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  colorTarget: { width: size.hitTarget, height: size.hitTarget, borderWidth: hairlineWidth, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
-  colorTargetActive: { borderWidth: size.markerRing, borderColor: colors.accent },
-  swatch: { width: size.avatar, height: size.avatar, borderRadius: radius.pill },
-  stampRow: { minHeight: size.listRow, flexDirection: "row", alignItems: "center", gap: space.sm, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline },
-  addRow: { minHeight: size.listRow, flexDirection: "row", alignItems: "center", gap: space.sm, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline },
+  // A round swatch in a round target: the selection reads as a ring around the chip, not a square box around a circle.
+  colorTarget: { width: size.hitTarget, height: size.hitTarget, borderRadius: radius.pill, borderWidth: size.markerRing, borderColor: colors.transparent, alignItems: "center", justifyContent: "center" },
+  colorTargetActive: { borderColor: colors.accent },
+  swatch: { width: size.avatar - space.xxs, height: size.avatar - space.xxs, borderRadius: radius.pill },
+  stampRow: { minHeight: size.listRow, flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.xs, borderBottomWidth: hairlineWidth, borderBottomColor: colors.hairline },
+  thumb: { width: THUMB, height: THUMB, alignItems: "center", justifyContent: "center" },
+  pressed: { opacity: pressedOpacity },
   stampText: { flex: 1, gap: space.xxs },
   rowActions: { flexDirection: "row", alignItems: "center" },
   iconButton: { width: size.hitTarget, height: size.hitTarget, alignItems: "center", justifyContent: "center" },
