@@ -1,13 +1,14 @@
 import { useLocalSearchParams } from "expo-router";
 import { useMemo, useRef, useState } from "react";
-import { FlatList, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
+import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 
 import type { StampView } from "@/api/contracts";
-import { Body, DisplayTitle, EditorialButton, EditorialHeader, EditorialSafeContent, EditorialScreen, Kicker, Rule } from "@/components/editorial/editorial";
+import { Body, DisplayTitle, EditorialButton, Wordmark, EditorialSafeContent, EditorialScreen, Kicker, Rule } from "@/components/editorial/editorial";
 import { Icon } from "@/components/ui/icon";
 import { StampMark } from "@/features/book/StampMark";
 import { useCollections } from "@/api/queries";
 import { InlineError } from "@/components/ui/inline-error";
+import { ScreenState } from "@/components/ui/screen-state";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text as UIText } from "@/components/ui/text";
 import { collectionColorValue } from "@/features/collections/colors";
@@ -36,11 +37,13 @@ export default function Gallery() {
   return (
     <EditorialScreen>
       <EditorialSafeContent bottom>
-        <EditorialHeader compact action={
-          <Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Close gallery" style={styles.iconTarget}>
-            <Icon name="xmark" color="textPrimary" size={size.iconSmall} />
+        <View style={styles.topBar}>
+          <Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Back" style={styles.iconTarget}>
+            <Icon name="chevron.left" color="textPrimary" size={size.iconSmall} />
           </Tappable>
-        } />
+          <Wordmark compact />
+          <View style={styles.iconTarget} />
+        </View>
         <Rule />
         <DisplayTitle size={48} style={styles.title}>Gallery.</DisplayTitle>
         <View style={styles.tabs} accessibilityRole="tablist">
@@ -87,12 +90,9 @@ function StampsPage() {
           <FilterButton label="HOTELS" active={filter === "hotel"} onPress={() => setFilter("hotel")} />
         </View>
         {passport.status === "pending" ? (
-          <View style={styles.empty}><Body muted>Loading your stamps…</Body></View>
+          <View style={styles.empty}><ScreenState kind="loading" label="Loading your stamps" /></View>
         ) : passport.status === "error" ? (
-          <View style={styles.empty}>
-            <Body muted>Couldn&apos;t load your stamps.</Body>
-            <Tappable onPress={passport.retry} style={styles.retry}><Kicker>TRY AGAIN</Kicker></Tappable>
-          </View>
+          <View style={styles.empty}><ScreenState kind="error" message="Couldn't load your stamps." onRetry={passport.retry} /></View>
         ) : (
           <FlatList
             style={styles.listView}
@@ -101,7 +101,9 @@ function StampsPage() {
             contentContainerStyle={stamps.length ? styles.list : styles.emptyList}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => <GalleryStamp stamp={item} />}
-            ListEmptyComponent={<Body muted>{filter === "all" ? "Your stamps will appear here." : `No ${filter} stamps yet.`}</Body>}
+            ListEmptyComponent={filter === "all"
+              ? <ScreenState kind="empty" title="No stamps yet" message="Stamp a restaurant, bar or hotel and it shows up here." action={{ label: "Stamp a place", onPress: () => nav.push("/stamp/new") }} />
+              : <Body muted>{`No ${filter} stamps yet.`}</Body>}
           />
         )}
     </View>
@@ -137,7 +139,7 @@ function GalleryStamp({ stamp }: { stamp: StampView }) {
         />
       </View>
       <View style={styles.copy}>
-        <Text style={styles.name} numberOfLines={2}>{stamp.place.name}</Text>
+        <Text style={styles.name} numberOfLines={3}>{stamp.place.name}</Text>
         {locality ? <Text style={styles.locality} numberOfLines={1}>{locality}</Text> : null}
         <View style={styles.meta}>
           <Text style={styles.date}>{date}</Text>
@@ -151,6 +153,7 @@ function GalleryStamp({ stamp }: { stamp: StampView }) {
 
 const styles = StyleSheet.create({
   title: { marginTop: 18, marginBottom: 4 },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   iconTarget: { width: size.hitTarget, height: size.hitTarget, alignItems: "center", justifyContent: "center" },
   tabs: { flexDirection: "row", gap: space.lg, marginTop: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
   tab: { minHeight: size.hitTarget, justifyContent: "center", borderBottomWidth: 2, borderBottomColor: colors.transparent, marginBottom: -StyleSheet.hairlineWidth },
@@ -169,8 +172,8 @@ const styles = StyleSheet.create({
   name: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 27, lineHeight: 29 },
   locality: { marginTop: 5, color: colors.textSecondary, fontFamily: fonts.sans, fontSize: 13 },
   meta: { marginTop: 12, flexDirection: "row", alignItems: "center", gap: 10 },
-  date: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8, textTransform: "uppercase" },
-  kind: { color: colors.dimBrass, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8 },
+  date: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" },
+  kind: { color: colors.dimBrass, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 0.8 },
   pressed: { opacity: pressedOpacity },
 });
 
@@ -178,9 +181,10 @@ const styles = StyleSheet.create({
 function CollectionsList() {
   const query = useCollections();
   const collections = query.data?.collections ?? [];
-  const empty = !query.isPending && !query.isError && collections.length === 0;
+  // Hold the empty state while a refetch is running, so a just-created collection never flashes "No collections yet" (P-121).
+  const empty = !query.isPending && !query.isError && !query.isFetching && collections.length === 0;
   return (
-    <ScrollView contentContainerStyle={collectionStyles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={collectionStyles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} tintColor={colors.accent} />}>
       <Body muted size={13}>Smaller passports built from your stamps. A stamp can sit in as many as you like.</Body>
       {query.isPending ? <SkeletonRows count={3} /> : null}
       {query.isError ? <InlineError message="Couldn't load your collections." onRetry={() => void query.refetch()} /> : null}
@@ -221,6 +225,6 @@ const collectionStyles = StyleSheet.create({
   bookRule: { width: hairlineWidth, height: "80%", backgroundColor: colors.foilHighlight },
   rowText: { flex: 1, minWidth: 0, gap: space.xs },
   name: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 27, lineHeight: 29 },
-  count: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8 },
+  count: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 0.8 },
   empty: { minHeight: size.heroHeight, alignItems: "center", justifyContent: "center", gap: space.sm, paddingHorizontal: space.xl },
 });

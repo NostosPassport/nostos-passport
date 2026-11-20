@@ -5,11 +5,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { Icon } from "@/components/ui/icon";
-import { InlineError } from "@/components/ui/inline-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCollection } from "@/api/queries";
 import { collectionColorValue } from "@/features/collections/colors";
-import { bookMotion, colors, scene3d, size, space, type as typeScale } from "@/theme";
+import { bookMotion, colors, maxFontSizeMultiplier, scene3d, size, space, type as typeScale } from "@/theme";
+import { Button } from "@/components/ui/button";
+import { ScreenState } from "@/components/ui/screen-state";
+import { Text } from "@/components/ui/text";
 import { Passport3DView } from "../lab3d/Passport3DView";
 import { READER_AT, SPREAD_FILL } from "../lab3d/open-motion";
 import { BearerPage } from "./BearerPage";
@@ -135,7 +137,9 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
   }, []));
   useEffect(() => { const sub = AppState.addEventListener("change", (s) => setAppActive(s === "active")); return () => sub.remove(); }, []);
   const stampPages = data.stamps.map((s) => s.page);
-  const total = compactReader ? focusPageCount(stampPages) : focusSpreadCount(stampPages);
+  // An empty master passport still has a first stamp page to turn to, with a way to stamp (P-034).
+  const emptyMaster = !collectionId && data.stamps.length === 0;
+  const total = compactReader ? Math.max(emptyMaster ? 2 : 1, focusPageCount(stampPages)) : Math.max(emptyMaster ? 2 : 1, focusSpreadCount(stampPages));
   const current = Math.min(readerIndex, total - 1);
   const availableWidth = width - insets.left - insets.right;
   const availableHeight = height - insets.top - insets.bottom;
@@ -155,7 +159,8 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
     placeholder.value = withTiming(0, { duration: reduced ? 0 : bookMotion.durations.standard });
   }, [modelShown, reduced, placeholder]);
   const measureModel = () => modelStage.current?.measureInWindow((_x, y, w, h) => setModelFrame({ y, height: h, width: w }));
-  const coverWidth = Math.floor(Math.min(modelFrame.width * 0.56, (modelFrame.height * 0.78) / BOOK_ASPECT));
+  // Before the stage is measured, size the flat cover off the window so the fallback is always there to tap.
+  const coverWidth = modelFrame.width > 0 ? Math.floor(Math.min(modelFrame.width * 0.56, (modelFrame.height * 0.78) / BOOK_ASPECT)) : Math.floor(width * 0.42);
   const requestReader = () => { if (readerRequested.current) return; readerRequested.current = true; setTransitioning(true); setFocused(true); };
   const onOpenProgress = (p: number) => { openProgress.value = p; if (opening && p >= READER_AT) requestReader(); };
   const onOpenSettled = (isOpen: boolean) => {
@@ -180,31 +185,39 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
   };
   const openStamp = (id: string) => { returnToFocus.current = true; setFocused(false); nav.push({ pathname: "/stamp/[id]", params: { id } }); };
   const bearerPage = <BearerPage width={book.pageWidth} height={book.pageHeight} bearer={{ displayName: data.displayName, handle: data.handle, memberSince: data.memberSince, bio: data.bio }} avatarUrl={data.avatarUrl} />;
+  const stampFirst = () => { close(); nav.push("/stamp/new"); };
+  const firstPagePrompt = (page: number) => emptyMaster && page === 1 ? (
+    <View style={[StyleSheet.absoluteFill, styles.emptyPage]} pointerEvents="box-none">
+      <Text variant="serifLabel" color="brass" align="center">Your first stamp lands here.</Text>
+      <Button title="Stamp a place" variant="secondary" compact block={false} onPress={stampFirst} />
+    </View>
+  ) : null;
   const renderFace = (face: PageFace, side: "left" | "right") => {
     if (face.kind === "inside-cover") return <InsideCover width={book.pageWidth} height={book.pageHeight} />;
     if (face.kind === "bearer") return bearerPage;
-    return <PageView page={face.page} side={side} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(face.page) ?? []} onStampPress={(s) => openStamp(s.id)} />;
+    return <View><PageView page={face.page} side={side} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(face.page) ?? []} onStampPress={(s) => openStamp(s.id)} />{firstPagePrompt(face.page)}</View>;
   };
   const renderSinglePage = (index: number) => {
     if (index === 0) return bearerPage;
-    return <PageView page={index} side={index % 2 === 1 ? "left" : "right"} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(index) ?? []} onStampPress={(s) => openStamp(s.id)} />;
+    return <View><PageView page={index} side={index % 2 === 1 ? "left" : "right"} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(index) ?? []} onStampPress={(s) => openStamp(s.id)} />{firstPagePrompt(index)}</View>;
   };
-  if (data.status === "error") return <View style={styles.center}><InlineError message="Couldn't open your passport. Your connection may be down." onRetry={data.retry} /></View>;
-  if (data.status === "pending") return <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Opening your passport"><Skeleton width={width * .8} height={height * .5} /></View>;
+  if (data.status === "error") return <View style={styles.center}><ScreenState kind="error" message="Couldn't open your passport. Your connection may be down." onRetry={data.retry} /></View>;
+  if (data.status === "pending") return <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Opening your passport"><Skeleton width={Math.min(width * .5, (height * .45) / BOOK_ASPECT)} height={Math.min(width * .5, (height * .45) / BOOK_ASPECT) * BOOK_ASPECT} /></View>;
   const slotted = top !== undefined || bottom !== undefined;
   return <View style={styles.root}>
     <View testID="passport-home" pointerEvents={focused || modelClosing ? "none" : "auto"} style={[styles.home, { paddingTop: insets.top + (slotted ? space.xs : size.hitTarget + space.xs) }]} accessibilityElementsHidden={focused} importantForAccessibility={focused ? "no-hide-descendants" : "auto"}>
       {top !== undefined ? <Animated.View style={[styles.slot, chromeMotion]}>{top}</Animated.View> : null}
       <Animated.View ref={modelStage} testID="passport-model-stage" onLayout={measureModel} style={[styles.model, modelMotion]}>
-        {modelError ? <View style={styles.center}><InlineError message="Couldn't load the 3D passport." onRetry={() => { setModelError(false); setModelKey((k) => k + 1); }} /><Tappable onPress={openPages} accessibilityRole="button" accessibilityLabel="Open stamp pages" style={styles.close}><Icon name="book" size={size.icon} color="accent" /></Tappable></View> :
+        {modelError ? null :
           <Passport3DView key={`${modelKey}-${coverColor ?? "master"}-${collectionTitle ?? "nostos"}`} running={screenActive && appActive} lowPower reduceMotion={reduced} soak={false} glassMode="auto" coverColor={coverColor} coverTitle={collectionTitle ?? undefined} open={opening} onTap={() => open()} onOpenProgress={onOpenProgress} onOpenSettled={onOpenSettled} onReady={() => { modelReady.current = true; setModelError(false); setTimeout(() => setModelShown(true), 120); }} onError={() => { modelReady.current = false; modelClosingRef.current = false; setModelShown(false); setModelClosing(false); setModelError(true); }} onGlass={() => undefined} onStats={() => undefined} />}
-        {!modelError && coverWidth > 0 ? (
-          <Animated.View testID="passport-placeholder" pointerEvents={modelShown ? "none" : "auto"} style={[StyleSheet.absoluteFill, styles.placeholder, placeholderMotion]}>
-            <Cover width={coverWidth} height={Math.floor(coverWidth * BOOK_ASPECT)} counts={data.counts} showCounts={false} tint={coverColor ?? scene3d.passportCover} onOpen={open} />
+        {coverWidth > 0 ? (
+          <Animated.View testID="passport-placeholder" pointerEvents={modelShown && !modelError ? "none" : "auto"} style={[StyleSheet.absoluteFill, styles.placeholder, placeholderMotion]}>
+            <Cover width={coverWidth} height={Math.floor(coverWidth * BOOK_ASPECT)} counts={data.counts} showCounts={false} tint={coverColor ?? scene3d.passportCover} onOpen={modelError ? openPages : open} />
           </Animated.View>
         ) : null}
+        {modelError ? <Tappable onPress={() => { setModelError(false); setModelKey((k) => k + 1); }} accessibilityRole="button" accessibilityLabel="Retry the 3D passport" style={[styles.close, styles.retry3d]}><Icon name="arrow.clockwise" size={size.iconSmall} color="textTertiary" /></Tappable> : null}
       </Animated.View>
-      <Animated.View style={[styles.counts, chromeMotion]}>{collectionTitle ? <NativeText numberOfLines={2} style={styles.collectionTitle}>{collectionTitle}</NativeText> : null}{bottom === undefined ? <Counts counts={data.counts} /> : null}{!collectionId && firstRun.show ? <FirstRunHint onDismiss={firstRun.dismiss} /> : null}</Animated.View>
+      <Animated.View style={[styles.counts, chromeMotion]}>{collectionTitle ? <NativeText numberOfLines={2} maxFontSizeMultiplier={maxFontSizeMultiplier} style={styles.collectionTitle}>{collectionTitle}</NativeText> : null}{bottom === undefined ? <Counts counts={data.counts} /> : null}{!collectionId && bottom === undefined && firstRun.show && data.counts.stamps === 0 ? <FirstRunHint onDismiss={firstRun.dismiss} /> : null}</Animated.View>
       {bottom !== undefined ? <Animated.View style={[styles.slot, chromeMotion]}>{bottom}</Animated.View> : null}
     </View>
     <Modal visible={focused} transparent presentationStyle="overFullScreen" animationType="none" onRequestClose={close}>
@@ -230,6 +243,8 @@ const styles = StyleSheet.create({
   model: { flex: 1, width: "100%", minHeight: 0 },
   counts: { width: "100%", alignItems: "center", paddingTop: space.md, gap: space.xs },
   slot: { width: "100%" },
+  emptyPage: { alignItems: "center", justifyContent: "center", gap: space.sm, padding: space.lg },
+  retry3d: { position: "absolute", right: 0, bottom: 0 },
   placeholder: { alignItems: "center", justifyContent: "center" },
   collectionTitle: { ...typeScale.title2, maxWidth: "88%", color: colors.textPrimary, textAlign: "center" },
   focus: { flex: 1, alignItems: "center", justifyContent: "center" },

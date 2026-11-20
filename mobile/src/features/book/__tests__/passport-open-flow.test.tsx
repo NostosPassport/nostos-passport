@@ -89,7 +89,7 @@ describe("tapping the 3D passport: the cover opens, then the reader takes over",
     await render(<PassportBook />);
     await act(() => mockView.onReady({}));
     await act(() => mockView.onError("gpu"));
-    await fireEvent.press(screen.getByLabelText("Open stamp pages"));
+    await fireEvent.press(screen.getByLabelText(/^Open your passport\./));
     expect(screen.getByLabelText("Close passport")).toBeTruthy();
   });
 
@@ -111,7 +111,7 @@ describe("tapping the 3D passport: the cover opens, then the reader takes over",
     await act(() => mockView.onOpenProgress(0.9));
     await tapPage(250);
     await tapPage(250);
-    await fireEvent.press(screen.getByRole("button", { name: "Stamp, Fourth, page 2, slot 1" }));
+    await fireEvent.press(screen.getByRole("button", { name: /^Stamp, Fourth, .*page 2$/ }));
     expect(mockPush).toHaveBeenCalledWith({ pathname: "/stamp/[id]", params: { id: "s4" } });
     expect(mockView.open).toBe(true);
     await act(() => mockFocus());

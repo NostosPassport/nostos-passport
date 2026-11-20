@@ -134,7 +134,7 @@ export function Counts({ counts }: { counts: CoverCounts }) {
     <View style={styles.counts} accessible accessibilityLabel={`${counts.stamps} stamps, ${counts.places} places`}>
       {items.map(([label, n]) => (
         <View key={label} testID={`passport-count-${label}`} style={styles.count}>
-          <Text variant="title" color="bookAccent" tabular accessibilityElementsHidden>{n}</Text>
+          <Text variant="title" color="bookAccent" tabular style={styles.figures} accessibilityElementsHidden>{n}</Text>
           <Text variant="typewriterSmall" color="dimBrass" align="center" numberOfLines={1} adjustsFontSizeToFit style={styles.countLabel} accessibilityElementsHidden>{label}</Text>
         </View>
       ))}
@@ -148,5 +148,7 @@ const styles = StyleSheet.create({
   bookClip: { overflow: "hidden", backgroundColor: colors.surface },
   counts: { alignSelf: "stretch", flexDirection: "row", justifyContent: "center", gap: space.sm, paddingHorizontal: space.xs },
   countLabel: { alignSelf: "stretch" },
+  // Cormorant's old-style "1" reads as a capital I (P-010).
+  figures: { fontVariant: ["lining-nums", "tabular-nums"] },
   count: { flex: 1, minWidth: 0, alignItems: "center", gap: space.xxs },
 });
