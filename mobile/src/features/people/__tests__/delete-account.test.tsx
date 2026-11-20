@@ -98,7 +98,14 @@ describe("Delete account", () => {
     await fireEvent.press(screen.getByLabelText("Delete account"));
     await flush();
     expect(await screen.findByText("That code is not correct.")).toBeTruthy();
+    expect(screen.getByLabelText("Verification code, needs attention")).toBeTruthy();
     expect(mockForget).not.toHaveBeenCalled();
+  });
+
+  it("focuses the code field and offers to send another code", async () => {
+    const code = await beginDeletion();
+    expect(code.props.autoFocus).toBe(true);
+    expect(screen.getByRole("button", { name: "Send another code" })).toBeTruthy();
   });
 
   it("does nothing if the destructive confirmation is cancelled", async () => {
