@@ -163,6 +163,6 @@ function TurningCurrentPage({ direction, current, pos, pw, ph, reduced, children
 const styles = StyleSheet.create({
   book: { ...shadows.page },
   page: { position: "absolute", top: 0, left: 0 },
-  cast: { position: "absolute", top: 0, left: 0, backgroundColor: colors.black },
+  cast: { position: "absolute", top: 0, left: 0, backgroundColor: colors.pageShade },
   a11y: { position: "absolute", width: hairlineWidth, height: hairlineWidth },
 });

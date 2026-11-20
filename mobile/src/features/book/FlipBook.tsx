@@ -176,5 +176,5 @@ function TurningPage({ k, pos, pw, ph, reduced, front, back }: { k: number; pos:
 
 const styles = StyleSheet.create({
   half: { position: "absolute", top: 0, left: 0 },
-  cast: { position: "absolute", top: 0, left: 0, backgroundColor: colors.black },
+  cast: { position: "absolute", top: 0, left: 0, backgroundColor: colors.pageShade },
 });
