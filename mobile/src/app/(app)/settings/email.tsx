@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { router, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import { useState } from "react";
 
 import { errorText } from "@/api";
@@ -14,6 +14,7 @@ import { Field, FieldGroup } from "@/components/ui/text-field";
 import { toast } from "@/components/ui/toast";
 import { haptics } from "@/lib/haptics";
 import { isEmail } from "@/lib/validation";
+import { nav } from "@/lib/nav";
 
 export default function ChangeEmail() {
   const me = useMe();
@@ -40,7 +41,7 @@ export default function ChangeEmail() {
       haptics.success();
       await queryClient.invalidateQueries({ queryKey: qk.me, exact: true });
       toast.show("Email updated", "neutral");
-      router.back();
+      nav.back();
     },
     onError: () => haptics.warning(),
   });
@@ -72,7 +73,7 @@ export default function ChangeEmail() {
       <Stack.Screen
         options={{
           title: "Email",
-          headerLeft: () => <HeaderButton label="Cancel" onPress={() => router.back()} />,
+          headerLeft: () => <HeaderButton label="Cancel" onPress={() => nav.back()} />,
           headerRight: () => <HeaderButton label={challenge ? "Save" : "Verify"} bold onPress={submit} disabled={unchanged || busy || (challenge ? code.length !== 6 : false)} />,
         }}
       />

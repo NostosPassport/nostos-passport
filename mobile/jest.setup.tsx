@@ -64,3 +64,9 @@ jest.mock("@shopify/react-native-skia", () => {
 });
 jest.mock("expo-sensors", () => ({ DeviceMotion: { isAvailableAsync: async () => false, addListener: () => ({ remove() {} }), setUpdateInterval() {} } }));
 jest.mock("expo-camera", () => ({ CameraView: () => null, useCameraPermissions: () => [{ granted: true }, jest.fn()] }));
+
+// The navigation double-tap guard is module state; start every test with a clean slate.
+beforeEach(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require("@/lib/nav").nav.reset();
+});

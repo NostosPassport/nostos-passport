@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
-import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { ActionSheetIOS, Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
@@ -27,6 +27,7 @@ import { formatBirthdateInput } from "@/lib/age";
 import { haptics } from "@/lib/haptics";
 import { useConfirmDiscard } from "@/lib/use-confirm-discard";
 import { colors, radius, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
 
 const YEAR_MS = 366 * 24 * 60 * 60 * 1000;
 function displayDate(d: Date) { return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`; }
@@ -67,7 +68,7 @@ function EditForm({ stamp }: { stamp: StampView }) {
 
   const save = useMutation({
     mutationFn: () => api.stamps.edit(stamp.id, change),
-    onSuccess: (res) => { haptics.success(); setSaved(true); patchStamp(queryClient, stamp.id, () => res.stamp); requestAnimationFrame(() => router.back()); },
+    onSuccess: (res) => { haptics.success(); setSaved(true); patchStamp(queryClient, stamp.id, () => res.stamp); requestAnimationFrame(() => nav.back()); },
     onError: () => haptics.warning(),
   });
   const removePhoto = useMutation({
@@ -138,7 +139,7 @@ function EditForm({ stamp }: { stamp: StampView }) {
 
   return (
     <FormScreen>
-      <Stack.Screen options={{ title: "Edit memory", headerLeft: () => <HeaderButton label="Cancel" onPress={() => router.back()} />, headerRight: () => <HeaderButton label="Save" bold onPress={doSave} disabled={!dirty || invalidDate || empty || save.isPending} /> }} />
+      <Stack.Screen options={{ title: "Edit memory", headerLeft: () => <HeaderButton label="Cancel" onPress={() => nav.back()} />, headerRight: () => <HeaderButton label="Save" bold onPress={doSave} disabled={!dirty || invalidDate || empty || save.isPending} /> }} />
 
       <FieldGroup footer="Visit date, up to one year ago" errors={[invalidDate ? "Use MM/DD/YYYY, within the last year and not in the future." : null]}>
         <TextInput value={dateValue} onChangeText={(value) => setDateValue(formatBirthdateInput(value))} keyboardType="number-pad" maxLength={10} placeholder="MM/DD/YYYY" placeholderTextColor={colors.textTertiary} style={styles.dateInput} accessibilityLabel="Visit date" />
@@ -171,7 +172,7 @@ function EditForm({ stamp }: { stamp: StampView }) {
       <FieldGroup footer={`${caption.length}/${CAPTION_MAX}`} errors={[empty ? "Add a photo, caption or song." : null]}>
         <Field label="Caption" value={caption} onChangeText={setCaption} maxLength={CAPTION_MAX} placeholder="What's it like?" multiline inputAccessoryViewButtonLabel="Done" returnKeyType="done" submitBehavior="blurAndSubmit" />
       </FieldGroup>
-      {song ? <SongRow song={song} trailing={<Pressable onPress={() => setSong(null)} accessibilityRole="button" accessibilityLabel="Remove song" hitSlop={space.xs} style={styles.remove}><Icon name="xmark.circle.fill" color="textTertiary" size={size.icon} /></Pressable>} /> : <Button title="Add a song" icon="music.note" variant="secondary" onPress={() => router.push("/stamp/song")} />}
+      {song ? <SongRow song={song} trailing={<Pressable onPress={() => setSong(null)} accessibilityRole="button" accessibilityLabel="Remove song" hitSlop={space.xs} style={styles.remove}><Icon name="xmark.circle.fill" color="textTertiary" size={size.icon} /></Pressable>} /> : <Button title="Add a song" icon="music.note" variant="secondary" onPress={() => nav.push("/stamp/song")} />}
       {save.error && <InlineError message={errorText(save.error, "Couldn't save. Try again.")} />}
     </FormScreen>
   );

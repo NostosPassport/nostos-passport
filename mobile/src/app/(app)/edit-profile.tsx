@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { router, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import { useState } from "react";
 import { ActionSheetIOS, Pressable, StyleSheet } from "react-native";
 
@@ -20,6 +20,7 @@ import { prepareImage } from "@/features/photos/prepare";
 import { haptics } from "@/lib/haptics";
 import { useConfirmDiscard } from "@/lib/use-confirm-discard";
 import { colors, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
 
 export default function EditProfile() {
   const settings = useProfileSettings();
@@ -55,7 +56,7 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
       haptics.success();
       setSaved(true);
       refreshProfile();
-      requestAnimationFrame(() => router.back());
+      requestAnimationFrame(() => nav.back());
     },
     onError: () => haptics.warning(),
   });
@@ -96,7 +97,7 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
     <FormScreen>
       <Stack.Screen
         options={{
-          headerLeft: () => <HeaderButton label="Cancel" onPress={() => router.back()} />,
+          headerLeft: () => <HeaderButton label="Cancel" onPress={() => nav.back()} />,
           headerRight: () => <HeaderButton label="Save" bold onPress={() => save.mutate()} disabled={!dirty || !!problem || save.isPending} />,
         }}
       />

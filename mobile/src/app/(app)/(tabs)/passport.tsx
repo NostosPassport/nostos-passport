@@ -1,10 +1,10 @@
-import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/ui/icon";
 import { PassportBook } from "@/features/book/PassportBook";
 import { colors, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
 
 export default function Passport() {
   const insets = useSafeAreaInsets();
@@ -13,7 +13,7 @@ export default function Passport() {
     <View style={styles.root}>
       <PassportBook />
       <Pressable
-        onPress={() => router.push("/collections")}
+        onPress={() => nav.push("/collections")}
         accessibilityRole="button"
         accessibilityLabel="Collections"
         hitSlop={space.xs}
@@ -22,7 +22,7 @@ export default function Passport() {
         <Icon name="book" color="textPrimary" size={size.icon} />
       </Pressable>
       <Pressable
-        onPress={() => router.push("/gallery")}
+        onPress={() => nav.push("/gallery")}
         accessibilityRole="button"
         accessibilityLabel="Stamp gallery"
         hitSlop={space.xs}
@@ -31,7 +31,7 @@ export default function Passport() {
         <Icon name="square.grid.2x2" color="textPrimary" size={size.iconSmall} />
       </Pressable>
       <Pressable
-        onPress={() => router.push("/settings")}
+        onPress={() => nav.push("/settings")}
         accessibilityRole="button"
         accessibilityLabel="Settings"
         hitSlop={space.xs}

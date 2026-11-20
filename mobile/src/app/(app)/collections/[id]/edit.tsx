@@ -9,6 +9,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { CollectionEditor, type CollectionDraft } from "@/features/collections/CollectionEditor";
 import { colors, space } from "@/theme";
+import { nav } from "@/lib/nav";
 
 export default function EditCollectionScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
@@ -20,7 +21,7 @@ export default function EditCollectionScreen() {
     onSuccess: (result) => {
       queryClient.setQueryData(qk.collection(id), result);
       void queryClient.invalidateQueries({ queryKey: qk.collections });
-      router.back();
+      nav.back();
     },
   });
   const remove = useMutation({

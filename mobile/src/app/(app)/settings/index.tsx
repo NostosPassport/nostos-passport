@@ -1,4 +1,4 @@
-import { router, Stack, type Href } from "expo-router";
+import { Stack, type Href } from "expo-router";
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { LEGAL, openWebPage } from "@/lib/links";
 import { colors, fonts, screenPadding, space } from "@/theme";
+import { nav } from "@/lib/nav";
 
 export default function Settings() {
   const insets = useSafeAreaInsets();
@@ -32,7 +33,7 @@ export default function Settings() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.nav, { paddingTop: insets.top + 4 }]}>
-        <Pressable onPress={() => router.back()} style={styles.hitTarget} accessibilityRole="button" accessibilityLabel="Back">
+        <Pressable onPress={() => nav.back()} style={styles.hitTarget} accessibilityRole="button" accessibilityLabel="Back">
           <Icon name="chevron.left" color="textPrimary" size={22} />
         </Pressable>
       </View>
@@ -42,20 +43,20 @@ export default function Settings() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.textSecondary} />}
       >
-        <SettingsRow title="Edit profile" subtitle={user ? `${user.displayName} · @${user.handle}` : undefined} trailing="chevron.right" onPress={() => router.push("/edit-profile")} />
-        <SettingsRow title="Email" subtitle={user?.email} trailing="chevron.right" onPress={() => router.push("/settings/email" as Href)} />
+        <SettingsRow title="Edit profile" subtitle={user ? `${user.displayName} · @${user.handle}` : undefined} trailing="chevron.right" onPress={() => nav.push("/edit-profile")} />
+        <SettingsRow title="Email" subtitle={user?.email} trailing="chevron.right" onPress={() => nav.push("/settings/email" as Href)} />
         <View style={styles.privacyNote}>
           <Text variant="footnote" color="textSecondary">Only you can see your passport.</Text>
           <Text variant="footnote" color="textSecondary">Nothing is shared, and there is no feed.</Text>
         </View>
-        <SettingsRow title="Customize" subtitle="Coming soon" trailing="chevron.right" onPress={() => router.push("/customize")} />
+        <SettingsRow title="Customize" subtitle="Coming soon" trailing="chevron.right" onPress={() => nav.push("/customize")} />
         <SettingsRow title="Privacy policy" subtitle="Opens in your browser" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.privacy)} />
         <SettingsRow title="Terms" subtitle="Opens in your browser" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.terms)} />
         <SettingsRow title="Support" subtitle="Get help" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.support)} />
-        {__DEV__ ? <SettingsRow title="Design gallery" subtitle="Development" trailing="chevron.right" onPress={() => router.push("/design")} /> : null}
+        {__DEV__ ? <SettingsRow title="Design gallery" subtitle="Development" trailing="chevron.right" onPress={() => nav.push("/design")} /> : null}
         <View style={styles.actions}>
           <Button title="Sign out" variant="plain" onPress={confirmSignOut} />
-          <Button title="Delete account" variant="secondary" onPress={() => router.push("/settings/delete-account")} />
+          <Button title="Delete account" variant="secondary" onPress={() => nav.push("/settings/delete-account")} />
         </View>
         {user ? <Text variant="footnote" color="textTertiary">Member since {new Date(user.memberSince).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</Text> : null}
       </ScrollView>

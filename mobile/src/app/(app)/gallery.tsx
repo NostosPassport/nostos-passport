@@ -1,4 +1,3 @@
-import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -9,6 +8,7 @@ import { StampMark } from "@/features/book/StampMark";
 import { usePassport } from "@/features/book/use-passport";
 import { localityKey, localityLabel } from "@/lib/place";
 import { colors, fonts, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
 
 type Filter = "all" | "restaurant" | "bar" | "hotel";
 
@@ -24,7 +24,7 @@ export default function StampGallery() {
     <EditorialScreen>
       <EditorialSafeContent bottom>
         <EditorialHeader compact action={
-          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close gallery" style={styles.iconTarget}>
+          <Pressable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Close gallery" style={styles.iconTarget}>
             <Icon name="xmark" color="textPrimary" size={size.iconSmall} />
           </Pressable>
         } />
@@ -73,7 +73,7 @@ function GalleryStamp({ stamp }: { stamp: StampView }) {
   const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: stamp.place.timeZone }).format(new Date(stamp.visitedAt));
   return (
     <Pressable
-      onPress={() => router.push({ pathname: "/stamp/[id]", params: { id: stamp.id } })}
+      onPress={() => nav.push({ pathname: "/stamp/[id]", params: { id: stamp.id } })}
       accessibilityRole="button"
       accessibilityLabel={`Open ${stamp.place.name} stamp`}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}

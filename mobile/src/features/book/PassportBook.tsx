@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Modal, Platform, Pressable, StyleSheet, Text as NativeText, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,6 +24,7 @@ import { type PageFace, groupByPage } from "./spreads";
 import { stampPlacement } from "./slots";
 import { FOCUS_TOP_SPACE, FOCUS_BOTTOM_SPACE, focusBookSize, focusPageCount, focusPageSize, focusSpreadCount, stampHitRect } from "./focus-interaction";
 import { usePassport } from "./use-passport";
+import { nav } from "@/lib/nav";
 
 /* eslint-disable react-hooks/immutability -- Reanimated shared values are written through .value by design */
 type Props = { collectionId?: string };
@@ -158,7 +159,7 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
     if (modelReady.current && opening) { setModelClosing(true); setOpening(false); }
     progress.value = withTiming(0, { duration: reduced ? 0 : bookMotion.durations.standard }, (finished) => { if (finished) scheduleOnRN(finishClose); });
   };
-  const openStamp = (id: string) => { returnToFocus.current = true; setFocused(false); router.push({ pathname: "/stamp/[id]", params: { id } }); };
+  const openStamp = (id: string) => { returnToFocus.current = true; setFocused(false); nav.push({ pathname: "/stamp/[id]", params: { id } }); };
   const bearerPage = <BearerPage width={book.pageWidth} height={book.pageHeight} bearer={{ displayName: data.displayName, handle: data.handle, memberSince: data.memberSince, bio: data.bio }} avatarUrl={data.avatarUrl} />;
   const renderFace = (face: PageFace, side: "left" | "right") => {
     if (face.kind === "inside-cover") return <InsideCover width={book.pageWidth} height={book.pageHeight} />;

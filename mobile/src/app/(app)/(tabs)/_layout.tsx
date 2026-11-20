@@ -1,10 +1,11 @@
-import { router, Tabs } from "expo-router";
+import { Tabs } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "@/components/ui/icon";
 import { mapRecenter } from "@/features/map/recenter";
 import { colors } from "@/theme";
+import { nav } from "@/lib/nav";
 
 /** Passport is the tab the app opens on. SDK 58 moved this from the `initialRouteName` prop to `unstable_settings.anchor`. */
 export const unstable_settings = { anchor: "passport" };
@@ -30,7 +31,7 @@ export default function TabsLayout() {
           tabBarAccessibilityLabel: "Stamp a place",
           tabBarButton: () => (
             <View style={styles.center} pointerEvents="box-none">
-              <Pressable onPress={() => router.push("/stamp/new")} accessibilityRole="button" accessibilityLabel="Stamp a place" style={({ pressed }) => [styles.stampButton, pressed && styles.pressed]}>
+              <Pressable onPress={() => nav.push("/stamp/new")} accessibilityRole="button" accessibilityLabel="Stamp a place" style={({ pressed }) => [styles.stampButton, pressed && styles.pressed]}>
                 <Icon name="plus" color="accent" size={24} />
               </Pressable>
             </View>

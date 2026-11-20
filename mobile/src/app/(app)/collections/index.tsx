@@ -1,4 +1,4 @@
-import { router, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { useCollections } from "@/api/queries";
@@ -9,6 +9,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { collectionColorValue } from "@/features/collections/colors";
 import { colors, hairlineWidth, radius, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
 
 export default function CollectionsScreen() {
   const query = useCollections();
@@ -24,7 +25,7 @@ export default function CollectionsScreen() {
         {!query.isPending && !query.isError && collections.length === 0 ? <View style={styles.empty}><Icon name="book" color="accent" size={size.iconLarge} /><Text variant="title2">No collections yet</Text><Text variant="callout" color="textSecondary" align="center">Create a passport for favorites, date nights, a trip, or anything else you want to keep together.</Text></View> : null}
         <View style={styles.list}>
           {collections.map((collection) => (
-            <Pressable key={collection.id} onPress={() => router.push({ pathname: "/collections/[id]", params: { id: collection.id } })} accessibilityRole="button" accessibilityLabel={`Open ${collection.name}`} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+            <Pressable key={collection.id} onPress={() => nav.push({ pathname: "/collections/[id]", params: { id: collection.id } })} accessibilityRole="button" accessibilityLabel={`Open ${collection.name}`} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
               <View style={[styles.book, { backgroundColor: collectionColorValue(collection.color) }]}><View style={styles.bookRule} /></View>
               <View style={styles.rowText}>
                 <Text variant="title2" numberOfLines={1}>{collection.name}</Text>
@@ -34,7 +35,7 @@ export default function CollectionsScreen() {
             </Pressable>
           ))}
         </View>
-        <Button title="+ Create collection" onPress={() => router.push("/collections/new")} />
+        <Button title="+ Create collection" onPress={() => nav.push("/collections/new")} />
       </ScrollView>
     </View>
   );

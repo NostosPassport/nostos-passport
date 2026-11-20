@@ -1,5 +1,4 @@
 import { Image } from "expo-image";
-import { router } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { ActionSheetIOS, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,6 +14,7 @@ import { photoDraft, usePhotoDraft } from "@/features/stamps/photo-draft";
 import { MAX_STAMP_PHOTOS, photoCount } from "@/features/stamps/stamp-flow";
 import { haptics } from "@/lib/haptics";
 import { colors, radius, screenPadding, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
 
 export default function StampCamera() {
   const insets = useSafeAreaInsets();
@@ -82,7 +82,7 @@ export default function StampCamera() {
     <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.lg }]}>
       <View style={styles.header}>
         <View><Text variant="title2">Photos</Text><Text variant="footnote" color="textSecondary">{photoCount(photos.length)}</Text></View>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Done" style={styles.done}><Text variant="callout" weight="semibold">Done</Text></Pressable>
+        <Pressable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Done" style={styles.done}><Text variant="callout" weight="semibold">Done</Text></Pressable>
       </View>
       <View style={styles.body}>
         {photos.length > 0 ? (
@@ -101,7 +101,7 @@ export default function StampCamera() {
       </View>
       <View style={styles.actions}>
         {!full ? <Button title={photos.length > 0 ? "Add another photo" : "Add a photo"} onPress={chooseSource} loading={busy} /> : null}
-        <Button title="Done" variant="plain" onPress={() => router.back()} />
+        <Button title="Done" variant="plain" onPress={() => nav.back()} />
       </View>
       <PhotoViewer photos={viewerPhotos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
     </View>

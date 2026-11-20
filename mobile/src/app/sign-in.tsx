@@ -1,5 +1,4 @@
 import { useMutation } from "@tanstack/react-query";
-import { router } from "expo-router";
 import { useState } from "react";
 import { Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,6 +10,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { haptics } from "@/lib/haptics";
 import { HANDLE_MAX, HANDLE_MIN, HANDLE_RE, isEmail } from "@/lib/validation";
 import { colors, fonts } from "@/theme";
+import { nav } from "@/lib/nav";
 
 const SIGN_IN_ART = require("../../assets/images/nostos_art1.png");
 
@@ -54,10 +54,10 @@ export default function SignIn() {
   const createAccount = () => {
     const value = identifier.trim();
     if (enteredEmail) {
-      router.push({ pathname: "/sign-up", params: { email: value } });
+      nav.push({ pathname: "/sign-up", params: { email: value } });
       return;
     }
-    router.push("/sign-up");
+    nav.push("/sign-up");
   };
 
   const submitIdentifier = () => {
