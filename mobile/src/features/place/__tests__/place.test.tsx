@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 
 import type { StampView } from "@/api/contracts";
 import PlacePage from "@/app/(app)/place/[id]";
+import { nav } from "@/lib/nav";
 import { dayLabel, stampLine, standing, visitSummary } from "../place-page";
 
 const mockPush = jest.fn();
@@ -80,8 +81,26 @@ describe("PlacePage", () => {
     await render(<PlacePage />);
     expect(screen.getByText("1.8 km away")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Stamp this place" })).toBeTruthy();
-    expect(screen.getByText(/unverified Now stamp or add a Past visit/)).toBeTruthy();
+    expect(screen.getByText(/too far away to verify this visit, but you can still stamp it/)).toBeTruthy();
     expect(screen.getByText("You haven't stamped this place yet.")).toBeTruthy();
+  });
+
+  it("a double tap on a stamp row opens it once", async () => {
+    nav.reset();
+    const a = stamp("a", "2026-10-04T03:41:00.000Z", "good pastrami");
+    mockQuery = { data: { place, stamps: [a], visits: [{ day: "2026-10-03", stamps: [a] }], inside: true, distanceM: 12 } };
+    await render(<PlacePage />);
+    const row = screen.getByRole("button", { name: /Stamp, 11:41 PM/ });
+    await fireEvent.press(row);
+    await fireEvent.press(row);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+  });
+
+  it("says nothing about verification when location is unknown", async () => {
+    mockQuery = { data: { place, stamps: [], visits: [], inside: null, distanceM: null } };
+    await render(<PlacePage />);
+    expect(screen.getByRole("button", { name: "Stamp this place" })).toBeTruthy();
+    expect(screen.queryByText(/verify/)).toBeNull();
   });
 
   it("loading and failed both say something", async () => {

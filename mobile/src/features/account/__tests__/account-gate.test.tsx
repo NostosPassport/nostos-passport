@@ -28,10 +28,12 @@ describe("accountState", () => {
 describe("AccountGate", () => {
   const renderGate = async () => render(<AccountGate title="Stamp a place" message="Loading your passport."><></></AccountGate>);
 
-  it("checking: says so and offers no sign-in action", async () => {
+  it("checking: shows the caller's title and message and offers no sign-in action", async () => {
     mockState = { state: "checking", retry, retrying: false };
     await renderGate();
-    expect(screen.getByText("Checking your account")).toBeTruthy();
+    expect(screen.getByText("Stamp a place")).toBeTruthy();
+    expect(screen.getByText("Loading your passport.")).toBeTruthy();
+    expect(screen.getByRole("progressbar", { name: "Stamp a place. Loading your passport." })).toBeTruthy();
     expect(screen.queryByText("Sign in")).toBeNull();
   });
 
@@ -47,7 +49,8 @@ describe("AccountGate", () => {
   it("ready: shows the protected screen", async () => {
     mockState = { state: "ready", retry, retrying: false };
     await render(<AccountGate title="t" message="m"><></></AccountGate>);
-    expect(screen.queryByText("Checking your account")).toBeNull();
+    expect(screen.queryByText("t")).toBeNull();
+    expect(screen.queryByText("m")).toBeNull();
     expect(screen.queryByText("Sign in")).toBeNull();
   });
 });
