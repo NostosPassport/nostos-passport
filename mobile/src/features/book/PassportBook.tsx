@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useFocusEffect } from "expo-router";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Modal, Platform, StyleSheet, Text as NativeText, useWindowDimensions, View, type ViewInstance } from "react-native";
@@ -44,6 +45,8 @@ type BookViewProps = {
 } & Slots;
 
 const TABLET_MIN_DIMENSION = 700;
+/** Cream marble behind the open book, so the reader sits on a surface rather than a flat colour. */
+const READER_BACKDROP = require("../../../assets/images/reader-marble.jpg");
 
 export function PassportBook({ collectionId, top, bottom }: Props = {}) {
   return collectionId ? <CollectionPassportBook collectionId={collectionId} /> : <MasterPassportBook top={top} bottom={bottom} />;
@@ -223,7 +226,9 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
     </View>
     <Modal visible={focused} transparent presentationStyle="overFullScreen" animationType="none" onRequestClose={close}>
       <View style={[styles.focus, { paddingTop: insets.top + FOCUS_TOP_SPACE, paddingBottom: insets.bottom + FOCUS_BOTTOM_SPACE, paddingLeft: insets.left + 8, paddingRight: insets.right + 8 }]} accessibilityViewIsModal>
-        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.backdrop, backdropMotion]} />
+        <Animated.View testID="passport-reader-backdrop" pointerEvents="none" style={[StyleSheet.absoluteFill, styles.backdrop, backdropMotion]}>
+          <Image source={READER_BACKDROP} style={StyleSheet.absoluteFill} contentFit="cover" transition={0} accessible={false} />
+        </Animated.View>
         <Animated.View testID="passport-reader-stage" pointerEvents={transitioning ? "none" : "auto"} style={readerMotion}>
           {compactReader ?
             <BookFrame pageWidth={book.pageWidth} pageHeight={book.pageHeight} page={current} total={total} coverColor={coverColor ?? scene3d.passportCover}>
