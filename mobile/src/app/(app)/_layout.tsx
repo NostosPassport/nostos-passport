@@ -15,7 +15,7 @@ export default function AppLayout() {
         <Stack.Screen name="stamp/new" options={{ presentation: "modal", headerShown: false, headerBackButtonMenuEnabled: false }} />
         <Stack.Screen name="stamp/camera" options={{ presentation: "fullScreenModal", headerShown: false }} />
         <Stack.Screen name="stamp/landed" options={{ headerShown: false, gestureEnabled: false, animation: "fade" }} />
-        <Stack.Screen name="stamp/edit" options={{ title: "Edit stamp", presentation: "modal" }} />
+        <Stack.Screen name="stamp/edit" options={{ title: "Edit memory", presentation: "modal" }} />
         <Stack.Screen name="stamp/song" options={{ presentation: "modal", headerShown: false }} />
         <Stack.Screen name="collections/index" options={{ title: "Collections" }} />
         <Stack.Screen name="collections/new" options={{ title: "Create collection", presentation: "modal" }} />

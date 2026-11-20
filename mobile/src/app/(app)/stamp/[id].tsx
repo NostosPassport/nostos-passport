@@ -99,7 +99,7 @@ function Memory({ stamp, actions, deleting }: { stamp: StampView; actions: Stamp
   const stampSize = Math.min(300, Math.max(220, width - 72));
   return <>
     <View style={styles.memoryWrap} pointerEvents={deleting ? "none" : "auto"}>
-      <ScrollView style={deleting && styles.dimmed} contentContainerStyle={[styles.memory, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 20 }]}>
+      <ScrollView style={[{ marginTop: insets.top }, deleting && styles.dimmed]} contentContainerStyle={[styles.memory, { paddingTop: 4, paddingBottom: insets.bottom + 20 }]}>
         <TopBar actions={actions} disabled={deleting} />
         <Kicker>{number ? `NO. ${number} / ${dateLabel}` : dateLabel}</Kicker>
         <Tappable onPress={() => nav.push({ pathname: "/place/[id]", params: { id: stamp.place.id } })} accessibilityRole="link" accessibilityLabel={stamp.place.name} accessibilityHint="Shows every visit you stamped here">
