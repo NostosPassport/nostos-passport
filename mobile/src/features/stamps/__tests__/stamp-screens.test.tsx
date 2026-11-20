@@ -289,6 +289,8 @@ describe("the photo source flow", () => {
     }
     expect(screen.getByText("6 of 6")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Add another photo" })).toBeNull();
+    expect(screen.getByText("6 of 6. Remove one to add another.")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Done" })).toHaveLength(1);
   });
 
   it("keeps existing photos when the native camera fails", async () => {

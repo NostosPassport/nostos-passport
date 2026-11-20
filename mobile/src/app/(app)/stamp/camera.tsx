@@ -4,6 +4,7 @@ import { ActionSheetIOS, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
+import { HeaderButton } from "@/components/ui/header-button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { PhotoViewer } from "@/features/book/PhotoViewer";
@@ -22,7 +23,8 @@ export default function StampCamera() {
   const photos = usePhotoDraft();
   const busyRef = useRef(false);
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
+  // "info" notes (the photo was added, only the Photos copy failed) are not errors and must not read red (P-102).
+  const [note, setNote] = useState<{ text: string; tone: "info" | "error" } | null>(null);
   const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
   const full = photos.length >= MAX_STAMP_PHOTOS;
 
@@ -40,15 +42,15 @@ export default function StampCamera() {
     try {
       const outcome = await takePhoto();
       if (outcome === "cancelled") return;
-      if (typeof outcome === "string") { setNote(CAMERA_NOTE[outcome]); return; }
+      if (typeof outcome === "string") { setNote({ text: CAMERA_NOTE[outcome], tone: outcome === "failed" ? "error" : "info" }); return; }
       const prepared = await prepareImage(outcome.uri, { watermark: true });
       if (photoDraft.add(prepared.uri)) {
         haptics.select();
         const saved = await saveAcceptedCameraPhoto(prepared.uri);
-        if (saved === "permission-denied") setNote("Photo added. Allow Nostos to add photos in Settings to save a copy to Photos.");
-        else if (saved === "failed") setNote("Photo added, but Nostos couldn't save a copy to Photos.");
+        if (saved === "permission-denied") setNote({ text: "Photo added. Allow Nostos to add photos in Settings to save a copy to Photos.", tone: "info" });
+        else if (saved === "failed") setNote({ text: "Photo added, but Nostos couldn't save a copy to Photos.", tone: "info" });
       }
-    } catch { setNote("Couldn't add that photo. Try again."); } finally { finishWork(); }
+    } catch { setNote({ text: "Couldn't add that photo. Try again.", tone: "error" }); } finally { finishWork(); }
   }, [finishWork, startWork]);
 
   const chooseLibraryPhotos = useCallback(async () => {
@@ -67,7 +69,7 @@ export default function StampCamera() {
         if (photoDraft.add(prepared.uri)) added += 1;
       }
       if (added > 0) haptics.select();
-    } catch { setNote("Couldn't add those photos. Try again."); } finally { finishWork(); }
+    } catch { setNote({ text: "Couldn't add those photos. Try again.", tone: "error" }); } finally { finishWork(); }
   }, [finishWork, startWork]);
 
   const chooseSource = useCallback(() => {
@@ -83,7 +85,8 @@ export default function StampCamera() {
     <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.lg }]}>
       <View style={styles.header}>
         <View><Text variant="title2">Photos</Text><Text variant="footnote" color="textSecondary">{photoCount(photos.length)}</Text></View>
-        <Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Done" style={styles.done}><Text variant="callout" weight="semibold">Done</Text></Tappable>
+        {/* The one Done. It waits while photos are still being prepared, so the composer never opens without them (P-100, P-101). */}
+        <HeaderButton label="Done" bold onPress={() => nav.back()} loading={busy} />
       </View>
       <View style={styles.body}>
         {photos.length > 0 ? (
@@ -98,11 +101,11 @@ export default function StampCamera() {
             ))}
           </ScrollView>
         ) : <View style={styles.empty}><Icon name="photo.on.rectangle" color="textSecondary" size={size.iconLarge} /><Text variant="callout" color="textSecondary" align="center">{busy ? "Adding photo…" : "No photos yet."}</Text></View>}
-        {note ? <Text variant="footnote" color="danger" align="center">{note}</Text> : null}
+        {busy && photos.length > 0 ? <Text variant="footnote" color="textSecondary" align="center">Adding photo…</Text> : null}
+        {note ? <Text variant="footnote" color={note.tone === "error" ? "danger" : "textSecondary"} align="center" accessibilityLiveRegion="polite">{note.text}</Text> : null}
       </View>
       <View style={styles.actions}>
-        {!full ? <Button title={photos.length > 0 ? "Add another photo" : "Add a photo"} onPress={chooseSource} loading={busy} /> : null}
-        <Button title="Done" variant="plain" onPress={() => nav.back()} />
+        {full ? <Text variant="footnote" color="textSecondary" align="center">{MAX_STAMP_PHOTOS} of {MAX_STAMP_PHOTOS}. Remove one to add another.</Text> : <Button title={photos.length > 0 ? "Add another photo" : "Add a photo"} onPress={chooseSource} loading={busy} />}
       </View>
       <PhotoViewer photos={viewerPhotos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
     </View>
@@ -113,7 +116,6 @@ const THUMB = 148;
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background, paddingHorizontal: screenPadding },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  done: { minWidth: 64, minHeight: 44, alignItems: "flex-end", justifyContent: "center" },
   body: { flex: 1, justifyContent: "center", gap: space.md },
   strip: { gap: space.sm, alignItems: "center", paddingVertical: space.lg },
   thumb: { width: THUMB, height: THUMB, borderRadius: radius.card, overflow: "hidden", backgroundColor: colors.elevated },
