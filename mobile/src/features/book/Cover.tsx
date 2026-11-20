@@ -29,7 +29,8 @@ half4 main(float2 xy) {
 const WORDMARK = "NOSTOS";
 const SUBTITLE = "PASSPORT";
 
-export function Cover({ width, height, counts, onOpen, name, showCounts = true }: { width: number; height: number; counts: CoverCounts; onOpen?: () => void; name?: string; showCounts?: boolean }) {
+/** `tint` dyes the leather (the 3D model's cover colour) so the flat cover can stand in for the 3D one while it loads. */
+export function Cover({ width, height, counts, onOpen, name, showCounts = true, tint }: { width: number; height: number; counts: CoverCounts; onOpen?: () => void; name?: string; showCounts?: boolean; tint?: string }) {
   const { sweep, gesture } = useFoilSweep(width);
   const titleFont = useFont(CormorantGaramond_600SemiBold, Math.round(width * 0.135));
   const subFont = useFont(CourierPrime_400Regular, Math.round(width * 0.036));
@@ -74,7 +75,7 @@ export function Cover({ width, height, counts, onOpen, name, showCounts = true }
           >
             <Canvas style={{ width, height }}>
               <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
-                {LEATHER ? <Shader source={LEATHER} uniforms={{ dark: Skia.Color(colors.elevated), light: Skia.Color(colors.background) }} /> : null}
+                {LEATHER ? <Shader source={LEATHER} uniforms={{ dark: Skia.Color(tint ? shade(tint, -0.12) : colors.elevated), light: Skia.Color(tint ? shade(tint, 0.06) : colors.background) }} /> : null}
               </RoundedRect>
               <RoundedRect x={0} y={0} width={width} height={height} r={coverRadius}>
                 <LinearGradient start={vec(0, 0)} end={vec(width, height)} colors={[colors.leatherSheen, colors.transparent, colors.bookShade]} />
@@ -117,13 +118,23 @@ function FoilGradient({ start, end }: { start: ReturnType<typeof useDerivedValue
   return <LinearGradient start={start} end={end} colors={[colors.dimBrass, colors.bookAccentSoft, colors.bookAccent, colors.bookAccentSoft, colors.dimBrass]} positions={[0, 0.28, 0.5, 0.72, 1]} />;
 }
 
+/** Lightens (amount > 0) or darkens a #rrggbb colour. */
+function shade(hex: string, amount: number): string {
+  const n = Number.parseInt(hex.replace("#", "").slice(0, 6), 16);
+  const ch = (shift: number) => {
+    const c = (n >> shift) & 255;
+    return Math.round(amount >= 0 ? c + (255 - c) * amount : c * (1 + amount));
+  };
+  return `#${[16, 8, 0].map((s) => ch(s).toString(16).padStart(2, "0")).join("")}`;
+}
+
 export function Counts({ counts }: { counts: CoverCounts }) {
   const items: [string, number][] = [["STAMPS", counts.stamps], ["PLACES", counts.places]];
   return (
     <View style={styles.counts} accessible accessibilityLabel={`${counts.stamps} stamps, ${counts.places} places`}>
       {items.map(([label, n]) => (
         <View key={label} testID={`passport-count-${label}`} style={styles.count}>
-          <Text variant="title" color="bookAccent" tabular accessibilityElementsHidden>{n}</Text>
+          <Text variant="title" color="bookAccent" tabular style={styles.figures} accessibilityElementsHidden>{n}</Text>
           <Text variant="typewriterSmall" color="dimBrass" align="center" numberOfLines={1} adjustsFontSizeToFit style={styles.countLabel} accessibilityElementsHidden>{label}</Text>
         </View>
       ))}
@@ -137,5 +148,7 @@ const styles = StyleSheet.create({
   bookClip: { overflow: "hidden", backgroundColor: colors.surface },
   counts: { alignSelf: "stretch", flexDirection: "row", justifyContent: "center", gap: space.sm, paddingHorizontal: space.xs },
   countLabel: { alignSelf: "stretch" },
+  // Cormorant's old-style "1" reads as a capital I (P-010).
+  figures: { fontVariant: ["lining-nums", "tabular-nums"] },
   count: { flex: 1, minWidth: 0, alignItems: "center", gap: space.xxs },
 });

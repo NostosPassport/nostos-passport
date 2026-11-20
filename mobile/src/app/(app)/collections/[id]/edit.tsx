@@ -32,7 +32,7 @@ export default function EditCollectionScreen() {
       void queryClient.invalidateQueries({ queryKey: qk.collections });
       // Pop the sheet and the deleted collection's passport together, back to the existing list, so the deleted
       // collection is not left in the back stack (P-128).
-      router.dismissTo("/collections");
+      router.dismissTo({ pathname: "/gallery", params: { tab: "collections" } });
     },
   });
 
