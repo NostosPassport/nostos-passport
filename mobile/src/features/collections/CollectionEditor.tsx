@@ -1,11 +1,13 @@
+import { Stack } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
 import { errorText } from "@/api";
 import { COLLECTION_NAME_MAX, type CollectionColorValue } from "@/api/collection-contracts";
 import type { StampView } from "@/api/contracts";
 import { Kicker, Rule } from "@/components/editorial/editorial";
 import { Button } from "@/components/ui/button";
+import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
 import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
@@ -20,26 +22,34 @@ export type CollectionDraft = { name: string; color: CollectionColorValue; stamp
 
 type Props = {
   initial: CollectionDraft;
+  /** The header action ("Create", "Save"). The sheet title already names the screen (P-130). */
   submitLabel: string;
   busy?: boolean;
   error?: unknown;
+  /** Copy for `error` when the server gives none. Defaults to the save message. */
+  errorFallback?: string;
   onSubmit: (draft: CollectionDraft) => void;
   onDelete?: () => void;
   deleting?: boolean;
+  /** Stamps already known (the collection's own), shown while the full library is still loading. */
+  knownStamps?: StampView[];
 };
 
 const stampDate = (stamp: StampView) => new Date(stamp.visitedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: stamp.place.timeZone });
 const stampSubtitle = (stamp: StampView) => [localityLabel(stamp.place), stampDate(stamp)].filter(Boolean).join(" · ");
 
-export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, onDelete, deleting }: Props) {
+export function CollectionEditor({ initial, submitLabel, busy, error, errorFallback, onSubmit, onDelete, deleting, knownStamps }: Props) {
   const source = useMyStamps();
   const [name, setName] = useState(initial.name);
   const [color, setColor] = useState<CollectionColorValue>(initial.color);
   const [stampIds, setStampIds] = useState(initial.stampIds);
-  const byId = new Map(source.stamps.map((stamp) => [stamp.id, stamp]));
+  const byId = new Map([...(knownStamps ?? []), ...source.stamps].map((stamp) => [stamp.id, stamp]));
   const selected = stampIds.map((id) => byId.get(id)).filter((stamp): stamp is StampView => !!stamp);
   const available = source.stamps.filter((stamp) => !stampIds.includes(stamp.id));
-  const valid = name.trim().length > 0 && name.trim().length <= COLLECTION_NAME_MAX && !busy;
+  const named = name.trim().length > 0 && name.trim().length <= COLLECTION_NAME_MAX;
+  // Save and Delete never run together (P-133).
+  const valid = named && !busy && !deleting;
+  const submit = () => onSubmit({ name: name.trim(), color, stampIds });
 
   const remove = (id: string) => setStampIds((ids) => ids.filter((value) => value !== id));
   const add = (id: string) => setStampIds((ids) => [...ids, id]);
@@ -55,6 +65,10 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
 
   return (
     <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets contentContainerStyle={styles.content}>
+      {/* The action lives in the header, so it stays in reach above a long stamp list (P-127). */}
+      <Stack.Screen options={headerTextButtons({ right: <HeaderButton label={submitLabel} bold loading={busy} disabled={!valid} onPress={submit} /> })} />
+      {/* Errors sit at the top, next to the header action that caused them. */}
+      {error ? <InlineError message={errorText(error, errorFallback ?? "Couldn't save this collection. Try again.")} /> : null}
       <View style={styles.field}>
         <Kicker>NAME</Kicker>
         <TextInput
@@ -70,21 +84,24 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
           style={styles.nameInput}
           accessibilityLabel="Collection name"
         />
-        <Text variant="footnote" color="textTertiary" align="right">{name.trim().length} / {COLLECTION_NAME_MAX}</Text>
+        <View style={styles.nameMeta}>
+          {named ? null : <Text variant="footnote" color="textTertiary" style={styles.hint}>Add a name to {submitLabel.toLowerCase()}.</Text>}
+          <Text variant="footnote" color="textTertiary">{name.trim().length} / {COLLECTION_NAME_MAX}</Text>
+        </View>
       </View>
 
       <Rule />
       <View style={styles.field}>
         <Kicker>COVER COLOR</Kicker>
-        <View style={styles.colors}>
+        <View style={styles.colors} accessibilityRole="radiogroup" accessibilityLabel="Cover color">
           {COLLECTION_COLORS.map((option) => {
             const active = option.id === color;
             return (
               <Tappable
                 key={option.id}
-                accessibilityRole="button"
+                accessibilityRole="radio"
                 accessibilityLabel={`${option.label} cover`}
-                accessibilityState={{ selected: active }}
+                accessibilityState={{ checked: active }}
                 onPress={() => setColor(option.id)}
                 style={[styles.colorTarget, active && styles.colorTargetActive]}
               >
@@ -98,9 +115,9 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
       <Rule />
       <View style={styles.field}>
         <Kicker>IN THIS COLLECTION · {stampIds.length}</Kicker>
-        {source.pending ? <SkeletonRows count={3} /> : null}
+        {source.pending && selected.length < stampIds.length ? <SkeletonRows count={Math.min(3, stampIds.length - selected.length)} /> : null}
         {source.error ? <InlineError message="Couldn't load your stamps." onRetry={source.retry} /> : null}
-        {!source.pending && !source.error && selected.length === 0 ? <Text variant="callout" color="textSecondary">No stamps yet. Add any stamp from your master Passport below.</Text> : null}
+        {!source.pending && !source.error && stampIds.length === 0 ?<Text variant="callout" color="textSecondary">No stamps yet. Add any stamp from your master Passport below.</Text> : null}
         {selected.map((stamp, index) => (
           <View key={stamp.id} style={styles.stampRow}>
             <View style={styles.stampText}>
@@ -129,12 +146,11 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
               <Icon name="plus" color="accent" size={size.iconSmall} />
             </Tappable>
           ))}
+          {source.loadingMore ? <ActivityIndicator color={colors.textSecondary} style={styles.more} accessibilityLabel="Loading more stamps" /> : null}
         </View>
       </> : null}
 
-      {error ? <InlineError message={errorText(error, "Couldn't save this collection. Try again.")} /> : null}
-      <Button title={submitLabel} loading={busy} disabled={!valid} onPress={() => onSubmit({ name: name.trim(), color, stampIds })} />
-      {onDelete ? <Button title="Delete collection" variant="destructive" loading={deleting} onPress={onDelete} /> : null}
+      {onDelete ? <Button title="Delete collection" variant="destructive" loading={deleting} disabled={busy} onPress={onDelete} /> : null}
     </ScrollView>
   );
 }
@@ -142,6 +158,9 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
 const styles = StyleSheet.create({
   content: { padding: space.lg, paddingBottom: space.xxxl, gap: space.lg },
   field: { gap: space.sm },
+  nameMeta: { flexDirection: "row", justifyContent: "flex-end", gap: space.sm },
+  hint: { flex: 1 },
+  more: { paddingVertical: space.sm },
   nameInput: { ...typeScale.title, minHeight: size.fieldHeight, borderBottomWidth: hairlineWidth, borderColor: colors.textPrimary, color: colors.textPrimary, paddingVertical: space.xs },
   colors: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   colorTarget: { width: size.hitTarget, height: size.hitTarget, borderWidth: hairlineWidth, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },

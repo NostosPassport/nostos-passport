@@ -42,7 +42,8 @@ export default function CollectionPassportScreen() {
         hitSlop={space.xs}
         style={[styles.edit, { top: insets.top + space.xs }]}
       >
-        <Icon name="gearshape" color="textPrimary" size={size.icon} />
+        {/* A pencil, not a gear: the gear means Settings on the Passport tab (P-135). */}
+        <Icon name="pencil" color="textPrimary" size={size.icon} />
       </Tappable>
     </View>
   );

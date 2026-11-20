@@ -19,14 +19,17 @@ export default function NewCollectionScreen() {
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: qk.collections });
       queryClient.setQueryData(qk.collection(result.collection.id), result);
-      router.replace({ pathname: "/collections/[id]", params: { id: result.collection.id } });
+      // Close the sheet, then open the new collection as a normal push over the list, rather than replacing the
+      // modal in place (P-134). Back from the new collection returns to the list.
+      router.dismiss();
+      nav.push({ pathname: "/collections/[id]", params: { id: result.collection.id } });
     },
   });
 
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ title: "Create collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} />
-      <CollectionEditor initial={initial} submitLabel="Create collection" busy={mutation.isPending} error={mutation.error} onSubmit={(draft) => mutation.mutate(draft)} />
+      <CollectionEditor initial={initial} submitLabel="Create" busy={mutation.isPending} error={mutation.error} onSubmit={(draft) => mutation.mutate(draft)} />
     </View>
   );
 }
