@@ -5,7 +5,7 @@ import { Tappable } from "@/components/ui/tappable";
 import { Text } from "@/components/ui/text";
 import { Field } from "@/components/ui/text-field";
 import { useAnnounce } from "@/lib/a11y";
-import { size, space } from "@/theme";
+import { fonts, size, space, tabular } from "@/theme";
 
 /** Never let "Send another code" be tapped again sooner than this, whatever the server suggests. */
 export const MIN_RESEND_SECONDS = 10;
@@ -87,6 +87,7 @@ export const CodeStep = forwardRef<TextInputInstance, Props>(function CodeStep(
         returnKeyType="done"
         onSubmitEditing={onSubmitEditing}
         testID={testID}
+        style={styles.codeInput}
       />
       <Text variant="footnote" color="textSecondary">{note}</Text>
       <View style={styles.actions}>
@@ -113,6 +114,8 @@ export const CodeStep = forwardRef<TextInputInstance, Props>(function CodeStep(
 
 const styles = StyleSheet.create({
   wrap: { gap: space.xs },
+  // The code reads as a code: typewriter digits, evenly spaced (placeholder included). No lineHeight, so the caret sits right.
+  codeInput: { fontFamily: fonts.mono, letterSpacing: space.xxs, ...tabular },
   actions: { flexDirection: "row", flexWrap: "wrap", columnGap: space.lg },
   action: { minHeight: size.hitTarget, justifyContent: "center" },
 });
