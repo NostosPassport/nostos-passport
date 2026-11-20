@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text as NativeText, View, type TextInputInstance } from "react-native";
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text as NativeText, View, type TextInputInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { errorText } from "@/api";
@@ -21,8 +21,11 @@ import { HANDLE_MAX, validateSignup, type SignupErrors, type SignupFields } from
 import { colors, fonts, screenPadding } from "@/theme";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
+import { DismissKeyboard } from "@/components/ui/dismiss-keyboard";
+import { useKeyboardVisible } from "@/lib/use-keyboard-visible";
 
 export default function SignUp() {
+  const keyboardUp = useKeyboardVisible();
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ email?: string | string[] }>();
@@ -107,7 +110,7 @@ export default function SignUp() {
   };
 
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView style={styles.root} behavior="padding">
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.topbar, { paddingTop: insets.top, height: insets.top + 44 }]}>
         <Tappable onPress={() => nav.back()} style={styles.hitTarget} accessibilityRole="button" accessibilityLabel="Back">
@@ -118,15 +121,14 @@ export default function SignUp() {
         </Tappable>
       </View>
 
-      <View style={styles.heading}>
+      <DismissKeyboard style={styles.heading}>
         <NativeText style={styles.title}>Your passport</NativeText>
         <Text variant="callout" color="textSecondary">For people 13 and over. Only you can see it.</Text>
-      </View>
+      </DismissKeyboard>
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
@@ -173,7 +175,7 @@ export default function SignUp() {
         {signup.error ? <InlineError message={errorText(signup.error, "Couldn't create your account. Check the details and try again.")} /> : null}
       </ScrollView>
 
-      <View style={[styles.actions, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View style={[styles.actions, { paddingBottom: keyboardUp ? 8 : Math.max(insets.bottom, 12) }]}>
         <Button
           title={challenge ? "Create account" : "Verify email"}
           onPress={submit}
@@ -181,7 +183,7 @@ export default function SignUp() {
           disabled={challenge ? code.length !== 6 : false}
         />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

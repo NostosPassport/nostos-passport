@@ -11,7 +11,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { localityLabel } from "@/lib/place";
-import { colors, hairlineWidth, radius, size, space, type as typeScale } from "@/theme";
+import { colors, hairlineWidth, radius, size, space, type as typeScale, maxFontSizeMultiplier } from "@/theme";
 import { COLLECTION_COLORS } from "./colors";
 import { useMyStamps } from "./use-my-stamps";
 import { Tappable } from "@/components/ui/tappable";
@@ -54,7 +54,7 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
   };
 
   return (
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+    <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets contentContainerStyle={styles.content}>
       <View style={styles.field}>
         <Kicker>NAME</Kicker>
         <TextInput
@@ -63,10 +63,14 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
           maxLength={COLLECTION_NAME_MAX}
           placeholder="Date Nights"
           placeholderTextColor={colors.textTertiary}
+          autoCapitalize="words"
+          returnKeyType="done"
+          selectionColor={colors.accent}
+          maxFontSizeMultiplier={maxFontSizeMultiplier}
           style={styles.nameInput}
           accessibilityLabel="Collection name"
         />
-        <Text variant="footnote" color="textTertiary" align="right">{name.length} / {COLLECTION_NAME_MAX}</Text>
+        <Text variant="footnote" color="textTertiary" align="right">{name.trim().length} / {COLLECTION_NAME_MAX}</Text>
       </View>
 
       <Rule />

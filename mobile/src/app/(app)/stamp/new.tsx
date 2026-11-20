@@ -34,6 +34,8 @@ import { useConfirmDiscard } from "@/lib/use-confirm-discard";
 import { colors, fonts, maxFontSizeMultiplier, size, space } from "@/theme";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
+import { DismissKeyboard } from "@/components/ui/dismiss-keyboard";
+import { useKeyboardVisible } from "@/lib/use-keyboard-visible";
 
 const ONE_YEAR_MS = 366 * 24 * 60 * 60 * 1000;
 function dateText(d: Date) { return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`; }
@@ -77,6 +79,7 @@ function Composer() {
   const [done, setDone] = useState(false);
   const [now] = useState(Date.now);
   const submitting = useRef(false);
+  const keyboardUp = useKeyboardVisible(800);
   const photoScroller = useRef<ScrollViewInstance>(null);
   const photoWidth = Math.max(1, width - 48);
   const currentPhoto = photoUris.length > 0 ? Math.min(activePhoto, photoUris.length - 1) : 0;
@@ -88,7 +91,7 @@ function Composer() {
   const previewSize = Math.min(300, Math.max(220, width - 72));
   const draft = { photoUris, caption, song };
   const dirty = !done && (place !== null || photoUris.length > 0 || caption.trim() !== "" || song !== null || collectionIds.length > 0 || mode === "past");
-  useConfirmDiscard(dirty);
+  const { leave } = useConfirmDiscard(dirty, { quietGestures: keyboardUp });
 
   const openPhotos = () => { if (!place) return; Keyboard.dismiss(); nav.push("/stamp/camera"); };
   useFocusEffect(useCallback(() => { const picked = songDraft.take(); if (picked) setSong(picked.song); }, []));
@@ -137,10 +140,10 @@ function Composer() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onScrollBeginDrag={Keyboard.dismiss} automaticallyAdjustKeyboardInsets contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 18 }]}>
-        <View style={[styles.topbar, place && styles.topbarWithBack]}>{place ? <Tappable onPress={resetPlace} accessibilityRole="button" accessibilityLabel="Back to places" style={styles.backTarget}><Icon name="chevron.left" color="textPrimary" size={22} /></Tappable> : null}<Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Cancel" style={styles.cancelTarget}><Kicker>CANCEL</Kicker></Tappable></View>
+        <View style={[styles.topbar, place && styles.topbarWithBack]}>{place ? <Tappable onPress={resetPlace} accessibilityRole="button" accessibilityLabel="Back to places" style={styles.backTarget}><Icon name="chevron.left" color="textPrimary" size={22} /></Tappable> : null}<Tappable onPress={leave} accessibilityRole="button" accessibilityLabel="Cancel" style={styles.cancelTarget}><Kicker>CANCEL</Kicker></Tappable></View>
 
         {!place ? <>
-          <NativeText style={styles.title}>Make a{`\n`}new stamp.</NativeText><Kicker>WHEN DID THIS HAPPEN?</Kicker>
+          <DismissKeyboard><NativeText style={styles.title}>Make a{`\n`}new stamp.</NativeText></DismissKeyboard><Kicker>WHEN DID THIS HAPPEN?</Kicker>
           <View style={styles.modeRow}>
             <Tappable style={[styles.modeCard, mode === "now" && styles.modeCardActive]} onPress={() => setMode("now")} accessibilityRole="button" accessibilityState={{ selected: mode === "now" }}><NativeText style={[styles.modeTitle, mode === "now" && styles.modeTitleActive]}>NOW</NativeText><Text variant="footnote" color={mode === "now" ? "onAccent" : "textSecondary"}>I&apos;m here now. Location can verify the visit.</Text></Tappable>
             <Tappable style={[styles.modeCard, mode === "past" && styles.modeCardActive]} onPress={() => setMode("past")} accessibilityRole="button" accessibilityState={{ selected: mode === "past" }}><NativeText style={[styles.modeTitle, mode === "past" && styles.modeTitleActive]}>PAST</NativeText><Text variant="footnote" color={mode === "past" ? "onAccent" : "textSecondary"}>Add a memory from the last year.</Text></Tappable>
@@ -156,7 +159,7 @@ function Composer() {
           {nearby.isError && !search.trim() && mode === "now" ? <InlineError message="Couldn't load nearby restaurants and bars." onRetry={() => void nearby.refetch()} /> : null}
           {searchResults.isError && searching ? <InlineError message="Couldn't search restaurants and bars." onRetry={() => void searchResults.refetch()} /> : null}
         </> : <>
-          <NativeText style={styles.title}>Make it{`\n`}a memory.</NativeText><NativeText style={styles.placeKicker}>{place.name.toUpperCase()} · {mode === "past" ? pastDateText : "TODAY"}</NativeText>
+          <DismissKeyboard><NativeText style={styles.title}>Make it{`\n`}a memory.</NativeText></DismissKeyboard><NativeText style={styles.placeKicker}>{place.name.toUpperCase()} · {mode === "past" ? pastDateText : "TODAY"}</NativeText>
           {place.cuisines.length > 0 ? <Text variant="footnote" color="textSecondary">{place.cuisines.join(" · ")}</Text> : null}
           <View style={styles.previewBlock}><Kicker>STAMP PREVIEW</Kicker><View style={styles.previewArt}><StampPreview place={place} visitedAt={previewVisitedAt} photoUri={photoUris[0] ?? null} size={previewSize} /></View><Text variant="footnote" color="textTertiary" align="center">The first photo becomes the image on your stamp.</Text></View>
           {verifiedEligible ? <View style={styles.verifiedNotice}><Icon name="checkmark.seal.fill" color="accent" size={20} /><Text variant="callout" color="accent" weight="semibold">Visit eligible for Nostos verification</Text></View> : <Text variant="footnote" color="textTertiary">This visit will be unverified unless Nostos can confirm you&apos;re at the place when you stamp.</Text>}
