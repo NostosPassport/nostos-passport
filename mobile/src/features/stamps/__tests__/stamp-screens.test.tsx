@@ -238,7 +238,7 @@ describe("the composer", () => {
     for (let i = 0; i < 6; i++) photoDraft.add(`file://${i}.jpg`);
     await wrap(<NewStamp />);
     await chooseKatz();
-    expect(screen.getByText("1 of 6", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByText("1 OF 6", { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText("6 of 6 photos. Remove one to add another.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Add more photos/ })).toBeNull();
   });
