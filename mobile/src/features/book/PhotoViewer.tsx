@@ -1,6 +1,7 @@
 import { Image } from "expo-image";
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
@@ -16,6 +17,7 @@ type Props = { photos: readonly PhotoViewerPhoto[]; index: number | null; onClos
 const photoUri = (photo: PhotoViewerPhoto): string => photo.uri ?? (photo.url ? mediaUrl(photo.url) : "");
 
 export function PhotoViewer({ photos, index, onClose }: Props) {
+  const insets = useSafeAreaInsets();
   const [current, setCurrent] = useState<number | null>(null);
   const shown = index === null ? null : (current ?? index);
   const close = () => {
@@ -26,7 +28,7 @@ export function PhotoViewer({ photos, index, onClose }: Props) {
     <Modal visible={index !== null} transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
       <View style={styles.root}>
         {shown !== null && photos[shown] ? <ZoomableImage key={photos[shown]!.id} uri={photoUri(photos[shown]!)} /> : null}
-        <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Back" hitSlop={space.sm} style={styles.back}>
+        <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Back" hitSlop={space.sm} style={[styles.back, { top: insets.top + space.xs }]}>
           <Icon name="chevron.left" color="accent" size={size.icon} />
         </Pressable>
         {shown !== null && photos.length > 1 ? (
@@ -105,7 +107,7 @@ function ZoomableImage({ uri }: { uri: string }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.black },
   fill: { flex: 1 },
-  back: { position: "absolute", top: space.xxxl + space.md, left: space.md, minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
+  back: { position: "absolute", left: space.md, minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
   pager: { position: "absolute", bottom: space.xxxl, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: space.xl },
   pagerButton: { minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
 });
