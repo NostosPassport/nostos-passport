@@ -1,7 +1,6 @@
 import { Image } from "expo-image";
-import { router } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { ActionSheetIOS, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActionSheetIOS, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,8 @@ import { photoDraft, usePhotoDraft } from "@/features/stamps/photo-draft";
 import { MAX_STAMP_PHOTOS, photoCount } from "@/features/stamps/stamp-flow";
 import { haptics } from "@/lib/haptics";
 import { colors, radius, screenPadding, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 export default function StampCamera() {
   const insets = useSafeAreaInsets();
@@ -82,17 +83,17 @@ export default function StampCamera() {
     <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.lg }]}>
       <View style={styles.header}>
         <View><Text variant="title2">Photos</Text><Text variant="footnote" color="textSecondary">{photoCount(photos.length)}</Text></View>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Done" style={styles.done}><Text variant="callout" weight="semibold">Done</Text></Pressable>
+        <Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Done" style={styles.done}><Text variant="callout" weight="semibold">Done</Text></Tappable>
       </View>
       <View style={styles.body}>
         {photos.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
             {photos.map((uri, i) => (
               <View key={`${uri}-${i}`} style={styles.thumb}>
-                <Pressable onPress={() => setViewingPhoto(i)} accessibilityRole="button" accessibilityLabel={`Open photo ${i + 1}`} style={styles.fill}>
+                <Tappable onPress={() => setViewingPhoto(i)} accessibilityRole="button" accessibilityLabel={`Open photo ${i + 1}`} style={styles.fill}>
                   <Image source={{ uri }} style={styles.fill} contentFit="cover" accessibilityLabel={`Photo ${i + 1}`} />
-                </Pressable>
-                <Pressable onPress={() => photoDraft.remove(i)} accessibilityRole="button" accessibilityLabel={`Remove photo ${i + 1}`} hitSlop={space.xs} style={styles.remove}><Icon name="xmark" color="onAccent" size={size.iconTiny} /></Pressable>
+                </Tappable>
+                <Tappable onPress={() => photoDraft.remove(i)} accessibilityRole="button" accessibilityLabel={`Remove photo ${i + 1}`} hitSlop={space.xs} style={styles.remove}><Icon name="xmark" color="onAccent" size={size.iconTiny} /></Tappable>
               </View>
             ))}
           </ScrollView>
@@ -101,7 +102,7 @@ export default function StampCamera() {
       </View>
       <View style={styles.actions}>
         {!full ? <Button title={photos.length > 0 ? "Add another photo" : "Add a photo"} onPress={chooseSource} loading={busy} /> : null}
-        <Button title="Done" variant="plain" onPress={() => router.back()} />
+        <Button title="Done" variant="plain" onPress={() => nav.back()} />
       </View>
       <PhotoViewer photos={viewerPhotos} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
     </View>

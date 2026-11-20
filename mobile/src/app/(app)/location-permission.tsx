@@ -1,4 +1,3 @@
-import { router } from "expo-router";
 import { useState } from "react";
 import { Linking, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { locationStore, useLocationState } from "@/features/location/location-store";
 import { colors, fonts, screenPadding, space } from "@/theme";
+import { nav } from "@/lib/nav";
 
 export default function LocationPermission() {
   const insets = useSafeAreaInsets();
@@ -17,7 +17,7 @@ export default function LocationPermission() {
   const ask = async () => {
     setAsking(true);
     const result = await locationStore.request().finally(() => setAsking(false));
-    if (result === "granted") router.back();
+    if (result === "granted") nav.back();
   };
 
   return (
@@ -38,7 +38,7 @@ export default function LocationPermission() {
         ) : (
           <Button title="Use my location" onPress={() => void ask()} loading={asking} />
         )}
-        <Button title="Continue without location" variant="secondary" onPress={() => router.back()} />
+        <Button title="Continue without location" variant="secondary" onPress={() => nav.back()} />
       </View>
     </View>
   );

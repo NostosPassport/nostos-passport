@@ -1,5 +1,5 @@
-import { router, Stack } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Stack } from "expo-router";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 import { useCollections } from "@/api/queries";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,9 @@ import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { collectionColorValue } from "@/features/collections/colors";
-import { colors, hairlineWidth, radius, size, space } from "@/theme";
+import { colors, hairlineWidth, radius, size, space, pressedOpacity } from "@/theme";
+import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 export default function CollectionsScreen() {
   const query = useCollections();
@@ -16,7 +18,7 @@ export default function CollectionsScreen() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: "Collections", headerLargeTitle: true }} />
+      <Stack.Screen options={{ title: "Collections" }} />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         <Text variant="callout" color="textSecondary">Build smaller passports from stamps in your master Passport. A stamp can appear in as many collections as you want.</Text>
         {query.isPending ? <SkeletonRows count={3} /> : null}
@@ -24,17 +26,17 @@ export default function CollectionsScreen() {
         {!query.isPending && !query.isError && collections.length === 0 ? <View style={styles.empty}><Icon name="book" color="accent" size={size.iconLarge} /><Text variant="title2">No collections yet</Text><Text variant="callout" color="textSecondary" align="center">Create a passport for favorites, date nights, a trip, or anything else you want to keep together.</Text></View> : null}
         <View style={styles.list}>
           {collections.map((collection) => (
-            <Pressable key={collection.id} onPress={() => router.push({ pathname: "/collections/[id]", params: { id: collection.id } })} accessibilityRole="button" accessibilityLabel={`Open ${collection.name}`} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+            <Tappable key={collection.id} onPress={() => nav.push({ pathname: "/collections/[id]", params: { id: collection.id } })} accessibilityRole="button" accessibilityLabel={`Open ${collection.name}`} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
               <View style={[styles.book, { backgroundColor: collectionColorValue(collection.color) }]}><View style={styles.bookRule} /></View>
               <View style={styles.rowText}>
                 <Text variant="title2" numberOfLines={1}>{collection.name}</Text>
                 <Text variant="footnote" color="textSecondary">{collection.stampCount} {collection.stampCount === 1 ? "stamp" : "stamps"}</Text>
               </View>
               <Icon name="chevron.right" color="textTertiary" size={size.iconSmall} />
-            </Pressable>
+            </Tappable>
           ))}
         </View>
-        <Button title="+ Create collection" onPress={() => router.push("/collections/new")} />
+        <Button title="+ Create collection" onPress={() => nav.push("/collections/new")} />
       </ScrollView>
     </View>
   );
@@ -48,6 +50,6 @@ const styles = StyleSheet.create({
   book: { width: size.buttonHeight, height: size.avatarLarge, borderRadius: radius.chip, paddingLeft: space.xs, justifyContent: "center" },
   bookRule: { width: hairlineWidth, height: "80%", backgroundColor: colors.foilHighlight },
   rowText: { flex: 1, gap: space.xxs },
-  pressed: { opacity: 0.72 },
+  pressed: { opacity: pressedOpacity },
   empty: { minHeight: size.heroHeight, alignItems: "center", justifyContent: "center", gap: space.sm, paddingHorizontal: space.xl },
 });

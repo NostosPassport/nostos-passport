@@ -7,6 +7,8 @@ import { qk } from "@/api/keys";
 import { COLLECTION_COLORS } from "@/features/collections/colors";
 import { CollectionEditor, type CollectionDraft } from "@/features/collections/CollectionEditor";
 import { colors } from "@/theme";
+import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
+import { nav } from "@/lib/nav";
 
 const initial: CollectionDraft = { name: "", color: COLLECTION_COLORS[0]!.id, stampIds: [] };
 
@@ -23,7 +25,7 @@ export default function NewCollectionScreen() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: "Create collection", presentation: "modal" }} />
+      <Stack.Screen options={{ title: "Create collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} />
       <CollectionEditor initial={initial} submitLabel="Create collection" busy={mutation.isPending} error={mutation.error} onSubmit={(draft) => mutation.mutate(draft)} />
     </View>
   );

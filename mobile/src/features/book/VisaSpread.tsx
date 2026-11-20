@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 
@@ -22,6 +21,7 @@ import { StampMark } from "./StampMark";
 import { TicketStub } from "./TicketStub";
 import { useTypewriter } from "./typewriter";
 import { visaLabel, visaStamp } from "./visa";
+import { nav } from "@/lib/nav";
 
 export function VisaSpread({ stamp, onSaveLayout }: { stamp: StampView; onSaveLayout?: (body: Parameters<typeof api.stamps.layout>[1]) => void }) {
   const { width: sw, height: sh } = useWindowDimensions();
@@ -42,7 +42,7 @@ export function VisaSpread({ stamp, onSaveLayout }: { stamp: StampView; onSaveLa
     </View></Spread>
     <View style={styles.slip} accessible={false}>
       <Text variant="typewriterSmall" color="dimBrass" accessibilityLabel={visaLabel(stamp.place.name, locality, stamp.visitedAt, stamp.page, stamp.place.timeZone)}>{[date, time].filter(Boolean).join("  ·  ")}</Text>
-      <Pressable onPress={() => router.push({ pathname: "/place/[id]", params: { id: stamp.place.id } })} accessibilityRole="button" hitSlop={space.xs}><Text variant="title2" color="brass">{stamp.place.name}</Text></Pressable>
+      <Pressable onPress={() => nav.push({ pathname: "/place/[id]", params: { id: stamp.place.id } })} accessibilityRole="button" hitSlop={space.xs}><Text variant="title2" color="brass">{stamp.place.name}</Text></Pressable>
       <Text variant="typewriterSmall" color="textSecondary">{locality}{stamp.page ? `${locality ? "  ·  " : ""}page ${stamp.page}` : ""}</Text>
       <Text variant="footnote" color={stamp.verified ? "accent" : "textTertiary"}>{stamp.verified ? "Nostos visit verified" : "Visit not location verified"}</Text>
       {stamp.caption !== "" ? <View><Text variant="typewriter" color={typed >= stamp.caption.length ? "textPrimary" : "transparent"}>{stamp.caption}</Text>{typed < stamp.caption.length ? <Text variant="typewriter" style={styles.typed} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{stamp.caption.slice(0, typed)}</Text> : null}</View> : null}

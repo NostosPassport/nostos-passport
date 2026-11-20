@@ -1,5 +1,5 @@
-import { router, Stack, useLocalSearchParams } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Stack, useLocalSearchParams } from "expo-router";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 import { errorText } from "@/api";
 import { usePlacePage } from "@/api/queries";
@@ -15,6 +15,8 @@ import { dayLabel, stampLine, standing, visitSummary } from "@/features/place/pl
 import { formatDistance } from "@/lib/format";
 import { localityKey, localityLabel } from "@/lib/place";
 import { colors, radius, screenPadding, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 export default function PlacePage() {
   return (
@@ -46,7 +48,7 @@ function Page() {
               {stand?.text ? (
                 <Text variant="typewriter" color={stand.canVerify ? "brass" : "dimBrass"} accessibilityLiveRegion="polite">{stand.text}</Text>
               ) : null}
-              <Button title="Stamp this place" icon="seal.fill" block={false} onPress={() => { placeDraft.set(data.place); router.push("/stamp/new"); }} />
+              <Button title="Stamp this place" icon="seal.fill" block={false} onPress={() => { placeDraft.set(data.place); nav.push("/stamp/new"); }} />
               {!stand?.canVerify ? <Text variant="footnote" color="textTertiary">You can still make an unverified Now stamp or add a Past visit.</Text> : null}
             </View>
 
@@ -56,10 +58,10 @@ function Page() {
               <View key={visit.day} style={styles.visit}>
                 <Text variant="serifLabel" color="brass" accessibilityRole="header">{dayLabel(visit.day)}</Text>
                 {visit.stamps.map((s) => (
-                  <Pressable key={s.id} onPress={() => router.push({ pathname: "/stamp/[id]", params: { id: s.id } })} accessibilityRole="button" accessibilityLabel={`Stamp, ${stampLine(s)}${s.verified ? ", visit verified" : ""}`} accessibilityHint="Opens the stamp" style={styles.row}>
+                  <Tappable key={s.id} onPress={() => nav.push({ pathname: "/stamp/[id]", params: { id: s.id } })} accessibilityRole="button" accessibilityLabel={`Stamp, ${stampLine(s)}${s.verified ? ", visit verified" : ""}`} accessibilityHint="Opens the stamp" style={styles.row}>
                     <StampMark input={{ placeId: s.place.id, placeName: s.place.name, localityKey: localityKey(s.place), localityName: localityLabel(s.place) }} size={size.avatarLarge} artwork={s.artwork} photoUrl={s.photoUrl} visitedAt={s.visitedAt} timeZone={s.place.timeZone} />
                     <View style={styles.line}><Text variant="typewriter" color="textPrimary" numberOfLines={3}>{stampLine(s)}</Text>{s.verified ? <Text variant="footnote" color="accent">Nostos verified</Text> : null}</View>
-                  </Pressable>
+                  </Tappable>
                 ))}
               </View>
             ))}

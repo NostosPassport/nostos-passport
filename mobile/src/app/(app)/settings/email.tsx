@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { router, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import { useState } from "react";
 
 import { errorText } from "@/api";
@@ -7,13 +7,14 @@ import { completeAccountEmailChange, startAccountEmailChange, type EmailChalleng
 import { qk } from "@/api/keys";
 import { useMe } from "@/api/queries";
 import { FormScreen } from "@/components/ui/form-screen";
-import { HeaderButton } from "@/components/ui/header-button";
+import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
 import { InlineError } from "@/components/ui/inline-error";
 import { Text } from "@/components/ui/text";
 import { Field, FieldGroup } from "@/components/ui/text-field";
 import { toast } from "@/components/ui/toast";
 import { haptics } from "@/lib/haptics";
 import { isEmail } from "@/lib/validation";
+import { nav } from "@/lib/nav";
 
 export default function ChangeEmail() {
   const me = useMe();
@@ -40,7 +41,7 @@ export default function ChangeEmail() {
       haptics.success();
       await queryClient.invalidateQueries({ queryKey: qk.me, exact: true });
       toast.show("Email updated", "neutral");
-      router.back();
+      nav.back();
     },
     onError: () => haptics.warning(),
   });
@@ -72,8 +73,7 @@ export default function ChangeEmail() {
       <Stack.Screen
         options={{
           title: "Email",
-          headerLeft: () => <HeaderButton label="Cancel" onPress={() => router.back()} />,
-          headerRight: () => <HeaderButton label={challenge ? "Save" : "Verify"} bold onPress={submit} disabled={unchanged || busy || (challenge ? code.length !== 6 : false)} />,
+          ...headerTextButtons({ right: <HeaderButton label={challenge ? "Save" : "Verify"} bold onPress={submit} disabled={unchanged || (challenge ? code.length !== 6 : false)} loading={busy} /> }),
         }}
       />
       <Text variant="callout" color="textSecondary">Change the email you use to sign in. We’ll send a verification code to the new address before changing it.</Text>
@@ -91,6 +91,8 @@ export default function ChangeEmail() {
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
+          autoCorrect={false}
+          spellCheck={false}
           textContentType="emailAddress"
           returnKeyType={challenge ? "next" : "done"}
           onSubmitEditing={challenge ? undefined : submit}

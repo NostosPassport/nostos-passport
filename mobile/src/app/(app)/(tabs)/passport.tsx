@@ -1,10 +1,11 @@
-import { router } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/ui/icon";
 import { PassportBook } from "@/features/book/PassportBook";
 import { colors, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 export default function Passport() {
   const insets = useSafeAreaInsets();
@@ -12,33 +13,33 @@ export default function Passport() {
   return (
     <View style={styles.root}>
       <PassportBook />
-      <Pressable
-        onPress={() => router.push("/collections")}
+      <Tappable
+        onPress={() => nav.push("/collections")}
         accessibilityRole="button"
         accessibilityLabel="Collections"
         hitSlop={space.xs}
         style={[styles.collections, { top }]}
       >
         <Icon name="book" color="textPrimary" size={size.icon} />
-      </Pressable>
-      <Pressable
-        onPress={() => router.push("/gallery")}
+      </Tappable>
+      <Tappable
+        onPress={() => nav.push("/gallery")}
         accessibilityRole="button"
         accessibilityLabel="Stamp gallery"
         hitSlop={space.xs}
         style={[styles.gallery, { top }]}
       >
         <Icon name="square.grid.2x2" color="textPrimary" size={size.iconSmall} />
-      </Pressable>
-      <Pressable
-        onPress={() => router.push("/settings")}
+      </Tappable>
+      <Tappable
+        onPress={() => nav.push("/settings")}
         accessibilityRole="button"
         accessibilityLabel="Settings"
         hitSlop={space.xs}
         style={[styles.gear, { top }]}
       >
         <Icon name="gearshape" color="textPrimary" size={size.icon} />
-      </Pressable>
+      </Tappable>
     </View>
   );
 }

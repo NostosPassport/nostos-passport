@@ -1,6 +1,5 @@
-import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import MapView, { Marker, type Region } from "react-native-maps";
 
 import type { Place } from "@/api/contracts";
@@ -15,6 +14,8 @@ import { colors } from "@/theme";
 import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
 import { HOTEL_TYPES, resolveCategoryStamp } from "../../../../shared/category-stamp-artwork";
+import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 type MapFilter = "all" | "restaurant" | "bar" | "hotel";
 
@@ -67,7 +68,7 @@ export function MapScreen() {
 
   const handleRecenter = useCallback(() => {
     if (!here) {
-      router.push("/location-permission");
+      nav.push("/location-permission");
       return;
     }
     recenter();
@@ -88,7 +89,7 @@ export function MapScreen() {
   return (
     <EditorialScreen>
       <EditorialSafeContent bottom>
-        <EditorialHeader compact action={<GearButton onPress={() => router.push("/settings")} />} />
+        <EditorialHeader compact action={<GearButton onPress={() => nav.push("/settings")} />} />
         <Rule />
         <DisplayTitle size={52} style={styles.title}>Where you&apos;ve been.</DisplayTitle>
         <Body muted size={13}>Tap a place to open your most recent stamp there.</Body>
@@ -118,7 +119,7 @@ export function MapScreen() {
               <Marker
                 key={`${place.id}-${artworkByPlace.get(place.id)?.icon ?? "legacy"}`}
                 coordinate={{ latitude: place.lat, longitude: place.lng }}
-                onPress={() => router.push({ pathname: "/stamp/[id]", params: { id: latestStamp.id } })}
+                onPress={() => nav.push({ pathname: "/stamp/[id]", params: { id: latestStamp.id } })}
                 tracksViewChanges
                 anchor={{ x: 0.5, y: 0.5 }}
                 accessibilityLabel={`${place.name}, open most recent stamp`}
@@ -137,14 +138,14 @@ export function MapScreen() {
               </Marker>
             ))}
           </MapView>
-          <Pressable
+          <Tappable
             onPress={handleRecenter}
             accessibilityRole="button"
             accessibilityLabel={here ? "Recenter map on my location" : "Share location to recenter map"}
             style={({ pressed }) => [styles.recenter, pressed && styles.recenterPressed]}
           >
             <Icon name="location.fill" color="accent" size={20} />
-          </Pressable>
+          </Tappable>
         </View>
       </EditorialSafeContent>
     </EditorialScreen>
@@ -153,14 +154,14 @@ export function MapScreen() {
 
 function FilterButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable
+    <Tappable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       style={[styles.filter, active && styles.filterActive]}
     >
       <Kicker muted={!active}>{label}</Kicker>
-    </Pressable>
+    </Tappable>
   );
 }
 

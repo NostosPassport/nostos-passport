@@ -1,6 +1,6 @@
-import { router, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Modal, Platform, Pressable, StyleSheet, Text as NativeText, useWindowDimensions, View } from "react-native";
+import { AppState, Modal, Platform, StyleSheet, Text as NativeText, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
@@ -24,6 +24,8 @@ import { type PageFace, groupByPage } from "./spreads";
 import { stampPlacement } from "./slots";
 import { FOCUS_TOP_SPACE, FOCUS_BOTTOM_SPACE, focusBookSize, focusPageCount, focusPageSize, focusSpreadCount, stampHitRect } from "./focus-interaction";
 import { usePassport } from "./use-passport";
+import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 /* eslint-disable react-hooks/immutability -- Reanimated shared values are written through .value by design */
 type Props = { collectionId?: string };
@@ -158,7 +160,7 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
     if (modelReady.current && opening) { setModelClosing(true); setOpening(false); }
     progress.value = withTiming(0, { duration: reduced ? 0 : bookMotion.durations.standard }, (finished) => { if (finished) scheduleOnRN(finishClose); });
   };
-  const openStamp = (id: string) => { returnToFocus.current = true; setFocused(false); router.push({ pathname: "/stamp/[id]", params: { id } }); };
+  const openStamp = (id: string) => { returnToFocus.current = true; setFocused(false); nav.push({ pathname: "/stamp/[id]", params: { id } }); };
   const bearerPage = <BearerPage width={book.pageWidth} height={book.pageHeight} bearer={{ displayName: data.displayName, handle: data.handle, memberSince: data.memberSince, bio: data.bio }} avatarUrl={data.avatarUrl} />;
   const renderFace = (face: PageFace, side: "left" | "right") => {
     if (face.kind === "inside-cover") return <InsideCover width={book.pageWidth} height={book.pageHeight} />;
@@ -174,7 +176,7 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
   return <View style={styles.root}>
     <View testID="passport-home" pointerEvents={focused || modelClosing ? "none" : "auto"} style={[styles.home, { paddingTop: insets.top + size.hitTarget + space.xs }]} accessibilityElementsHidden={focused} importantForAccessibility={focused ? "no-hide-descendants" : "auto"}>
       <Animated.View testID="passport-model-stage" onLayout={(e) => setModelFrame({ y: e.nativeEvent.layout.y, height: e.nativeEvent.layout.height, width: e.nativeEvent.layout.width })} style={[styles.model, modelMotion]}>
-        {modelError ? <View style={styles.center}><InlineError message="Couldn't load the 3D passport." onRetry={() => { setModelError(false); setModelKey((k) => k + 1); }} /><Pressable onPress={openPages} accessibilityRole="button" accessibilityLabel="Open stamp pages" style={styles.close}><Icon name="book" size={size.icon} color="accent" /></Pressable></View> :
+        {modelError ? <View style={styles.center}><InlineError message="Couldn't load the 3D passport." onRetry={() => { setModelError(false); setModelKey((k) => k + 1); }} /><Tappable onPress={openPages} accessibilityRole="button" accessibilityLabel="Open stamp pages" style={styles.close}><Icon name="book" size={size.icon} color="accent" /></Tappable></View> :
           <Passport3DView key={`${modelKey}-${coverColor ?? "master"}-${collectionTitle ?? "nostos"}`} running={screenActive && appActive} lowPower reduceMotion={reduced} soak={false} glassMode="auto" coverColor={coverColor} coverTitle={collectionTitle ?? undefined} open={opening} onTap={() => open()} onOpenProgress={onOpenProgress} onOpenSettled={onOpenSettled} onReady={() => { modelReady.current = true; setModelError(false); }} onError={() => { modelReady.current = false; setModelClosing(false); setModelError(true); }} onGlass={() => undefined} onStats={() => undefined} />}
       </Animated.View>
       <Animated.View style={[styles.counts, chromeMotion]}>{collectionTitle ? <NativeText numberOfLines={2} style={styles.collectionTitle}>{collectionTitle}</NativeText> : null}<Counts counts={data.counts} />{!collectionId && firstRun.show ? <FirstRunHint onDismiss={firstRun.dismiss} /> : null}</Animated.View>
@@ -187,7 +189,7 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
             <SinglePageFlipBook key="focused-single-pages" pageWidth={book.pageWidth} pageHeight={book.pageHeight} total={total} page={current} onPageChange={setReaderIndex} renderPage={renderSinglePage} pageTaps stampTargets={stampTargets} /> :
             <FlipBook key="focused-spreads" pageWidth={book.pageWidth} pageHeight={book.pageHeight} total={total} spread={current} onSpreadChange={setReaderIndex} renderFace={renderFace} pageTaps stampTargets={stampTargets} />}
         </Animated.View>
-        <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close passport" accessibilityHint="Returns to the main screen without changing your page" onAccessibilityEscape={close} style={[styles.close, { position: "absolute", top: insets.top + 4, right: insets.right + 8 }]}><Icon name="xmark" color="textPrimary" size={size.iconSmall} /></Pressable>
+        <Tappable onPress={close} accessibilityRole="button" accessibilityLabel="Close passport" accessibilityHint="Returns to the main screen without changing your page" onAccessibilityEscape={close} style={[styles.close, { position: "absolute", top: insets.top + 4, right: insets.right + 8 }]}><Icon name="xmark" color="textPrimary" size={size.iconSmall} /></Tappable>
       </View>
     </Modal>
   </View>;

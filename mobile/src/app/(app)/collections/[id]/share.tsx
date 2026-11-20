@@ -10,6 +10,8 @@ import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { colors, hairlineWidth, space } from "@/theme";
+import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
+import { nav } from "@/lib/nav";
 
 async function openShareSheet(name: string, url: string) {
   await Share.share({ title: name, message: `${name} on Nostos`, url });
@@ -50,10 +52,10 @@ export default function ShareCollectionScreen() {
   const mutationError = enable.error ?? disable.error;
 
   if (busy) {
-    return <View style={styles.loading}><Stack.Screen options={{ title: "Share collection", presentation: "modal" }} /><SkeletonRows count={4} /></View>;
+    return <View style={styles.loading}><Stack.Screen options={{ title: "Share collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} /><SkeletonRows count={4} /></View>;
   }
   if (failed) {
-    return <View style={styles.loading}><Stack.Screen options={{ title: "Share collection", presentation: "modal" }} /><InlineError message="Couldn't load sharing settings." onRetry={() => { void collectionQuery.refetch(); void shareQuery.refetch(); }} /></View>;
+    return <View style={styles.loading}><Stack.Screen options={{ title: "Share collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} /><InlineError message="Couldn't load sharing settings." onRetry={() => { void collectionQuery.refetch(); void shareQuery.refetch(); }} /></View>;
   }
 
   const collection = collectionQuery.data.collection;
@@ -61,7 +63,7 @@ export default function ShareCollectionScreen() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: "Share collection", presentation: "modal" }} />
+      <Stack.Screen options={{ title: "Share collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} />
       <View style={styles.hero}>
         <Text variant="title">{collection.name}</Text>
         <Text color="textSecondary">Only this collection can be shared. Your master Passport always stays private.</Text>

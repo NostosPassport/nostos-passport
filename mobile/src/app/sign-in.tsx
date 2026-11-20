@@ -1,7 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import { router } from "expo-router";
 import { useState } from "react";
-import { Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ApiError, errorText } from "@/api";
@@ -10,7 +9,10 @@ import { farewellNotice, useAuth } from "@/auth/auth-context";
 import { InlineError } from "@/components/ui/inline-error";
 import { haptics } from "@/lib/haptics";
 import { HANDLE_MAX, HANDLE_MIN, HANDLE_RE, isEmail } from "@/lib/validation";
-import { colors, fonts } from "@/theme";
+import { colors, fonts, pressedOpacity } from "@/theme";
+import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
+import { DismissKeyboard } from "@/components/ui/dismiss-keyboard";
 
 const SIGN_IN_ART = require("../../assets/images/nostos_art1.png");
 
@@ -54,10 +56,10 @@ export default function SignIn() {
   const createAccount = () => {
     const value = identifier.trim();
     if (enteredEmail) {
-      router.push({ pathname: "/sign-up", params: { email: value } });
+      nav.push({ pathname: "/sign-up", params: { email: value } });
       return;
     }
-    router.push("/sign-up");
+    nav.push("/sign-up");
   };
 
   const submitIdentifier = () => {
@@ -73,16 +75,16 @@ export default function SignIn() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <View style={styles.root}>
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 4, paddingBottom: Math.max(insets.bottom, 12) }]}
+        style={[styles.scroll, { marginTop: insets.top }]}
+        contentContainerStyle={[styles.content, { paddingTop: 4, paddingBottom: Math.max(insets.bottom, 12) }]}
         automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
       >
-        <Pressable onPress={Keyboard.dismiss} accessible={false}>
+        <DismissKeyboard>
           <Text style={styles.wordmark}>NOSTOS</Text>
           <Image
             source={SIGN_IN_ART}
@@ -92,7 +94,7 @@ export default function SignIn() {
             accessibilityIgnoresInvertColors
           />
           <Text style={styles.headline}>Your city,{`\n`}remembered.</Text>
-        </Pressable>
+        </DismissKeyboard>
 
         <View style={styles.form}>
           <View style={styles.formHeading}>
@@ -156,9 +158,9 @@ export default function SignIn() {
             <View style={styles.newAccount}>
               <Text style={styles.newAccountTitle}>{enteredEmail ? "Looks like you’re new to Nostos." : "We couldn’t find that Nostos account."}</Text>
               <Text style={styles.notice}>{enteredEmail ? `Create a passport with ${identifier.trim()}.` : "Check the handle or create a new passport."}</Text>
-              <Pressable onPress={createAccount} style={styles.secondaryAction} accessibilityRole="button" accessibilityLabel="Create a passport">
+              <Tappable onPress={createAccount} style={styles.secondaryAction} accessibilityRole="button" accessibilityLabel="Create a passport">
                 <Text style={styles.createText}>Create a passport</Text>
-              </Pressable>
+              </Tappable>
             </View>
           ) : requestCode.error ? (
             <InlineError message={errorText(requestCode.error, "Couldn't send a sign-in code. Try again.")} />
@@ -167,7 +169,7 @@ export default function SignIn() {
           {verify.error ? <InlineError message={errorText(verify.error, "Couldn't verify that code. Try again.")} /> : null}
 
           {!noAccount ? (
-            <Pressable
+            <Tappable
               onPress={challenge ? submitCode : submitIdentifier}
               disabled={challenge ? code.length !== 6 || verify.isPending : !validIdentifier || requestCode.isPending}
               style={({ pressed }) => [
@@ -181,26 +183,26 @@ export default function SignIn() {
               <Text style={styles.signInText}>
                 {challenge ? (verify.isPending ? "Signing in…" : "Sign in") : requestCode.isPending ? "Sending…" : "Send sign-in code"}
               </Text>
-            </Pressable>
+            </Tappable>
           ) : null}
 
           {challenge ? (
-            <Pressable
+            <Tappable
               onPress={() => requestCode.mutate()}
               disabled={requestCode.isPending}
               style={styles.secondaryAction}
               accessibilityRole="button"
             >
               <Text style={styles.createText}>{requestCode.isPending ? "Sending…" : "Send another code"}</Text>
-            </Pressable>
+            </Tappable>
           ) : !noAccount ? (
-            <Pressable onPress={createAccount} style={styles.secondaryAction} accessibilityRole="button">
+            <Tappable onPress={createAccount} style={styles.secondaryAction} accessibilityRole="button">
               <Text style={styles.createText}>New to Nostos? Create a passport</Text>
-            </Pressable>
+            </Tappable>
           ) : null}
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -226,6 +228,6 @@ const styles = StyleSheet.create({
   newAccount: { gap: 4 },
   newAccountTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: "600" },
   disabled: { opacity: 0.42 },
-  pressed: { opacity: 0.78 },
+  pressed: { opacity: pressedOpacity },
   createText: { color: colors.accent, fontSize: 13 },
 });

@@ -1,10 +1,12 @@
-import { router, Stack, useLocalSearchParams } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Stack, useLocalSearchParams } from "expo-router";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/ui/icon";
 import { PassportBook } from "@/features/book/PassportBook";
 import { colors, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 export default function CollectionPassportScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
@@ -15,33 +17,33 @@ export default function CollectionPassportScreen() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <PassportBook collectionId={id} />
-      <Pressable
-        onPress={() => router.back()}
+      <Tappable
+        onPress={() => nav.back()}
         accessibilityRole="button"
         accessibilityLabel="Back to collections"
         hitSlop={space.xs}
         style={[styles.back, { top: insets.top + space.xs }]}
       >
         <Icon name="chevron.left" color="textPrimary" size={size.icon} />
-      </Pressable>
-      <Pressable
-        onPress={() => router.push({ pathname: "/collections/[id]/share", params: { id } })}
+      </Tappable>
+      <Tappable
+        onPress={() => nav.push({ pathname: "/collections/[id]/share", params: { id } })}
         accessibilityRole="button"
         accessibilityLabel="Share collection"
         hitSlop={space.xs}
         style={[styles.share, { top: insets.top + space.xs }]}
       >
         <Icon name="square.and.arrow.up" color="textPrimary" size={size.icon} />
-      </Pressable>
-      <Pressable
-        onPress={() => router.push({ pathname: "/collections/[id]/edit", params: { id } })}
+      </Tappable>
+      <Tappable
+        onPress={() => nav.push({ pathname: "/collections/[id]/edit", params: { id } })}
         accessibilityRole="button"
         accessibilityLabel="Edit collection"
         hitSlop={space.xs}
         style={[styles.edit, { top: insets.top + space.xs }]}
       >
         <Icon name="gearshape" color="textPrimary" size={size.icon} />
-      </Pressable>
+      </Tappable>
     </View>
   );
 }

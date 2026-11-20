@@ -1,9 +1,15 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View, type TextStyle, type ViewStyle } from "react-native";
+import { ActivityIndicator, StyleSheet, Text as RNText, View, type TextProps, type TextStyle, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/ui/icon";
-import { colors, fonts } from "@/theme";
+import { Tappable } from "@/components/ui/tappable";
+import { colors, fonts, maxFontSizeMultiplier, pressedOpacity } from "@/theme";
+
+/** Editorial text with the app-wide Dynamic Type cap, so big type grows but never past what the layout holds. */
+function Text(props: TextProps) {
+  return <RNText maxFontSizeMultiplier={maxFontSizeMultiplier} {...props} />;
+}
 
 export function EditorialScreen({ children, style }: PropsWithChildren<{ style?: ViewStyle }>) {
   return <View style={[styles.screen, style]}>{children}</View>;
@@ -45,17 +51,22 @@ export function EditorialHeader({ compact = false, action }: { compact?: boolean
 
 export function GearButton({ onPress }: { onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Settings" style={styles.iconTarget}>
+    <Tappable onPress={onPress} accessibilityRole="button" accessibilityLabel="Settings" style={styles.iconTarget}>
       <Icon name="gearshape" color="textPrimary" size={22} />
-    </Pressable>
+    </Tappable>
   );
 }
 
-export function EditorialButton({ label, onPress, disabled = false, outline = false, style }: { label: string; onPress: () => void; disabled?: boolean; outline?: boolean; style?: ViewStyle }) {
+/** `loading` keeps the button at full strength with a spinner, so a slow save reads as working, not disabled. */
+export function EditorialButton({ label, onPress, disabled = false, loading = false, outline = false, style }: { label: string; onPress: () => void; disabled?: boolean; loading?: boolean; outline?: boolean; style?: ViewStyle }) {
+  const inactive = disabled || loading;
   return (
-    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled }} style={({ pressed }) => [styles.button, outline && styles.buttonOutline, style, disabled && styles.disabled, pressed && !disabled && styles.pressed]}>
-      <Text style={[styles.buttonText, outline && styles.buttonOutlineText]}>{label}</Text>
-    </Pressable>
+    <Tappable onPress={onPress} disabled={inactive} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: inactive, busy: loading }} style={({ pressed }) => [styles.button, outline && styles.buttonOutline, style, disabled && !loading && styles.disabled, pressed && !inactive && styles.pressed]}>
+      <View style={styles.buttonRow}>
+        {loading ? <ActivityIndicator color={outline ? colors.accent : colors.onAccent} /> : null}
+        <Text style={[styles.buttonText, outline && styles.buttonOutlineText]}>{label}</Text>
+      </View>
+    </Tappable>
   );
 }
 
@@ -71,10 +82,11 @@ const styles = StyleSheet.create({
   muted: { color: colors.textSecondary },
   rule: { height: StyleSheet.hairlineWidth, backgroundColor: colors.hairline, width: "100%" },
   iconTarget: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  button: { height: 48, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, borderRadius: 1 },
+  button: { minHeight: 48, paddingVertical: 10, paddingHorizontal: 16, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, borderRadius: 1 },
+  buttonRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   buttonOutline: { backgroundColor: colors.transparent, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.accent },
   buttonText: { color: colors.onAccent, fontFamily: fonts.sans, fontSize: 14, fontWeight: "500" },
   buttonOutlineText: { color: colors.accent },
   disabled: { opacity: 0.42 },
-  pressed: { opacity: 0.78 },
+  pressed: { opacity: pressedOpacity },
 });

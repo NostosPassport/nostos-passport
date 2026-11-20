@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
-import { router, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
+import { ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { errorText } from "@/api";
@@ -15,6 +15,8 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { songDraft } from "@/features/stamps/song-draft";
 import { colors, fonts, radius, screenPadding, size, space } from "@/theme";
+import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 /** Search songs (Apple's iTunes catalog, through Nostos) and pick one for the stamp. Metadata only: nothing plays. */
 export default function SongPicker() {
@@ -31,7 +33,7 @@ export default function SongPicker() {
   const choose = (r: SongResult) => {
     const song: Song = { title: r.title, artist: r.artist, artUrl: r.artUrl, sourceId: r.sourceId };
     songDraft.choose(song);
-    router.back();
+    nav.back();
   };
   const songs = search.data?.songs ?? [];
 
@@ -39,9 +41,9 @@ export default function SongPicker() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.topbar}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Cancel" style={styles.cancelTarget}>
+        <Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Cancel" style={styles.cancelTarget}>
           <Kicker>CANCEL</Kicker>
-        </Pressable>
+        </Tappable>
       </View>
       <NativeText style={styles.title}>Add a song</NativeText>
       <Text variant="callout" color="textSecondary" style={styles.subtitle}>Attach a song to this memory.</Text>
@@ -63,6 +65,10 @@ export default function SongPicker() {
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
+            autoFocus
+            spellCheck={false}
+            clearButtonMode="while-editing"
+            selectionColor={colors.accent}
             style={styles.searchInput}
             accessibilityLabel="Song or artist"
           />
@@ -91,17 +97,17 @@ export default function SongPicker() {
             ))}
           </ListGroup>
         )}
-        <Pressable
+        <Tappable
           onPress={() => {
             songDraft.choose(null);
-            router.back();
+            nav.back();
           }}
           accessibilityRole="button"
           accessibilityLabel="No song"
           style={styles.none}
         >
           <NativeText style={styles.noneText}>No song</NativeText>
-        </Pressable>
+        </Tappable>
       </ScrollView>
     </View>
   );
@@ -126,7 +132,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: screenPadding, gap: 12 },
   searchField: { gap: 7 },
-  searchInput: { height: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, color: colors.textPrimary, fontSize: 14, paddingHorizontal: 10, paddingVertical: 0 },
+  searchInput: { minHeight: 50, borderBottomWidth: 1, borderBottomColor: colors.textPrimary, color: colors.textPrimary, fontSize: 17, paddingHorizontal: 0, paddingVertical: 0 },
   art: { width: size.avatarLarge - space.md, height: size.avatarLarge - space.md, borderRadius: radius.chip, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   none: { minHeight: 48, alignItems: "center", justifyContent: "center" },
   noneText: { color: colors.textPrimary, fontSize: 14, fontWeight: "500" },

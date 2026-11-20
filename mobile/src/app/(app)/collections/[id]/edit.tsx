@@ -9,6 +9,8 @@ import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { CollectionEditor, type CollectionDraft } from "@/features/collections/CollectionEditor";
 import { colors, space } from "@/theme";
+import { nav } from "@/lib/nav";
+import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
 
 export default function EditCollectionScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
@@ -20,7 +22,7 @@ export default function EditCollectionScreen() {
     onSuccess: (result) => {
       queryClient.setQueryData(qk.collection(id), result);
       void queryClient.invalidateQueries({ queryKey: qk.collections });
-      router.back();
+      nav.back();
     },
   });
   const remove = useMutation({
@@ -45,7 +47,7 @@ export default function EditCollectionScreen() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: "Edit collection", presentation: "modal" }} />
+      <Stack.Screen options={{ title: "Edit collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} />
       <CollectionEditor
         initial={initial}
         submitLabel="Save changes"

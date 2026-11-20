@@ -11,13 +11,13 @@ export default function AppLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="gallery" options={{ headerShown: false }} />
         <Stack.Screen name="place/[id]" options={{ title: "Place" }} />
-        <Stack.Screen name="stamp/[id]" options={{ title: "Stamp" }} />
+        <Stack.Screen name="stamp/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="stamp/new" options={{ presentation: "modal", headerShown: false, headerBackButtonMenuEnabled: false }} />
         <Stack.Screen name="stamp/camera" options={{ presentation: "fullScreenModal", headerShown: false }} />
         <Stack.Screen name="stamp/landed" options={{ headerShown: false, gestureEnabled: false, animation: "fade" }} />
         <Stack.Screen name="stamp/edit" options={{ title: "Edit stamp", presentation: "modal" }} />
-        <Stack.Screen name="stamp/song" options={{ title: "Add a song", presentation: "modal" }} />
-        <Stack.Screen name="collections/index" options={{ title: "Collections", headerLargeTitle: true }} />
+        <Stack.Screen name="stamp/song" options={{ presentation: "modal", headerShown: false }} />
+        <Stack.Screen name="collections/index" options={{ title: "Collections" }} />
         <Stack.Screen name="collections/new" options={{ title: "Create collection", presentation: "modal" }} />
         <Stack.Screen name="collections/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="collections/[id]/edit" options={{ title: "Edit collection", presentation: "modal" }} />
@@ -30,7 +30,7 @@ export default function AppLayout() {
           name="customize"
           options={{ presentation: "formSheet", sheetAllowedDetents: [0.4], sheetGrabberVisible: true, sheetCornerRadius: radius.sheet, headerShown: false, contentStyle: { backgroundColor: colors.surface } }}
         />
-        <Stack.Screen name="settings/index" options={{ title: "Settings", headerLargeTitle: true }} />
+        <Stack.Screen name="settings/index" options={{ headerShown: false }} />
         <Stack.Screen name="edit-profile" options={{ title: "Edit profile", presentation: "modal" }} />
         <Stack.Screen name="settings/email" options={{ title: "Email" }} />
         <Stack.Screen name="settings/delete-account" options={{ title: "Delete account" }} />
