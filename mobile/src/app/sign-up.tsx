@@ -203,8 +203,8 @@ export default function SignUp() {
         {consentError ? <InlineError message={consentError} /> : null}
 
         <View style={styles.legalLinks}>
-          <Button title="Terms" variant="plain" onPress={() => openWebPage(LEGAL.terms)} accessibilityRole="link" />
-          <Button title="Privacy policy" variant="plain" onPress={() => openWebPage(LEGAL.privacy)} accessibilityRole="link" />
+          <Button title="Terms" variant="plain" link onPress={() => openWebPage(LEGAL.terms)} accessibilityRole="link" />
+          <Button title="Privacy policy" variant="plain" link onPress={() => openWebPage(LEGAL.privacy)} accessibilityRole="link" />
         </View>
 
         <View style={styles.notes}>
@@ -238,8 +238,7 @@ const styles = StyleSheet.create({
   title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 50, lineHeight: 52, letterSpacing: -0.7 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: screenPadding, paddingBottom: 24, gap: 10 },
-  // Plain buttons carry their own side padding; pull the row out by it so "Terms" lines up with the fields and checkbox.
-  legalLinks: { flexDirection: "row", marginHorizontal: -space.md },
+  legalLinks: { flexDirection: "row", gap: space.lg },
   notes: { gap: 1 },
   actions: { paddingHorizontal: screenPadding, paddingTop: 8, gap: 8, backgroundColor: colors.background },
 });
