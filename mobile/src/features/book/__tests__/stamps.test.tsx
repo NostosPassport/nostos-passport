@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react-native";
 
 import { BORDERS, MOTIFS, SHAPES, borderFor, fitName, motifPath, ringsFor, shapePath, stampDesign, STAMP_BOX } from "../stamp-design";
-import { StampMark } from "../StampMark";
+import { StampMark, fitStampSize } from "../StampMark";
 
 const input = (id: string, name = "Katz's Delicatessen", localityKey = "East Village", localityName = "East Village") => ({ placeId: id, placeName: name, localityKey, localityName });
 
@@ -109,5 +109,14 @@ describe("shapes, borders and motifs", () => {
 describe("drawing", () => {
   it("renders a stamp for every shape without crashing", async () => {
     for (let i = 0; i < 12; i++) await render(<StampMark input={input(`draw-${i}`)} size={100} />);
+  });
+});
+
+describe("fitting a stamp into a box", () => {
+  it("keeps landscape stamps at full width and shrinks square ones to the box height", () => {
+    expect(fitStampSize({ kind: "restaurant" }, 96, 68)).toBe(96);
+    expect(fitStampSize({ kind: "hotel" }, 96, 68)).toBe(96);
+    expect(fitStampSize({ kind: "bar" }, 96, 68)).toBe(68);
+    expect(fitStampSize(null, 96, 68)).toBe(68);
   });
 });

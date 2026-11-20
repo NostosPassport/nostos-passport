@@ -9,10 +9,10 @@ export function InsideCover({ width, height }: { width: number; height: number }
   return (
     <PageStock width={width} height={height} spine="right">
       <View style={styles.center} accessible accessibilityLabel="Nostos. The longing to return home.">
-        <Text variant="serifLabel" color="dimBrass" align="center">
+        <Text variant="serifLabel" color="dimBrass" align="center" maxFontSizeMultiplier={1.15}>
           NOSTOS
         </Text>
-        <Text variant="typewriterSmall" color="boneFaint" align="center">
+        <Text variant="typewriterSmall" color="boneFaint" align="center" maxFontSizeMultiplier={1.15}>
           the longing to return home
         </Text>
       </View>

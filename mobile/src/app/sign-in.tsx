@@ -23,6 +23,16 @@ const SIGN_IN_ART = require("../../assets/images/nostos_art1.png");
 /** The wordmark and headline are display type: they grow a little with Dynamic Type, then stop (P-022). */
 const HERO_MAX_FONT_SCALE = 1.2;
 
+/**
+ * The collage takes 30% of the screen, capped. On short phones (iPhone SE) it takes less, so the sign-in field and
+ * button stay above the fold instead of under the art.
+ */
+const COLLAGE_MAX_HEIGHT = 299;
+const SHORT_SCREEN_HEIGHT = 700;
+function collageHeight(windowHeight: number) {
+  return Math.round(Math.min(COLLAGE_MAX_HEIGHT, windowHeight * (windowHeight < SHORT_SCREEN_HEIGHT ? 0.22 : 0.3)));
+}
+
 function isHandle(value: string) {
   const normalized = value.trim().toLowerCase();
   return normalized.length >= HANDLE_MIN && normalized.length <= HANDLE_MAX && HANDLE_RE.test(normalized);
@@ -119,7 +129,7 @@ export default function SignIn() {
           <Text style={styles.wordmark} maxFontSizeMultiplier={HERO_MAX_FONT_SCALE} accessibilityLabel="Nostos">NOSTOS</Text>
           <Image
             source={SIGN_IN_ART}
-            style={[styles.collage, { height: Math.round(Math.min(299, windowHeight * 0.3)) }]}
+            style={[styles.collage, { height: collageHeight(windowHeight) }]}
             resizeMode="cover"
             accessible
             accessibilityRole="image"

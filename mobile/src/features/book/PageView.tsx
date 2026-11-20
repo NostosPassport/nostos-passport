@@ -15,6 +15,10 @@ export type RenderStamp = (stamp: StampView, placement: Placement) => ReactNode;
 type Props = { page: number; side: "left" | "right"; width: number; height: number; stamps: readonly StampView[]; renderStamp?: RenderStamp; onStampPress?: (stamp: StampView) => void };
 const defaultRender: RenderStamp = (stamp, p) => <StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey: localityKey(stamp.place), localityName: localityLabel(stamp.place) }} size={p.size} artwork={stamp.artwork} photoUrl={stamp.photoUrl} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} />;
 
+function visitDate(stamp: StampView): string {
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: stamp.place.timeZone }).format(new Date(stamp.visitedAt));
+}
+
 export function PageView({ page, side, width, height, stamps, renderStamp = defaultRender, onStampPress }: Props) {
   const band = Math.round(height * 0.05);
   const inset = Math.round(width * 0.06);
@@ -27,12 +31,12 @@ export function PageView({ page, side, width, height, stamps, renderStamp = defa
       {stamps.map((stamp) => {
         const p = stampPlacement(stamp, width, height);
         return (
-          <Pressable key={stamp.id} onPress={onStampPress ? () => onStampPress(stamp) : undefined} accessibilityRole="button" accessibilityLabel={`Stamp, ${stamp.place.name}, page ${page}, slot ${stamp.slot}${stamp.verified ? ", visit verified" : ""}`} style={{ position: "absolute", left: p.cx - p.size / 2, top: p.cy - placementHeight(p) / 2, width: p.size, height: placementHeight(p), transform: [{ rotate: `${p.rotation}deg` }] }}>
+          <Pressable key={stamp.id} onPress={onStampPress ? () => onStampPress(stamp) : undefined} accessibilityRole="button" accessibilityLabel={`Stamp, ${stamp.place.name}, ${visitDate(stamp)}, page ${page}${stamp.verified ? ", visit verified" : ""}`} style={{ position: "absolute", left: p.cx - p.size / 2, top: p.cy - placementHeight(p) / 2, width: p.size, height: placementHeight(p), transform: [{ rotate: `${p.rotation}deg` }] }}>
             {renderStamp(stamp, p)}
           </Pressable>
         );
       })}
-      <Text variant="typewriterSmall" color="dimBrass" tabular style={[styles.number, { bottom: inset, [side === "left" ? "left" : "right"]: inset * 1.4 }]} accessibilityLabel={`Page ${page}`}>{page}</Text>
+      <Text variant="typewriterSmall" color="dimBrass" tabular maxFontSizeMultiplier={1.15} style={[styles.number, { bottom: inset, [side === "left" ? "left" : "right"]: inset * 1.4 }]} accessibilityLabel={`Page ${page}`}>{page}</Text>
     </PageStock>
   );
 }

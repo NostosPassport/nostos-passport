@@ -28,7 +28,7 @@ export function BearerPage({ width, height, bearer, avatarUrl }: { width: number
         </Text>
         <View style={[styles.row, { gap: rowGap }]}>
           <View style={[styles.photo, { width: photo, height: Math.round(photo * 1.25) }]}>
-            <Avatar name={bearer.displayName} uri={avatarUrl} size={photo - 6} variant="title" />
+            <Avatar square name={bearer.displayName} uri={avatarUrl} size={photo - 6} variant="title" />
           </View>
           <View style={[styles.fields, { gap: fieldGap }]}>
             {fields.map((f) => (

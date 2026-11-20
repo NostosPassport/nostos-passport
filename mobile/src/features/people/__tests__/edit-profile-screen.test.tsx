@@ -17,6 +17,6 @@ describe("Edit profile", () => {
     expect(screen.getByLabelText("Handle").props.editable).toBe(false);
     expect(screen.getByText("Handles can't be changed.")).toBeTruthy();
     await fireEvent.changeText(screen.getByLabelText("Bio"), "hi  ");
-    expect(screen.getByText("4/150")).toBeTruthy();
+    expect(screen.getByText("4 / 150")).toBeTruthy();
   });
 });

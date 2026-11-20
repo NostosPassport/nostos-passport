@@ -52,7 +52,7 @@ describe("first run", () => {
   it("counts as seen when the cover is opened", async () => {
     await render(<PassportBook />);
     await waitFor(() => expect(screen.getByText(FIRST_RUN_COPY.title)).toBeTruthy());
-    await fireEvent.press(screen.getByRole("button", { name: /Open your passport/ }));
+    await fireEvent.press(screen.getAllByRole("button", { name: /Open your passport/ })[0]!);
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith(FIRST_RUN_KEY, "1");
   });
 });

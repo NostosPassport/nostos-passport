@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api, ApiError, errorText, mediaUrl } from "@/api";
 import type { StampView } from "@/api/contracts";
 import { useStamp } from "@/api/queries";
-import { Kicker } from "@/components/editorial/editorial";
+import { Kicker, Rule } from "@/components/editorial/editorial";
 import { Icon } from "@/components/ui/icon";
 import { ScreenState } from "@/components/ui/screen-state";
 import { Text } from "@/components/ui/text";
@@ -19,7 +19,7 @@ import { dropStamp } from "@/features/stamps/cache";
 import { SongRow } from "@/features/stamps/song-row";
 import { haptics } from "@/lib/haptics";
 import { localityLabel } from "@/lib/place";
-import { colors, dimmedOpacity, fonts, maxFontSizeMultiplier, radius, size, space, type } from "@/theme";
+import { aspect, colors, dimmedOpacity, fonts, hairlineWidth, maxFontSizeMultiplier, radius, screenPadding, shadows, size, space, type } from "@/theme";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
 
@@ -28,6 +28,8 @@ const NOSTOS_MARK = require("../../../../assets/images/nostos-watermark.png");
 const LONG_CAPTION = 80;
 /** The display title may shrink to this fraction of its size to fit a long place name in three lines. */
 const TITLE_MIN_SCALE = 0.6;
+/** Photos sit in a paper mat this wide, so they read as prints rather than raw full-bleed images. */
+const PHOTO_MAT = space.xs;
 type StampAction = { label: string; destructive?: boolean; onPress: () => void };
 
 export default function StampDetail() {
@@ -92,14 +94,16 @@ function Memory({ stamp, actions, deleting }: { stamp: StampView; actions: Stamp
   const dateLabel = date.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric", timeZone: stamp.place.timeZone }).toUpperCase();
   // Only number the memory when its passport page and slot are known; never show a made-up "NO. 001".
   const number = stamp.page !== null && stamp.slot !== null ? String((stamp.page - 1) * 3 + stamp.slot).padStart(3, "0") : null;
-  const photoWidth = Math.max(1, width - 48);
+  // Width of one photo page inside the mat (and its hairline edge); the pager snaps to exactly this.
+  const photoWidth = Math.max(1, Math.floor(width - screenPadding * 2 - PHOTO_MAT * 2 - hairlineWidth * 2));
+  const photoHeight = Math.round(photoWidth / aspect.post);
   const photoCount = stamp.photos.length;
   const locality = localityLabel(stamp.place);
   const localityKey = stamp.place.area ?? stamp.place.city ?? stamp.place.countryCode ?? stamp.place.country ?? stamp.place.id;
   const stampSize = Math.min(300, Math.max(220, width - 72));
   return <>
     <View style={styles.memoryWrap} pointerEvents={deleting ? "none" : "auto"}>
-      <ScrollView style={[{ marginTop: insets.top }, deleting && styles.dimmed]} contentContainerStyle={[styles.memory, { paddingTop: 4, paddingBottom: insets.bottom + 20 }]}>
+      <ScrollView style={[{ marginTop: insets.top }, deleting && styles.dimmed]} contentContainerStyle={[styles.memory, { paddingTop: space.xxs, paddingBottom: insets.bottom + space.xl }]}>
         <TopBar actions={actions} disabled={deleting} />
         <Kicker>{number ? `NO. ${number} / ${dateLabel}` : dateLabel}</Kicker>
         <Tappable onPress={() => nav.push({ pathname: "/place/[id]", params: { id: stamp.place.id } })} accessibilityRole="link" accessibilityLabel={stamp.place.name} accessibilityHint="Shows every visit you stamped here">
@@ -107,12 +111,26 @@ function Memory({ stamp, actions, deleting }: { stamp: StampView; actions: Stamp
         </Tappable>
         {locality ? <Kicker>{locality.toUpperCase()}</Kicker> : null}
         <View style={styles.stampArt}><StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey, localityName: locality }} size={stampSize} artwork={stamp.artwork} photoUrl={stamp.photos[0]?.url ?? stamp.photoUrl} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} /></View>
-        <View style={styles.heroFrame}>{photoCount ? <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} bounces={photoCount > 1} onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}>{stamp.photos.map((photo, index) => <Tappable key={photo.id} onPress={() => setViewingPhoto(index)} accessibilityRole="imagebutton" accessibilityLabel={`Photo ${index + 1} of ${photoCount}`} accessibilityHint="Opens the photo full screen" style={[styles.photoPage, { width: photoWidth }]}><Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" /></Tappable>)}</ScrollView> : <View style={styles.emptyPhoto} />}</View>
+        {/* The photos are a matted print: paper border, hairline edge, contact shadow. No photos, no empty frame. */}
+        {photoCount ? (
+          <View style={styles.photoBlock}>
+            <View style={styles.print}>
+              <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} bounces={photoCount > 1} style={{ width: photoWidth, height: photoHeight }} onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}>
+                {stamp.photos.map((photo, index) => <Tappable key={photo.id} onPress={() => setViewingPhoto(index)} accessibilityRole="imagebutton" accessibilityLabel={`Photo ${index + 1} of ${photoCount}`} accessibilityHint="Opens the photo full screen" style={[styles.photoPage, { width: photoWidth, height: photoHeight }]}><Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" /></Tappable>)}
+              </ScrollView>
+            </View>
+            {/* The counter sits right under the print it counts; a single photo needs no counter. */}
+            {photoCount > 1 ? <View style={styles.photoMeta}><Kicker muted>{`${activePhoto + 1} OF ${photoCount} PHOTOS`}</Kicker><View style={styles.dots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{stamp.photos.slice(0, 6).map((photo, index) => <View key={photo.id} style={[styles.dot, index === activePhoto && styles.dotActive]} />)}</View></View> : null}
+          </View>
+        ) : null}
         {/* User text is never truncated; a long caption steps down to the title size instead. */}
-        {stamp.caption ? <NativeText style={[styles.caption, stamp.caption.length > LONG_CAPTION && styles.captionLong]} maxFontSizeMultiplier={maxFontSizeMultiplier}>{stamp.caption}</NativeText> : null}{stamp.song ? <SongRow song={stamp.song} /> : null}
-        <View style={styles.photoMeta}><Kicker>{photoCount === 0 ? "NO PHOTOS" : `${activePhoto + 1} OF ${photoCount} ${photoCount === 1 ? "PHOTO" : "PHOTOS"}`}</Kicker><View style={styles.dots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{stamp.photos.slice(0, 6).map((photo, index) => <View key={photo.id} style={[styles.dot, index === activePhoto && styles.dotActive]} />)}</View></View>
-        {/* Compact bottom metadata. Unverified is muted fine print, never an error. */}
-        {stamp.verified ? <View style={styles.verified}><Image source={NOSTOS_MARK} style={styles.verifiedLogo} contentFit="contain" /><Text variant="typewriterSmall" color="accent">LOCATION VERIFIED BY NOSTOS</Text></View> : <Text variant="typewriterSmall" color="textTertiary" align="right" style={styles.unverified}>VISIT NOT LOCATION VERIFIED</Text>}
+        {stamp.caption ? <NativeText style={[styles.caption, stamp.caption.length > LONG_CAPTION && styles.captionLong]} maxFontSizeMultiplier={maxFontSizeMultiplier}>{stamp.caption}</NativeText> : null}
+        {stamp.song ? <SongRow song={stamp.song} /> : null}
+        {/* Compact bottom metadata under a hairline. Unverified is muted fine print, never an error. */}
+        <View style={styles.footer}>
+          <Rule />
+          {stamp.verified ? <View style={styles.verification}><Image source={NOSTOS_MARK} style={styles.verifiedLogo} contentFit="contain" /><Text variant="typewriterSmall" color="accent">LOCATION VERIFIED BY NOSTOS</Text></View> : <View style={styles.verification}><Text variant="typewriterSmall" color="textTertiary">VISIT NOT LOCATION VERIFIED</Text></View>}
+        </View>
       </ScrollView>
     </View>
     {deleting ? (
@@ -141,28 +159,29 @@ function useActions(stamp: StampView | undefined): { actions: StampAction[]; del
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  stateScreen: { flex: 1, paddingHorizontal: space.xl },
+  stateScreen: { flex: 1, paddingHorizontal: screenPadding },
   centerState: { flex: 1, alignItems: "center", justifyContent: "center" },
   memoryWrap: { flex: 1 },
   dimmed: { opacity: dimmedOpacity },
   busy: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center" },
   busyPill: { flexDirection: "row", alignItems: "center", gap: space.xs, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.pill, backgroundColor: colors.paperRaised },
-  memory: { paddingHorizontal: 24, gap: 10 },
-  memoryTopbar: { height: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginHorizontal: -7 },
+  memory: { paddingHorizontal: screenPadding, gap: space.sm },
+  // Pull the 44pt targets out so the chevron and ellipsis glyphs line up with the screen gutter.
+  memoryTopbar: { height: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginHorizontal: -(size.hitTarget - size.icon) / 2 },
   hitTarget: { width: size.hitTarget, height: size.hitTarget, alignItems: "center", justifyContent: "center" },
   // Display serif: line height sits above the font size so ascenders and descenders never clip (P-086).
   memoryTitle: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 64, lineHeight: 70, letterSpacing: -1.6, paddingTop: 2 },
-  stampArt: { minHeight: 230, alignItems: "center", justifyContent: "center", paddingVertical: 8 },
-  heroFrame: { height: 301, marginTop: 4, overflow: "hidden", backgroundColor: colors.elevated, position: "relative" },
-  photoPage: { height: 301, backgroundColor: colors.elevated },
-  emptyPhoto: { flex: 1, backgroundColor: colors.elevated },
-  caption: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 44, lineHeight: 50, letterSpacing: -1.1, marginVertical: 4, paddingTop: 2 },
+  stampArt: { minHeight: 230, alignItems: "center", justifyContent: "center", paddingVertical: space.xs },
+  photoBlock: { gap: space.xs, marginTop: space.xxs, marginBottom: space.xxs },
+  print: { alignSelf: "center", padding: PHOTO_MAT, borderRadius: radius.chip / 4, backgroundColor: colors.paperRaised, borderWidth: hairlineWidth, borderColor: colors.hairline, ...shadows.contact },
+  photoPage: { backgroundColor: colors.elevated },
+  caption: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 44, lineHeight: 50, letterSpacing: -1.1, marginVertical: space.xxs, paddingTop: 2 },
   captionLong: { fontSize: type.title.fontSize, lineHeight: type.title.lineHeight, letterSpacing: 0 },
-  photoMeta: { minHeight: 42, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  dots: { flexDirection: "row", gap: 10 },
-  dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.textTertiary, opacity: 0.45 },
+  photoMeta: { minHeight: size.iconLarge, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  dots: { flexDirection: "row", gap: space.xs },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.textTertiary, opacity: dimmedOpacity },
   dotActive: { backgroundColor: colors.accent, opacity: 1 },
-  verified: { minHeight: 22, marginTop: 4, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 5 },
+  footer: { marginTop: space.md, gap: space.sm },
+  verification: { minHeight: 22, flexDirection: "row", alignItems: "center", gap: 6 },
   verifiedLogo: { width: size.iconTiny, height: size.iconTiny, opacity: 0.72 },
-  unverified: { minHeight: 22, marginTop: 4 },
 });

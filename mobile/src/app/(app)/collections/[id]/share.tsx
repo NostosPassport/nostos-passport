@@ -9,11 +9,13 @@ import { api } from "@/api";
 import { qk } from "@/api/keys";
 import { useCollection, useCollectionShare } from "@/api/queries";
 import { Button } from "@/components/ui/button";
+import { Kicker, Rule } from "@/components/editorial/editorial";
 import { InlineError } from "@/components/ui/inline-error";
+import { ScreenState } from "@/components/ui/screen-state";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { toast, ToastHost } from "@/components/ui/toast";
-import { colors, hairlineWidth, space } from "@/theme";
+import { colors, hairlineWidth, radius, space } from "@/theme";
 import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
 import { nav } from "@/lib/nav";
 
@@ -72,7 +74,7 @@ export default function ShareCollectionScreen() {
     return <View style={styles.loading}><Stack.Screen options={{ title: "Share collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} /><SkeletonRows count={4} /></View>;
   }
   if (failed) {
-    return <View style={styles.loading}><Stack.Screen options={{ title: "Share collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} /><InlineError message="Couldn't load sharing settings." onRetry={() => { void collectionQuery.refetch(); void shareQuery.refetch(); }} /></View>;
+    return <View style={styles.centered}><Stack.Screen options={{ title: "Share collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} /><ScreenState kind="error" message="Couldn't load sharing settings." retrying={collectionQuery.isFetching || shareQuery.isFetching} onRetry={() => { void collectionQuery.refetch(); void shareQuery.refetch(); }} /></View>;
   }
 
   const collection = collectionQuery.data.collection;
@@ -83,23 +85,26 @@ export default function ShareCollectionScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.root} contentInsetAdjustmentBehavior="automatic">
         <Stack.Screen options={{ title: "Share collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} />
         <View style={styles.hero}>
-          <Text variant="title">{collection.name}</Text>
-          <Text color="textSecondary">Only this collection can be shared. Your master Passport always stays private.</Text>
+          <Text variant="title" numberOfLines={3}>{collection.name}</Text>
+          <Text variant="callout" color="textSecondary">Only this collection can be shared. Your master Passport always stays private.</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text variant="title2">Web link</Text>
-          <Text color="textSecondary">
+        <Rule />
+        <View style={styles.section}>
+          <Kicker>WEB LINK</Kicker>
+          <Text variant="callout" color="textSecondary">
             {share.enabled
               ? "Anyone with this link can view the live collection on the web. The page is not listed or indexed by search engines."
               : "Create a private-by-link web view that works without a Nostos account."}
           </Text>
           {share.enabled ? (
             <>
-              <Text variant="caption" color="textSecondary" numberOfLines={2} selectable>{share.url}</Text>
+              {/* The link itself, set in the typewriter on a paper slip so it reads as the thing being shared. */}
+              <View style={styles.link}>
+                <Text variant="typewriterSmall" numberOfLines={2} selectable>{share.url}</Text>
+              </View>
               <Button title="Share link" icon="square.and.arrow.up" onPress={() => void openShareSheet(collection.name, share.url)} />
               <Button title="Copy link" icon="doc.on.doc" variant="secondary" onPress={() => copyLink(share.url)} />
-              <Button title="Disable shared link" variant="destructive" loading={disable.isPending} onPress={confirmDisable} />
             </>
           ) : (
             <Button title="Create and share link" icon="square.and.arrow.up" loading={enable.isPending} onPress={() => enable.mutate()} />
@@ -114,9 +119,12 @@ export default function ShareCollectionScreen() {
           ) : null}
         </View>
 
-        <Text variant="caption" color="textSecondary">
+        <Rule />
+        <Text variant="footnote" color="textSecondary">
           Removing a stamp from this collection removes it from the shared page. Deleting the collection or disabling its link makes the shared page unavailable.
         </Text>
+        {/* The destructive action sits apart from Share and Copy, at the foot of the sheet like Delete in the editor. */}
+        {share.enabled ? <Button title="Disable shared link" variant="destructive" loading={disable.isPending} onPress={confirmDisable} /> : null}
       </ScrollView>
       <ToastHost bottom={insets.bottom + space.lg} />
     </View>
@@ -128,5 +136,7 @@ const styles = StyleSheet.create({
   root: { padding: space.lg, paddingBottom: space.xxxl, gap: space.lg },
   loading: { flex: 1, backgroundColor: colors.transparent, padding: space.lg },
   hero: { gap: space.xs },
-  card: { borderTopWidth: hairlineWidth, borderBottomWidth: hairlineWidth, borderColor: colors.hairline, paddingVertical: space.lg, gap: space.md },
+  section: { gap: space.md },
+  link: { paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.chip, backgroundColor: colors.paperDeep, borderWidth: hairlineWidth, borderColor: colors.hairline },
+  centered: { flex: 1, backgroundColor: colors.transparent, justifyContent: "center" },
 });

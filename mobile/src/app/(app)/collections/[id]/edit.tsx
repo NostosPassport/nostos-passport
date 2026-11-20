@@ -5,7 +5,7 @@ import { Alert, StyleSheet, View } from "react-native";
 import { api } from "@/api";
 import { qk } from "@/api/keys";
 import { useCollection } from "@/api/queries";
-import { InlineError } from "@/components/ui/inline-error";
+import { ScreenState } from "@/components/ui/screen-state";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { CollectionEditor, type CollectionDraft } from "@/features/collections/CollectionEditor";
 import { colors, space } from "@/theme";
@@ -32,7 +32,7 @@ export default function EditCollectionScreen() {
       void queryClient.invalidateQueries({ queryKey: qk.collections });
       // Pop the sheet and the deleted collection's passport together, back to the existing list, so the deleted
       // collection is not left in the back stack (P-128).
-      router.dismissTo("/collections");
+      router.dismissTo({ pathname: "/gallery", params: { tab: "collections" } });
     },
   });
 
@@ -49,7 +49,7 @@ export default function EditCollectionScreen() {
   ]);
 
   if (query.isPending) return <View style={styles.loading}><Stack.Screen options={{ title: "Edit collection" }} /><SkeletonRows count={5} /></View>;
-  if (query.isError || !query.data) return <View style={styles.loading}><Stack.Screen options={{ title: "Edit collection" }} /><InlineError message="Couldn't open this collection." onRetry={() => void query.refetch()} /></View>;
+  if (query.isError || !query.data) return <View style={styles.centered}><Stack.Screen options={{ title: "Edit collection" }} /><ScreenState kind="error" message="Couldn't open this collection." retrying={query.isFetching} onRetry={() => void query.refetch()} /></View>;
 
   const collection = query.data.collection;
   const initial: CollectionDraft = { name: collection.name, color: collection.color, stampIds: collection.stamps.map((stamp) => stamp.id) };
@@ -78,4 +78,5 @@ export default function EditCollectionScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.transparent },
   loading: { flex: 1, backgroundColor: colors.transparent, padding: space.lg },
+  centered: { flex: 1, backgroundColor: colors.transparent, justifyContent: "center" },
 });

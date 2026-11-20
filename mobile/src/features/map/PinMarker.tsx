@@ -32,7 +32,9 @@ export function PinMarker({ kind, selected, input, artwork }: { kind: PinKind; s
   const rotation = icon.rotate ? `rotate(${icon.rotate} 12 12)` : undefined;
 
   return (
-    <View style={[styles.lit, shadows.glow, { width: box, height: box, borderRadius: box / 2, borderColor: design.color }]}>
+    // A category pin is ringed in its own colour; a soft contact shadow lifts it off the map without the blue accent
+    // glow, which haloed green and burgundy rings in the wrong colour.
+    <View style={[styles.lit, shadows.contact, { width: box, height: box, borderRadius: box / 2, borderColor: design.color }]}>
       <Svg width={iconSize} height={iconSize} viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" pointerEvents="none">
         <G
           transform={rotation}

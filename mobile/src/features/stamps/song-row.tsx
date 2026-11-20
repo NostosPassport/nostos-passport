@@ -5,7 +5,7 @@ import type { Song } from "@/api/contracts";
 import { Icon } from "@/components/ui/icon";
 import { Tappable } from "@/components/ui/tappable";
 import { Text } from "@/components/ui/text";
-import { colors, radius, size, space } from "@/theme";
+import { colors, hairlineWidth, radius, size, space } from "@/theme";
 
 /** The spoken form: "Song: Heroes by David Bowie". */
 export function songLabel(song: Pick<Song, "title" | "artist">): string {
@@ -21,8 +21,11 @@ export function RemoveSongButton({ onPress }: { onPress: () => void }) {
   );
 }
 
+/** Album art size, shared with the song picker's result rows so a chosen song looks like the row it came from. */
+export const SONG_ART_SIZE = size.listRow - space.md;
+
 /**
- * A song's art, title and artist. Metadata only: there is no playback. The song reads as one VoiceOver element and
+ * A song's art, title and artist, drawn like a ListRow (hairline-ruled, body title, footnote artist). Metadata only: there is no playback. The song reads as one VoiceOver element and
  * the `trailing` control (e.g. Remove song) stays separately reachable.
  */
 export function SongRow({ song, trailing }: { song: Pick<Song, "title" | "artist" | "artUrl">; trailing?: React.ReactNode }) {
@@ -37,10 +40,10 @@ export function SongRow({ song, trailing }: { song: Pick<Song, "title" | "artist
           </View>
         )}
         <View style={styles.text}>
-          <Text variant="subhead" weight="semibold" numberOfLines={1}>
+          <Text variant="body" numberOfLines={2}>
             {song.title}
           </Text>
-          <Text variant="footnote" color="textSecondary" numberOfLines={1}>
+          <Text variant="footnote" color="textSecondary" numberOfLines={2}>
             {song.artist}
           </Text>
         </View>
@@ -51,8 +54,8 @@ export function SongRow({ song, trailing }: { song: Pick<Song, "title" | "artist
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.xs, borderRadius: radius.card, backgroundColor: colors.paperDeep },
-  art: { width: size.listRow - space.md, height: size.listRow - space.md, borderRadius: radius.chip, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  row: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: size.listRow, paddingVertical: space.sm, borderTopWidth: hairlineWidth, borderBottomWidth: hairlineWidth, borderColor: colors.hairline },
+  art: { width: SONG_ART_SIZE, height: SONG_ART_SIZE, borderRadius: radius.chip, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   remove: { minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
   song: { flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm },
   text: { flex: 1, gap: space.xxs },

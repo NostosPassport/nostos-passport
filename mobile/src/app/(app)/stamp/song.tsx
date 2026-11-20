@@ -13,8 +13,9 @@ import { InlineError } from "@/components/ui/inline-error";
 import { ListGroup, ListRow } from "@/components/ui/list-row";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { SONG_ART_SIZE } from "@/features/stamps/song-row";
 import { songDraft } from "@/features/stamps/song-draft";
-import { colors, fonts, radius, screenPadding, size, space } from "@/theme";
+import { colors, fonts, maxFontSizeMultiplier, radius, screenPadding, size, space } from "@/theme";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
 
@@ -53,11 +54,11 @@ export default function SongPicker() {
           <Kicker>CANCEL</Kicker>
         </Tappable>
       </View>
-      <NativeText style={styles.title}>Add a song</NativeText>
+      <NativeText style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={maxFontSizeMultiplier}>Add a song</NativeText>
       <Text variant="callout" color="textSecondary" style={styles.subtitle}>Attach a song to this memory.</Text>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + space.xl }]}
         automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
@@ -83,7 +84,7 @@ export default function SongPicker() {
         </View>
 
         {query.length < 2 ? (
-          <Text variant="footnote" color="textSecondary">Start typing to search Apple Music.</Text>
+          <Text variant="callout" color="textSecondary">Start typing to search Apple Music.</Text>
         ) : search.isPending ? (
           <SkeletonRows count={4} />
         ) : search.isError ? (
@@ -122,13 +123,15 @@ function Art({ url }: { url: string | null }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  topbar: { height: 44, marginTop: 4, paddingHorizontal: screenPadding - 7, alignItems: "flex-end", justifyContent: "center" },
-  cancelTarget: { minWidth: 64, height: 44, alignItems: "center", justifyContent: "center" },
-  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 50, lineHeight: 52, letterSpacing: -0.7, paddingHorizontal: screenPadding, marginTop: 8 },
-  subtitle: { paddingHorizontal: screenPadding, marginTop: 4, marginBottom: 18 },
+  // Same Cancel placement as the stamp composer: right-aligned on the screen gutter.
+  topbar: { height: size.hitTarget, marginTop: space.xxs, paddingHorizontal: screenPadding, alignItems: "flex-end", justifyContent: "center" },
+  cancelTarget: { minWidth: 64, height: size.hitTarget, alignItems: "flex-end", justifyContent: "center" },
+  // Display serif: line height above the font size so ascenders and descenders never clip (P-086).
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 50, lineHeight: 56, letterSpacing: -0.7, paddingHorizontal: screenPadding, marginTop: space.xs, paddingTop: 2 },
+  subtitle: { paddingHorizontal: screenPadding, marginTop: space.xxs, marginBottom: space.lg },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: screenPadding, gap: 12 },
+  content: { paddingHorizontal: screenPadding, gap: space.sm },
   searchField: { gap: 7 },
   searchInput: { minHeight: 50, borderBottomWidth: 1, borderBottomColor: colors.textPrimary, color: colors.textPrimary, fontSize: 17, paddingHorizontal: 0, paddingVertical: 0 },
-  art: { width: size.avatarLarge - space.md, height: size.avatarLarge - space.md, borderRadius: radius.chip, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  art: { width: SONG_ART_SIZE, height: SONG_ART_SIZE, borderRadius: radius.chip, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center", overflow: "hidden" },
 });

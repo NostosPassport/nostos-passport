@@ -113,7 +113,7 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
       </Tappable>
       {photo.error && <InlineError message={errorText(photo.error, "Couldn't update your photo. Try again.")} />}
       {/* Count the same string maxLength caps (P-153). */}
-      <FieldGroup footer={`${values.bio.length}/${BIO_MAX}`} errors={[problem && dirty ? problem : null]}>
+      <FieldGroup counter={`${values.bio.length} / ${BIO_MAX}`} errors={[problem && dirty ? problem : null]}>
         <Field label="Name" value={values.displayName} onChangeText={set("displayName")} maxLength={NAME_MAX} autoCapitalize="words" textContentType="name" returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => bioRef.current?.focus()} />
         <Field ref={bioRef} label="Bio" value={values.bio} onChangeText={set("bio")} maxLength={BIO_MAX} placeholder="A line about you" multiline accessibilityHint={`Up to ${BIO_MAX} characters`} />
       </FieldGroup>

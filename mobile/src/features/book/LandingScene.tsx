@@ -24,6 +24,9 @@ type Props = {
   onDone: () => void;
 };
 
+/** Photo pins fade in rather than popping in a single frame (P-108). */
+const PIN_FADE_MS = 220;
+
 export function LandingScene({ stamp, others, pageWidth: pw, pageHeight: ph, onDone }: Props) {
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
@@ -52,7 +55,7 @@ export function LandingScene({ stamp, others, pageWidth: pw, pageHeight: ph, onD
     const f = landingFrame(t.value, reduced);
     return { opacity: reduced ? 0 : (1 - f.inkSpread) * 0.6, transform: [{ scale: 0.8 + f.inkSpread * 0.5 }] };
   });
-  const pin$ = useAnimatedStyle(() => ({ opacity: t.value > LANDING.impact + LANDING.ink ? 1 : 0 }));
+  const pin$ = useAnimatedStyle(() => ({ opacity: reduced ? (t.value > LANDING.impact + LANDING.ink ? 1 : 0) : Math.min(1, Math.max(0, (t.value - LANDING.impact - LANDING.ink) / PIN_FADE_MS)) }));
 
   const spot = { position: "absolute" as const, left: place.cx - place.size / 2, top: place.cy - placementHeight(place) / 2, width: place.size, height: placementHeight(place) };
   return (
@@ -67,7 +70,7 @@ export function LandingScene({ stamp, others, pageWidth: pw, pageHeight: ph, onD
         <Animated.View pointerEvents="none" style={[styles.pins, pin$]}>
           {pins.map((p, i) => (
             <View key={i} style={[styles.photo, { left: p.cx - p.size / 2, width: p.size, height: p.size, transform: [{ rotate: `${p.rotation}deg` }] }]}>
-              <Image source={{ uri: mediaUrl(stamp.photos[i]!.url) }} style={styles.fill} contentFit="cover" accessible={false} />
+              <Image source={{ uri: mediaUrl(stamp.photos[i]!.url) }} style={styles.print} contentFit="cover" accessible={false} />
               <View style={styles.pin} />
             </View>
           ))}
@@ -88,8 +91,9 @@ const styles = StyleSheet.create({
   glow: { backgroundColor: colors.brassGlow, ...shadows.glow },
   ink: { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.brass, backgroundColor: colors.brassGlowSoft },
   pins: { position: "absolute", left: 0, right: 0, bottom: space.xl, height: space.xxxl * 2 },
-  photo: { position: "absolute", top: 0, borderRadius: radius.chip / 4, overflow: "hidden", backgroundColor: colors.elevated, ...shadows.contact },
-  fill: { width: "100%", height: "100%" },
+  // A print on a paper mat. No overflow clipping here: on iOS it would also clip the contact shadow.
+  photo: { position: "absolute", top: 0, padding: space.xxs, borderRadius: radius.chip / 4, backgroundColor: colors.paperRaised, ...shadows.contact },
+  print: { flex: 1, borderRadius: radius.chip / 8, backgroundColor: colors.elevated },
   pin: { position: "absolute", top: space.xxs, alignSelf: "center", width: space.xs, height: space.xs, borderRadius: space.xxs, backgroundColor: colors.brass },
   words: { alignItems: "center", gap: space.xs, paddingHorizontal: space.lg },
   done: { width: size.heroHeight },
