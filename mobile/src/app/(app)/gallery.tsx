@@ -5,7 +5,7 @@ import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, View, type Scro
 import type { StampView } from "@/api/contracts";
 import { Body, DisplayTitle, EditorialButton, Wordmark, EditorialSafeContent, EditorialScreen, Kicker, Rule } from "@/components/editorial/editorial";
 import { Icon } from "@/components/ui/icon";
-import { StampMark } from "@/features/book/StampMark";
+import { StampMark, fitStampSize } from "@/features/book/StampMark";
 import { useCollections } from "@/api/queries";
 import { InlineError } from "@/components/ui/inline-error";
 import { ScreenState } from "@/components/ui/screen-state";
@@ -14,12 +14,15 @@ import { Text as UIText } from "@/components/ui/text";
 import { collectionColorValue } from "@/features/collections/colors";
 import { usePassport } from "@/features/book/use-passport";
 import { localityKey, localityLabel } from "@/lib/place";
-import { colors, fonts, hairlineWidth, radius, size, space, pressedOpacity } from "@/theme";
+import { colors, fonts, hairlineWidth, maxFontSizeMultiplier, radius, size, space, pressedOpacity } from "@/theme";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
 
 type Filter = "all" | "restaurant" | "bar" | "hotel";
 type Tab = "stamps" | "collections";
+/** The stamp's box in a gallery row. A square bar stamp at full width would dwarf the landscape restaurant ones. */
+const MARK_WIDTH = 112;
+const MARK_HEIGHT = 88;
 const TABS: { key: Tab; label: string }[] = [{ key: "stamps", label: "STAMPS" }, { key: "collections", label: "COLLECTIONS" }];
 
 /** The gallery: two swipeable pages, every stamp and every collection. */
@@ -103,7 +106,7 @@ function StampsPage() {
             renderItem={({ item }) => <GalleryStamp stamp={item} />}
             ListEmptyComponent={filter === "all"
               ? <ScreenState kind="empty" title="No stamps yet" message="Stamp a restaurant, bar or hotel and it shows up here." action={{ label: "Stamp a place", onPress: () => nav.push("/stamp/new") }} />
-              : <Body muted>{`No ${filter} stamps yet.`}</Body>}
+              : <ScreenState kind="empty" title={`No ${filter} stamps yet`} />}
           />
         )}
     </View>
@@ -131,7 +134,7 @@ function GalleryStamp({ stamp }: { stamp: StampView }) {
       <View style={styles.mark}>
         <StampMark
           input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey: localityKey(stamp.place), localityName: locality }}
-          size={112}
+          size={fitStampSize(stamp.artwork, MARK_WIDTH, MARK_HEIGHT)}
           artwork={stamp.artwork}
           photoUrl={stamp.photoUrl}
           visitedAt={stamp.visitedAt}
@@ -139,11 +142,11 @@ function GalleryStamp({ stamp }: { stamp: StampView }) {
         />
       </View>
       <View style={styles.copy}>
-        <Text style={styles.name} numberOfLines={3}>{stamp.place.name}</Text>
-        {locality ? <Text style={styles.locality} numberOfLines={1}>{locality}</Text> : null}
+        <Text style={styles.name} numberOfLines={3} maxFontSizeMultiplier={maxFontSizeMultiplier}>{stamp.place.name}</Text>
+        {locality ? <Text style={styles.locality} numberOfLines={1} maxFontSizeMultiplier={maxFontSizeMultiplier}>{locality}</Text> : null}
         <View style={styles.meta}>
-          <Text style={styles.date}>{date}</Text>
-          {stamp.artwork?.kind ? <Text style={styles.kind}>{stamp.artwork.kind.toUpperCase()}</Text> : null}
+          <Text style={styles.date} maxFontSizeMultiplier={maxFontSizeMultiplier}>{date}</Text>
+          {stamp.artwork?.kind ? <Text style={styles.kind} maxFontSizeMultiplier={maxFontSizeMultiplier}>{stamp.artwork.kind.toUpperCase()}</Text> : null}
         </View>
       </View>
       <Icon name="chevron.right" color="textTertiary" size={16} />
@@ -158,8 +161,9 @@ const styles = StyleSheet.create({
   tabs: { flexDirection: "row", gap: space.lg, marginTop: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
   tab: { minHeight: size.hitTarget, justifyContent: "center", borderBottomWidth: 2, borderBottomColor: colors.transparent, marginBottom: -StyleSheet.hairlineWidth },
   tabActive: { borderBottomColor: colors.accent },
-  filters: { height: 54, flexDirection: "row", gap: 8, marginTop: 12, marginBottom: 4 },
-  filter: { flexGrow: 1, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.transparent },
+  // The same filter row as the map: content-sized cells with a 2pt underline. Wraps instead of overflowing at large text.
+  filters: { minHeight: 48, flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8, marginBottom: 4 },
+  filter: { minHeight: size.hitTarget, flexGrow: 1, flexShrink: 0, alignItems: "center", justifyContent: "center", borderBottomWidth: 2, borderBottomColor: colors.transparent },
   filterActive: { borderBottomColor: colors.accent },
   listView: { flex: 1 },
   list: { paddingTop: 6, paddingBottom: space.xl },
@@ -167,7 +171,7 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.md },
   retry: { minHeight: size.hitTarget, justifyContent: "center" },
   row: { minHeight: 142, flexDirection: "row", alignItems: "center", gap: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline, paddingVertical: 14 },
-  mark: { width: 122, alignItems: "center", justifyContent: "center" },
+  mark: { width: MARK_WIDTH, alignItems: "center", justifyContent: "center" },
   copy: { flex: 1, minWidth: 0 },
   name: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 27, lineHeight: 29 },
   locality: { marginTop: 5, color: colors.textSecondary, fontFamily: fonts.sans, fontSize: 13 },
@@ -188,14 +192,8 @@ function CollectionsList() {
       <Body muted size={13}>Smaller passports built from your stamps. A stamp can sit in as many as you like.</Body>
       {query.isPending ? <SkeletonRows count={3} /> : null}
       {query.isError ? <InlineError message="Couldn't load your collections." onRetry={() => void query.refetch()} /> : null}
-      {empty ? (
-        <View style={collectionStyles.empty}>
-          <Icon name="book" color="accent" size={size.iconLarge} />
-          <UIText variant="title2">No collections yet</UIText>
-          <UIText variant="callout" color="textSecondary" align="center">Make one for favorites, date nights, a trip, or anything you want to keep together.</UIText>
-        </View>
-      ) : null}
-      <View>
+      {empty ? <ScreenState kind="empty" icon="book" title="No collections yet" message="Make one for favorites, date nights, a trip, or anything you want to keep together." /> : null}
+      {collections.length ? <View>
         {collections.map((collection) => (
           <Tappable
             key={collection.id}
@@ -212,7 +210,7 @@ function CollectionsList() {
             <Icon name="chevron.right" color="textTertiary" size={16} />
           </Tappable>
         ))}
-      </View>
+      </View> : null}
       <EditorialButton label="New collection" outline onPress={() => nav.push("/collections/new")} />
     </ScrollView>
   );
@@ -226,5 +224,4 @@ const collectionStyles = StyleSheet.create({
   rowText: { flex: 1, minWidth: 0, gap: space.xs },
   name: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 27, lineHeight: 29 },
   count: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 0.8 },
-  empty: { minHeight: size.heroHeight, alignItems: "center", justifyContent: "center", gap: space.sm, paddingHorizontal: space.xl },
 });
