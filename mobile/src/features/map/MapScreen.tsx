@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import MapView, { Marker, type Region } from "react-native-maps";
 
 import type { Place } from "@/api/contracts";
@@ -15,6 +15,7 @@ import { mapRecenter } from "./recenter";
 import { PinMarker } from "./PinMarker";
 import { HOTEL_TYPES, resolveCategoryStamp } from "../../../../shared/category-stamp-artwork";
 import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 type MapFilter = "all" | "restaurant" | "bar" | "hotel";
 
@@ -137,14 +138,14 @@ export function MapScreen() {
               </Marker>
             ))}
           </MapView>
-          <Pressable
+          <Tappable
             onPress={handleRecenter}
             accessibilityRole="button"
             accessibilityLabel={here ? "Recenter map on my location" : "Share location to recenter map"}
             style={({ pressed }) => [styles.recenter, pressed && styles.recenterPressed]}
           >
             <Icon name="location.fill" color="accent" size={20} />
-          </Pressable>
+          </Tappable>
         </View>
       </EditorialSafeContent>
     </EditorialScreen>
@@ -153,14 +154,14 @@ export function MapScreen() {
 
 function FilterButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable
+    <Tappable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       style={[styles.filter, active && styles.filterActive]}
     >
       <Kicker muted={!active}>{label}</Kicker>
-    </Pressable>
+    </Tappable>
   );
 }
 

@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "@/components/ui/icon";
 import { mapRecenter } from "@/features/map/recenter";
-import { colors } from "@/theme";
+import { colors, pressedOpacity } from "@/theme";
 import { nav } from "@/lib/nav";
 
 /** Passport is the tab the app opens on. SDK 58 moved this from the `initialRouteName` prop to `unstable_settings.anchor`. */
@@ -53,5 +53,5 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, lineHeight: 14 },
   center: { flex: 1, alignItems: "center", justifyContent: "flex-start", paddingTop: 3 },
   stampButton: { width: 44, height: 44, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.accent, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
-  pressed: { opacity: 0.65 },
+  pressed: { opacity: pressedOpacity },
 });

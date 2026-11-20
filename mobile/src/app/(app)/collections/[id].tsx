@@ -1,11 +1,12 @@
 import { Stack, useLocalSearchParams } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/ui/icon";
 import { PassportBook } from "@/features/book/PassportBook";
 import { colors, size, space } from "@/theme";
 import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 export default function CollectionPassportScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
@@ -16,7 +17,7 @@ export default function CollectionPassportScreen() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <PassportBook collectionId={id} />
-      <Pressable
+      <Tappable
         onPress={() => nav.back()}
         accessibilityRole="button"
         accessibilityLabel="Back to collections"
@@ -24,8 +25,8 @@ export default function CollectionPassportScreen() {
         style={[styles.back, { top: insets.top + space.xs }]}
       >
         <Icon name="chevron.left" color="textPrimary" size={size.icon} />
-      </Pressable>
-      <Pressable
+      </Tappable>
+      <Tappable
         onPress={() => nav.push({ pathname: "/collections/[id]/share", params: { id } })}
         accessibilityRole="button"
         accessibilityLabel="Share collection"
@@ -33,8 +34,8 @@ export default function CollectionPassportScreen() {
         style={[styles.share, { top: insets.top + space.xs }]}
       >
         <Icon name="square.and.arrow.up" color="textPrimary" size={size.icon} />
-      </Pressable>
-      <Pressable
+      </Tappable>
+      <Tappable
         onPress={() => nav.push({ pathname: "/collections/[id]/edit", params: { id } })}
         accessibilityRole="button"
         accessibilityLabel="Edit collection"
@@ -42,7 +43,7 @@ export default function CollectionPassportScreen() {
         style={[styles.edit, { top: insets.top + space.xs }]}
       >
         <Icon name="gearshape" color="textPrimary" size={size.icon} />
-      </Pressable>
+      </Tappable>
     </View>
   );
 }

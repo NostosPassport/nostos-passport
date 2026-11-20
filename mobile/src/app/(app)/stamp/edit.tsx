@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { ActionSheetIOS, Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { ActionSheetIOS, Alert, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
 import { api, errorText, mediaUrl } from "@/api";
 import { StampResponse, type Song, type StampView } from "@/api/contracts";
@@ -28,6 +28,7 @@ import { haptics } from "@/lib/haptics";
 import { useConfirmDiscard } from "@/lib/use-confirm-discard";
 import { colors, radius, size, space } from "@/theme";
 import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 const YEAR_MS = 366 * 24 * 60 * 60 * 1000;
 function displayDate(d: Date) { return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`; }
@@ -139,7 +140,7 @@ function EditForm({ stamp }: { stamp: StampView }) {
 
   return (
     <FormScreen>
-      <Stack.Screen options={{ title: "Edit memory", headerLeft: () => <HeaderButton label="Cancel" onPress={() => nav.back()} />, headerRight: () => <HeaderButton label="Save" bold onPress={doSave} disabled={!dirty || invalidDate || empty || save.isPending} /> }} />
+      <Stack.Screen options={{ title: "Edit memory", headerLeft: () => <HeaderButton label="Cancel" onPress={() => nav.back()} />, headerRight: () => <HeaderButton label="Save" bold onPress={doSave} disabled={!dirty || invalidDate || empty} loading={save.isPending} /> }} />
 
       <FieldGroup footer="Visit date, up to one year ago" errors={[invalidDate ? "Use MM/DD/YYYY, within the last year and not in the future." : null]}>
         <TextInput value={dateValue} onChangeText={(value) => setDateValue(formatBirthdateInput(value))} keyboardType="number-pad" maxLength={10} placeholder="MM/DD/YYYY" placeholderTextColor={colors.textTertiary} style={styles.dateInput} accessibilityLabel="Visit date" />
@@ -155,10 +156,10 @@ function EditForm({ stamp }: { stamp: StampView }) {
                 <View key={photo.id} style={styles.thumb}>
                   <Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" />
                   {index === 0 ? <View style={styles.coverBadge}><Text variant="caption" color="onAccent" weight="semibold">COVER</Text></View> : null}
-                  <Pressable onPress={() => Alert.alert("Remove photo?", "This removes it from the stamp.", [{ text: "Cancel", style: "cancel" }, { text: "Remove", style: "destructive", onPress: () => removePhoto.mutate(photo.id) }])} accessibilityRole="button" accessibilityLabel="Remove photo" style={styles.removePhoto}><Icon name="xmark" color="onAccent" size={16} /></Pressable>
+                  <Tappable onPress={() => Alert.alert("Remove photo?", "This removes it from the stamp.", [{ text: "Cancel", style: "cancel" }, { text: "Remove", style: "destructive", onPress: () => removePhoto.mutate(photo.id) }])} accessibilityRole="button" accessibilityLabel="Remove photo" style={styles.removePhoto}><Icon name="xmark" color="onAccent" size={16} /></Tappable>
                   <View style={styles.orderControls}>
-                    <Pressable disabled={index === 0 || reorderPhotos.isPending} onPress={() => movePhoto(index, -1)} accessibilityRole="button" accessibilityLabel={`Move photo ${index + 1} earlier`} style={[styles.orderButton, index === 0 && styles.orderDisabled]}><Icon name="chevron.left" color="onAccent" size={15} /></Pressable>
-                    <Pressable disabled={index === stamp.photos.length - 1 || reorderPhotos.isPending} onPress={() => movePhoto(index, 1)} accessibilityRole="button" accessibilityLabel={`Move photo ${index + 1} later`} style={[styles.orderButton, index === stamp.photos.length - 1 && styles.orderDisabled]}><Icon name="chevron.right" color="onAccent" size={15} /></Pressable>
+                    <Tappable disabled={index === 0 || reorderPhotos.isPending} onPress={() => movePhoto(index, -1)} accessibilityRole="button" accessibilityLabel={`Move photo ${index + 1} earlier`} style={[styles.orderButton, index === 0 && styles.orderDisabled]}><Icon name="chevron.left" color="onAccent" size={15} /></Tappable>
+                    <Tappable disabled={index === stamp.photos.length - 1 || reorderPhotos.isPending} onPress={() => movePhoto(index, 1)} accessibilityRole="button" accessibilityLabel={`Move photo ${index + 1} later`} style={[styles.orderButton, index === stamp.photos.length - 1 && styles.orderDisabled]}><Icon name="chevron.right" color="onAccent" size={15} /></Tappable>
                   </View>
                 </View>
               ))}
@@ -172,7 +173,7 @@ function EditForm({ stamp }: { stamp: StampView }) {
       <FieldGroup footer={`${caption.length}/${CAPTION_MAX}`} errors={[empty ? "Add a photo, caption or song." : null]}>
         <Field label="Caption" value={caption} onChangeText={setCaption} maxLength={CAPTION_MAX} placeholder="What's it like?" multiline inputAccessoryViewButtonLabel="Done" returnKeyType="done" submitBehavior="blurAndSubmit" />
       </FieldGroup>
-      {song ? <SongRow song={song} trailing={<Pressable onPress={() => setSong(null)} accessibilityRole="button" accessibilityLabel="Remove song" hitSlop={space.xs} style={styles.remove}><Icon name="xmark.circle.fill" color="textTertiary" size={size.icon} /></Pressable>} /> : <Button title="Add a song" icon="music.note" variant="secondary" onPress={() => nav.push("/stamp/song")} />}
+      {song ? <SongRow song={song} trailing={<Tappable onPress={() => setSong(null)} accessibilityRole="button" accessibilityLabel="Remove song" hitSlop={space.xs} style={styles.remove}><Icon name="xmark.circle.fill" color="textTertiary" size={size.icon} /></Tappable>} /> : <Button title="Add a song" icon="music.note" variant="secondary" onPress={() => nav.push("/stamp/song")} />}
       {save.error && <InlineError message={errorText(save.error, "Couldn't save. Try again.")} />}
     </FormScreen>
   );

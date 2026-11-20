@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from "react-native";
 
-import { colors, dimmedOpacity, hairlineWidth, size, space, type ColorToken } from "@/theme";
+import { colors, dimmedOpacity, hairlineWidth, size, space, type ColorToken, pressedOpacity } from "@/theme";
 import { Icon, type SymbolName } from "./icon";
 import { Text } from "./text";
 
@@ -76,6 +76,6 @@ const styles = StyleSheet.create({
   inline: { alignSelf: "flex-start" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.xs, paddingVertical: space.xs },
   title: { flexShrink: 1 },
-  pressed: { opacity: 0.8 },
+  pressed: { opacity: pressedOpacity },
   disabled: { opacity: dimmedOpacity },
 });

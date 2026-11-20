@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { haptics } from "@/lib/haptics";
 import { colors, pressedOpacity, radius, size, space } from "@/theme";
 import { Icon } from "./icon";
+import { Tappable } from "./tappable";
 
 type Props = {
   checked: boolean;
@@ -16,7 +17,7 @@ type Props = {
 /** The whole row toggles. Keep links out of `children`; put them in their own buttons. */
 export function Checkbox({ checked, onChange, accessibilityLabel, invalid, children }: Props) {
   return (
-    <Pressable
+    <Tappable
       accessibilityRole="checkbox"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked }}
@@ -30,7 +31,7 @@ export function Checkbox({ checked, onChange, accessibilityLabel, invalid, child
         {checked && <Icon name="checkmark" color="onAccent" size={size.iconTiny} weight="bold" />}
       </View>
       <View style={styles.label}>{children}</View>
-    </Pressable>
+    </Tappable>
   );
 }
 

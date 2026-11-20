@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 
 import type { StampView } from "@/api/contracts";
 import { Body, DisplayTitle, EditorialHeader, EditorialSafeContent, EditorialScreen, Kicker, Rule } from "@/components/editorial/editorial";
@@ -7,8 +7,9 @@ import { Icon } from "@/components/ui/icon";
 import { StampMark } from "@/features/book/StampMark";
 import { usePassport } from "@/features/book/use-passport";
 import { localityKey, localityLabel } from "@/lib/place";
-import { colors, fonts, size, space } from "@/theme";
+import { colors, fonts, size, space, pressedOpacity } from "@/theme";
 import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 type Filter = "all" | "restaurant" | "bar" | "hotel";
 
@@ -24,9 +25,9 @@ export default function StampGallery() {
     <EditorialScreen>
       <EditorialSafeContent bottom>
         <EditorialHeader compact action={
-          <Pressable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Close gallery" style={styles.iconTarget}>
+          <Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Close gallery" style={styles.iconTarget}>
             <Icon name="xmark" color="textPrimary" size={size.iconSmall} />
-          </Pressable>
+          </Tappable>
         } />
         <Rule />
         <DisplayTitle size={48} style={styles.title}>Stamp gallery.</DisplayTitle>
@@ -42,7 +43,7 @@ export default function StampGallery() {
         ) : passport.status === "error" ? (
           <View style={styles.empty}>
             <Body muted>Couldn&apos;t load your stamps.</Body>
-            <Pressable onPress={passport.retry} style={styles.retry}><Kicker>TRY AGAIN</Kicker></Pressable>
+            <Tappable onPress={passport.retry} style={styles.retry}><Kicker>TRY AGAIN</Kicker></Tappable>
           </View>
         ) : (
           <FlatList
@@ -62,9 +63,9 @@ export default function StampGallery() {
 
 function FilterButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }} style={[styles.filter, active && styles.filterActive]}>
+    <Tappable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }} style={[styles.filter, active && styles.filterActive]}>
       <Kicker muted={!active}>{label}</Kicker>
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -72,7 +73,7 @@ function GalleryStamp({ stamp }: { stamp: StampView }) {
   const locality = localityLabel(stamp.place);
   const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: stamp.place.timeZone }).format(new Date(stamp.visitedAt));
   return (
-    <Pressable
+    <Tappable
       onPress={() => nav.push({ pathname: "/stamp/[id]", params: { id: stamp.id } })}
       accessibilityRole="button"
       accessibilityLabel={`Open ${stamp.place.name} stamp`}
@@ -97,7 +98,7 @@ function GalleryStamp({ stamp }: { stamp: StampView }) {
         </View>
       </View>
       <Icon name="chevron.right" color="textTertiary" size={16} />
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -120,5 +121,5 @@ const styles = StyleSheet.create({
   meta: { marginTop: 12, flexDirection: "row", alignItems: "center", gap: 10 },
   date: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8, textTransform: "uppercase" },
   kind: { color: colors.dimBrass, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8 },
-  pressed: { opacity: 0.7 },
+  pressed: { opacity: pressedOpacity },
 });

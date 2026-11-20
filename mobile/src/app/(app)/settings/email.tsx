@@ -74,7 +74,7 @@ export default function ChangeEmail() {
         options={{
           title: "Email",
           headerLeft: () => <HeaderButton label="Cancel" onPress={() => nav.back()} />,
-          headerRight: () => <HeaderButton label={challenge ? "Save" : "Verify"} bold onPress={submit} disabled={unchanged || busy || (challenge ? code.length !== 6 : false)} />,
+          headerRight: () => <HeaderButton label={challenge ? "Save" : "Verify"} bold onPress={submit} disabled={unchanged || (challenge ? code.length !== 6 : false)} loading={busy} />,
         }}
       />
       <Text variant="callout" color="textSecondary">Change the email you use to sign in. We’ll send a verification code to the new address before changing it.</Text>

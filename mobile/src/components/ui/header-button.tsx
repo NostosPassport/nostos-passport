@@ -1,17 +1,23 @@
-import { Pressable, StyleSheet } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
 
-import { size, space } from "@/theme";
+import { colors, size, space } from "@/theme";
+import { Tappable } from "./tappable";
 import { Text } from "./text";
 
-/** Text button for native headers ("Cancel", "Save"). */
-export function HeaderButton({ label, onPress, bold, disabled }: { label: string; onPress: () => void; bold?: boolean; disabled?: boolean }) {
+/** Text button for native headers ("Cancel", "Save"). `loading` swaps the label for a spinner while a save runs. */
+export function HeaderButton({ label, onPress, bold, disabled, loading }: { label: string; onPress: () => void; bold?: boolean; disabled?: boolean; loading?: boolean }) {
+  const inactive = disabled || loading;
   return (
-    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} hitSlop={space.xs} style={styles.button}>
-      <Text variant="body" color={disabled ? "textTertiary" : "accent"} weight={bold ? "semibold" : "regular"}>
-        {label}
-      </Text>
-    </Pressable>
+    <Tappable onPress={onPress} disabled={inactive} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!inactive, busy: !!loading }} hitSlop={space.xs} style={styles.button}>
+      {loading ? (
+        <ActivityIndicator color={colors.accent} />
+      ) : (
+        <Text variant="body" color={disabled ? "textTertiary" : "accent"} weight={bold ? "semibold" : "regular"}>
+          {label}
+        </Text>
+      )}
+    </Tappable>
   );
 }
 
-const styles = StyleSheet.create({ button: { minHeight: size.hitTarget, justifyContent: "center", paddingHorizontal: space.xxs } });
+const styles = StyleSheet.create({ button: { minHeight: size.hitTarget, minWidth: size.hitTarget, alignItems: "center", justifyContent: "center", paddingHorizontal: space.xxs } });

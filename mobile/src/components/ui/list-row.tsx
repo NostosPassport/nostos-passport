@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { colors, hairlineWidth, size, space, type ColorToken } from "@/theme";
+import { colors, hairlineWidth, size, space, type ColorToken, pressedOpacity } from "@/theme";
 import { Icon, type SymbolName } from "./icon";
 import { Text } from "./text";
 
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: 0 },
   group: { backgroundColor: colors.transparent, borderTopWidth: hairlineWidth, borderBottomWidth: hairlineWidth, borderColor: colors.hairline },
   row: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 73, paddingVertical: space.sm },
-  pressed: { opacity: 0.65 },
+  pressed: { opacity: pressedOpacity },
   text: { flex: 1, gap: space.xxs },
   titleRow: { flexDirection: "row", alignItems: "center", gap: space.xxs },
   titleShrink: { flexShrink: 1 },

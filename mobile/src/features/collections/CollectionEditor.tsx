@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { ScrollView, StyleSheet, TextInput, View } from "react-native";
 
 import { errorText } from "@/api";
 import { COLLECTION_NAME_MAX, type CollectionColorValue } from "@/api/collection-contracts";
@@ -14,6 +14,7 @@ import { localityLabel } from "@/lib/place";
 import { colors, hairlineWidth, radius, size, space, type as typeScale } from "@/theme";
 import { COLLECTION_COLORS } from "./colors";
 import { useMyStamps } from "./use-my-stamps";
+import { Tappable } from "@/components/ui/tappable";
 
 export type CollectionDraft = { name: string; color: CollectionColorValue; stampIds: string[] };
 
@@ -75,7 +76,7 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
           {COLLECTION_COLORS.map((option) => {
             const active = option.id === color;
             return (
-              <Pressable
+              <Tappable
                 key={option.id}
                 accessibilityRole="button"
                 accessibilityLabel={`${option.label} cover`}
@@ -84,7 +85,7 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
                 style={[styles.colorTarget, active && styles.colorTargetActive]}
               >
                 <View style={[styles.swatch, { backgroundColor: option.value }]} />
-              </Pressable>
+              </Tappable>
             );
           })}
         </View>
@@ -103,9 +104,9 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
               <Text variant="footnote" color="textSecondary" numberOfLines={1}>{stampSubtitle(stamp)}</Text>
             </View>
             <View style={styles.rowActions}>
-              <Pressable disabled={index === 0} onPress={() => move(index, -1)} accessibilityRole="button" accessibilityLabel={`Move ${stamp.place.name} up`} style={[styles.iconButton, index === 0 && styles.disabled]}><Icon name="chevron.up" size={size.iconSmall} /></Pressable>
-              <Pressable disabled={index === selected.length - 1} onPress={() => move(index, 1)} accessibilityRole="button" accessibilityLabel={`Move ${stamp.place.name} down`} style={[styles.iconButton, index === selected.length - 1 && styles.disabled]}><Icon name="chevron.down" size={size.iconSmall} /></Pressable>
-              <Pressable onPress={() => remove(stamp.id)} accessibilityRole="button" accessibilityLabel={`Remove ${stamp.place.name} from collection`} style={styles.iconButton}><Icon name="xmark" size={size.iconSmall} /></Pressable>
+              <Tappable disabled={index === 0} onPress={() => move(index, -1)} accessibilityRole="button" accessibilityLabel={`Move ${stamp.place.name} up`} style={[styles.iconButton, index === 0 && styles.disabled]}><Icon name="chevron.up" size={size.iconSmall} /></Tappable>
+              <Tappable disabled={index === selected.length - 1} onPress={() => move(index, 1)} accessibilityRole="button" accessibilityLabel={`Move ${stamp.place.name} down`} style={[styles.iconButton, index === selected.length - 1 && styles.disabled]}><Icon name="chevron.down" size={size.iconSmall} /></Tappable>
+              <Tappable onPress={() => remove(stamp.id)} accessibilityRole="button" accessibilityLabel={`Remove ${stamp.place.name} from collection`} style={styles.iconButton}><Icon name="xmark" size={size.iconSmall} /></Tappable>
             </View>
           </View>
         ))}
@@ -116,13 +117,13 @@ export function CollectionEditor({ initial, submitLabel, busy, error, onSubmit, 
         <View style={styles.field}>
           <Kicker>ADD STAMPS</Kicker>
           {available.map((stamp) => (
-            <Pressable key={stamp.id} onPress={() => add(stamp.id)} accessibilityRole="button" accessibilityLabel={`Add ${stamp.place.name} to collection`} style={styles.addRow}>
+            <Tappable key={stamp.id} onPress={() => add(stamp.id)} accessibilityRole="button" accessibilityLabel={`Add ${stamp.place.name} to collection`} style={styles.addRow}>
               <View style={styles.stampText}>
                 <Text variant="body" weight="semibold" numberOfLines={1}>{stamp.place.name}</Text>
                 <Text variant="footnote" color="textSecondary" numberOfLines={1}>{stampSubtitle(stamp)}</Text>
               </View>
               <Icon name="plus" color="accent" size={size.iconSmall} />
-            </Pressable>
+            </Tappable>
           ))}
         </View>
       </> : null}

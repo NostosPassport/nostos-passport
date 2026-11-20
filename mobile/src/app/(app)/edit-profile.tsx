@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { useState } from "react";
-import { ActionSheetIOS, Pressable, StyleSheet } from "react-native";
+import { ActionSheetIOS, StyleSheet } from "react-native";
 
 import { api, errorText } from "@/api";
 import { AvatarResponse, type ProfileSettingsResponse } from "@/api/contracts";
@@ -21,6 +21,7 @@ import { haptics } from "@/lib/haptics";
 import { useConfirmDiscard } from "@/lib/use-confirm-discard";
 import { colors, size, space } from "@/theme";
 import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 export default function EditProfile() {
   const settings = useProfileSettings();
@@ -98,13 +99,13 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
       <Stack.Screen
         options={{
           headerLeft: () => <HeaderButton label="Cancel" onPress={() => nav.back()} />,
-          headerRight: () => <HeaderButton label="Save" bold onPress={() => save.mutate()} disabled={!dirty || !!problem || save.isPending} />,
+          headerRight: () => <HeaderButton label="Save" bold onPress={() => save.mutate()} disabled={!dirty || !!problem} loading={save.isPending} />,
         }}
       />
-      <Pressable onPress={choosePhoto} disabled={photo.isPending} accessibilityRole="button" accessibilityLabel={avatarUrl ? "Change profile photo" : "Add profile photo"} accessibilityState={{ busy: photo.isPending }} style={styles.photo}>
+      <Tappable onPress={choosePhoto} disabled={photo.isPending} accessibilityRole="button" accessibilityLabel={avatarUrl ? "Change profile photo" : "Add profile photo"} accessibilityState={{ busy: photo.isPending }} style={styles.photo}>
         <Avatar name={values.displayName} uri={avatarUrl} size={size.avatarLarge} variant="title" />
         <Text variant="callout" color="accent" weight="semibold">{photo.isPending ? "Uploading…" : avatarUrl ? "Change photo" : "Add photo"}</Text>
-      </Pressable>
+      </Tappable>
       {photo.error && <InlineError message={errorText(photo.error, "Couldn't update your photo. Try again.")} />}
       <FieldGroup footer={`${values.bio.trim().length}/${BIO_MAX}`} errors={[problem && dirty ? problem : null]}>
         <Field label="Name" value={values.displayName} onChangeText={set("displayName")} maxLength={NAME_MAX} autoCapitalize="words" textContentType="name" returnKeyType="next" />

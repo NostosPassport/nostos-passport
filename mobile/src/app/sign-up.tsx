@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text as NativeText, View, type TextInputInstance } from "react-native";
+import { ScrollView, StyleSheet, Text as NativeText, View, type TextInputInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { errorText } from "@/api";
@@ -20,6 +20,7 @@ import { LEGAL, openWebPage } from "@/lib/links";
 import { HANDLE_MAX, validateSignup, type SignupErrors, type SignupFields } from "@/lib/validation";
 import { colors, fonts, screenPadding } from "@/theme";
 import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 export default function SignUp() {
   const { signIn } = useAuth();
@@ -109,12 +110,12 @@ export default function SignUp() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.topbar, { paddingTop: insets.top, height: insets.top + 44 }]}>
-        <Pressable onPress={() => nav.back()} style={styles.hitTarget} accessibilityRole="button" accessibilityLabel="Back">
+        <Tappable onPress={() => nav.back()} style={styles.hitTarget} accessibilityRole="button" accessibilityLabel="Back">
           <Icon name="chevron.left" color="textPrimary" size={22} />
-        </Pressable>
-        <Pressable onPress={() => router.replace("/sign-in")} style={styles.signInLink} accessibilityRole="button">
+        </Tappable>
+        <Tappable onPress={() => router.replace("/sign-in")} style={styles.signInLink} accessibilityRole="button">
           <NativeText style={styles.navLabel}>SIGN IN</NativeText>
-        </Pressable>
+        </Tappable>
       </View>
 
       <View style={styles.heading}>

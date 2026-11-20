@@ -1,5 +1,5 @@
 import { Stack, type Href } from "expo-router";
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View } from "react-native";
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { LEGAL, openWebPage } from "@/lib/links";
-import { colors, fonts, screenPadding, space } from "@/theme";
+import { colors, fonts, screenPadding, space, pressedOpacity } from "@/theme";
 import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 export default function Settings() {
   const insets = useSafeAreaInsets();
@@ -33,9 +34,9 @@ export default function Settings() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.nav, { paddingTop: insets.top + 4 }]}>
-        <Pressable onPress={() => nav.back()} style={styles.hitTarget} accessibilityRole="button" accessibilityLabel="Back">
+        <Tappable onPress={() => nav.back()} style={styles.hitTarget} accessibilityRole="button" accessibilityLabel="Back">
           <Icon name="chevron.left" color="textPrimary" size={22} />
-        </Pressable>
+        </Tappable>
       </View>
       <NativeText style={styles.title}>Settings</NativeText>
       <ScrollView
@@ -67,13 +68,13 @@ export default function Settings() {
 function SettingsRow({ title, subtitle, trailing, onPress }: { title: string; subtitle?: string; trailing?: "chevron.right" | "arrow.up.right"; onPress: () => void }) {
   const label = [title, subtitle].filter(Boolean).join(", ");
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
+    <Tappable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
       <View style={styles.rowCopy}>
         <NativeText style={styles.rowTitle}>{title}</NativeText>
         {subtitle ? <NativeText style={styles.rowSubtitle}>{subtitle}</NativeText> : null}
       </View>
       {trailing ? <Icon name={trailing} color="textTertiary" size={16} /> : null}
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -90,5 +91,5 @@ const styles = StyleSheet.create({
   rowSubtitle: { color: colors.textSecondary, fontSize: 12, lineHeight: 15 },
   privacyNote: { paddingVertical: 3 },
   actions: { gap: space.sm, paddingTop: space.sm },
-  pressed: { opacity: 0.65 },
+  pressed: { opacity: pressedOpacity },
 });

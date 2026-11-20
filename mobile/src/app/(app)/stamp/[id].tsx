@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ActionSheetIOS, Alert, Pressable, ScrollView, StyleSheet, Text as NativeText, useWindowDimensions, View } from "react-native";
+import { ActionSheetIOS, Alert, ScrollView, StyleSheet, Text as NativeText, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, ApiError, errorText, mediaUrl } from "@/api";
@@ -23,6 +23,7 @@ import { haptics } from "@/lib/haptics";
 import { localityLabel } from "@/lib/place";
 import { colors, fonts, screenPadding, size, space } from "@/theme";
 import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 const NOSTOS_MARK = require("../../../../assets/images/nostos-watermark.png");
 type StampAction = { label: string; destructive?: boolean; onPress: () => void };
@@ -56,10 +57,10 @@ function Memory({ stamp, actions }: { stamp: StampView; actions: StampAction[] }
   const localityKey = stamp.place.area ?? stamp.place.city ?? stamp.place.countryCode ?? stamp.place.country ?? stamp.place.id;
   const stampSize = Math.min(300, Math.max(220, width - 72));
   return <><ScrollView contentContainerStyle={[styles.memory, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 20 }]}>
-    <View style={styles.memoryTopbar}><Pressable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Back" style={styles.hitTarget}><Icon name="chevron.left" color="textPrimary" size={22} /></Pressable>{actions.length ? <Pressable onPress={() => showActions(actions)} accessibilityRole="button" accessibilityLabel="More options" style={styles.hitTarget}><NativeText style={styles.more}>•••</NativeText></Pressable> : null}</View>
+    <View style={styles.memoryTopbar}><Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Back" style={styles.hitTarget}><Icon name="chevron.left" color="textPrimary" size={22} /></Tappable>{actions.length ? <Tappable onPress={() => showActions(actions)} accessibilityRole="button" accessibilityLabel="More options" style={styles.hitTarget}><NativeText style={styles.more}>•••</NativeText></Tappable> : null}</View>
     <Kicker>NO. {number} / {dateLabel}</Kicker><NativeText style={styles.memoryTitle}>{stamp.place.name}</NativeText>{locality ? <Kicker>{locality.toUpperCase()}</Kicker> : null}
     <View style={styles.stampArt}><StampMark input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey, localityName: locality }} size={stampSize} artwork={stamp.artwork} photoUrl={stamp.photos[0]?.url ?? stamp.photoUrl} visitedAt={stamp.visitedAt} timeZone={stamp.place.timeZone} /></View>
-    <View style={styles.heroFrame}>{stamp.photos.length ? <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} bounces={stamp.photos.length > 1} onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}>{stamp.photos.map((photo, index) => <Pressable key={photo.id} onPress={() => setViewingPhoto(index)} style={[styles.photoPage, { width: photoWidth }]}><Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" /></Pressable>)}</ScrollView> : <View style={styles.emptyPhoto} />}</View>
+    <View style={styles.heroFrame}>{stamp.photos.length ? <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} bounces={stamp.photos.length > 1} onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}>{stamp.photos.map((photo, index) => <Tappable key={photo.id} onPress={() => setViewingPhoto(index)} style={[styles.photoPage, { width: photoWidth }]}><Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" /></Tappable>)}</ScrollView> : <View style={styles.emptyPhoto} />}</View>
     {stamp.caption ? <NativeText style={styles.caption}>{stamp.caption}</NativeText> : null}{stamp.song ? <SongRow song={stamp.song} /> : null}
     <View style={styles.photoMeta}><Kicker>{stamp.photos.length === 0 ? "NO PHOTOS" : `${activePhoto + 1} OF ${stamp.photos.length} ${stamp.photos.length === 1 ? "PHOTO" : "PHOTOS"}`}</Kicker><View style={styles.dots}>{stamp.photos.slice(0, 6).map((photo, index) => <View key={photo.id} style={[styles.dot, index === activePhoto && styles.dotActive]} />)}</View></View>
     {stamp.verified ? <View style={styles.verified}><Image source={NOSTOS_MARK} style={styles.verifiedLogo} contentFit="contain" /><NativeText style={styles.verifiedText}>LOCATION VERIFIED BY NOSTOS</NativeText></View> : <NativeText style={styles.unverified}>VISIT NOT LOCATION VERIFIED</NativeText>}

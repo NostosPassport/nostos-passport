@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
+import { ScrollView, StyleSheet, Text as NativeText, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { errorText } from "@/api";
@@ -16,6 +16,7 @@ import { Text } from "@/components/ui/text";
 import { songDraft } from "@/features/stamps/song-draft";
 import { colors, fonts, radius, screenPadding, size, space } from "@/theme";
 import { nav } from "@/lib/nav";
+import { Tappable } from "@/components/ui/tappable";
 
 /** Search songs (Apple's iTunes catalog, through Nostos) and pick one for the stamp. Metadata only: nothing plays. */
 export default function SongPicker() {
@@ -40,9 +41,9 @@ export default function SongPicker() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.topbar}>
-        <Pressable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Cancel" style={styles.cancelTarget}>
+        <Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Cancel" style={styles.cancelTarget}>
           <Kicker>CANCEL</Kicker>
-        </Pressable>
+        </Tappable>
       </View>
       <NativeText style={styles.title}>Add a song</NativeText>
       <Text variant="callout" color="textSecondary" style={styles.subtitle}>Attach a song to this memory.</Text>
@@ -92,7 +93,7 @@ export default function SongPicker() {
             ))}
           </ListGroup>
         )}
-        <Pressable
+        <Tappable
           onPress={() => {
             songDraft.choose(null);
             nav.back();
@@ -102,7 +103,7 @@ export default function SongPicker() {
           style={styles.none}
         >
           <NativeText style={styles.noneText}>No song</NativeText>
-        </Pressable>
+        </Tappable>
       </ScrollView>
     </View>
   );
