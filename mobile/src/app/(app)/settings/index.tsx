@@ -3,10 +3,13 @@ import { Alert, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { errorText } from "@/api";
 import { useMe } from "@/api/queries";
 import { useAuth } from "@/auth/auth-context";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { InlineError } from "@/components/ui/inline-error";
 import { Text } from "@/components/ui/text";
 import { LEGAL, openWebPage } from "@/lib/links";
 import { colors, fonts, screenPadding, space, pressedOpacity } from "@/theme";
@@ -18,6 +21,7 @@ export default function Settings() {
   const me = useMe();
   const { signOut } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const user = me.data?.user;
 
   const refresh = async () => {
@@ -25,10 +29,23 @@ export default function Settings() {
     await me.refetch().finally(() => setRefreshing(false));
   };
 
-  const confirmSignOut = () => Alert.alert("Sign out?", undefined, [
-    { text: "Cancel", style: "cancel" },
-    { text: "Sign out", style: "destructive", onPress: () => void signOut() },
-  ]);
+  // One sign-out at a time: the button shows progress and ignores further taps while it runs (P-144).
+  const runSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
+  const confirmSignOut = () => {
+    if (signingOut) return;
+    Alert.alert("Sign out?", undefined, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign out", style: "destructive", onPress: () => void runSignOut() },
+    ]);
+  };
 
   return (
     <View style={styles.root}>
@@ -44,36 +61,54 @@ export default function Settings() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.textSecondary} />}
       >
+        {me.isError && !user ? (
+          <InlineError message={errorText(me.error, "Couldn't load your account.")} onRetry={() => void refresh()} retrying={refreshing} />
+        ) : null}
         <SettingsRow title="Edit profile" subtitle={user ? `${user.displayName} · @${user.handle}` : undefined} trailing="chevron.right" onPress={() => nav.push("/edit-profile")} />
-        <SettingsRow title="Email" subtitle={user?.email} trailing="chevron.right" onPress={() => nav.push("/settings/email" as Href)} />
+        <SettingsRow title="Email" subtitle={user?.email} subtitleEllipsis="middle" trailing="chevron.right" onPress={() => nav.push("/settings/email" as Href)} />
         <View style={styles.privacyNote}>
-          <Text variant="footnote" color="textSecondary">Only you can see your passport.</Text>
-          <Text variant="footnote" color="textSecondary">Nothing is shared, and there is no feed.</Text>
+          <Text variant="footnote" color="textSecondary">Your passport is private, and there is no feed.</Text>
+          <Text variant="footnote" color="textSecondary">Only collections you choose to share get a link.</Text>
         </View>
-        <SettingsRow title="Customize" subtitle="Coming soon" trailing="chevron.right" onPress={() => nav.push("/customize")} />
+        {/* Not built yet: a "Soon" tag instead of a chevron, so it doesn't read as working navigation (P-146). */}
+        <SettingsRow title="Customize" subtitle="Covers, paper and inks" badge="Soon" accessibilityHint="Coming soon" onPress={() => nav.push("/customize")} />
         <SettingsRow title="Privacy policy" subtitle="Opens in your browser" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.privacy)} />
         <SettingsRow title="Terms" subtitle="Opens in your browser" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.terms)} />
         <SettingsRow title="Support" subtitle="Get help" trailing="arrow.up.right" onPress={() => openWebPage(LEGAL.support)} />
         {__DEV__ ? <SettingsRow title="Design gallery" subtitle="Development" trailing="chevron.right" onPress={() => nav.push("/design")} /> : null}
         <View style={styles.actions}>
-          <Button title="Sign out" variant="plain" onPress={confirmSignOut} />
-          <Button title="Delete account" variant="secondary" onPress={() => nav.push("/settings/delete-account")} />
+          <Button title="Sign out" variant="plain" onPress={confirmSignOut} loading={signingOut} />
         </View>
-        {user ? <Text variant="footnote" color="textTertiary">Member since {new Date(user.memberSince).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</Text> : null}
+        {/* Set apart from Sign out, in the danger colour (P-142). */}
+        <View style={styles.danger}>
+          <Button title="Delete account" variant="destructive" onPress={() => nav.push("/settings/delete-account")} disabled={signingOut} />
+        </View>
+        {user ? <Text variant="footnote" color="textTertiary">Member since {new Date(user.memberSince).toLocaleDateString(undefined, { month: "long", year: "numeric" })}</Text> : null}
       </ScrollView>
     </View>
   );
 }
 
-function SettingsRow({ title, subtitle, trailing, onPress }: { title: string; subtitle?: string; trailing?: "chevron.right" | "arrow.up.right"; onPress: () => void }) {
+type RowProps = {
+  title: string;
+  subtitle?: string;
+  subtitleEllipsis?: "tail" | "middle";
+  trailing?: "chevron.right" | "arrow.up.right";
+  /** Shown in place of the trailing icon. */
+  badge?: string;
+  accessibilityHint?: string;
+  onPress: () => void;
+};
+
+function SettingsRow({ title, subtitle, subtitleEllipsis = "tail", trailing, badge, accessibilityHint, onPress }: RowProps) {
   const label = [title, subtitle].filter(Boolean).join(", ");
   return (
-    <Tappable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
+    <Tappable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label} accessibilityHint={accessibilityHint}>
       <View style={styles.rowCopy}>
         <NativeText style={styles.rowTitle}>{title}</NativeText>
-        {subtitle ? <NativeText style={styles.rowSubtitle}>{subtitle}</NativeText> : null}
+        {subtitle ? <NativeText style={styles.rowSubtitle} numberOfLines={1} ellipsizeMode={subtitleEllipsis}>{subtitle}</NativeText> : null}
       </View>
-      {trailing ? <Icon name={trailing} color="textTertiary" size={16} /> : null}
+      {badge ? <Badge label={badge} /> : trailing ? <Icon name={trailing} color="textTertiary" size={16} /> : null}
     </Tappable>
   );
 }
@@ -91,5 +126,6 @@ const styles = StyleSheet.create({
   rowSubtitle: { color: colors.textSecondary, fontSize: 12, lineHeight: 15 },
   privacyNote: { paddingVertical: 3 },
   actions: { gap: space.sm, paddingTop: space.sm },
+  danger: { paddingTop: space.xl, paddingBottom: space.sm },
   pressed: { opacity: pressedOpacity },
 });

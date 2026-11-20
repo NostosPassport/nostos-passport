@@ -17,11 +17,15 @@ export default function Customize() {
       <Text variant="callout" color="textSecondary" align="center">
         Cover leather, page stock and stamp inks are on the way. Nothing to set up yet, and nothing to buy.
       </Text>
-      <Button title="Close" variant="secondary" block={false} onPress={() => nav.back()} />
+      {/* Full width under the centred copy, like the sheet's other actions; not a small box pinned left (P-148). */}
+      <View style={styles.action}>
+        <Button title="Close" variant="secondary" onPress={() => nav.back()} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { backgroundColor: colors.surface, alignItems: "center", gap: space.sm, paddingHorizontal: screenPadding, paddingTop: space.xl, paddingBottom: space.xxl },
+  action: { alignSelf: "stretch", paddingTop: space.sm },
 });
