@@ -10,6 +10,7 @@ import { Text } from "@/components/ui/text";
 import { AccountGate } from "@/features/account/account-gate";
 import { StampMark } from "@/features/book/StampMark";
 import { useUserCoords } from "@/features/location/location-store";
+import { placeDraft } from "@/features/stamps/place-draft";
 import { dayLabel, stampLine, standing, visitSummary } from "@/features/place/place-page";
 import { formatDistance } from "@/lib/format";
 import { localityKey, localityLabel } from "@/lib/place";
@@ -45,7 +46,7 @@ function Page() {
               {stand?.text ? (
                 <Text variant="typewriter" color={stand.canVerify ? "brass" : "dimBrass"} accessibilityLiveRegion="polite">{stand.text}</Text>
               ) : null}
-              <Button title="Stamp this place" icon="seal.fill" block={false} onPress={() => router.push("/stamp/new")} />
+              <Button title="Stamp this place" icon="seal.fill" block={false} onPress={() => { placeDraft.set(data.place); router.push("/stamp/new"); }} />
               {!stand?.canVerify ? <Text variant="footnote" color="textTertiary">You can still make an unverified Now stamp or add a Past visit.</Text> : null}
             </View>
 
