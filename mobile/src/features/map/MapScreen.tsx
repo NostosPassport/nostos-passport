@@ -16,7 +16,7 @@ import { useAnnounce } from "@/lib/a11y";
 import { DEFAULT_REGION } from "@/lib/geo";
 import { nav } from "@/lib/nav";
 import { localityKey, localityLabel } from "@/lib/place";
-import { colors, dimmedOpacity, hairlineWidth, radius, shadows, size, space } from "@/theme";
+import { colors, dimmedOpacity, hairlineWidth, pressedOpacity, radius, shadows, size, space } from "@/theme";
 import { HOTEL_TYPES, resolveCategoryStamp, type CategoryStampArtwork } from "../../../../shared/category-stamp-artwork";
 import { groupPins, isSameSpot, userRegion, type PinGroup } from "./map-model";
 import { PinMarker } from "./PinMarker";
@@ -203,7 +203,7 @@ export function MapScreen() {
             accessibilityLabel={here ? "Recenter map on my location" : "Share location to recenter map"}
             style={({ pressed }) => [styles.recenter, pressed && styles.recenterPressed]}
           >
-            <Icon name="location.fill" color="accent" size={20} />
+            <Icon name="location.fill" color="accent" size={size.icon} />
           </Tappable>
         </View>
       </EditorialSafeContent>
@@ -258,7 +258,8 @@ function MapPin({ group, artwork, onPress }: { group: PinGroup; artwork: Categor
         />
         {count > 1 ? (
           <View style={styles.badge}>
-            <Text variant="caption" color="onAccent" weight="semibold" tabular>{count}</Text>
+            {/* Marker snapshots don't reflow, so the count stays at its base size inside the fixed badge. */}
+            <Text variant="caption" color="onAccent" weight="semibold" tabular maxFontSizeMultiplier={1}>{count}</Text>
           </View>
         ) : null}
       </View>
@@ -281,13 +282,14 @@ function FilterButton({ label, active, disabled, onPress }: { label: string; act
 }
 
 const styles = StyleSheet.create({
-  title: { marginTop: 8, marginBottom: 4 },
-  filters: { height: 48, flexDirection: "row", gap: 8, marginTop: 6 },
+  title: { marginTop: space.xs, marginBottom: space.xxs },
+  filters: { minHeight: 48, flexDirection: "row", gap: space.xs, marginTop: space.xxs },
   // Content-sized cells: "RESTAURANTS" does not fit a quarter of an iPhone SE, so equal widths would wrap it.
   filter: { flexGrow: 1, flexShrink: 0, alignItems: "center", justifyContent: "center", borderBottomWidth: 2, borderBottomColor: colors.transparent },
   filterActive: { borderBottomColor: colors.accent },
   filterDisabled: { opacity: dimmedOpacity },
-  mapFrame: { flex: 1, minHeight: 200, overflow: "hidden", marginTop: 4, marginBottom: 12, backgroundColor: colors.paperDeep },
+  // A hairline frame so the map reads as a plate set on the page, not a raw tile bleeding into the paper.
+  mapFrame: { flex: 1, minHeight: 200, overflow: "hidden", marginTop: space.xxs, marginBottom: space.sm, backgroundColor: colors.paperDeep, borderWidth: hairlineWidth, borderColor: colors.hairline },
   overlay: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center", padding: space.lg },
   card: { alignSelf: "stretch", backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: hairlineWidth, borderColor: colors.hairline, ...shadows.soft },
   note: {
@@ -314,20 +316,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.accent,
+    borderWidth: hairlineWidth,
+    borderColor: colors.surface,
   },
   recenter: {
     position: "absolute",
-    right: 14,
-    bottom: 14,
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    right: space.sm,
+    bottom: space.sm,
+    width: size.hitTarget,
+    height: size.hitTarget,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: hairlineWidth,
     borderColor: colors.hairline,
     ...shadows.soft,
   },
-  recenterPressed: { opacity: 0.75 },
+  recenterPressed: { opacity: pressedOpacity },
 });
