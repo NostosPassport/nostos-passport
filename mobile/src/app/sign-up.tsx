@@ -19,7 +19,7 @@ import { useAnnounce } from "@/lib/a11y";
 import { haptics } from "@/lib/haptics";
 import { LEGAL, openWebPage } from "@/lib/links";
 import { HANDLE_MAX, validateSignup, type SignupErrors, type SignupFields } from "@/lib/validation";
-import { colors, fonts, maxFontSizeMultiplier, screenPadding, size } from "@/theme";
+import { colors, fonts, maxFontSizeMultiplier, screenPadding, size, space } from "@/theme";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
 import { DismissKeyboard } from "@/components/ui/dismiss-keyboard";
@@ -160,7 +160,7 @@ export default function SignUp() {
       </View>
 
       <DismissKeyboard style={styles.heading}>
-        <NativeText style={styles.title} maxFontSizeMultiplier={maxFontSizeMultiplier}>Your passport</NativeText>
+        <NativeText style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={maxFontSizeMultiplier}>Your passport</NativeText>
         <Text variant="callout" color="textSecondary">For people 13 and over. Only you can see it.</Text>
       </DismissKeyboard>
 
@@ -238,7 +238,8 @@ const styles = StyleSheet.create({
   title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 50, lineHeight: 52, letterSpacing: -0.7 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: screenPadding, paddingBottom: 24, gap: 10 },
-  legalLinks: { flexDirection: "row" },
+  // Plain buttons carry their own side padding; pull the row out by it so "Terms" lines up with the fields and checkbox.
+  legalLinks: { flexDirection: "row", marginHorizontal: -space.md },
   notes: { gap: 1 },
   actions: { paddingHorizontal: screenPadding, paddingTop: 8, gap: 8, backgroundColor: colors.background },
 });
