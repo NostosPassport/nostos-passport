@@ -40,7 +40,11 @@ export function CategoryStampMark(props: Props) {
         {scene.borders.map((b, k) => <Path key={k} d={b.d} strokeWidth={b.width} />)}
       </G>
       {props.photoUri
-        ? <SvgImage href={{ uri: props.photoUri }} x={p.x - 2} y={p.y - 2} width={p.s + 4} height={p.s + 4} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${uid}-photo)`} />
+        ? <G>
+            {/* A faint ink tint holds the photo's place while it loads, so it doesn't pop in on blank paper (P-064). */}
+            <Path d={p.clipD} fill={ink} fillOpacity={0.08} />
+            <SvgImage href={{ uri: props.photoUri }} x={p.x - 2} y={p.y - 2} width={p.s + 4} height={p.s + 4} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${uid}-photo)`} />
+          </G>
         : <Path d={p.clipD} fill="none" stroke={ink} strokeWidth={1} strokeDasharray="3 4" strokeOpacity={0.55} />}
       {scene.texts.map((t, k) => (
         <SvgText key={k} x={t.x} y={t.y} fill={ink} fontFamily={face(t.text)} fontSize={t.size} letterSpacing={t.tracking || undefined} textAnchor={t.anchor} textLength={t.textLength} lengthAdjust={t.textLength ? "spacingAndGlyphs" : undefined}>{t.text}</SvgText>

@@ -111,7 +111,7 @@ describe("Edit collection", () => {
     confirmDelete();
     await wrap(<EditCollectionScreen />);
     await fireEvent.press(screen.getByRole("button", { name: "Delete collection" }));
-    await waitFor(() => expect(mockRouter.dismissTo).toHaveBeenCalledWith("/collections"));
+    await waitFor(() => expect(mockRouter.dismissTo).toHaveBeenCalledWith({ pathname: "/gallery", params: { tab: "collections" } }));
     expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 

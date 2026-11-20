@@ -74,7 +74,7 @@ function StampShelf() {
       {passport.status === "ready" && recent.length === 0 ? (
         <Tappable onPress={() => nav.push("/stamp/new")} accessibilityRole="button" accessibilityLabel="Stamp your first place" style={[styles.card, styles.emptyCard]}>
           <Icon name="plus" color="accent" size={size.icon} />
-          <Text variant="footnote" color="textSecondary" align="center">Your first stamp goes here</Text>
+          <Text variant="footnote" color="textSecondary" align="center">Tap the cover to open your passport. Your first stamp goes here.</Text>
         </Tappable>
       ) : (
         <FlatList
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   list: { marginHorizontal: -space.md, flexGrow: 0 },
   row: { paddingHorizontal: space.md + space.xs, gap: space.sm, paddingBottom: space.sm },
   card: { width: CARD_WIDTH, padding: space.sm, gap: space.xxs, borderRadius: radius.chip, backgroundColor: colors.paperRaised, borderWidth: hairlineWidth, borderColor: colors.hairline, ...shadows.contact },
-  emptyCard: { height: MARK_BOX + 56, alignItems: "center", justifyContent: "center", gap: space.xs, marginHorizontal: space.xs },
+  emptyCard: { width: "auto", minHeight: MARK_BOX + 56, paddingHorizontal: space.lg, alignItems: "center", justifyContent: "center", gap: space.xs, marginHorizontal: space.xs },
   markBox: { height: MARK_BOX, alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: space.xxs },
   cardName: { minHeight: 42, color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 17, lineHeight: 21 },
   cardDate: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8 },

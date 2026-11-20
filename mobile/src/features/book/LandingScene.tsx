@@ -24,6 +24,9 @@ type Props = {
   onDone: () => void;
 };
 
+/** Photo pins fade in rather than popping in a single frame (P-108). */
+const PIN_FADE_MS = 220;
+
 export function LandingScene({ stamp, others, pageWidth: pw, pageHeight: ph, onDone }: Props) {
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
@@ -52,7 +55,7 @@ export function LandingScene({ stamp, others, pageWidth: pw, pageHeight: ph, onD
     const f = landingFrame(t.value, reduced);
     return { opacity: reduced ? 0 : (1 - f.inkSpread) * 0.6, transform: [{ scale: 0.8 + f.inkSpread * 0.5 }] };
   });
-  const pin$ = useAnimatedStyle(() => ({ opacity: t.value > LANDING.impact + LANDING.ink ? 1 : 0 }));
+  const pin$ = useAnimatedStyle(() => ({ opacity: reduced ? (t.value > LANDING.impact + LANDING.ink ? 1 : 0) : Math.min(1, Math.max(0, (t.value - LANDING.impact - LANDING.ink) / PIN_FADE_MS)) }));
 
   const spot = { position: "absolute" as const, left: place.cx - place.size / 2, top: place.cy - placementHeight(place) / 2, width: place.size, height: placementHeight(place) };
   return (
