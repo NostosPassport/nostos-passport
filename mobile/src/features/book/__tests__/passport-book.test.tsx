@@ -46,7 +46,7 @@ describe("PassportBook focused reading",()=>{
  });
  it("an empty phone passport holds on the profile page",async()=>{
   mockData=ready();await render(<PassportBook/>);await fireEvent.press(screen.getByLabelText("Open your passport"));
-  await tapSingle(10);await tapSingle(300);
+  await tapSingle(10);await tapSingle(250);
   expect(screen.getByLabelText("Passport pages").props.accessibilityValue).toMatchObject({now:1,max:1});
   expect(screen.queryByLabelText("Nostos. The longing to return home.")).toBeNull();
   expect(screen.getByText("NOSTOS PASSPORT")).toBeVisible();
@@ -58,10 +58,10 @@ describe("PassportBook focused reading",()=>{
   await render(<PassportBook/>);await fireEvent.press(screen.getByLabelText("Open your passport"));
   expect(screen.queryByLabelText("Nostos. The longing to return home.")).toBeNull();expect(screen.getByText("NOSTOS PASSPORT")).toBeVisible();
   expect(screen.getByLabelText("Passport pages").props.accessibilityValue).toMatchObject({now:1,max:3});
-  await tapSingle(300);
+  await tapSingle(250);
   expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(2);
   expect(screen.getByLabelText("Page 1")).toBeVisible();expect(screen.queryByLabelText("Page 2")).toBeNull();
-  await tapSingle(300);
+  await tapSingle(250);
   expect(screen.getByLabelText("Passport pages").props.accessibilityValue.now).toBe(3);
   expect(screen.getByLabelText("Page 2")).toBeVisible();expect(screen.queryByLabelText("Page 1")).toBeNull();
   const fourth=screen.getByRole("button",{name:"Stamp, Fourth, page 2, slot 1"});expect(fourth).toBeVisible();await fireEvent.press(fourth);

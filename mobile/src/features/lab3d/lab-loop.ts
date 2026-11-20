@@ -53,6 +53,8 @@ export class LabLoop {
   private renderedOpen = 0;
   private settledReported = true;
   private ignoring = false;
+  /** True when the GL surface may hold nothing: after a resume, iOS can drop an undrawn buffer (the magenta/blank P-032). */
+  private dirty = true;
 
   constructor(props: LoopProps) {
     this.props = props;
@@ -94,6 +96,7 @@ export class LabLoop {
 
   update(props: LoopProps) {
     const glassChanged = props.glassMode !== this.props.glassMode;
+    if (props.running && !this.props.running) this.dirty = true;
     this.props = props;
     const target: 0 | 1 = props.open ? 1 : 0;
     if (target !== this.openTarget) {
@@ -120,6 +123,7 @@ export class LabLoop {
       this.props.onGlass(stage.setGlass(this.props.glassMode));
       this.props.onReady({ ...stage.info });
       stage.render({ angle: this.sim.angle, tiltX: 0, tiltY: 0, bob: 0, open: this.openProgress });
+      this.dirty = false;
       this.wake();
     } catch (e) {
       this.props.onError(e instanceof Error ? e.message : String(e));
@@ -160,12 +164,13 @@ export class LabLoop {
       this.lastTick = now;
       this.openProgress = stepOpen(this.openProgress, this.openTarget, dt, p.reduceMotion);
       const moved = this.openProgress !== this.renderedOpen;
-      if (!resized && !moved && isSettled(this.sim, input)) {
+      if (!resized && !moved && !this.dirty && isSettled(this.sim, input)) {
         this.lastRender = null;
       } else {
         this.sim = advance(this.sim, dt, input);
         this.stage.render({ angle: this.sim.angle, tiltX: this.sim.tiltX, tiltY: this.sim.tiltY, bob: bobOffset(this.sim.time, input.motion), open: this.openProgress });
         this.renderedOpen = this.openProgress;
+        this.dirty = false;
         if (moved) p.onOpenProgress?.(this.openProgress);
         this.meter.tick(now);
         this.lastRender = now;
