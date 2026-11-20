@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, Stack, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { Keyboard, Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput, useWindowDimensions, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Keyboard, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, Text as NativeText, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, errorText } from "@/api";
@@ -21,6 +21,7 @@ import { locationStore, useLocationState, usePermissionRefresh, useUserCoords } 
 import { CAPTION_MAX, stampFields, stampProblem, type StampMode } from "@/features/stamps/composer";
 import { landingDraft } from "@/features/stamps/landing-draft";
 import { photoDraft, usePhotoDraft } from "@/features/stamps/photo-draft";
+import { placeDraft } from "@/features/stamps/place-draft";
 import { songDraft } from "@/features/stamps/song-draft";
 import { MAX_STAMP_PHOTOS, stampReadiness } from "@/features/stamps/stamp-flow";
 import { StampPreview } from "@/features/stamps/StampPreview";
@@ -63,7 +64,7 @@ function Composer() {
   const [pastDateText, setPastDateText] = useState(() => dateText(new Date()));
   const [search, setSearch] = useState("");
   const searchResults = usePlaceSearch(search, coords);
-  const [place, setPlace] = useState<Place | null>(null);
+  const [place, setPlace] = useState<Place | null>(() => placeDraft.take());
   const photoUris = usePhotoDraft();
   const [activePhoto, setActivePhoto] = useState(0);
   const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
@@ -73,6 +74,8 @@ function Composer() {
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const [now] = useState(Date.now);
+  const submitting = useRef(false);
+  const photoScroller = useRef<ScrollViewInstance>(null);
   const photoWidth = Math.max(1, width - 48);
   const currentPhoto = photoUris.length > 0 ? Math.min(activePhoto, photoUris.length - 1) : 0;
 
@@ -89,6 +92,7 @@ function Composer() {
   useFocusEffect(useCallback(() => { const picked = songDraft.take(); if (picked) setSong(picked.song); }, []));
 
   const stamp = useMutation({
+    onSettled: () => { submitting.current = false; },
     mutationFn: async () => {
       if (!place) throw new Error("no place");
       const here = mode === "now" ? ((await locationStore.currentForPosting()) ?? coords) : null;
@@ -113,6 +117,16 @@ function Composer() {
   const verifiedEligible = mode === "now" && permission === "granted" && nearMatch?.inside === true;
   const resetPlace = () => { Keyboard.dismiss(); setPlace(null); setSearch(""); stamp.reset(); };
   const choosePlace = (next: Place) => { Keyboard.dismiss(); setPlace(next); stamp.reset(); };
+  // isPending only flips after a re-render, so two taps in one frame would both submit. Guard synchronously.
+  const submitStamp = () => { if (submitting.current || done) return; submitting.current = true; stamp.mutate(); };
+  // After a removal the carousel must show the photo the next X will remove: stay on the same slot (now the next
+  // photo), or step back when the last one was removed, and move the scroll position to match.
+  const removeCurrentPhoto = () => {
+    const nextIndex = Math.max(0, Math.min(currentPhoto, photoUris.length - 2));
+    photoDraft.remove(currentPhoto);
+    setActivePhoto(nextIndex);
+    photoScroller.current?.scrollTo({ x: nextIndex * photoWidth, animated: false });
+  };
   const toggleCollection = (id: string) => setCollectionIds((ids) => ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]);
   const searching = search.trim().length >= 2;
   const results = searching ? (searchResults.data?.places ?? []) : [];
@@ -144,12 +158,12 @@ function Composer() {
           {place.cuisines.length > 0 ? <Text variant="footnote" color="textSecondary">{place.cuisines.join(" · ")}</Text> : null}
           <View style={styles.previewBlock}><Kicker>STAMP PREVIEW</Kicker><View style={styles.previewArt}><StampPreview place={place} visitedAt={previewVisitedAt} photoUri={photoUris[0] ?? null} size={previewSize} /></View><Text variant="footnote" color="textTertiary" align="center">The first photo becomes the image on your stamp.</Text></View>
           {verifiedEligible ? <View style={styles.verifiedNotice}><Icon name="checkmark.seal.fill" color="accent" size={20} /><Text variant="callout" color="accent" weight="semibold">Visit eligible for Nostos verification</Text></View> : <Text variant="footnote" color="textTertiary">This visit will be unverified unless Nostos can confirm you&apos;re at the place when you stamp.</Text>}
-          <View style={styles.photoStage}>{photoUris.length > 0 ? <ScrollView horizontal pagingEnabled nestedScrollEnabled directionalLockEnabled showsHorizontalScrollIndicator={false} bounces={photoUris.length > 1} onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}>{photoUris.map((uri, index) => <Pressable key={`${uri}-${index}`} onPress={() => setViewingPhoto(index)} accessibilityRole="button" accessibilityLabel={`Open photo ${index + 1} of ${photoUris.length}`} style={[styles.photoPage, { width: photoWidth }]}><Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" /></Pressable>)}</ScrollView> : <Pressable style={styles.emptyPhoto} onPress={openPhotos} accessibilityRole="button" accessibilityLabel="Add a photo"><Icon name="camera.fill" color="accent" size={30} /><Text variant="callout" color="textSecondary">Add a photo</Text></Pressable>}{photoUris.length > 0 ? <><View style={styles.photoCount}><NativeText style={styles.photoCountText}>{photoUris.length} / {MAX_STAMP_PHOTOS}</NativeText></View><Pressable onPress={() => { photoDraft.remove(currentPhoto); setActivePhoto(Math.max(0, currentPhoto - 1)); }} accessibilityRole="button" accessibilityLabel={`Remove photo ${currentPhoto + 1}`} style={styles.removePhoto}><Icon name="xmark" color="textPrimary" size={20} /></Pressable></> : null}</View>
+          <View style={styles.photoStage}>{photoUris.length > 0 ? <ScrollView ref={photoScroller} horizontal pagingEnabled nestedScrollEnabled directionalLockEnabled showsHorizontalScrollIndicator={false} bounces={photoUris.length > 1} onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}>{photoUris.map((uri, index) => <Pressable key={`${uri}-${index}`} onPress={() => setViewingPhoto(index)} accessibilityRole="button" accessibilityLabel={`Open photo ${index + 1} of ${photoUris.length}`} style={[styles.photoPage, { width: photoWidth }]}><Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" /></Pressable>)}</ScrollView> : <Pressable style={styles.emptyPhoto} onPress={openPhotos} accessibilityRole="button" accessibilityLabel="Add a photo"><Icon name="camera.fill" color="accent" size={30} /><Text variant="callout" color="textSecondary">Add a photo</Text></Pressable>}{photoUris.length > 0 ? <><View style={styles.photoCount}><NativeText style={styles.photoCountText}>{photoUris.length} / {MAX_STAMP_PHOTOS}</NativeText></View><Pressable onPress={removeCurrentPhoto} accessibilityRole="button" accessibilityLabel={`Remove photo ${currentPhoto + 1}`} style={styles.removePhoto}><Icon name="xmark" color="textPrimary" size={20} /></Pressable></> : null}</View>
           {photoUris.length < MAX_STAMP_PHOTOS ? <EditorialButton label={photoUris.length === 0 ? "+  Add photos" : "+  Add more photos"} outline onPress={openPhotos} /> : null}
           <View style={styles.captionBlock}><Kicker>A FEW WORDS</Kicker><TextInput value={caption} onChangeText={setCaption} maxLength={CAPTION_MAX} placeholder="An afternoon worth keeping." placeholderTextColor={colors.textSecondary} multiline inputAccessoryViewButtonLabel="Done" returnKeyType="done" submitBehavior="blurAndSubmit" style={styles.captionInput} accessibilityLabel="A few words" /><NativeText style={styles.counter}>{caption.length} / {CAPTION_MAX}</NativeText></View><Rule />
           {song ? <View style={styles.songWrap}><SongRow song={song} trailing={<Pressable onPress={() => setSong(null)} accessibilityRole="button" accessibilityLabel="Remove song" style={styles.hitTarget}><Icon name="xmark" color="textSecondary" size={18} /></Pressable>} /></View> : <Pressable style={styles.songAction} onPress={() => { Keyboard.dismiss(); router.push("/stamp/song"); }} accessibilityRole="button"><Icon name="music.note" color="textPrimary" size={23} /><NativeText style={styles.songLabel}>Add a song</NativeText></Pressable>}
           {(collections.data?.collections.length ?? 0) > 0 ? <><Rule /><View style={styles.collectionBlock}><Kicker>ADD TO COLLECTIONS · OPTIONAL</Kicker>{collections.data!.collections.map((collection) => { const selected = collectionIds.includes(collection.id); return <Pressable key={collection.id} onPress={() => toggleCollection(collection.id)} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} style={styles.collectionRow}><Icon name={selected ? "checkmark.circle.fill" : "circle"} color={selected ? "accent" : "textTertiary"} size={22} /><View style={styles.collectionText}><Text variant="body" weight="semibold">{collection.name}</Text><Text variant="footnote" color="textSecondary">{collection.stampCount} {collection.stampCount === 1 ? "stamp" : "stamps"}</Text></View></Pressable>; })}</View></> : null}
-          <Rule />{readiness.hint && !stamp.isPending ? <Text variant="footnote" color="textTertiary">{readiness.hint}</Text> : null}{stamp.error ? <InlineError message={errorText(stamp.error, "Couldn't stamp that. Try again.")} onRetry={() => stamp.mutate()} retrying={stamp.isPending} /> : null}<EditorialButton label={stamp.isPending ? `Stamping…${photoUris.length ? ` ${Math.round(progress * 100)}%` : ""}` : "Stamp this place"} disabled={!readiness.ready} onPress={() => { Keyboard.dismiss(); haptics.select(); stamp.mutate(); }} />
+          <Rule />{readiness.hint && !stamp.isPending ? <Text variant="footnote" color="textTertiary">{readiness.hint}</Text> : null}{stamp.error ? <InlineError message={errorText(stamp.error, "Couldn't stamp that. Try again.")} onRetry={submitStamp} retrying={stamp.isPending} /> : null}<EditorialButton label={stamp.isPending ? `Stamping…${photoUris.length ? ` ${Math.round(progress * 100)}%` : ""}` : "Stamp this place"} disabled={!readiness.ready} onPress={() => { if (submitting.current) return; Keyboard.dismiss(); haptics.select(); submitStamp(); }} />
         </>}
       </ScrollView>
       <PhotoViewer photos={photoUris.map((uri, index) => ({ id: `${uri}-${index}`, uri }))} index={viewingPhoto} onClose={() => setViewingPhoto(null)} />
