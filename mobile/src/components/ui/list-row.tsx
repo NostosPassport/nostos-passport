@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   header: { letterSpacing: 1.2 },
   footer: { paddingHorizontal: 0 },
   group: { backgroundColor: colors.transparent, borderTopWidth: hairlineWidth, borderBottomWidth: hairlineWidth, borderColor: colors.hairline },
-  row: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 73, paddingVertical: space.sm },
+  row: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: size.listRow, paddingVertical: space.sm },
   pressed: { opacity: pressedOpacity },
   text: { flex: 1, gap: space.xxs },
   titleRow: { flexDirection: "row", alignItems: "center", gap: space.xxs },
