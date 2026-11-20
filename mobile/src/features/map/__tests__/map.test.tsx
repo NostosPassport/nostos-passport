@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { View } from "react-native";
 
 import type { Place, UserPlacesResponse } from "@/api/contracts";
+import { nav } from "@/lib/nav";
 import { MapScreen } from "../MapScreen";
 import { PinMarker } from "../PinMarker";
 
@@ -12,7 +13,14 @@ let mockPlaces: Place[] = [];
 let mockMine: UserPlacesResponse["places"] = [];
 let mockHere: { lat: number; lng: number } | null = null;
 
-jest.mock("expo-router", () => ({ router: { push: (...a: unknown[]) => mockPush(...a) } }));
+let mockFocused = true;
+let mockRecenterListener: (() => void) | null = null;
+let mockMineState: { isPending?: boolean; isError?: boolean } = {};
+
+jest.mock("expo-router", () => ({
+  router: { push: (...a: unknown[]) => mockPush(...a) },
+  useNavigation: () => ({ isFocused: () => mockFocused }),
+}));
 jest.mock("react-native-maps", () => {
   const React = jest.requireActual("react");
   const { View: V, Pressable: P } = jest.requireActual("react-native");
@@ -36,10 +44,17 @@ jest.mock("react-native-maps", () => {
 jest.mock("@/api/queries", () => ({
   useMe: () => ({ data: { user: { handle: "ava" } } }),
   usePlaces: () => ({ data: { places: mockPlaces, attribution: null } }),
-  useUserPlaces: () => ({ data: { places: mockMine } }),
+  useUserPlaces: () => (mockMineState.isPending ? { isPending: true } : mockMineState.isError ? { isError: true, refetch: jest.fn() } : { data: { places: mockMine } }),
 }));
 jest.mock("@/features/location/location-store", () => ({ useUserCoords: () => mockHere }));
-jest.mock("../recenter", () => ({ mapRecenter: { subscribe: () => () => undefined } }));
+jest.mock("../recenter", () => ({
+  mapRecenter: {
+    subscribe: (listener: () => void) => {
+      mockRecenterListener = listener;
+      return () => undefined;
+    },
+  },
+}));
 
 const place = (id: string, over: Partial<Place> = {}): Place => ({
   id,
@@ -104,6 +119,76 @@ describe("MapScreen", () => {
     mockPlaces = [restaurant, bar, unvisited];
     mockMine = [mineRow(restaurant, "stamp-restaurant"), mineRow(bar, "stamp-bar")];
     mockHere = { lat: 40.7314, lng: -74.0078 };
+    mockFocused = true;
+    mockRecenterListener = null;
+    mockMineState = {};
+    nav.reset();
+  });
+
+  it("explains an empty map and offers to stamp", async () => {
+    mockMine = [];
+    await render(<MapScreen />);
+    expect(screen.getByText("Places you stamp appear here")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Stamp a place" }));
+    expect(mockPush).toHaveBeenCalledWith("/stamp/new");
+  });
+
+  it("shows loading and error states over the map", async () => {
+    mockMineState = { isPending: true };
+    const { rerender } = await render(<MapScreen />);
+    expect(screen.getByLabelText("Loading your places")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "HOTELS" })).toBeDisabled();
+    mockMineState = { isError: true };
+    await rerender(<MapScreen />);
+    expect(screen.getByText("Couldn't load your places.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+  });
+
+  it("says so when a filter has no matches", async () => {
+    await render(<MapScreen />);
+    await fireEvent.press(screen.getByRole("tab", { name: "HOTELS" }));
+    expect(screen.getByText("No hotels stamped yet.")).toBeTruthy();
+  });
+
+  it("refits the camera to the filtered places", async () => {
+    await render(<MapScreen />);
+    mockAnimateToRegion.mockClear();
+    await fireEvent.press(screen.getByRole("tab", { name: "BARS" }));
+    expect(mockAnimateToRegion).toHaveBeenCalledWith(expect.objectContaining({ latitude: 40.7335 }), 300);
+  });
+
+  it("goes back to ALL after a new stamp so the new pin shows", async () => {
+    const { rerender } = await render(<MapScreen />);
+    await fireEvent.press(screen.getByRole("tab", { name: "BARS" }));
+    expect(screen.queryByLabelText("Don Angie, open most recent stamp")).toBeNull();
+    const hotel = place("hotel", { name: "Public Hotel", category: "hotel", primaryType: "hotel", lat: 40.7224 });
+    mockPlaces = [...mockPlaces, hotel];
+    mockMine = [...mockMine, mineRow(hotel, "stamp-hotel")];
+    await rerender(<MapScreen />);
+    expect(screen.getByRole("tab", { name: "ALL" })).toBeSelected();
+    expect(screen.getByLabelText("Public Hotel, open most recent stamp")).toBeTruthy();
+    expect(screen.getByLabelText("Don Angie, open most recent stamp")).toBeTruthy();
+  });
+
+  it("re-centres on a Map tab press only when the map is already showing", async () => {
+    await render(<MapScreen />);
+    mockAnimateToRegion.mockClear();
+    mockFocused = false;
+    mockRecenterListener?.();
+    expect(mockAnimateToRegion).not.toHaveBeenCalled();
+    mockFocused = true;
+    mockRecenterListener?.();
+    expect(mockAnimateToRegion).toHaveBeenCalledWith(expect.objectContaining({ latitude: 40.7314, latitudeDelta: 0.026 }), 300);
+  });
+
+  it("groups places on the same spot into one pin with a count", async () => {
+    const twin = place("twin", { name: "Upstairs Bar", category: "bar", lat: 40.7314, lng: -74.0078 });
+    mockPlaces = [...mockPlaces, twin];
+    mockMine = [...mockMine, mineRow(twin, "stamp-twin")];
+    await render(<MapScreen />);
+    expect(screen.queryByLabelText("Don Angie, open most recent stamp")).toBeNull();
+    expect(screen.getByLabelText("2 places: Don Angie, Upstairs Bar. Choose one")).toBeTruthy();
+    expect(screen.getByText("2")).toBeTruthy();
   });
 
   it("shows only stamped places and the user's location", async () => {
