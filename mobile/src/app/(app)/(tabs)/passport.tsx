@@ -26,9 +26,9 @@ export default function Passport() {
 }
 
 const SHELF_LIMIT = 12;
-const CARD_WIDTH = 132;
-const MARK_SIZE = 112;
-const MARK_BOX = 104;
+const CARD_WIDTH = 112;
+const MARK_SIZE = 96;
+const MARK_BOX = 78;
 
 function firstName(displayName: string): string {
   return displayName.trim().split(/\s+/)[0] ?? "";
@@ -111,7 +111,7 @@ function ShelfCard({ stamp }: { stamp: StampView }) {
           timeZone={stamp.place.timeZone}
         />
       </View>
-      <Text style={styles.cardName} numberOfLines={2} maxFontSizeMultiplier={1.2}>{stamp.place.name}</Text>
+      <Text style={styles.cardName} numberOfLines={1} maxFontSizeMultiplier={1.2}>{stamp.place.name}</Text>
       <Text style={styles.cardDate} numberOfLines={1} maxFontSizeMultiplier={1.2}>{date.toUpperCase()}</Text>
     </Tappable>
   );
@@ -128,9 +128,9 @@ const styles = StyleSheet.create({
   seeAll: { minHeight: size.hitTarget, flexDirection: "row", alignItems: "center", gap: space.xxs },
   list: { marginHorizontal: -space.md, flexGrow: 0 },
   row: { paddingHorizontal: space.md + space.xs, gap: space.sm, paddingBottom: space.sm },
-  card: { width: CARD_WIDTH, padding: space.sm, gap: space.xxs, borderRadius: radius.chip, backgroundColor: colors.paperRaised, borderWidth: hairlineWidth, borderColor: colors.hairline, ...shadows.contact },
-  emptyCard: { width: "auto", minHeight: MARK_BOX + 56, paddingHorizontal: space.lg, alignItems: "center", justifyContent: "center", gap: space.xs, marginHorizontal: space.xs },
+  card: { width: CARD_WIDTH, padding: space.xs, gap: 2, borderRadius: radius.chip, backgroundColor: colors.paperRaised, borderWidth: hairlineWidth, borderColor: colors.hairline, ...shadows.contact },
+  emptyCard: { width: "auto", minHeight: MARK_BOX + 40, paddingHorizontal: space.lg, alignItems: "center", justifyContent: "center", gap: space.xs, marginHorizontal: space.xs },
   markBox: { height: MARK_BOX, alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: space.xxs },
-  cardName: { minHeight: 42, color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 17, lineHeight: 21 },
+  cardName: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 15, lineHeight: 18 },
   cardDate: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.8 },
 });
