@@ -22,6 +22,7 @@ import { CAPTION_MAX, stampChanges } from "@/features/stamps/composer";
 import { patchStamp } from "@/features/stamps/cache";
 import { useRevealAboveKeyboard } from "@/features/stamps/reveal-above-keyboard";
 import { songDraft } from "@/features/stamps/song-draft";
+import { AddSongRow } from "@/features/stamps/add-song-row";
 import { RemoveSongButton, SongRow } from "@/features/stamps/song-row";
 import { MAX_STAMP_PHOTOS } from "@/features/stamps/stamp-flow";
 import { useVisitDateField, visitDateText } from "@/features/stamps/visit-date";
@@ -217,7 +218,7 @@ function EditForm({ stamp }: { stamp: StampView }) {
           <Field label="A few words" value={caption} onChangeText={setCaption} onFocus={() => reveal(captionY.current)} error={empty ? "Add a photo, caption or song." : null} maxLength={CAPTION_MAX} placeholder="An afternoon worth keeping." multiline inputAccessoryViewButtonLabel="Done" returnKeyType="done" submitBehavior="blurAndSubmit" style={styles.captionInput} />
         </FieldGroup>
       </View>
-      {song ? <SongRow song={song} trailing={<RemoveSongButton onPress={() => setSong(null)} />} /> : <Button title="Add a song" icon="music.note" variant="secondary" onPress={() => nav.push("/stamp/song")} />}
+      {song ? <SongRow song={song} trailing={<RemoveSongButton onPress={() => setSong(null)} />} /> : <AddSongRow onPress={() => nav.push("/stamp/song")} />}
     </ScrollView>
   );
 }

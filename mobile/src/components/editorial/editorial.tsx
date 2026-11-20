@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/ui/icon";
 import { Tappable } from "@/components/ui/tappable";
-import { colors, fonts, maxFontSizeMultiplier, pressedOpacity } from "@/theme";
+import { colors, fonts, maxFontSizeMultiplier, pressedOpacity, screenPadding } from "@/theme";
 
 /** Editorial text with the app-wide Dynamic Type cap, so big type grows but never past what the layout holds. */
 function Text(props: TextProps) {
@@ -72,12 +72,12 @@ export function EditorialButton({ label, onPress, disabled = false, loading = fa
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  safe: { flex: 1, paddingHorizontal: 24 },
+  safe: { flex: 1, paddingHorizontal: screenPadding },
   header: { height: 82, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   wordmark: { color: colors.accent, fontFamily: fonts.serifRegular, fontSize: 66, lineHeight: 68, letterSpacing: -2.5 },
   wordmarkCompact: { fontSize: 46, lineHeight: 48 },
   display: { color: colors.textPrimary, fontFamily: fonts.serifRegular, letterSpacing: -1.6, paddingTop: 2 },
-  kicker: { color: colors.textPrimary, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.35, textTransform: "uppercase" },
+  kicker: { color: colors.textPrimary, fontFamily: fonts.monoBold, fontSize: 12, lineHeight: 16, letterSpacing: 1.35, textTransform: "uppercase" },
   body: { color: colors.textPrimary, fontFamily: fonts.sans, lineHeight: 18 },
   muted: { color: colors.textSecondary },
   rule: { height: StyleSheet.hairlineWidth, backgroundColor: colors.hairline, width: "100%" },
