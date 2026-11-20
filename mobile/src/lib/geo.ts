@@ -1,12 +1,18 @@
 import type { Region } from "react-native-maps";
 
-/** East Village and Lower East Side, framed for a portrait phone. */
-export const HOME_REGION: Region = {
-  latitude: 40.7222,
-  longitude: -73.9855,
-  latitudeDelta: 0.026,
-  longitudeDelta: 0.018,
+/**
+ * Where the map opens when there is nothing better: no stamps and no location. Places are worldwide, so this is a
+ * neutral wide view rather than any one city (P-058). The map prefers the visited places' region, then the user.
+ */
+export const DEFAULT_REGION: Region = {
+  latitude: 30,
+  longitude: -30,
+  latitudeDelta: 90,
+  longitudeDelta: 120,
 };
+
+/** A neighbourhood-sized span, framed for a portrait phone. Re-centring on the user never stays wider (P-055). */
+export const NEIGHBOURHOOD_SPAN = { latitudeDelta: 0.026, longitudeDelta: 0.018 } as const;
 
 export type Coords = { lat: number; lng: number };
 

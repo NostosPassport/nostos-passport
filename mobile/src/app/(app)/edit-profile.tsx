@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Stack } from "expo-router";
-import { useState } from "react";
-import { ActionSheetIOS, StyleSheet } from "react-native";
+import { useRef, useState } from "react";
+import { ActionSheetIOS, StyleSheet, type TextInputInstance } from "react-native";
 
 import { api, errorText } from "@/api";
 import { AvatarResponse, type ProfileSettingsResponse } from "@/api/contracts";
@@ -29,6 +29,8 @@ export default function EditProfile() {
   if (!data) {
     return (
       <FormScreen>
+        {/* A way out while the profile loads or fails, not only swipe-down (P-154). */}
+        <Stack.Screen options={headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> })} />
         {settings.isError ? <InlineError message={errorText(settings.error, "Couldn't load your profile.")} onRetry={() => void settings.refetch()} retrying={settings.isFetching} /> : <SkeletonRows count={4} />}
       </FormScreen>
     );
@@ -41,6 +43,7 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
   const initial: ProfileValues = { displayName: data.profile.displayName, bio: data.profile.bio };
   const [values, setValues] = useState(initial);
   const [saved, setSaved] = useState(false);
+  const bioRef = useRef<TextInputInstance>(null);
   const change = profileChanges(initial, values);
   const dirty = Object.keys(change).length > 0;
   const problem = profileProblem(values);
@@ -109,9 +112,14 @@ function EditForm({ data }: { data: ProfileSettingsResponse }) {
         <Text variant="callout" color="accent" weight="semibold">{photo.isPending ? "Uploading…" : avatarUrl ? "Change photo" : "Add photo"}</Text>
       </Tappable>
       {photo.error && <InlineError message={errorText(photo.error, "Couldn't update your photo. Try again.")} />}
-      <FieldGroup footer={`${values.bio.trim().length}/${BIO_MAX}`} errors={[problem && dirty ? problem : null]}>
-        <Field label="Name" value={values.displayName} onChangeText={set("displayName")} maxLength={NAME_MAX} autoCapitalize="words" textContentType="name" returnKeyType="next" />
-        <Field label="Bio" value={values.bio} onChangeText={set("bio")} maxLength={BIO_MAX} placeholder="A line about you" multiline accessibilityHint={`Up to ${BIO_MAX} characters`} />
+      {/* Count the same string maxLength caps (P-153). */}
+      <FieldGroup footer={`${values.bio.length}/${BIO_MAX}`} errors={[problem && dirty ? problem : null]}>
+        <Field label="Name" value={values.displayName} onChangeText={set("displayName")} maxLength={NAME_MAX} autoCapitalize="words" textContentType="name" returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => bioRef.current?.focus()} />
+        <Field ref={bioRef} label="Bio" value={values.bio} onChangeText={set("bio")} maxLength={BIO_MAX} placeholder="A line about you" multiline accessibilityHint={`Up to ${BIO_MAX} characters`} />
+      </FieldGroup>
+      {/* The handle is shown but can't be edited, so nobody goes looking for a way to change it (P-152). */}
+      <FieldGroup footer="Handles can't be changed.">
+        <Field label="Handle" value={`@${data.profile.handle}`} editable={false} accessibilityHint="Handles can't be changed" />
       </FieldGroup>
       {save.error && <InlineError message={errorText(save.error, "Couldn't save. Check the fields and try again.")} />}
     </FormScreen>

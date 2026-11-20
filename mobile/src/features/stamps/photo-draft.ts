@@ -1,6 +1,7 @@
 /**
  * The photos for the stamp being made, shared between the composer and photo-source handoff.
- * Camera captures are trusted directly; library imports reach this draft only after validation.
+ * Camera captures and Photo Library picks both land here after preparation (re-encode, EXIF/GPS stripped). Library
+ * picks are not authenticity-gated: verification applies to the visit, not to photos.
  */
 import { useSyncExternalStore } from "react";
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from "react-native-reanimated";
 
@@ -21,10 +21,14 @@ export function SegmentedControl<K extends string>({ segments, value, onChange, 
   const reduceMotion = useReducedMotion();
   const index = Math.max(0, segments.findIndex((s) => s.key === value));
   const x = useSharedValue(0);
+  const placed = useRef(false);
   const segWidth = width / segments.length;
 
   useEffect(() => {
-    x.value = reduceMotion ? index * segWidth : withSpring(index * segWidth, spring.snappy);
+    if (segWidth <= 0) return;
+    // First layout: put the thumb straight on the selected segment instead of sliding in from the left.
+    if (!placed.current || reduceMotion) { x.value = index * segWidth; placed.current = true; return; }
+    x.value = withSpring(index * segWidth, spring.snappy);
   }, [index, segWidth, reduceMotion, x]);
 
   const thumb = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
@@ -75,7 +79,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: space.xxs,
     borderRadius: radius.chip,
-    backgroundColor: colors.background,
+    backgroundColor: colors.paperDeep,
   },
   thumb: {
     position: "absolute",
@@ -83,7 +87,7 @@ const styles = StyleSheet.create({
     bottom: space.xxs,
     left: space.xxs,
     borderRadius: radius.chip - space.xxs,
-    backgroundColor: colors.elevated,
+    backgroundColor: colors.paperRaised,
   },
   segment: { flex: 1, minHeight: size.hitTarget - space.xs, alignItems: "center", justifyContent: "center", paddingHorizontal: space.xxs },
 });

@@ -1,16 +1,18 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 import { ApiError, errorText } from "@/api";
+import type { MeResponse } from "@/api/contracts";
 import { deleteAccountWithCode, startDeleteAccountVerification, type EmailChallenge } from "@/api/email-auth";
+import { qk } from "@/api/keys";
 import { farewellNotice, useAuth } from "@/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { FormScreen } from "@/components/ui/form-screen";
 import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/ui/inline-error";
 import { Text } from "@/components/ui/text";
-import { Field, FieldGroup } from "@/components/ui/text-field";
+import { CodeStep } from "@/features/account/code-step";
 import { haptics } from "@/lib/haptics";
 import { colors, radius, size, space } from "@/theme";
 
@@ -25,6 +27,8 @@ const FAREWELL = "Your account is deleted.";
 
 export default function DeleteAccount() {
   const { forget } = useAuth();
+  // Read from the cache only (Settings has already loaded it); this screen never fetches the account itself.
+  const accountEmail = useQueryClient().getQueryData<MeResponse>(qk.me)?.user.email;
   const [challenge, setChallenge] = useState<EmailChallenge | null>(null);
   const [code, setCode] = useState("");
 
@@ -60,6 +64,12 @@ export default function DeleteAccount() {
     },
   });
 
+  const resend = () => {
+    if (requestCode.isPending) return;
+    del.reset();
+    requestCode.mutate();
+  };
+
   const confirm = () => {
     if (!challenge) {
       requestCode.mutate();
@@ -90,24 +100,21 @@ export default function DeleteAccount() {
       </View>
 
       {challenge ? (
-        <FieldGroup footer="Enter the six-digit code we sent to your current account email.">
-          <Field
-            label="Verification code"
-            placeholder="000000"
-            value={code}
-            onChangeText={(value) => {
-              setCode(value.replace(/\D/g, "").slice(0, 6));
-              if (del.error) del.reset();
-            }}
-            keyboardType="number-pad"
-            textContentType="oneTimeCode"
-            autoComplete="one-time-code"
-            maxLength={6}
-            returnKeyType="done"
-            onSubmitEditing={confirm}
-            testID="delete-code"
-          />
-        </FieldGroup>
+        <CodeStep
+          challengeId={challenge.challengeId}
+          resendAfterSeconds={challenge.resendAfterSeconds}
+          code={code}
+          onChangeCode={(value) => {
+            setCode(value);
+            if (del.error) del.reset();
+          }}
+          sentTo={accountEmail ?? "your account email"}
+          onResend={resend}
+          resending={requestCode.isPending}
+          invalid={!!del.error}
+          onSubmitEditing={confirm}
+          testID="delete-code"
+        />
       ) : (
         <Text variant="callout" color="textSecondary">We’ll email your current account address with a confirmation code before anything is deleted.</Text>
       )}
@@ -119,7 +126,7 @@ export default function DeleteAccount() {
         variant="destructive"
         onPress={confirm}
         disabled={challenge ? code.length !== 6 : false}
-        loading={requestCode.isPending || del.isPending}
+        loading={(!challenge && requestCode.isPending) || del.isPending}
       />
     </FormScreen>
   );

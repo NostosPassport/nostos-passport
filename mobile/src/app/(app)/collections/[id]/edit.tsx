@@ -30,13 +30,22 @@ export default function EditCollectionScreen() {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: qk.collection(id) });
       void queryClient.invalidateQueries({ queryKey: qk.collections });
-      router.replace("/collections");
+      // Pop the sheet and the deleted collection's passport together, back to the existing list, so the deleted
+      // collection is not left in the back stack (P-128).
+      router.dismissTo("/collections");
     },
   });
 
   const confirmDelete = () => Alert.alert("Delete collection?", "The collection will be removed, but every stamp will stay in your master Passport.", [
     { text: "Cancel", style: "cancel" },
-    { text: "Delete", style: "destructive", onPress: () => remove.mutate() },
+    {
+      text: "Delete",
+      style: "destructive",
+      onPress: () => {
+        update.reset();
+        remove.mutate();
+      },
+    },
   ]);
 
   if (query.isPending) return <View style={styles.loading}><Stack.Screen options={{ title: "Edit collection" }} /><SkeletonRows count={5} /></View>;
@@ -50,10 +59,15 @@ export default function EditCollectionScreen() {
       <Stack.Screen options={{ title: "Edit collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} />
       <CollectionEditor
         initial={initial}
-        submitLabel="Save changes"
+        submitLabel="Save"
         busy={update.isPending}
-        error={update.error ?? remove.error}
-        onSubmit={(draft) => update.mutate(draft)}
+        error={remove.error ?? update.error}
+        errorFallback={remove.error ? "Couldn't delete this collection. Try again." : "Couldn't save this collection. Try again."}
+        knownStamps={collection.stamps}
+        onSubmit={(draft) => {
+          remove.reset();
+          update.mutate(draft);
+        }}
         onDelete={confirmDelete}
         deleting={remove.isPending}
       />

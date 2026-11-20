@@ -79,6 +79,24 @@ describe("sign-up age gate", () => {
     await waitFor(() => expect(mockSignIn).toHaveBeenCalledTimes(1));
   });
 
+  it("on an empty submit, marks only the first field that needs attention", async () => {
+    await wrap(<SignUp />);
+    await fireEvent.press(screen.getByLabelText("Verify email"));
+    expect(screen.getByLabelText("Email, needs attention")).toBeTruthy();
+    expect(screen.getByLabelText("Handle")).toBeTruthy();
+    expect(screen.getByLabelText("Name")).toBeTruthy();
+    expect(screen.queryByText("Agree to the Terms and Privacy policy to continue.")).toBeNull();
+  });
+
+  it("shows the server error above the button and clears it when a field changes", async () => {
+    mockStartSignup.mockRejectedValue(new Error("boom"));
+    await fill("05051990");
+    await fireEvent.press(screen.getByLabelText("Verify email"));
+    expect(await screen.findByText("Couldn't send your verification code. Try again.")).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText("Name"), "Sammy");
+    expect(screen.queryByText("Couldn't send your verification code. Try again.")).toBeNull();
+  });
+
   it("never requests verification for someone under 13", async () => {
     await fill(yearsAgo(12));
     await fireEvent.press(screen.getByLabelText("Verify email"));

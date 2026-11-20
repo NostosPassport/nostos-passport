@@ -3,6 +3,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 
 import { router } from "expo-router";
+import { ActionSheetIOS, Alert } from "react-native";
+
+import { api } from "@/api";
 
 import { songDraft } from "@/features/stamps/song-draft";
 import { ApiError } from "@/api/client";
@@ -82,6 +85,46 @@ describe("Stamp detail", () => {
     expect(screen.getByText("LOCATION VERIFIED BY NOSTOS")).toBeTruthy();
   });
 
+  it("keeps a way back while loading, gone or failed", async () => {
+    for (const q of [
+      { isPending: true },
+      { isError: true, error: new ApiError(404, "not_found", "Stamp not found"), refetch: jest.fn() },
+      { isError: true, error: new ApiError(0, "timeout", "Nostos isn't responding."), refetch: jest.fn() },
+    ]) {
+      mockStamp = q;
+      const r = await wrap(<StampDetail />);
+      await fireEvent.press(screen.getByRole("button", { name: "Back" }));
+      await r.unmount();
+    }
+    expect(screen.queryByRole("button", { name: "More options" })).toBeNull();
+    expect(router.back).toHaveBeenCalled();
+  });
+
+  it("labels photo pages and leaves out an unknown memory number", async () => {
+    const photo = (id: string, position: number) => ({ id, url: `u-${id}`, position, x: null, y: null, rotation: null });
+    mockStamp = { data: { stamp: { ...stamp, page: null, slot: null, photos: [photo("a", 0), photo("b", 1)] } } };
+    await wrap(<StampDetail />);
+    expect(screen.getByLabelText("Photo 1 of 2")).toBeTruthy();
+    expect(screen.getByLabelText("Photo 2 of 2")).toBeTruthy();
+    expect(screen.queryByText(/NO\. 001/)).toBeNull();
+    expect(screen.getByRole("button", { name: "More options" })).toBeTruthy();
+  });
+
+  it("delete says passport, and shows progress while it runs", async () => {
+    const sheet = jest.spyOn(ActionSheetIOS, "showActionSheetWithOptions").mockImplementation((_o, cb) => cb(1));
+    const alert = jest.spyOn(Alert, "alert").mockImplementation((_t, _m, buttons) => buttons?.[1]?.onPress?.());
+    (api.stamps.remove as jest.Mock).mockReturnValue(new Promise(() => undefined));
+    mockStamp = { data: { stamp } };
+    await wrap(<StampDetail />);
+    await fireEvent.press(screen.getByRole("button", { name: "More options" }));
+    expect(sheet.mock.calls[0]?.[0].options).toEqual(["Edit memory", "Delete from passport", "Cancel"]);
+    expect(alert.mock.calls[0]?.[0]).toBe("Delete from your passport?");
+    expect(await screen.findByRole("progressbar", { name: "Deleting this memory" })).toBeTruthy();
+    expect(api.stamps.remove).toHaveBeenCalledTimes(1);
+    sheet.mockRestore();
+    alert.mockRestore();
+  });
+
   it("shows unverified only as fine-print metadata", async () => {
     mockStamp = { data: { stamp: { ...stamp, verified: false, verifiedAt: null } } };
     await wrap(<StampDetail />);
@@ -112,16 +155,28 @@ describe("Song picker", () => {
     await act(async () => jest.advanceTimersByTime(350));
   };
 
-  it("starts with an in-content search field and can clear the selected song", async () => {
+  it("starts with an in-content search field, and Cancel leaves without picking anything", async () => {
     mockSongs = { isPending: true, fetchStatus: "idle" };
     const a = await wrap(<SongPicker />);
     expect(screen.getByText("SONG OR ARTIST")).toBeTruthy();
     expect(screen.getByLabelText("Song or artist")).toBeTruthy();
-    expect(screen.getByText("No song")).toBeTruthy();
-    await fireEvent.press(screen.getByText("No song"));
-    expect(songDraft.take()).toEqual({ song: null });
+    expect(screen.queryByText("No song")).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
+    expect(songDraft.take()).toBeUndefined();
     expect(router.back).toHaveBeenCalledTimes(1);
     await a.unmount();
+  });
+
+  it("keeps the first pick when two rows are tapped quickly", async () => {
+    mockSongs = { data: { songs: [
+      { title: "Heroes", artist: "David Bowie", album: null, artUrl: null, sourceId: "1" },
+      { title: "Changes", artist: "David Bowie", album: null, artUrl: null, sourceId: "2" },
+    ] } };
+    await wrap(<SongPicker />);
+    await searchFor("Bowie");
+    await fireEvent.press(screen.getByLabelText("Heroes by David Bowie"));
+    await fireEvent.press(screen.getByLabelText("Changes by David Bowie"));
+    expect(songDraft.take()?.song?.title).toBe("Heroes");
   });
 
   it("debounces typing and shows a searching state without results or an empty message", async () => {

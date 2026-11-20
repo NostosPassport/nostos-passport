@@ -3,9 +3,14 @@ import { useEffect } from "react";
 import type { StampView } from "@/api/contracts";
 import { useMe, useUserStamps } from "@/api/queries";
 
+/**
+ * Every stamp in the master Passport. Later pages load one after another in the background: `pending` covers only
+ * the first page, and `loadingMore` the rest, so the editor can show what has loaded right away (P-132).
+ */
 export function useMyStamps(): {
   stamps: StampView[];
   pending: boolean;
+  loadingMore: boolean;
   error: boolean;
   retry: () => void;
 } {
@@ -19,11 +24,13 @@ export function useMyStamps(): {
 
   return {
     stamps: (query.data?.pages ?? []).flatMap((page) => page.stamps),
-    pending: me.isPending || query.isPending || !!query.hasNextPage,
+    pending: me.isPending || query.isPending,
+    loadingMore: !query.isPending && !!query.hasNextPage && !query.isFetchNextPageError,
     error: me.isError || query.isError,
     retry: () => {
       void me.refetch();
-      void query.refetch();
+      if (query.isFetchNextPageError) void query.fetchNextPage();
+      else void query.refetch();
     },
   };
 }

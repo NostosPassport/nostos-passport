@@ -20,7 +20,7 @@ import { Tappable } from "@/components/ui/tappable";
 
 export default function PlacePage() {
   return (
-    <AccountGate title="Place" message="Sign in to see your stamps at this place.">
+    <AccountGate title="Your visits here" message="Checking your account first.">
       <Page />
     </AccountGate>
   );
@@ -49,7 +49,8 @@ function Page() {
                 <Text variant="typewriter" color={stand.canVerify ? "brass" : "dimBrass"} accessibilityLiveRegion="polite">{stand.text}</Text>
               ) : null}
               <Button title="Stamp this place" icon="seal.fill" block={false} onPress={() => { placeDraft.set(data.place); nav.push("/stamp/new"); }} />
-              {!stand?.canVerify ? <Text variant="footnote" color="textTertiary">You can still make an unverified Now stamp or add a Past visit.</Text> : null}
+              {/* Only when we know the user is out of range; with location off there is nothing to explain. */}
+              {stand?.text && !stand.canVerify ? <Text variant="footnote" color="textTertiary">You&apos;re too far away to verify this visit, but you can still stamp it or add an earlier visit.</Text> : null}
             </View>
 
             {summary ? <Text variant="typewriterSmall" color="dimBrass">{summary.toUpperCase()}</Text> : <Text variant="callout" color="textSecondary">You haven&apos;t stamped this place yet.</Text>}

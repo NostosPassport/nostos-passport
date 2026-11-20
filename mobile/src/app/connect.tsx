@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -9,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { InlineError } from "@/components/ui/inline-error";
 import { colors, screenPadding, space } from "@/theme";
 
+const SPINNER_DELAY_MS = 300;
+
 /**
  * Signed in, but the account hasn't loaded yet (just signed in, or offline at launch). The app
  * waits here so the Terms check can't be skipped.
@@ -18,6 +21,13 @@ export default function Connect() {
   const me = useMe();
   const { signOut } = useAuth();
   const failed = me.isError || (me.isPending && me.fetchStatus === "paused");
+  // Usually this screen lasts a few frames between sign-in and the app. Hold the spinner back briefly so a fast
+  // load doesn't flash one (P-031x); a slow load still shows it.
+  const [showSpinner, setShowSpinner] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSpinner(true), SPINNER_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.md }]}>
@@ -29,9 +39,9 @@ export default function Connect() {
             onRetry={() => void me.refetch()}
             retrying={me.isFetching}
           />
-        ) : (
+        ) : showSpinner ? (
           <ActivityIndicator color={colors.textSecondary} accessibilityLabel="Loading your account" />
-        )}
+        ) : null}
       </View>
       {failed && <Button title="Sign out" variant="plain" onPress={() => void signOut()} />}
     </View>

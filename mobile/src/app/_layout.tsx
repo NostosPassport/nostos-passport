@@ -34,6 +34,7 @@ const navigationTheme = {
 };
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+SplashScreen.setOptions({ fade: true, duration: 250 });
 void SystemUI.setBackgroundColorAsync(colors.background).catch(() => undefined);
 initErrorReporting();
 

@@ -1,6 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { Alert, ScrollView, Share, StyleSheet, View } from "react-native";
+import { useRef } from "react";
+// Core Clipboard still works on iOS but is deprecated (dev-only warning once). Swap for expo-clipboard when it is added.
+import { Alert, Clipboard, ScrollView, Share, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/api";
 import { qk } from "@/api/keys";
@@ -9,13 +12,10 @@ import { Button } from "@/components/ui/button";
 import { InlineError } from "@/components/ui/inline-error";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { toast, ToastHost } from "@/components/ui/toast";
 import { colors, hairlineWidth, space } from "@/theme";
 import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
 import { nav } from "@/lib/nav";
-
-async function openShareSheet(name: string, url: string) {
-  await Share.share({ title: name, message: `${name} on Nostos`, url });
-}
 
 export default function ShareCollectionScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
@@ -23,6 +23,23 @@ export default function ShareCollectionScreen() {
   const queryClient = useQueryClient();
   const collectionQuery = useCollection(id);
   const shareQuery = useCollectionShare(id);
+  const insets = useSafeAreaInsets();
+
+  // One share sheet at a time: taps while it is open (or presenting) are ignored (P-138).
+  const sheetOpen = useRef(false);
+  const openShareSheet = async (name: string, url: string) => {
+    if (sheetOpen.current) return;
+    sheetOpen.current = true;
+    try {
+      await Share.share({ title: name, message: `${name} on Nostos`, url });
+    } finally {
+      sheetOpen.current = false;
+    }
+  };
+  const copyLink = (url: string) => {
+    Clipboard.setString(url);
+    toast.show("Link copied");
+  };
 
   const enable = useMutation({
     mutationFn: () => api.collections.enableShare(id),
@@ -62,42 +79,47 @@ export default function ShareCollectionScreen() {
   const share = shareQuery.data.share;
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.root} contentInsetAdjustmentBehavior="automatic">
-      <Stack.Screen options={{ title: "Share collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} />
-      <View style={styles.hero}>
-        <Text variant="title">{collection.name}</Text>
-        <Text color="textSecondary">Only this collection can be shared. Your master Passport always stays private.</Text>
-      </View>
+    <View style={styles.scroll}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.root} contentInsetAdjustmentBehavior="automatic">
+        <Stack.Screen options={{ title: "Share collection", presentation: "modal", ...headerTextButtons({ left: <HeaderButton label="Cancel" onPress={() => nav.back()} /> }) }} />
+        <View style={styles.hero}>
+          <Text variant="title">{collection.name}</Text>
+          <Text color="textSecondary">Only this collection can be shared. Your master Passport always stays private.</Text>
+        </View>
 
-      <View style={styles.card}>
-        <Text variant="title2">Web link</Text>
-        <Text color="textSecondary">
-          {share.enabled
-            ? "Anyone with this link can view the live collection on the web. The page is not listed or indexed by search engines."
-            : "Create a private-by-link web view that works without a Nostos account."}
+        <View style={styles.card}>
+          <Text variant="title2">Web link</Text>
+          <Text color="textSecondary">
+            {share.enabled
+              ? "Anyone with this link can view the live collection on the web. The page is not listed or indexed by search engines."
+              : "Create a private-by-link web view that works without a Nostos account."}
+          </Text>
+          {share.enabled ? (
+            <>
+              <Text variant="caption" color="textSecondary" numberOfLines={2} selectable>{share.url}</Text>
+              <Button title="Share link" icon="square.and.arrow.up" onPress={() => void openShareSheet(collection.name, share.url)} />
+              <Button title="Copy link" icon="doc.on.doc" variant="secondary" onPress={() => copyLink(share.url)} />
+              <Button title="Disable shared link" variant="destructive" loading={disable.isPending} onPress={confirmDisable} />
+            </>
+          ) : (
+            <Button title="Create and share link" icon="square.and.arrow.up" loading={enable.isPending} onPress={() => enable.mutate()} />
+          )}
+          {mutationError ? (
+            <InlineError
+              message="Couldn't update this shared link."
+              // Retrying a disable asks again: it is destructive and the first confirmation was for that attempt (P-139).
+              onRetry={share.enabled ? confirmDisable : () => enable.mutate()}
+              retrying={enable.isPending || disable.isPending}
+            />
+          ) : null}
+        </View>
+
+        <Text variant="caption" color="textSecondary">
+          Removing a stamp from this collection removes it from the shared page. Deleting the collection or disabling its link makes the shared page unavailable.
         </Text>
-        {share.enabled ? (
-          <>
-            <Text variant="caption" color="textSecondary" numberOfLines={2} selectable>{share.url}</Text>
-            <Button title="Share link" icon="square.and.arrow.up" onPress={() => void openShareSheet(collection.name, share.url)} />
-            <Button title="Disable shared link" variant="destructive" loading={disable.isPending} onPress={confirmDisable} />
-          </>
-        ) : (
-          <Button title="Create and share link" icon="square.and.arrow.up" loading={enable.isPending} onPress={() => enable.mutate()} />
-        )}
-        {mutationError ? (
-          <InlineError
-            message="Couldn't update this shared link."
-            onRetry={share.enabled ? () => disable.mutate() : () => enable.mutate()}
-            retrying={enable.isPending || disable.isPending}
-          />
-        ) : null}
-      </View>
-
-      <Text variant="caption" color="textSecondary">
-        Removing a stamp from this collection removes it from the shared page. Deleting the collection or disabling its link makes the shared page unavailable.
-      </Text>
-    </ScrollView>
+      </ScrollView>
+      <ToastHost bottom={insets.bottom + space.lg} />
+    </View>
   );
 }
 
