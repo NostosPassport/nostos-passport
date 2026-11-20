@@ -1,4 +1,5 @@
 import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -8,8 +9,10 @@ import { nav } from "@/lib/nav";
 
 /** A quiet teaser. Nothing here can be bought or changed yet. */
 export default function Customize() {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.root}>
+    // Bottom padding clears the home indicator the same way the location sheet does.
+    <View style={[styles.root, { paddingBottom: insets.bottom + space.md }]}>
       <Icon name="lock.fill" color="brass" size={size.iconLarge} />
       <Text variant="title2" accessibilityRole="header">
         Customize
@@ -26,6 +29,6 @@ export default function Customize() {
 }
 
 const styles = StyleSheet.create({
-  root: { backgroundColor: colors.surface, alignItems: "center", gap: space.sm, paddingHorizontal: screenPadding, paddingTop: space.xl, paddingBottom: space.xxl },
+  root: { backgroundColor: colors.surface, alignItems: "center", gap: space.sm, paddingHorizontal: screenPadding, paddingTop: space.xl },
   action: { alignSelf: "stretch", paddingTop: space.sm },
 });

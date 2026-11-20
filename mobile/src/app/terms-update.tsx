@@ -36,7 +36,7 @@ export default function TermsUpdate() {
       <View style={styles.actions}>
         {accept.error && <InlineError message={errorText(accept.error, "Couldn't save that. Try again.")} />}
         <Button title="Agree and continue" onPress={() => accept.mutate()} loading={accept.isPending} disabled={!version} />
-        <Button title="Sign out" variant="secondary" onPress={() => void signOut()} />
+        <Button title="Sign out" variant="plain" onPress={() => void signOut()} />
       </View>
     </ScrollView>
   );
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.background },
   root: { flexGrow: 1, paddingHorizontal: screenPadding, justifyContent: "space-between", gap: space.xl },
   body: { gap: space.md, paddingTop: space.xl },
-  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 48, lineHeight: 50, letterSpacing: -1.1 },
+  title: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 50, lineHeight: 52, letterSpacing: -0.7 },
   links: { gap: space.sm, marginTop: space.sm },
   actions: { gap: space.sm },
 });
