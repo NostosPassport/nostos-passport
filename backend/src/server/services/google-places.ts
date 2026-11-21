@@ -194,8 +194,27 @@ function labelForType(type: string): string | null {
   return null;
 }
 
-/** A place's own primary type decides first; otherwise food, then drink, then lodging tags. */
+const CLUB_TYPES = new Set(["night_club", "nightclub", "dance_club"]);
+/** Primary types too broad to outrank a nightclub tag: Google files many clubs that serve food as a "restaurant". */
+const GENERIC_PRIMARY = new Set(["restaurant", "cafe", "coffee_shop", "food", "event_venue", "live_music_venue", "point_of_interest", "establishment"]);
+
+/** True when a place with a generic primary type is also tagged as a nightclub, so it should stamp as a club. */
+export function isClub(primaryType: string | null, types: readonly string[]): boolean {
+  return (!primaryType || GENERIC_PRIMARY.has(primaryType)) && types.some((type) => CLUB_TYPES.has(type));
+}
+
+/**
+ * The category and primary type a stored venue should be shown and stamped as. Applied when reading, so venues saved
+ * before a rule change (e.g. a club Google lists as a "restaurant") are corrected without rewriting rows.
+ */
+export function effectivePlaceType<T extends { category: string | null; googlePrimaryType: string | null; googleTypes: readonly string[] }>(row: T): { category: string | null; primaryType: string | null } {
+  if (isClub(row.googlePrimaryType, row.googleTypes)) return { category: "bar", primaryType: "night_club" };
+  return { category: row.category, primaryType: row.googlePrimaryType };
+}
+
+/** A nightclub tag beats a generic primary type; otherwise the place's own primary type decides first, then food, drink and lodging tags. */
 export function categoryFor(primaryType: string | null, types: readonly string[]): PlaceCategory | null {
+  if (isClub(primaryType, types)) return "bar";
   if (primaryType && BAR_TYPES.has(primaryType)) return "bar";
   if (primaryType === "restaurant" || primaryType?.endsWith("_restaurant") || primaryType === "steak_house") return "restaurant";
   if (primaryType && HOTEL_TYPES.has(primaryType)) return "hotel";

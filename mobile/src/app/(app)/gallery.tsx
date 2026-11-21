@@ -44,15 +44,15 @@ export default function Gallery() {
     <EditorialScreen>
       <EditorialSafeContent bottom>
         <View style={styles.topBar}>
-          <Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Back" style={styles.iconTarget}>
+          <Tappable onPress={() => nav.back()} accessibilityRole="button" accessibilityLabel="Back" style={[styles.iconTarget, styles.side]}>
             <Icon name="chevron.left" color="textPrimary" size={size.iconSmall} />
           </Tappable>
           <Wordmark compact />
           {tab === "stamps" ? (
-            <Tappable onPress={() => setSelecting((v) => !v)} accessibilityRole="button" accessibilityLabel={selecting ? "Done selecting" : "Select stamps"} style={styles.iconTarget}>
-              <Kicker style={styles.selectToggle}>{selecting ? "DONE" : "SELECT"}</Kicker>
+            <Tappable onPress={() => setSelecting((v) => !v)} accessibilityRole="button" accessibilityLabel={selecting ? "Done selecting" : "Select stamps"} style={[styles.iconTarget, styles.side, styles.sideEnd]}>
+              <Kicker numberOfLines={1} maxFontSizeMultiplier={1.2} style={styles.selectToggle}>{selecting ? "DONE" : "SELECT"}</Kicker>
             </Tappable>
-          ) : <View style={styles.iconTarget} />}
+          ) : <View style={[styles.iconTarget, styles.side]} />}
         </View>
         <Rule />
         <DisplayTitle size={48} style={styles.title}>Gallery.</DisplayTitle>
@@ -185,6 +185,9 @@ const styles = StyleSheet.create({
   title: { marginTop: 18, marginBottom: 4 },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   iconTarget: { width: size.hitTarget, height: size.hitTarget, alignItems: "center", justifyContent: "center" },
+  // Both ends the same width so the wordmark stays centred, and wide enough for SELECT on one line.
+  side: { width: 76, alignItems: "flex-start" },
+  sideEnd: { alignItems: "flex-end" },
   tabs: { flexDirection: "row", gap: space.lg, marginTop: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
   tab: { minHeight: size.hitTarget, justifyContent: "center", borderBottomWidth: 2, borderBottomColor: colors.transparent, marginBottom: -StyleSheet.hairlineWidth },
   tabActive: { borderBottomColor: colors.accent },
