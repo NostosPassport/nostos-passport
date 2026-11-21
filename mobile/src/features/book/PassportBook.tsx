@@ -141,7 +141,7 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
   useEffect(() => { const sub = AppState.addEventListener("change", (s) => setAppActive(s === "active")); return () => sub.remove(); }, []);
   const stampPages = data.stamps.map((s) => s.page);
   // An empty master passport still has a first stamp page to turn to, with a way to stamp (P-034).
-  const emptyMaster = !collectionId && data.stamps.length === 0;
+  const emptyMaster = !collectionId && data.stamps.every((s) => s.page === null);
   const total = compactReader ? Math.max(emptyMaster ? 2 : 1, focusPageCount(stampPages)) : Math.max(emptyMaster ? 2 : 1, focusSpreadCount(stampPages));
   const current = Math.min(readerIndex, total - 1);
   const availableWidth = width - insets.left - insets.right;

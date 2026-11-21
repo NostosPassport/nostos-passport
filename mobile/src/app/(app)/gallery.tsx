@@ -32,8 +32,11 @@ export default function Gallery() {
   const [tab, setTab] = useState<Tab>(initial);
   const [pageWidth, setPageWidth] = useState(0);
   const pager = useRef<ScrollViewInstance>(null);
+  // Select mode picks several stamps to add to a book at once.
+  const [selecting, setSelecting] = useState(false);
   const show = (next: Tab) => {
     setTab(next);
+    if (next !== "stamps") setSelecting(false);
     pager.current?.scrollTo({ x: next === "collections" ? pageWidth : 0, animated: true });
   };
 
@@ -45,7 +48,11 @@ export default function Gallery() {
             <Icon name="chevron.left" color="textPrimary" size={size.iconSmall} />
           </Tappable>
           <Wordmark compact />
-          <View style={styles.iconTarget} />
+          {tab === "stamps" ? (
+            <Tappable onPress={() => setSelecting((v) => !v)} accessibilityRole="button" accessibilityLabel={selecting ? "Done selecting" : "Select stamps"} style={styles.iconTarget}>
+              <Kicker style={styles.selectToggle}>{selecting ? "DONE" : "SELECT"}</Kicker>
+            </Tappable>
+          ) : <View style={styles.iconTarget} />}
         </View>
         <Rule />
         <DisplayTitle size={48} style={styles.title}>Gallery.</DisplayTitle>
@@ -64,9 +71,10 @@ export default function Gallery() {
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               contentOffset={{ x: initial === "collections" ? pageWidth : 0, y: 0 }}
+              scrollEnabled={!selecting}
               onMomentumScrollEnd={(e) => setTab(e.nativeEvent.contentOffset.x > pageWidth / 2 ? "collections" : "stamps")}
             >
-              <View style={{ width: pageWidth }}><StampsPage /></View>
+              <View style={{ width: pageWidth }}><StampsPage selecting={selecting} onDoneSelecting={() => setSelecting(false)} /></View>
               <View style={{ width: pageWidth }}><CollectionsList /></View>
             </ScrollView>
           ) : null}
@@ -76,9 +84,17 @@ export default function Gallery() {
   );
 }
 
-function StampsPage() {
+function StampsPage({ selecting, onDoneSelecting }: { selecting: boolean; onDoneSelecting: () => void }) {
   const passport = usePassport();
   const [filter, setFilter] = useState<Filter>("all");
+  const [picked, setPicked] = useState<string[]>([]);
+  const visiblePicked = selecting ? picked : [];
+  const togglePick = (id: string) => setPicked((ids) => (ids.includes(id) ? ids.filter((v) => v !== id) : [...ids, id]));
+  const addPicked = () => {
+    nav.push({ pathname: "/add-to", params: { ids: visiblePicked.join(",") } });
+    setPicked([]);
+    onDoneSelecting();
+  };
   const stamps = useMemo(() => {
     const sorted = [...passport.stamps].sort((a, b) => Date.parse(b.visitedAt) - Date.parse(a.visitedAt));
     return filter === "all" ? sorted : sorted.filter((stamp) => stamp.artwork?.kind === filter);
@@ -103,12 +119,18 @@ function StampsPage() {
             keyExtractor={(stamp) => stamp.id}
             contentContainerStyle={stamps.length ? styles.list : styles.emptyList}
             showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => <GalleryStamp stamp={item} />}
+            renderItem={({ item }) => <GalleryStamp stamp={item} selecting={selecting} picked={visiblePicked.includes(item.id)} onPick={() => togglePick(item.id)} />}
             ListEmptyComponent={filter === "all"
               ? <ScreenState kind="empty" title="No stamps yet" message="Stamp a restaurant, bar or hotel and it shows up here." action={{ label: "Stamp a place", onPress: () => nav.push("/stamp/new") }} />
               : <ScreenState kind="empty" title={`No ${filter} stamps yet`} />}
           />
         )}
+        {selecting ? (
+          <View style={styles.selectBar}>
+            <Text style={styles.selectCount} maxFontSizeMultiplier={maxFontSizeMultiplier}>{visiblePicked.length ? `${visiblePicked.length} SELECTED` : "TAP STAMPS TO SELECT"}</Text>
+            <EditorialButton label="Add to…" onPress={addPicked} disabled={visiblePicked.length === 0} />
+          </View>
+        ) : null}
     </View>
   );
 }
@@ -121,16 +143,20 @@ function FilterButton({ label, active, onPress }: { label: string; active: boole
   );
 }
 
-function GalleryStamp({ stamp }: { stamp: StampView }) {
+function GalleryStamp({ stamp, selecting, picked, onPick }: { stamp: StampView; selecting: boolean; picked: boolean; onPick: () => void }) {
   const locality = localityLabel(stamp.place);
   const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: stamp.place.timeZone }).format(new Date(stamp.visitedAt));
   return (
     <Tappable
-      onPress={() => nav.push({ pathname: "/stamp/[id]", params: { id: stamp.id } })}
-      accessibilityRole="button"
-      accessibilityLabel={`Open ${stamp.place.name} stamp`}
+      onPress={selecting ? onPick : () => nav.push({ pathname: "/stamp/[id]", params: { id: stamp.id } })}
+      onLongPress={selecting ? undefined : () => nav.push({ pathname: "/add-to", params: { ids: stamp.id } })}
+      accessibilityRole={selecting ? "checkbox" : "button"}
+      accessibilityState={selecting ? { checked: picked } : undefined}
+      accessibilityLabel={selecting ? `${stamp.place.name} stamp` : `Open ${stamp.place.name} stamp`}
+      accessibilityHint={selecting ? undefined : "Long press to add it to your passport or a collection"}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
+      {selecting ? <Icon name={picked ? "checkmark.circle.fill" : "circle"} color={picked ? "accent" : "textTertiary"} size={size.icon} /> : null}
       <View style={styles.mark}>
         <StampMark
           input={{ placeId: stamp.place.id, placeName: stamp.place.name, localityKey: localityKey(stamp.place), localityName: locality }}
@@ -148,8 +174,9 @@ function GalleryStamp({ stamp }: { stamp: StampView }) {
           <Text style={styles.date} maxFontSizeMultiplier={maxFontSizeMultiplier}>{date}</Text>
           {stamp.artwork?.kind ? <Text style={styles.kind} maxFontSizeMultiplier={maxFontSizeMultiplier}>{stamp.artwork.kind.toUpperCase()}</Text> : null}
         </View>
+        {stamp.page === null ? <Text style={styles.outOfPassport} maxFontSizeMultiplier={maxFontSizeMultiplier}>NOT IN PASSPORT</Text> : null}
       </View>
-      <Icon name="chevron.right" color="textTertiary" size={16} />
+      {selecting ? null : <Icon name="chevron.right" color="textTertiary" size={16} />}
     </Tappable>
   );
 }
@@ -179,6 +206,10 @@ const styles = StyleSheet.create({
   date: { color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" },
   kind: { color: colors.dimBrass, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 0.8 },
   pressed: { opacity: pressedOpacity },
+  selectToggle: { color: colors.accent },
+  outOfPassport: { marginTop: 8, color: colors.textTertiary, fontFamily: fonts.mono, fontSize: 10, letterSpacing: 0.8 },
+  selectBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, paddingTop: space.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hairline },
+  selectCount: { flexShrink: 1, color: colors.textSecondary, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 0.8 },
 });
 
 

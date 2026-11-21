@@ -151,8 +151,10 @@ function useActions(stamp: StampView | undefined): { actions: StampAction[]; del
   return {
     deleting,
     actions: [
+      { label: "Add to…", onPress: () => nav.push({ pathname: "/add-to", params: { ids: stamp.id } }) },
       { label: "Edit memory", onPress: () => nav.push({ pathname: "/stamp/edit", params: { id: stamp.id } }) },
-      { label: "Delete from passport", destructive: true, onPress: () => Alert.alert("Delete from your passport?", "This memory is removed for good.", [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive", onPress: () => { if (!remove.isPending) remove.mutate(stamp.id); } }]) },
+      // Taking a stamp out of a book happens in Add to… or with the trash in the book; this deletes it everywhere.
+      { label: "Delete stamp", destructive: true, onPress: () => Alert.alert("Delete this stamp?", "It's removed for good, from your gallery, your passport and every collection.", [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive", onPress: () => { if (!remove.isPending) remove.mutate(stamp.id); } }]) },
     ],
   };
 }

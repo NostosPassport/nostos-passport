@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { router, Stack } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { View, StyleSheet } from "react-native";
 
 import { api } from "@/api";
@@ -10,9 +10,10 @@ import { colors } from "@/theme";
 import { HeaderButton, headerTextButtons } from "@/components/ui/header-button";
 import { nav } from "@/lib/nav";
 
-const initial: CollectionDraft = { name: "", color: COLLECTION_COLORS[0]!.id, stampIds: [] };
-
 export default function NewCollectionScreen() {
+  // "New collection" from the Add to… sheet starts with the stamps it was opened for.
+  const params = useLocalSearchParams<{ stampIds?: string }>();
+  const initial: CollectionDraft = { name: "", color: COLLECTION_COLORS[0]!.id, stampIds: (params.stampIds ?? "").split(",").filter(Boolean) };
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (draft: CollectionDraft) => api.collections.create(draft),
