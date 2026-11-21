@@ -48,7 +48,11 @@ const REGISTRY = new Map<string, Contract>([
   ["POST /api/places/[id]/stamps", C.CreateStampResponse],
   ["GET /api/stamps/[id]", C.StampResponse],
   ["PATCH /api/stamps/[id]", C.StampResponse],
+  ["GET /api/stamps/[id]/collections", Collections.StampMembershipResponse],
   ["PUT /api/stamps/[id]/collections", Collections.StampCollectionsResponse],
+  ["PUT /api/stamps/[id]/passport", Collections.StampMembershipResponse],
+  ["GET /api/layouts/[book]", Collections.BookLayoutResponse],
+  ["PUT /api/layouts/[book]/[stampId]", Collections.BookLayoutResponse],
   ["POST /api/stamps/[id]/photos", C.ErrorResponse],
   ["PATCH /api/stamps/[id]/photos", C.StampResponse],
   ["POST /api/stamps/[id]/photos/[photoId]/remove", C.StampResponse],
@@ -74,7 +78,7 @@ function discoverRoutes(root: string) {
       const source = readFileSync(full, "utf8");
       const relative = path.relative(root, dir).split(path.sep).join("/");
       const route = `/api/${relative}`;
-      for (const match of source.matchAll(/export const (GET|POST|PUT|PATCH|DELETE)\b/g)) found.push(`${match[1]} ${route}`);
+      for (const match of source.matchAll(/export (?:const|(?:async )?function) (GET|POST|PUT|PATCH|DELETE)\b/g)) found.push(`${match[1]} ${route}`);
     }
   };
   walk(root);

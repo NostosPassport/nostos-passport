@@ -9,7 +9,6 @@ const TABLES = [
   "collection_share",
   "collection_stamp",
   "collection",
-  "pinned_stamp",
   "stamp_photo",
   "photo",
   "venue",
