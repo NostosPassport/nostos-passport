@@ -114,7 +114,8 @@ function Memory({ stamp, actions, deleting }: { stamp: StampView; actions: Stamp
         {/* The photos are a matted print: paper border, hairline edge, contact shadow. No photos, no empty frame. */}
         {photoCount ? (
           <View style={styles.photoBlock}>
-            <View style={styles.print}>
+            {/* Sized to the photo exactly: left to itself the pager grew far past the photo on device. */}
+            <View style={[styles.print, { width: photoWidth + PHOTO_MAT * 2 + hairlineWidth * 2, height: photoHeight + PHOTO_MAT * 2 + hairlineWidth * 2 }]}>
               <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} bounces={photoCount > 1} style={{ width: photoWidth, height: photoHeight }} onMomentumScrollEnd={(event) => setActivePhoto(Math.round(event.nativeEvent.contentOffset.x / photoWidth))}>
                 {stamp.photos.map((photo, index) => <Tappable key={photo.id} onPress={() => setViewingPhoto(index)} accessibilityRole="imagebutton" accessibilityLabel={`Photo ${index + 1} of ${photoCount}`} accessibilityHint="Opens the photo full screen" style={[styles.photoPage, { width: photoWidth, height: photoHeight }]}><Image source={{ uri: mediaUrl(photo.url), cacheKey: photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" /></Tappable>)}
               </ScrollView>
@@ -151,8 +152,10 @@ function useActions(stamp: StampView | undefined): { actions: StampAction[]; del
   return {
     deleting,
     actions: [
+      { label: "Add to…", onPress: () => nav.push({ pathname: "/add-to", params: { ids: stamp.id } }) },
       { label: "Edit memory", onPress: () => nav.push({ pathname: "/stamp/edit", params: { id: stamp.id } }) },
-      { label: "Delete from passport", destructive: true, onPress: () => Alert.alert("Delete from your passport?", "This memory is removed for good.", [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive", onPress: () => { if (!remove.isPending) remove.mutate(stamp.id); } }]) },
+      // Taking a stamp out of a book happens in Add to… or with the trash in the book; this deletes it everywhere.
+      { label: "Delete stamp", destructive: true, onPress: () => Alert.alert("Delete this stamp?", "It's removed for good, from your gallery, your passport and every collection.", [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive", onPress: () => { if (!remove.isPending) remove.mutate(stamp.id); } }]) },
     ],
   };
 }
@@ -173,7 +176,7 @@ const styles = StyleSheet.create({
   memoryTitle: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 64, lineHeight: 70, letterSpacing: -1.6, paddingTop: 2 },
   stampArt: { minHeight: 230, alignItems: "center", justifyContent: "center", paddingVertical: space.xs },
   photoBlock: { gap: space.xs, marginTop: space.xxs, marginBottom: space.xxs },
-  print: { alignSelf: "center", padding: PHOTO_MAT, borderRadius: radius.chip / 4, backgroundColor: colors.paperRaised, borderWidth: hairlineWidth, borderColor: colors.hairline, ...shadows.contact },
+  print: { alignSelf: "center", overflow: "hidden", padding: PHOTO_MAT, borderRadius: radius.chip / 4, backgroundColor: colors.paperRaised, borderWidth: hairlineWidth, borderColor: colors.hairline, ...shadows.contact },
   photoPage: { backgroundColor: colors.elevated },
   caption: { color: colors.textPrimary, fontFamily: fonts.serifRegular, fontSize: 44, lineHeight: 50, letterSpacing: -1.1, marginVertical: space.xxs, paddingTop: 2 },
   captionLong: { fontSize: type.title.fontSize, lineHeight: type.title.lineHeight, letterSpacing: 0 },

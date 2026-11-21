@@ -9,7 +9,7 @@ import type { Db } from "@/lib/db";
 import { distanceMeters } from "@/lib/geo";
 import { OSM_ATTRIBUTION, slugify } from "@/lib/osm";
 import { notFound } from "@/server/errors";
-import { googleNearby, googlePlaceDetails, googlePlacePriceLevel, googleTextSearch, type GooglePlace, type PlaceCategory } from "@/server/services/google-places";
+import { effectivePlaceType, googleNearby, googlePlaceDetails, googlePlacePriceLevel, googleTextSearch, type GooglePlace, type PlaceCategory } from "@/server/services/google-places";
 
 const placeSelect = {
   id: true,
@@ -103,9 +103,9 @@ const toView = (row: PlaceRow): PlaceView => ({
   geofenceMeters: row.geofenceMeters,
   fromOsm: row.osmId !== null,
   googlePlaceId: row.googlePlaceId,
-  category: category(row.category),
+  category: category(effectivePlaceType(row).category),
   cuisines: row.cuisines,
-  primaryType: row.googlePrimaryType,
+  primaryType: effectivePlaceType(row).primaryType,
   businessStatus: row.googleBusinessStatus,
 });
 

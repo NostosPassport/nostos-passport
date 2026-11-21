@@ -110,15 +110,15 @@ describe("Stamp detail", () => {
     expect(screen.getByRole("button", { name: "More options" })).toBeTruthy();
   });
 
-  it("delete says passport, and shows progress while it runs", async () => {
-    const sheet = jest.spyOn(ActionSheetIOS, "showActionSheetWithOptions").mockImplementation((_o, cb) => cb(1));
+  it("offers Add to…, says delete is everywhere, and shows progress while it runs", async () => {
+    const sheet = jest.spyOn(ActionSheetIOS, "showActionSheetWithOptions").mockImplementation((_o, cb) => cb(2));
     const alert = jest.spyOn(Alert, "alert").mockImplementation((_t, _m, buttons) => buttons?.[1]?.onPress?.());
     (api.stamps.remove as jest.Mock).mockReturnValue(new Promise(() => undefined));
     mockStamp = { data: { stamp } };
     await wrap(<StampDetail />);
     await fireEvent.press(screen.getByRole("button", { name: "More options" }));
-    expect(sheet.mock.calls[0]?.[0].options).toEqual(["Edit memory", "Delete from passport", "Cancel"]);
-    expect(alert.mock.calls[0]?.[0]).toBe("Delete from your passport?");
+    expect(sheet.mock.calls[0]?.[0].options).toEqual(["Add to…", "Edit memory", "Delete stamp", "Cancel"]);
+    expect(alert.mock.calls[0]?.[0]).toBe("Delete this stamp?");
     expect(await screen.findByRole("progressbar", { name: "Deleting this memory" })).toBeTruthy();
     expect(api.stamps.remove).toHaveBeenCalledTimes(1);
     sheet.mockRestore();

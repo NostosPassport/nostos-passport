@@ -12,5 +12,8 @@ export const qk = {
   userStamps: (handle: string) => ["user", handle, "stamps"] as const,
   userPlaces: (handle: string) => ["user", handle, "places"] as const,
   stamp: (id: string) => ["stamp", id] as const,
+  stampBooks: (id: string) => ["stamp", id, "books"] as const,
+  /** Hand placements in one book: "passport" or a collection id. */
+  bookLayout: (book: string) => ["layouts", book] as const,
   songSearch: (q: string) => ["songs", "search", q] as const,
 };

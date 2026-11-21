@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { priceTierForGoogleLevel } from "@/server/services/google-price-cache";
-import { categoryFor, cuisineTags, googleNearby, googlePlaceDetails, googleTextSearch, localityFromAddressComponents } from "@/server/services/google-places";
+import { categoryFor, cuisineTags, effectivePlaceType, googleNearby, googlePlaceDetails, googleTextSearch, localityFromAddressComponents } from "@/server/services/google-places";
 
 const originalKey = process.env.GOOGLE_PLACES_API_KEY;
 afterEach(() => {
@@ -77,6 +77,16 @@ describe("Google Places normalization", () => {
       timeZone: "America/New_York",
       priceLevel: null,
     })]);
+  });
+
+  it("stamps a club that Google files as a generic restaurant as a club, but not a specific restaurant with a club tag", () => {
+    expect(categoryFor("restaurant", ["restaurant", "night_club", "bar", "food"])).toBe("bar");
+    expect(categoryFor("live_music_venue", ["live_music_venue", "night_club"])).toBe("bar");
+    expect(categoryFor("italian_restaurant", ["italian_restaurant", "night_club"])).toBe("restaurant");
+    expect(categoryFor("restaurant", ["restaurant", "bar"])).toBe("restaurant");
+    // Venues saved before the rule are corrected when read.
+    expect(effectivePlaceType({ category: "restaurant", googlePrimaryType: "restaurant", googleTypes: ["restaurant", "night_club"] })).toEqual({ category: "bar", primaryType: "night_club" });
+    expect(effectivePlaceType({ category: "restaurant", googlePrimaryType: "pizza_restaurant", googleTypes: ["pizza_restaurant"] })).toEqual({ category: "restaurant", primaryType: "pizza_restaurant" });
   });
 
   it("classifies hotels without taking over restaurants and bars", () => {

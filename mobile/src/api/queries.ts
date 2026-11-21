@@ -103,6 +103,17 @@ export function useStamp(id: string) {
   return useQuery({ queryKey: qk.stamp(id), queryFn: () => api.stamps.get(id) });
 }
 
+/** The main passport and collections that hold a stamp. */
+export function useStampBooks(id: string, enabled = true) {
+  return useQuery({ queryKey: qk.stampBooks(id), queryFn: () => api.books.ofStamp(id), enabled: enabled && id !== "" });
+}
+
+/** Where the owner placed stamps by hand in one book. A failed load leaves every stamp in its automatic slot. */
+export function useBookLayout(book: string, enabled = true) {
+  const { status } = useAuth();
+  return useQuery({ queryKey: qk.bookLayout(book), queryFn: () => api.books.layout(book), enabled: status === "signedIn" && enabled && book !== "", staleTime: 30_000, retry: 1 });
+}
+
 export function useSongSearch(q: string) {
   const query = q.trim();
   return useQuery({

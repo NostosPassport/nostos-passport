@@ -180,6 +180,14 @@ export function createApi(config: ApiConfig) {
       setForStamp: (stampId: string, collectionIds: string[]) => request("PUT", `/api/stamps/${enc(stampId)}/collections`, CC.StampCollectionsResponse, { collectionIds }),
     },
 
+    /** Which books hold a stamp, and where the owner placed stamps in each book (`passport` or a collection id). */
+    books: {
+      ofStamp: (stampId: string) => request("GET", `/api/stamps/${enc(stampId)}/collections`, CC.StampMembershipResponse),
+      setInPassport: (stampId: string, inPassport: boolean) => request("PUT", `/api/stamps/${enc(stampId)}/passport`, CC.StampMembershipResponse, { inPassport }),
+      layout: (book: string) => request("GET", `/api/layouts/${enc(book)}`, CC.BookLayoutResponse),
+      place: (book: string, stampId: string, body: CC.StampPlacementInputData | { reset: true }) => request("PUT", `/api/layouts/${enc(book)}/${enc(stampId)}`, CC.BookLayoutResponse, body),
+    },
+
     stamps: {
       layout: (id: string, body: C.PhotoLayoutRequest) => request("PATCH", `/api/stamps/${enc(id)}/photos`, C.StampResponse, body),
       removePhoto: (id: string, photoId: string) => request("POST", `/api/stamps/${enc(id)}/photos/${enc(photoId)}/remove`, C.StampResponse),

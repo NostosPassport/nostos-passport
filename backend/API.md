@@ -127,12 +127,20 @@ Nostos verifies the visit, not individual photo provenance. The server does not 
 | `GET /api/collections/:id` | none | `CollectionResponse`, owner only |
 | `PATCH /api/collections/:id` | `CollectionUpdateRequest` | `CollectionResponse` |
 | `DELETE /api/collections/:id` | none | `DeleteCollectionResponse` |
+| `GET /api/stamps/:id/collections` | none | `StampMembershipResponse`, owner only |
 | `PUT /api/stamps/:id/collections` | `StampCollectionsRequest` | `StampCollectionsResponse` |
+| `PUT /api/stamps/:id/passport` | `StampPassportRequest` | `StampMembershipResponse` |
+| `GET /api/layouts/:book` | none | `BookLayoutResponse`, owner only |
+| `PUT /api/layouts/:book/:stampId` | `StampPlacementRequest` | `BookLayoutResponse` |
 | `GET /api/collections/:id/share` | none | `CollectionShareResponse`, owner only |
 | `POST /api/collections/:id/share` | none | `CollectionShareResponse`, creates/reuses the active link |
 | `DELETE /api/collections/:id/share` | none | `CollectionShareResponse`, revokes the link |
 
 A collection can contain only the owner's live stamps. Its member ordering is explicit and independent from the master Passport chronology.
+
+Every live stamp is in the gallery (`GET /api/users/:handle/stamps`). New stamps also land in the main Passport. `PUT /api/stamps/:id/passport` with `{ inPassport: false }` takes a stamp out of the main Passport without removing it: it stays in the gallery and its collections, its `page` and `slot` become `null`, and the remaining Passport stamps close the gap. `{ inPassport: true }` puts it back in visit-date order. Removal (`POST /api/stamps/:id/remove`) is still the only way to delete a stamp.
+
+Each book keeps its own hand placement per stamp. `:book` is `passport` or a collection id. A placement is the stamp's centre as fractions of its page (`x`, `y` in 0..1), a size relative to its automatic size (`scale` 0.4..2.5) and a tilt in degrees (`rotation` -180..180); `{ reset: true }` returns the stamp to its automatic slot. Stamps not listed in `BookLayoutResponse` sit in their automatic slot. Taking a stamp out of a book (out of the Passport, or out of a collection) discards its placement there; reordering a collection keeps placements. Placements are kept out of `StampView` so older app builds, which parse `StampView` strictly, keep working.
 
 `CollectionShareResponse` is either `{ share: { enabled: false, url: null } }` or `{ share: { enabled: true, url } }`. The URL is a signed, unguessable capability for the one collection. Calling `POST` again while sharing is enabled returns the same active URL. Calling `DELETE` deletes the share record, so the old URL immediately stops resolving.
 

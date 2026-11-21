@@ -14,6 +14,7 @@ import { consumeRate } from "@/server/rate-limit";
 import { lockAndCheckCooldown } from "@/server/services/geofence";
 import { processImage } from "@/server/services/image";
 import { cachedGooglePrices } from "@/server/services/google-price-cache";
+import { effectivePlaceType } from "@/server/services/google-places";
 import { resolveCategoryStamp } from "@/lib/category-stamp-artwork";
 
 export const CAPTION_MAX = 280;
@@ -88,7 +89,7 @@ type StampRow = {
   venue: {
     id: string; slug: string; name: string;
     area: string | null; city: string | null; region: string | null; country: string | null; countryCode: string | null; timeZone: string;
-    category: string | null; cuisines: string[]; googlePrimaryType: string | null; michelinStars: number | null;
+    category: string | null; cuisines: string[]; googlePrimaryType: string | null; googleTypes: string[]; michelinStars: number | null;
   };
   photos: { id: string; storageKey: string; position: number; x: number | null; y: number | null; rotation: number | null }[];
 };
@@ -97,17 +98,18 @@ const stampSelect = {
   id: true, userId: true, caption: true, songTitle: true, songArtist: true, songArtUrl: true, songSourceId: true,
   createdAt: true, visitedAt: true, verifiedAt: true, editedAt: true, removedAt: true,
   user: { select: { deletedAt: true } },
-  venue: { select: { id: true, slug: true, name: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true, category: true, cuisines: true, googlePrimaryType: true, michelinStars: true } },
+  venue: { select: { id: true, slug: true, name: true, area: true, city: true, region: true, country: true, countryCode: true, timeZone: true, category: true, cuisines: true, googlePrimaryType: true, googleTypes: true, michelinStars: true } },
   photos: { where: { removedAt: null }, orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }], select: { id: true, storageKey: true, position: true, x: true, y: true, rotation: true } },
 };
 
 export type StampView = Awaited<ReturnType<typeof toStampViews>>[number];
 
+/** Each stamp's place among its owner's main-passport stamps, oldest visit first. Stamps taken out of the passport get none (page and slot null). */
 async function ordinals(db: Db, rows: readonly StampRow[]) {
   const out = new Map<string, number>();
   const userIds = [...new Set(rows.map((r) => r.userId))];
   if (!userIds.length) return out;
-  const all = await db.photo.findMany({ where: { userId: { in: userIds }, removedAt: null }, orderBy: [{ userId: "asc" }, { visitedAt: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true, userId: true } });
+  const all = await db.photo.findMany({ where: { userId: { in: userIds }, removedAt: null, inPassport: true }, orderBy: [{ userId: "asc" }, { visitedAt: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true, userId: true } });
   const counter = new Map<string, number>();
   for (const s of all) {
     const n = counter.get(s.userId) ?? 0;
@@ -121,11 +123,12 @@ async function toStampViews(db: Db, rows: readonly StampRow[], now: Date) {
   const places = await ordinals(db, rows);
   const prices = await cachedGooglePrices(db, rows.map((r) => r.venue.id));
   return Promise.all(rows.map(async (r) => {
+    const kind = effectivePlaceType(r.venue);
     const artwork = resolveCategoryStamp({
       id: r.venue.id,
-      category: r.venue.category,
+      category: kind.category,
       cuisines: r.venue.cuisines,
-      primaryType: r.venue.googlePrimaryType,
+      primaryType: kind.primaryType,
     });
     const michelinStars = r.venue.michelinStars === 1 || r.venue.michelinStars === 2 || r.venue.michelinStars === 3 ? r.venue.michelinStars : null;
     return {

@@ -134,6 +134,13 @@ model Photo {
   editedAt            DateTime? @map("edited_at") @db.Timestamptz(3)
   removedAt           DateTime? @map("removed_at") @db.Timestamptz(3)
   countable           Boolean   @default(true)
+  /// Off when the owner took the stamp out of the main passport; it still lives in the gallery and any collections.
+  inPassport          Boolean   @default(true) @map("in_passport")
+  /// Where the owner placed the stamp on its main passport page (fractions of the page, scale 1 = automatic size); null = automatic spot.
+  layoutX             Float?    @map("layout_x")
+  layoutY             Float?    @map("layout_y")
+  layoutScale         Float?    @map("layout_scale")
+  layoutRotation      Float?    @map("layout_rotation")
   user                User      @relation(fields: [userId], references: [id])
   venue               Venue     @relation(fields: [venueId], references: [id])
   photos              StampPhoto[]
@@ -176,6 +183,11 @@ model CollectionStamp {
   stampId      String     @map("stamp_id")
   position     Int
   addedAt      DateTime   @default(now()) @map("added_at") @db.Timestamptz(3)
+  /// Where the owner placed the stamp on its page in this collection; null = automatic spot.
+  x            Float?
+  y            Float?
+  scale        Float?
+  rotation     Float?
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   stamp        Photo      @relation(fields: [stampId], references: [id], onDelete: Cascade)
 
