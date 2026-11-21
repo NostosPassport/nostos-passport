@@ -6,6 +6,7 @@ import { FIRST_RUN_COPY, FIRST_RUN_KEY, hasSeenFirstRun, markFirstRunSeen } from
 import { PassportBook } from "../PassportBook";
 import type { PassportData } from "../use-passport";
 
+jest.mock("@/features/books/arrange", () => ({ ...jest.requireActual("@/features/books/arrange"), useArrange: () => ({ layouts: new Map(), hidden: new Set(), place: jest.fn(), takeOut: jest.fn() }) }));
 jest.mock("../../lab3d/Passport3DView",()=>{const React=jest.requireActual("react");const {Pressable}=jest.requireActual("react-native");return {Passport3DView:({onTap}:{onTap:()=>void})=>React.createElement(Pressable,{accessibilityRole:"button",accessibilityLabel:"Open your passport",onPress:onTap})};});
 let mockData: PassportData;
 jest.mock("expo-router", () => ({ router: { push: jest.fn() }, useFocusEffect: jest.fn() }));

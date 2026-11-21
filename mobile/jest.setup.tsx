@@ -46,7 +46,7 @@ jest.mock("expo-symbols", () => {
 jest.mock("react-native-gesture-handler/lib/module/GestureHandlerRootViewContext", () => ({ __esModule: true, default: require("react").createContext(true) }));
 
 jest.mock("react-native-worklets", () => require("react-native-worklets/src/mock"));
-jest.mock("react-native-reanimated", () => ({ ...require("react-native-reanimated/mock"), useSharedValue: (value: unknown) => require("react").useState(() => ({ value }))[0], useReducedMotion: () => false }));
+jest.mock("react-native-reanimated", () => ({ ...require("react-native-reanimated/mock"), useSharedValue: (value: unknown) => require("react").useState(() => { const sv = { value, get: () => sv.value, set: (v: unknown) => { sv.value = v; } }; return sv; })[0], useReducedMotion: () => false }));
 
 // Skia draws on a GPU canvas that doesn't exist in Jest. Components render as plain Views (Canvas) or nothing, so the book's
 // structure, labels and logic can be tested; how it looks is a device check (DEVICE-CHECKLIST.md).

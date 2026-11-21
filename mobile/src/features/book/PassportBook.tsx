@@ -31,6 +31,11 @@ import { FOCUS_TOP_SPACE, FOCUS_BOTTOM_SPACE, focusBookSize, focusPageCount, foc
 import { usePassport } from "./use-passport";
 import { nav } from "@/lib/nav";
 import { Tappable } from "@/components/ui/tappable";
+import { ToastHost } from "@/components/ui/toast";
+import { applyLayout, useArrange } from "@/features/books/arrange";
+import { DragContext, type DragState } from "@/features/books/ArrangeableStamp";
+import { PASSPORT_BOOK } from "@/features/books/books";
+import type { PageArrange } from "./PageView";
 
 /* eslint-disable react-hooks/immutability -- Reanimated shared values are written through .value by design */
 /** `top` and `bottom` sit above and below the 3D passport on the home screen; they fade out while the book opens. */
@@ -45,6 +50,8 @@ type BookViewProps = {
 } & Slots;
 
 const TABLET_MIN_DIMENSION = 700;
+/** How far up from the bottom of the reader a dragged stamp counts as over the trash. */
+const TRASH_ZONE = 120;
 /** Cream marble behind the open book, so the reader sits on a surface rather than a flat colour. */
 const READER_BACKDROP = require("../../../assets/images/reader-marble.jpg");
 
@@ -116,6 +123,13 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
   const openProgress = useSharedValue(0);
   const modelReady = useRef(false);
   const modelClosingRef = useRef(false);
+  // Each book keeps its own stamp placement; the trash takes a stamp out of this book only.
+  const bookId = collectionId ?? PASSPORT_BOOK;
+  const arrange = useArrange(bookId, collectionTitle ?? "this collection");
+  const dragActive = useSharedValue(0);
+  const overTrash = useSharedValue(0);
+  const trashTop = useSharedValue(Number.POSITIVE_INFINITY);
+  const drag: DragState = useMemo(() => ({ active: dragActive, overTrash, trashTop }), [dragActive, overTrash, trashTop]);
   const readerRequested = useRef(false);
   const closing = useSharedValue(false);
   // Bring the home chrome back even when the model never drives openProgress home (e.g. the reader came back from a
@@ -170,15 +184,24 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
     if (isOpen && opening) requestReader();
     else if (!isOpen) { readerRequested.current = false; modelClosingRef.current = false; setModelClosing(false); openProgress.value = 0; }
   };
-  const byPage = useMemo(() => groupByPage(data.stamps), [data.stamps]);
+  const byPage = useMemo(() => groupByPage(data.stamps.filter((s) => !arrange.hidden.has(s.id))), [data.stamps, arrange.hidden]);
+  const placedAt = (s: (typeof data.stamps)[number]) => applyLayout(stampPlacement(s, book.pageWidth, book.pageHeight), arrange.layouts.get(s.id), book.pageWidth, book.pageHeight);
+  const pageArrange: PageArrange = { layouts: arrange.layouts, onPlace: (s, l) => arrange.place(s.id, l), onTakeOut: (s) => arrange.takeOut(s.id) };
+  useEffect(() => { trashTop.value = height - insets.bottom - TRASH_ZONE; }, [height, insets.bottom, trashTop]);
+  const trashMotion = useAnimatedStyle(() => ({
+    opacity: withTiming(dragActive.value, { duration: reduced ? 0 : 160 }),
+    transform: [{ translateY: reduced ? 0 : withTiming((1 - dragActive.value) * 24, { duration: 160 }) }, { scale: withTiming(1 + overTrash.value * 0.18, { duration: 120 }) }],
+  }));
+  const trashTint = useAnimatedStyle(() => ({ backgroundColor: overTrash.value ? colors.accent : colors.paperRaised }));
   const stampTargets = useMemo(() => {
     if (compactReader) {
       if (current === 0) return [];
-      return (byPage.get(current) ?? []).map((s) => stampHitRect(stampPlacement(s, book.pageWidth, book.pageHeight), 0));
+      return (byPage.get(current) ?? []).map((s) => stampHitRect(placedAt(s), 0));
     }
     return [current * 2 - 1, current * 2].flatMap((p, index) =>
-      (byPage.get(p) ?? []).map((s) => stampHitRect(stampPlacement(s, book.pageWidth, book.pageHeight), index * book.pageWidth)));
-  }, [compactReader, byPage, current, book.pageWidth, book.pageHeight]);
+      (byPage.get(p) ?? []).map((s) => stampHitRect(placedAt(s), index * book.pageWidth)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compactReader, byPage, current, book.pageWidth, book.pageHeight, arrange.layouts]);
   const close = () => {
     if (closing.value) return;
     closing.value = true;
@@ -198,11 +221,11 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
   const renderFace = (face: PageFace, side: "left" | "right") => {
     if (face.kind === "inside-cover") return <InsideCover width={book.pageWidth} height={book.pageHeight} />;
     if (face.kind === "bearer") return bearerPage;
-    return <View><PageView page={face.page} side={side} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(face.page) ?? []} onStampPress={(s) => openStamp(s.id)} />{firstPagePrompt(face.page)}</View>;
+    return <View><PageView page={face.page} side={side} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(face.page) ?? []} onStampPress={(s) => openStamp(s.id)} arrange={pageArrange} />{firstPagePrompt(face.page)}</View>;
   };
   const renderSinglePage = (index: number) => {
     if (index === 0) return bearerPage;
-    return <View><PageView page={index} side={index % 2 === 1 ? "left" : "right"} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(index) ?? []} onStampPress={(s) => openStamp(s.id)} />{firstPagePrompt(index)}</View>;
+    return <View><PageView page={index} side={index % 2 === 1 ? "left" : "right"} width={book.pageWidth} height={book.pageHeight} stamps={byPage.get(index) ?? []} onStampPress={(s) => openStamp(s.id)} arrange={pageArrange} />{firstPagePrompt(index)}</View>;
   };
   if (data.status === "error") return <View style={styles.center}><ScreenState kind="error" message="Couldn't open your passport. Your connection may be down." onRetry={data.retry} /></View>;
   if (data.status === "pending") return <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Opening your passport"><Skeleton width={Math.min(width * .5, (height * .45) / BOOK_ASPECT)} height={Math.min(width * .5, (height * .45) / BOOK_ASPECT) * BOOK_ASPECT} /></View>;
@@ -225,6 +248,7 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
       {bottom !== undefined ? <Animated.View style={[styles.slot, chromeMotion]}>{bottom}</Animated.View> : null}
     </View>
     <Modal visible={focused} transparent presentationStyle="overFullScreen" animationType="none" onRequestClose={close}>
+      <DragContext.Provider value={drag}>
       <View style={[styles.focus, { paddingTop: insets.top + FOCUS_TOP_SPACE, paddingBottom: insets.bottom + FOCUS_BOTTOM_SPACE, paddingLeft: insets.left + 8, paddingRight: insets.right + 8 }]} accessibilityViewIsModal>
         <Animated.View testID="passport-reader-backdrop" pointerEvents="none" style={[StyleSheet.absoluteFill, styles.backdrop, backdropMotion]}>
           <Image source={READER_BACKDROP} style={StyleSheet.absoluteFill} contentFit="cover" transition={0} accessible={false} />
@@ -237,7 +261,13 @@ function PassportBookView({ data, collectionId, coverColor, collectionTitle = nu
             <FlipBook key="focused-spreads" pageWidth={book.pageWidth} pageHeight={book.pageHeight} total={total} spread={current} onSpreadChange={setReaderIndex} renderFace={renderFace} pageTaps stampTargets={stampTargets} />}
         </Animated.View>
         <Tappable onPress={close} accessibilityRole="button" accessibilityLabel="Close passport" accessibilityHint="Returns to the main screen without changing your page" onAccessibilityEscape={close} style={[styles.close, { position: "absolute", top: insets.top + 4, right: insets.right + 8 }]}><Icon name="xmark" color="textPrimary" size={size.iconSmall} /></Tappable>
+        <Animated.View testID="passport-trash" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.trash, { bottom: insets.bottom + space.lg }, trashMotion]}>
+          <Animated.View style={[styles.trashDisc, trashTint]}><Icon name="trash" color="textPrimary" size={size.icon} /></Animated.View>
+          <Text variant="typewriterSmall" color="textSecondary" numberOfLines={1} maxFontSizeMultiplier={1.15}>{collectionId ? `TAKE OUT OF ${(collectionTitle ?? "COLLECTION").toUpperCase()}` : "TAKE OUT OF PASSPORT"}</Text>
+        </Animated.View>
+        <ToastHost bottom={insets.bottom + space.lg} />
       </View>
+      </DragContext.Provider>
     </Modal>
   </View>;
 }
@@ -255,5 +285,7 @@ const styles = StyleSheet.create({
   collectionTitle: { ...typeScale.title2, maxWidth: "88%", color: colors.textPrimary, textAlign: "center" },
   focus: { flex: 1, alignItems: "center", justifyContent: "center" },
   backdrop: { backgroundColor: colors.background },
+  trash: { position: "absolute", left: 0, right: 0, alignItems: "center", gap: space.xs },
+  trashDisc: { width: size.hitTarget + space.md, height: size.hitTarget + space.md, borderRadius: (size.hitTarget + space.md) / 2, alignItems: "center", justifyContent: "center", borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline },
   close: { minWidth: size.hitTarget, minHeight: size.hitTarget, alignItems: "center", justifyContent: "center" },
 });
