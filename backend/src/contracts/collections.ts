@@ -40,9 +40,27 @@ export const CollectionShare = z.discriminatedUnion("enabled", [
 ]);
 export const CollectionShareResponse = z.object({ share: CollectionShare }).strict();
 
+/** Where the owner placed a stamp on its page in one book: centre as fractions of the page, size relative to its automatic size, tilt in degrees. */
+export const StampPlacementInput = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  scale: z.number().min(0.4).max(2.5),
+  rotation: z.number().min(-180).max(180),
+}).strict();
+export const StampPlacement = StampPlacementInput.extend({ stampId: z.string() }).strict();
+/** A placement to save, or `reset` to put the stamp back in its automatic spot. */
+export const StampPlacementRequest = z.union([StampPlacementInput, z.object({ reset: z.literal(true) }).strict()]);
+/** Every stamp the owner has moved in one book (`passport` or a collection id); stamps not listed sit in their automatic spot. */
+export const BookLayoutResponse = z.object({ placements: z.array(StampPlacement) }).strict();
+/** Which books hold a stamp. Every stamp is always in the gallery. */
+export const StampMembershipResponse = z.object({ inPassport: z.boolean(), collectionIds: z.array(z.string()) }).strict();
+export const StampPassportRequest = z.object({ inPassport: z.boolean() }).strict();
+
 export type CollectionColor = z.infer<typeof CollectionColor>;
 export type CollectionCreateRequest = z.infer<typeof CollectionCreateRequest>;
 export type CollectionUpdateRequest = z.infer<typeof CollectionUpdateRequest>;
 export type CollectionSummary = z.infer<typeof CollectionSummary>;
 export type CollectionView = z.infer<typeof CollectionView>;
 export type CollectionShare = z.infer<typeof CollectionShare>;
+export type StampPlacement = z.infer<typeof StampPlacement>;
+export type StampMembershipResponse = z.infer<typeof StampMembershipResponse>;

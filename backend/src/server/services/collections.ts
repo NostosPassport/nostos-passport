@@ -110,10 +110,15 @@ export async function updateCollection(db: Db, actor: Actor | null, id: string, 
   await db.$transaction(async (tx) => {
     await tx.collection.update({ where: { id }, data: { name: input.name, color: input.color, updatedAt: now } });
     if (input.stampIds !== undefined) {
-      await tx.collectionStamp.deleteMany({ where: { collectionId: id } });
-      if (input.stampIds.length) {
-        await tx.collectionStamp.createMany({ data: input.stampIds.map((stampId, position) => ({ collectionId: id, stampId, position, addedAt: now })) });
+      // Reorder in place so stamps that stay keep where the owner placed them; only removed stamps lose their placement.
+      const stampIds = input.stampIds;
+      await tx.collectionStamp.deleteMany({ where: { collectionId: id, stampId: { notIn: stampIds } } });
+      const kept = new Set((await tx.collectionStamp.findMany({ where: { collectionId: id }, select: { stampId: true } })).map((r) => r.stampId));
+      for (const [position, stampId] of stampIds.entries()) {
+        if (kept.has(stampId)) await tx.collectionStamp.update({ where: { collectionId_stampId: { collectionId: id, stampId } }, data: { position } });
       }
+      const added = stampIds.flatMap((stampId, position) => (kept.has(stampId) ? [] : [{ collectionId: id, stampId, position, addedAt: now }]));
+      if (added.length) await tx.collectionStamp.createMany({ data: added });
     }
   });
   return getCollection(db, me, id, now);

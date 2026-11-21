@@ -103,11 +103,12 @@ const stampSelect = {
 
 export type StampView = Awaited<ReturnType<typeof toStampViews>>[number];
 
+/** Each stamp's place among its owner's main-passport stamps, oldest visit first. Stamps taken out of the passport get none (page and slot null). */
 async function ordinals(db: Db, rows: readonly StampRow[]) {
   const out = new Map<string, number>();
   const userIds = [...new Set(rows.map((r) => r.userId))];
   if (!userIds.length) return out;
-  const all = await db.photo.findMany({ where: { userId: { in: userIds }, removedAt: null }, orderBy: [{ userId: "asc" }, { visitedAt: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true, userId: true } });
+  const all = await db.photo.findMany({ where: { userId: { in: userIds }, removedAt: null, inPassport: true }, orderBy: [{ userId: "asc" }, { visitedAt: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true, userId: true } });
   const counter = new Map<string, number>();
   for (const s of all) {
     const n = counter.get(s.userId) ?? 0;
